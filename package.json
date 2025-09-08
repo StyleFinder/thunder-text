@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build",
+    "build:render": "npm install && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
@@ -46,5 +47,9 @@
     "jest-environment-jsdom": "^30.1.2",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }
