@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { exchangeCodeForToken } from '@/lib/shopify'
-import { supabaseAdmin } from '@/lib/supabase'
-import { redirect } from 'next/navigation'
 
 export async function GET(request: NextRequest) {
+  // Check if we're in a build environment without proper configuration
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co') {
+    return NextResponse.json(
+      { error: 'Application not properly configured' },
+      { status: 503 }
+    )
+  }
+
   try {
+    // Dynamic imports to avoid loading during build
+    const { exchangeCodeForToken } = await import('@/lib/shopify')
+    const { supabaseAdmin } = await import('@/lib/supabase')
     const { searchParams } = new URL(request.url)
     const code = searchParams.get('code')
     const shop = searchParams.get('shop')
