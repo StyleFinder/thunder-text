@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "build:render": "npm install && next build",
+    "build:render": "npm install --legacy-peer-deps && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
