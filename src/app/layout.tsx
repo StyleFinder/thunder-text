@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { AppProvider } from "@shopify/polaris";
-import "@shopify/polaris/build/esm/styles.css";
-import { SessionProvider } from "next-auth/react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,11 +17,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <SessionProvider>
-          <AppProvider i18n={{}} features={{ newDesignLanguage: true }}>
-            {children}
-          </AppProvider>
-        </SessionProvider>
+        <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+          <header style={{ marginBottom: '40px', textAlign: 'center' }}>
+            <h1 style={{ color: '#2563eb', fontSize: '2.5rem', marginBottom: '10px' }}>Thunder Text</h1>
+            <p style={{ color: '#6b7280', fontSize: '1.2rem' }}>AI-Powered Product Description Generator</p>
+          </header>
+          {children}
+        </div>
       </body>
     </html>
   );
