@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 interface Product {
@@ -29,7 +29,7 @@ interface GeneratedContent {
   keywords: string[]
 }
 
-export default function Dashboard() {
+function DashboardContent() {
   const searchParams = useSearchParams()
   const shop = searchParams?.get('shop')
   const authenticated = searchParams?.get('authenticated')
@@ -157,5 +157,18 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <div style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid #3b82f6', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+        <p>Loading Dashboard...</p>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }
