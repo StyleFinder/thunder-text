@@ -209,7 +209,6 @@ export default function Dashboard() {
         accessibilityLabel={`View details for ${product.title}`}
       >
         <InlineStack distribution="fillEvenly">
-          <InlineStack.Item fill>
             <InlineStack vertical spacing="tight">
               <Text variant="headingSm" as="h3">
                 {product.title}
@@ -224,8 +223,6 @@ export default function Dashboard() {
                 {product.description ? 'Has Description' : 'Needs Description'}
               </Badge>
             </InlineStack>
-          </Stack.Item>
-          <InlineStack.Item>
             <Button
               onClick={() => handleGenerateDescription(item)}
               loading={loading}
@@ -233,7 +230,6 @@ export default function Dashboard() {
             >
               Generate Description
             </Button>
-          </Stack.Item>
         </InlineStack>
       </ResourceItem>
     )
