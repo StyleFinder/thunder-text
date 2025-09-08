@@ -2,7 +2,7 @@ import OpenAI from 'openai'
 
 // Master OpenAI client with centralized API key
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+  apiKey: process.env.OPENAI_API_KEY || 'placeholder-api-key',
 })
 
 export interface ProductDescriptionRequest {

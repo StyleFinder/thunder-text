@@ -3,8 +3,8 @@ import { SupabaseAdapter } from "@next-auth/supabase-adapter"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: SupabaseAdapter({
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    secret: process.env.SUPABASE_SERVICE_KEY!,
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+    secret: process.env.SUPABASE_SERVICE_KEY || 'placeholder-service-key',
   }),
   providers: [
     // Shopify OAuth provider will be configured here

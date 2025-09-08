@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { aiGenerator } from '@/lib/openai'
-import { supabaseAdmin } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
+  // Check if we're in a build environment without proper configuration
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co') {
+    return NextResponse.json(
+      { error: 'Application not properly configured' },
+      { status: 503 }
+    )
+  }
+
   try {
+    // Dynamic imports to avoid loading during build
+    const { auth } = await import('@/lib/auth')
+    const { aiGenerator } = await import('@/lib/openai')
+    const { supabaseAdmin } = await import('@/lib/supabase')
+    
     const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
