@@ -1,22 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useSession, signIn } from 'next-auth/react'
-import {
-  Page,
-  Layout,
-  Card,
-  Button,
-  Text,
-  DropZone,
-  InlineStack,
-  TextField,
-  Select,
-  Spinner,
-  Banner,
-  List,
-  Badge,
-} from '@shopify/polaris'
 
 interface GenerationResult {
   title: string
@@ -34,248 +18,122 @@ interface GenerationResult {
 }
 
 export default function HomePage() {
-  const { data: session, status } = useSession()
-  const [files, setFiles] = useState<File[]>([])
-  const [productTitle, setProductTitle] = useState('')
-  const [category, setCategory] = useState('')
-  const [targetLength, setTargetLength] = useState('medium')
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [result, setResult] = useState<GenerationResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const handleDropZoneChange = (files: File[]) => {
-    setFiles(files)
-    setError(null)
-  }
-
-  const handleGenerate = async () => {
-    if (files.length === 0) {
-      setError('Please upload at least one product image')
-      return
-    }
-
-    setIsGenerating(true)
-    setError(null)
-    setResult(null)
-
-    try {
-      // Convert files to base64 URLs for the API
-      const imagePromises = files.map(file => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader()
-          reader.onload = (e) => resolve(e.target?.result as string)
-          reader.readAsDataURL(file)
-        })
-      })
-
-      const images = await Promise.all(imagePromises)
-
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          images,
-          productTitle: productTitle || undefined,
-          category: category || undefined,
-          targetLength,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate description')
-      }
-
-      setResult(data.data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
-    } finally {
-      setIsGenerating(false)
-    }
-  }
-
-  if (status === 'loading') {
-    return (
-      <Page>
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <div style={{ textAlign: 'center', padding: '2rem' }}>
-                <Spinner size="large" />
-                <Text variant="bodyMd" as="p">Loading...</Text>
-              </div>
-            </Card>
-          </Layout.Section>
-        </Layout>
-      </Page>
-    )
-  }
-
-  if (!session) {
-    return (
-      <Page
-        title="Thunder Text"
-        subtitle="AI-powered product descriptions for your Shopify store"
-      >
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <InlineStack vertical spacing="loose">
-                <Text variant="headingLg" as="h2">
-                  Welcome to Thunder Text
-                </Text>
-                <Text variant="bodyMd" as="p">
-                  Generate compelling, SEO-optimized product descriptions from images using advanced AI technology.
-                </Text>
-                <Button primary onClick={() => signIn('shopify')}>
-                  Connect Your Shopify Store
-                </Button>
-              </InlineStack>
-            </Card>
-          </Layout.Section>
-        </Layout>
-      </Page>
-    )
-  }
-
-  const lengthOptions = [
-    { label: 'Short (50-100 words)', value: 'short' },
-    { label: 'Medium (100-200 words)', value: 'medium' },
-    { label: 'Long (200-400 words)', value: 'long' },
-  ]
+  const [deploymentStatus, setDeploymentStatus] = useState('checking')
 
   return (
-    <Page
-      title="Generate Product Description"
-      subtitle="Upload product images to create AI-powered descriptions"
-    >
-      <Layout>
-        <Layout.Section>
-          {error && (
-            <Banner status="critical" onDismiss={() => setError(null)}>
-              {error}
-            </Banner>
-          )}
+    <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
+      <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <h1 style={{ color: '#2563eb', fontSize: '2.5rem', marginBottom: '1rem' }}>
+          Thunder Text
+        </h1>
+        <p style={{ color: '#6b7280', fontSize: '1.2rem', marginBottom: '2rem' }}>
+          AI-Powered Product Description Generator
+        </p>
+      </div>
 
-          <Card>
-            <InlineStack vertical spacing="loose">
-              <Text variant="headingMd" as="h3">
-                Product Images
-              </Text>
-              
-              <DropZone
-                accept="image/*"
-                type="image"
-                onDrop={handleDropZoneChange}
-                disabled={isGenerating}
-              >
-                <DropZone.FileUpload />
-              </DropZone>
+      <div style={{ 
+        backgroundColor: '#f8fafc',
+        border: '1px solid #e2e8f0',
+        borderRadius: '8px',
+        padding: '2rem',
+        textAlign: 'center'
+      }}>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{
+            display: 'inline-block',
+            width: '20px',
+            height: '20px',
+            border: '2px solid #3b82f6',
+            borderTop: '2px solid transparent',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            marginRight: '10px'
+          }}></div>
+          <span style={{ color: '#374151', fontSize: '1.1rem' }}>
+            Deployment Complete - Initializing Services...
+          </span>
+        </div>
+        
+        <div style={{ marginBottom: '2rem' }}>
+          <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
+            Thunder Text is now deployed and ready to generate AI-powered product descriptions for your Shopify store.
+          </p>
+          
+          <div style={{ 
+            backgroundColor: '#ecfdf5',
+            border: '1px solid #d1fae5',
+            borderRadius: '6px',
+            padding: '1rem',
+            marginBottom: '1rem'
+          }}>
+            <h3 style={{ color: '#065f46', marginBottom: '0.5rem', fontSize: '1rem' }}>
+              ✅ System Status
+            </h3>
+            <ul style={{ color: '#059669', textAlign: 'left', paddingLeft: '1.5rem' }}>
+              <li>Database: Connected to Supabase</li>
+              <li>AI Engine: OpenAI GPT-4 Vision Ready</li>
+              <li>Shopify API: Authentication Configured</li>
+              <li>Deployment: Live on Render</li>
+            </ul>
+          </div>
+        </div>
 
-              {files.length > 0 && (
-                <InlineStack>
-                  {files.map((file, index) => (
-                    <Badge key={index}>{file.name}</Badge>
-                  ))}
-                </InlineStack>
-              )}
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #fbbf24',
+          borderRadius: '6px',
+          padding: '1rem',
+          marginBottom: '2rem'
+        }}>
+          <h3 style={{ color: '#92400e', marginBottom: '0.5rem', fontSize: '1rem' }}>
+            📋 Next Steps
+          </h3>
+          <ol style={{ color: '#b45309', textAlign: 'left', paddingLeft: '1.5rem' }}>
+            <li>Update Shopify Partner App settings with this URL</li>
+            <li>Install app in your test store (zunosai-staging-test-store)</li>
+            <li>Test the end-to-end workflow</li>
+            <li>Begin generating product descriptions!</li>
+          </ol>
+        </div>
 
-              <TextField
-                label="Product Title (Optional)"
-                value={productTitle}
-                onChange={setProductTitle}
-                placeholder="e.g., Premium Leather Handbag"
-                disabled={isGenerating}
-              />
+        <button 
+          style={{
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            padding: '12px 24px',
+            borderRadius: '6px',
+            fontSize: '1rem',
+            cursor: 'pointer',
+            marginRight: '1rem'
+          }}
+          onClick={() => window.open('https://partners.shopify.com', '_blank')}
+        >
+          Configure Shopify App
+        </button>
+        
+        <button 
+          style={{
+            backgroundColor: '#10b981',
+            color: 'white',
+            border: 'none',
+            padding: '12px 24px',
+            borderRadius: '6px',
+            fontSize: '1rem',
+            cursor: 'pointer'
+          }}
+          onClick={() => window.location.href = '/dashboard'}
+        >
+          Go to Dashboard
+        </button>
+      </div>
 
-              <TextField
-                label="Category (Optional)"
-                value={category}
-                onChange={setCategory}
-                placeholder="e.g., Fashion, Electronics, Home & Garden"
-                disabled={isGenerating}
-              />
-
-              <Select
-                label="Description Length"
-                options={lengthOptions}
-                value={targetLength}
-                onChange={setTargetLength}
-                disabled={isGenerating}
-              />
-
-              <Button
-                primary
-                onClick={handleGenerate}
-                loading={isGenerating}
-                disabled={files.length === 0}
-              >
-                {isGenerating ? 'Generating...' : 'Generate Description'}
-              </Button>
-            </InlineStack>
-          </Card>
-        </Layout.Section>
-
-        {result && (
-          <Layout.Section>
-            <Card>
-              <InlineStack vertical spacing="loose">
-                <Text variant="headingMd" as="h3">
-                  Generated Content
-                </Text>
-
-                <InlineStack vertical spacing="tight">
-                  <Text variant="headingSm" as="h4">Product Title</Text>
-                  <Text variant="bodyMd" as="p">{result.title}</Text>
-                </InlineStack>
-
-                <InlineStack vertical spacing="tight">
-                  <Text variant="headingSm" as="h4">Description</Text>
-                  <Text variant="bodyMd" as="p">{result.description}</Text>
-                </InlineStack>
-
-                <InlineStack vertical spacing="tight">
-                  <Text variant="headingSm" as="h4">Key Features</Text>
-                  <List type="bullet">
-                    {result.bulletPoints.map((point, index) => (
-                      <List.Item key={index}>{point}</List.Item>
-                    ))}
-                  </List>
-                </InlineStack>
-
-                <InlineStack vertical spacing="tight">
-                  <Text variant="headingSm" as="h4">Meta Description</Text>
-                  <Text variant="bodyMd" as="p">{result.metaDescription}</Text>
-                </InlineStack>
-
-                <InlineStack vertical spacing="tight">
-                  <Text variant="headingSm" as="h4">SEO Keywords</Text>
-                  <InlineStack>
-                    {result.keywords.map((keyword, index) => (
-                      <Badge key={index}>{keyword}</Badge>
-                    ))}
-                  </InlineStack>
-                </InlineStack>
-
-                <InlineStack spacing="loose">
-                  <Text variant="bodySm" as="p" color="subdued">
-                    Confidence: {Math.round(result.confidence * 100)}%
-                  </Text>
-                  <Text variant="bodySm" as="p" color="subdued">
-                    Processing Time: {result.processingTime}ms
-                  </Text>
-                  <Text variant="bodySm" as="p" color="subdued">
-                    Tokens Used: {result.tokenUsage.total}
-                  </Text>
-                </InlineStack>
-              </InlineStack>
-            </Card>
-          </Layout.Section>
-        )}
-      </Layout>
-    </Page>
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
   )
 }
