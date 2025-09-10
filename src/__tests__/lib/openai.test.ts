@@ -1,18 +1,17 @@
 import { AIDescriptionGenerator } from '@/lib/openai'
-import OpenAI from 'openai'
 
 // Mock OpenAI
 jest.mock('openai')
 
+declare global {
+  var mockOpenAICreate: jest.Mock
+}
+
 describe('AIDescriptionGenerator', () => {
   let generator: AIDescriptionGenerator
-  let mockOpenAI: jest.Mocked<OpenAI>
 
   beforeEach(() => {
     generator = new AIDescriptionGenerator()
-    mockOpenAI = require('openai').__esModule 
-      ? require('openai').default() 
-      : require('openai')()
   })
 
   afterEach(() => {
@@ -51,7 +50,7 @@ describe('AIDescriptionGenerator', () => {
     }
 
     it('should generate product description successfully', async () => {
-      mockOpenAI.chat.completions.create.mockResolvedValue(mockOpenAIResponse)
+      global.mockOpenAICreate.mockResolvedValue(mockOpenAIResponse)
 
       const result = await generator.generateProductDescription(mockRequest)
 
@@ -73,14 +72,14 @@ describe('AIDescriptionGenerator', () => {
 
     it('should handle OpenAI API errors', async () => {
       const error = new Error('OpenAI API error')
-      mockOpenAI.chat.completions.create.mockRejectedValue(error)
+      global.mockOpenAICreate.mockRejectedValue(error)
 
       await expect(generator.generateProductDescription(mockRequest))
         .rejects.toThrow('Failed to generate product description: OpenAI API error')
     })
 
     it('should handle empty response from OpenAI', async () => {
-      mockOpenAI.chat.completions.create.mockResolvedValue({
+      global.mockOpenAICreate.mockResolvedValue({
         choices: [{ message: { content: null } }],
         usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
       })
@@ -103,7 +102,7 @@ describe('AIDescriptionGenerator', () => {
         },
       }
 
-      mockOpenAI.chat.completions.create.mockResolvedValue(malformedResponse)
+      global.mockOpenAICreate.mockResolvedValue(malformedResponse)
 
       const result = await generator.generateProductDescription(mockRequest)
 
@@ -113,7 +112,7 @@ describe('AIDescriptionGenerator', () => {
     })
 
     it('should track usage for billing', async () => {
-      mockOpenAI.chat.completions.create.mockResolvedValue(mockOpenAIResponse)
+      global.mockOpenAICreate.mockResolvedValue(mockOpenAIResponse)
 
       await generator.generateProductDescription(mockRequest)
 
@@ -121,11 +120,11 @@ describe('AIDescriptionGenerator', () => {
     })
 
     it('should build appropriate prompts based on request parameters', async () => {
-      mockOpenAI.chat.completions.create.mockResolvedValue(mockOpenAIResponse)
+      global.mockOpenAICreate.mockResolvedValue(mockOpenAIResponse)
 
       await generator.generateProductDescription(mockRequest)
 
-      const callArgs = mockOpenAI.chat.completions.create.mock.calls[0][0]
+      const callArgs = global.mockOpenAICreate.mock.calls[0][0]
       const messages = callArgs.messages as any[]
       const textContent = messages[0].content.find((c: any) => c.type === 'text')?.text
 

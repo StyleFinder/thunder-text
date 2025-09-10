@@ -97,17 +97,25 @@ jest.mock('@shopify/polaris', () => ({
   TextContainer: ({ children }) => <div data-testid="text-container">{children}</div>,
 }))
 
-// Mock OpenAI
-jest.mock('openai', () => ({
-  __esModule: true,
-  default: jest.fn().mockImplementation(() => ({
-    chat: {
-      completions: {
-        create: jest.fn(),
+// Create a mock for the OpenAI chat completions
+const mockCreate = jest.fn()
+
+// Mock OpenAI - needs to match the module-level instance usage pattern
+jest.mock('openai', () => {
+  return {
+    __esModule: true,
+    default: jest.fn().mockImplementation(() => ({
+      chat: {
+        completions: {
+          create: mockCreate,
+        },
       },
-    },
-  })),
-}))
+    })),
+  }
+})
+
+// Export the mock for test access
+global.mockOpenAICreate = mockCreate
 
 // Mock Supabase
 jest.mock('@supabase/supabase-js', () => ({
