@@ -2,6 +2,19 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import {
+  Page,
+  Layout,
+  Card,
+  Button,
+  Text,
+  Box,
+  InlineStack,
+  BlockStack,
+  ProgressBar,
+  Badge,
+  Spinner
+} from '@shopify/polaris'
 
 interface Product {
   node: {
@@ -34,139 +47,121 @@ function DashboardContent() {
   const shop = searchParams?.get('shop')
   const authenticated = searchParams?.get('authenticated')
   
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) {
-    return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid #3b82f6', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-        <p>Loading...</p>
-      </div>
-    )
-  }
+  console.log('Dashboard render:', { shop, authenticated })
 
   if (!shop || !authenticated) {
     return (
-      <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ color: '#2563eb', fontSize: '2rem' }}>Thunder Text Dashboard</h1>
-        </div>
-        
-        <div style={{ 
-          backgroundColor: '#fef3c7',
-          border: '1px solid #fbbf24',
-          borderRadius: '8px',
-          padding: '2rem',
-          textAlign: 'center'
-        }}>
-          <h2 style={{ color: '#92400e', marginBottom: '1rem' }}>Authentication Required</h2>
-          <p style={{ color: '#b45309', marginBottom: '1rem' }}>
-            Please install Thunder Text from your Shopify admin panel to access the dashboard.
-          </p>
-          <button 
-            style={{
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '6px',
-              fontSize: '1rem',
-              cursor: 'pointer'
-            }}
-            onClick={() => window.location.href = '/'}
-          >
-            Back to Home
-          </button>
-        </div>
-      </div>
+      <Page title="Thunder Text Dashboard">
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingLg">Authentication Required</Text>
+                <Text as="p">
+                  Please install Thunder Text from your Shopify admin panel to access the dashboard.
+                </Text>
+                <Button primary onClick={() => window.location.href = '/'}>
+                  Back to Home
+                </Button>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+      </Page>
     )
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-        <h1 style={{ color: '#2563eb', fontSize: '2rem', marginBottom: '0.5rem' }}>
-          Thunder Text Dashboard
-        </h1>
-        <p style={{ color: '#6b7280' }}>
-          Connected to: {shop}
-        </p>
-      </div>
+    <Page 
+      title="Dashboard" 
+      subtitle="Welcome to Product Description Generator"
+    >
+      <Layout>
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <Text as="p" variant="bodyMd">
+                Generate compelling product descriptions using AI to boost your sales.
+              </Text>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
 
-      <div style={{
-        backgroundColor: '#ecfdf5',
-        border: '1px solid #d1fae5',
-        borderRadius: '8px',
-        padding: '2rem',
-        textAlign: 'center'
-      }}>
-        <h2 style={{ color: '#065f46', marginBottom: '1rem' }}>
-          🎉 Welcome to Thunder Text!
-        </h2>
-        <p style={{ color: '#059669', marginBottom: '1.5rem' }}>
-          Your AI-powered product description generator is ready to use.
-        </p>
-        
-        <div style={{ marginBottom: '2rem' }}>
-          <h3 style={{ color: '#065f46', marginBottom: '1rem' }}>Quick Actions:</h3>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button style={{
-              backgroundColor: '#10b981',
-              color: 'white',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '6px',
-              fontSize: '1rem',
-              cursor: 'pointer'
-            }}>
-              View Products
-            </button>
-            <button style={{
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '6px',
-              fontSize: '1rem',
-              cursor: 'pointer'
-            }}>
-              Generate Descriptions
-            </button>
-            <button style={{
-              backgroundColor: '#8b5cf6',
-              color: 'white',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '6px',
-              fontSize: '1rem',
-              cursor: 'pointer'
-            }}>
-              View Settings
-            </button>
-          </div>
-        </div>
+        <Layout.Section variant="oneHalf">
+          <Card>
+            <BlockStack gap="400">
+              <Text as="p" variant="bodySm" tone="subdued">Free Trial Usage</Text>
+              <Text as="p" variant="bodySm">0 of 25 descriptions used</Text>
+              <ProgressBar progress={0} size="small" />
+              <InlineStack align="end">
+                <Text as="span" variant="bodySm" tone="subdued">25 remaining</Text>
+              </InlineStack>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
 
-        <div style={{ fontSize: '0.9rem', color: '#059669' }}>
-          <p>✅ Connected to Shopify</p>
-          <p>✅ AI Engine Ready</p>
-          <p>✅ Database Connected</p>
-        </div>
-      </div>
-    </div>
+        <Layout.Section variant="oneHalf">
+          <Card>
+            <BlockStack gap="400">
+              <InlineStack align="space-between" blockAlign="center">
+                <Text as="h3" variant="headingMd">ROI Calculator</Text>
+                <Text as="span" variant="bodySm" tone="subdued">💰</Text>
+              </InlineStack>
+              <BlockStack gap="200">
+                <Text as="p" variant="bodySm" tone="subdued">Total Savings</Text>
+                <Text as="p" variant="headingLg" tone="success">$0</Text>
+                <Text as="span" variant="bodySm" tone="subdued">(0 min saved)</Text>
+                <Text as="p" variant="bodySm">0 products generated • 0 min saved</Text>
+              </BlockStack>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <Text as="h3" variant="headingMd">Quick Actions</Text>
+              <InlineStack gap="300">
+                <Button 
+                  variant="primary"
+                  tone="success"
+                  onClick={() => {
+                    const params = new URLSearchParams()
+                    if (shop) params.append('shop', shop)
+                    if (authenticated) params.append('authenticated', authenticated)
+                    window.location.href = `/create?${params.toString()}`
+                  }}
+                >
+                  Create New Product
+                </Button>
+                <Button 
+                  onClick={() => {
+                    const params = new URLSearchParams()
+                    if (shop) params.append('shop', shop)
+                    if (authenticated) params.append('authenticated', authenticated)
+                    window.location.href = `/generate?${params.toString()}`
+                  }}
+                >
+                  Update Existing Product
+                </Button>
+              </InlineStack>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+      </Layout>
+    </Page>
   )
 }
 
 export default function Dashboard() {
   return (
     <Suspense fallback={
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid #3b82f6', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-        <p>Loading Dashboard...</p>
-      </div>
+      <Box padding="800">
+        <InlineStack align="center" blockAlign="center">
+          <Spinner size="small" />
+          <Text as="p">Loading Dashboard...</Text>
+        </InlineStack>
+      </Box>
     }>
       <DashboardContent />
     </Suspense>

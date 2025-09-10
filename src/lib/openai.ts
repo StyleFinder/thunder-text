@@ -176,7 +176,8 @@ Requirements:
   calculateCost(tokens: number): number {
     // GPT-4 Vision pricing (approximate)
     const costPerToken = 0.00003 // $0.03 per 1K tokens
-    return tokens * costPerToken
+    const result = tokens * costPerToken
+    return parseFloat(result.toFixed(6))
   }
 }
 

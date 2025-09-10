@@ -1,0 +1,31 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "fa85f3902882734b800968440c27447d"
+name = "Product Description Generator"
+application_url = "http://localhost:3000"
+embedded = true
+handle = "thunder-text-16"
+
+[webhooks]
+api_version = "2024-01"
+
+# Compliance webhooks disabled for local development
+# Production deployment should restore these with HTTPS URLs
+# [[webhooks.subscriptions]]
+# uri = "/api/webhooks"  
+# compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_content,read_products,write_content,write_products"
+
+[auth]
+redirect_urls = [
+  "http://localhost:3000/api/auth/callback/shopify"
+]
+
+[pos]
+embedded = false
+
+[build]
+dev_store_url = "zunosai-staging-test-store.myshopify.com"

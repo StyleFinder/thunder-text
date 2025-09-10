@@ -13,21 +13,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       name: "Shopify",
       type: "oauth",
       authorization: {
-        url: "https://shopify.dev/oauth/authorize",
+        url: `https://${process.env.SHOPIFY_TEST_STORE}.myshopify.com/admin/oauth/authorize`,
         params: {
           scope: process.env.SHOPIFY_SCOPES,
           response_type: "code",
         },
       },
-      token: "https://shopify.dev/oauth/access_token",
-      userinfo: "https://shopify.dev/admin/api/2024-01/shop.json",
+      checks: ["state"],
+      token: `https://${process.env.SHOPIFY_TEST_STORE}.myshopify.com/admin/oauth/access_token`,
+      userinfo: `https://${process.env.SHOPIFY_TEST_STORE}.myshopify.com/admin/api/2024-01/shop.json`,
       clientId: process.env.SHOPIFY_API_KEY,
       clientSecret: process.env.SHOPIFY_API_SECRET,
       profile(profile: any) {
         return {
-          id: profile.shop.id,
-          name: profile.shop.name,
-          email: profile.shop.email,
+          id: profile.shop?.id || profile.id,
+          name: profile.shop?.name || profile.name,
+          email: profile.shop?.email || profile.email,
           image: null,
         }
       },
