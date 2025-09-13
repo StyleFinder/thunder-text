@@ -1,6 +1,6 @@
 'use client'
 
-import { Page, Layout, Card, Text, Button, Banner, Stack } from '@shopify/polaris'
+import { Page, Layout, Card, Text, Button, Banner, LegacyStack } from '@shopify/polaris'
 import { useState } from 'react'
 
 export default function GetToken() {
@@ -46,16 +46,14 @@ export default function GetToken() {
       <Layout>
         <Layout.Section>
           <Card>
-            <Stack vertical spacing="loose">
+            <LegacyStack vertical spacing="loose">
               <Text variant="headingMd" as="h2">
                 Generate Shopify Access Token
               </Text>
-              
               <Text as="p" color="subdued">
                 This will generate a fresh access token for your development store.
               </Text>
-              
-              <Stack distribution="leading">
+              <LegacyStack distribution="leading">
                 <Button 
                   variant="primary" 
                   onClick={generateToken}
@@ -63,14 +61,12 @@ export default function GetToken() {
                 >
                   Generate Token
                 </Button>
-              </Stack>
-              
+              </LegacyStack>
               {error && (
                 <Banner status="critical">
                   <p>{error}</p>
                 </Banner>
               )}
-              
               {token && (
                 <>
                   <Banner status="success">
@@ -88,15 +84,15 @@ export default function GetToken() {
                     {token}
                   </div>
                   
-                  <Stack distribution="leading">
+                  <LegacyStack distribution="leading">
                     <Button onClick={copyToken}>
                       Copy Token
                     </Button>
-                  </Stack>
+                  </LegacyStack>
                   
                   <Card sectioned>
                     <Text variant="headingMd" as="h3">Next Steps:</Text>
-                    <Stack vertical spacing="tight">
+                    <LegacyStack vertical spacing="tight">
                       <Text as="p">1. Copy the token above</Text>
                       <Text as="p">2. Update .env.local:</Text>
                       <div style={{ 
@@ -110,14 +106,14 @@ export default function GetToken() {
                       </div>
                       <Text as="p">3. Restart your dev server</Text>
                       <Text as="p">4. Test product creation</Text>
-                    </Stack>
+                    </LegacyStack>
                   </Card>
                 </>
               )}
-            </Stack>
+            </LegacyStack>
           </Card>
         </Layout.Section>
       </Layout>
     </Page>
-  )
+  );
 }
