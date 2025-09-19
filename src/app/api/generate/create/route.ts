@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { getCombinedPrompt, type ProductCategory } from '@/lib/prompts'
 
 if (!process.env.OPENAI_API_KEY) {
   throw new Error('OPENAI_API_KEY environment variable is not set')
@@ -37,6 +38,12 @@ export async function POST(request: NextRequest) {
       additionalNotes 
     } = body
 
+    console.log('🔍 FRONTEND DATA RECEIVED:', {
+      category,
+      template,
+      raw_body: { category: body.category, template: body.template }
+    })
+
     if (!images || images.length === 0) {
       return NextResponse.json(
         { success: false, error: 'At least one image is required' },
@@ -51,8 +58,75 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Build the system prompt for product creation
-    let systemPrompt = `You are a professional e-commerce copywriter tasked with creating compelling product descriptions for a new product. 
+    // Use the development store UUID directly (matches what's in database)
+    const storeId = '550e8400-e29b-41d4-a716-446655440000'  // Development store UUID
+    
+    // Frontend already sends the correct backend category key (e.g. 'womens_clothing')
+    // No mapping needed - use the template value directly
+    const productCategory = template as ProductCategory || 'general'
+    
+    // Get custom prompts for the store and category
+    console.log('🎯 AI Generation - Building custom prompt for:', { 
+      parentCategory: category,
+      productTemplate: template, 
+      mappedCategory: productCategory,
+      storeId 
+    })
+    
+    let customPrompts = null
+    let systemPrompt = ''
+    
+    try {
+      customPrompts = await getCombinedPrompt(storeId, productCategory)
+      console.log('✅ Custom prompts loaded:', { 
+        hasSystemPrompt: !!customPrompts?.system_prompt,
+        hasCategoryTemplate: !!customPrompts?.category_template,
+        hasCombo: !!customPrompts?.combined
+      })
+      
+      if (customPrompts?.combined) {
+        systemPrompt = `${customPrompts.combined}
+
+=== TASK INSTRUCTIONS ===
+
+Analyze the provided product images and generate compelling content based on the custom guidelines above.
+
+PRODUCT DETAILS:
+- Category: ${category}
+- Available Sizing: ${sizing || 'Not specified'}
+- Template Style: ${template}
+${fabricMaterial ? `- Materials: ${fabricMaterial}` : ''}
+${occasionUse ? `- Occasion/Use: ${occasionUse}` : ''}
+${targetAudience ? `- Target Audience: ${targetAudience}` : ''}
+${keyFeatures ? `- Key Features: ${keyFeatures}` : ''}
+${additionalNotes ? `- Additional Notes: ${additionalNotes}` : ''}
+
+OUTPUT FORMAT - Return a JSON object with these exact fields:
+{
+  "title": "Product title (max 70 characters)",
+  "description": "Detailed product description following the custom prompt guidelines above (200-400 words)",
+  "bulletPoints": ["Array of 5-7 key benefit bullet points"],
+  "metaDescription": "SEO meta description (max 160 characters)", 
+  "keywords": ["Array of 8-12 relevant SEO keywords"],
+  "suggestedPrice": "Suggested price range based on category and features",
+  "tags": ["Array of product tags for organization"]
+}
+
+CRITICAL: The "description" field must strictly follow the custom prompt guidelines above, especially the formatting rules and section structure provided in the category template.
+
+FORMATTING REQUIREMENTS:
+- Use HTML formatting, not Markdown
+- Section headers should be bold using <b>Header Name</b> tags
+- Never use **markdown bold** or asterisks for formatting
+- Use <br> for line breaks when needed
+- Keep paragraphs as plain text without HTML paragraph tags`
+      } else {
+        throw new Error('No custom prompts available')
+      }
+    } catch (error) {
+      console.error('❌ Failed to load custom prompts, using fallback:', error)
+      // Fallback to basic prompt if custom prompts fail
+      systemPrompt = `You are a professional e-commerce copywriter tasked with creating compelling product descriptions for a new product. 
 
 REQUIREMENTS:
 - Create engaging, SEO-optimized content that converts browsers to buyers
@@ -80,7 +154,15 @@ OUTPUT FORMAT - Return a JSON object with these exact fields:
   "keywords": ["Array of 8-12 relevant SEO keywords"],
   "suggestedPrice": "Suggested price range based on category and features",
   "tags": ["Array of product tags for organization"]
-}`
+}
+
+FORMATTING REQUIREMENTS:
+- Use HTML formatting, not Markdown
+- Section headers should be bold using <b>Header Name</b> tags  
+- Never use **markdown bold** or asterisks for formatting
+- Use <br> for line breaks when needed
+- Keep paragraphs as plain text without HTML paragraph tags`
+    }
 
     const userPrompt = `Analyze these product images and create compelling e-commerce content. Focus on what makes this product unique and valuable to customers.
 

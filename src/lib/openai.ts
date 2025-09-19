@@ -1,4 +1,5 @@
 import OpenAI from 'openai'
+import { getCombinedPrompt, type ProductCategory } from './prompts'
 
 // Master OpenAI client with centralized API key
 const openai = new OpenAI({
@@ -39,8 +40,8 @@ export class AIDescriptionGenerator {
     const startTime = Date.now()
     
     try {
-      // Build the prompt based on request parameters
-      const prompt = this.buildPrompt(request)
+      // Build the prompt based on request parameters and custom prompts
+      const prompt = await this.buildPrompt(request)
       
       // Analyze images using GPT-4 Vision
       const response = await openai.chat.completions.create({
@@ -95,15 +96,54 @@ export class AIDescriptionGenerator {
     }
   }
 
-  private buildPrompt(request: ProductDescriptionRequest): string {
+  private async buildPrompt(request: ProductDescriptionRequest): Promise<string> {
     const lengthGuide = {
       short: '50-100 words',
       medium: '100-200 words', 
       long: '200-400 words'
     }
+
+    // Get the custom prompts for this store and category
+    const category = (request.category || 'general') as ProductCategory
+    let customPrompts = null
+
+    console.log('🎯 AI Generation - Building prompt for:', { storeId: request.storeId, category })
     
+    try {
+      customPrompts = await getCombinedPrompt(request.storeId, category)
+      console.log('✅ Custom prompts loaded:', { 
+        hasSystemPrompt: !!customPrompts?.system_prompt,
+        hasCategoryTemplate: !!customPrompts?.category_template,
+        hasCombo: !!customPrompts?.combined
+      })
+    } catch (error) {
+      console.error('❌ Failed to load custom prompts, falling back to default:', error)
+    }
+
+    // Use custom prompts if available, otherwise fall back to basic instructions
+    const coreInstructions = customPrompts?.combined || `
+You are an expert e-commerce copywriter. Create compelling product descriptions that convert browsers into buyers.
+
+CORE PRINCIPLES:
+- Write in second person ("you") to create connection with the customer
+- Use sensory, descriptive language appropriate to the product type
+- Balance emotional appeal with practical information
+- Include all relevant product specifications provided in the context
+- Format with clear section headers (no special characters like *, #, or -)
+
+FORMATTING RULES:
+- Section headers should be in bold TypeCase
+- No markdown formatting or special characters
+- Keep paragraphs concise (3-5 sentences max)
+- Use line breaks between sections for clarity
+`.trim()
+
     return `
-Analyze the provided product images and generate a compelling, SEO-optimized product description.
+${coreInstructions}
+
+=== TASK INSTRUCTIONS ===
+
+Analyze the provided product images and generate compelling content based on the guidelines above.
 
 Product Context:
 ${request.productTitle ? `- Title: ${request.productTitle}` : ''}
@@ -115,21 +155,14 @@ ${request.keywords?.length ? `- Target Keywords: ${request.keywords.join(', ')}`
 Please provide a JSON response with the following structure:
 {
   "title": "Compelling product title based on images",
-  "description": "SEO-optimized product description",
+  "description": "SEO-optimized product description following the custom guidelines above",
   "bulletPoints": ["Key feature 1", "Key feature 2", "Key feature 3", "Key feature 4", "Key feature 5"],
   "metaDescription": "Search engine meta description (150-160 characters)",
   "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
   "confidence": 0.95
 }
 
-Requirements:
-- Focus on product features visible in the images
-- Include materials, colors, patterns, and design elements
-- Write compelling copy that converts browsers to buyers
-- Ensure all keywords are naturally integrated
-- Maintain consistent brand voice throughout
-- Generate exactly 5 bullet points highlighting key features
-- Create an engaging meta description for search results
+CRITICAL: The "description" field must strictly follow the custom prompt guidelines above, especially the formatting rules and section structure provided in the category template.
 `.trim()
   }
 

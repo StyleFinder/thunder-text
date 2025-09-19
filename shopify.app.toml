@@ -2,7 +2,7 @@
 
 client_id = "fa85f3902882734b800968440c27447d"
 name = "Product Description Generator"
-application_url = "http://localhost:3000"
+application_url = "http://localhost:3050"
 embedded = true
 handle = "thunder-text-16"
 
@@ -17,11 +17,11 @@ api_version = "2024-01"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_content,read_products,write_content,write_products"
+scopes = "read_files,write_files,write_inventory,read_inventory,read_metaobject_definitions,write_metaobject_definitions,read_metaobjects,write_metaobjects,read_product_feeds,write_product_feeds,read_product_listings,write_product_listings,read_products,write_products,read_content,write_content"
 
 [auth]
 redirect_urls = [
-  "http://localhost:3000/api/auth/callback/shopify"
+  "http://localhost:3050/api/auth/callback/shopify"
 ]
 
 [pos]

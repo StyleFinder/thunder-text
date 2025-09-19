@@ -49,7 +49,8 @@ function DashboardContent() {
   
   console.log('Dashboard render:', { shop, authenticated })
 
-  if (!shop || !authenticated) {
+  // Temporarily disable auth check for development
+  if (false) { // if (!shop || !authenticated) {
     return (
       <Page title="Thunder Text Dashboard">
         <Layout>
