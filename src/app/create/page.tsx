@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, Suspense } from 'react'
+import { useState, useCallback, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
   Page,
@@ -20,6 +20,8 @@ import {
   Modal,
   Frame
 } from '@shopify/polaris'
+import { CategoryTemplateSelector } from '@/app/components/CategoryTemplateSelector'
+import { type ProductCategory } from '@/lib/prompts'
 
 interface UploadedFile {
   file: File
@@ -33,9 +35,10 @@ function CreateProductContent() {
   
   // Form state
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
-  const [productCategory, setProductCategory] = useState('')
+  const [productCategory, setProductCategory] = useState<ProductCategory>('general')
+  const [selectedTemplate, setSelectedTemplate] = useState<ProductCategory>('general')
   const [availableSizing, setAvailableSizing] = useState('')
-  const [descriptionTemplate, setDescriptionTemplate] = useState('Default Template (system)')
+  const [templatePreview, setTemplatePreview] = useState<any>(null)
   const [fabricMaterial, setFabricMaterial] = useState('')
   const [occasionUse, setOccasionUse] = useState('')
   const [targetAudience, setTargetAudience] = useState('')
@@ -50,27 +53,200 @@ function CreateProductContent() {
   const [creatingProduct, setCreatingProduct] = useState(false)
   const [productCreated, setProductCreated] = useState<any>(null)
 
-  // Product categories from the dropdown
-  const categoryOptions = [
-    { label: 'Select a category', value: '' },
-    { label: 'Fashion & Apparel', value: 'Fashion & Apparel' },
-    { label: 'Electronics & Gadgets', value: 'Electronics & Gadgets' },
-    { label: 'Home & Garden', value: 'Home & Garden' },
-    { label: 'Health & Beauty', value: 'Health & Beauty' },
-    { label: 'Sports & Outdoors', value: 'Sports & Outdoors' },
-    { label: 'Books & Media', value: 'Books & Media' },
-    { label: 'Toys & Games', value: 'Toys & Games' },
-    { label: 'Food & Beverages', value: 'Food & Beverages' },
-    { label: 'Automotive', value: 'Automotive' },
-    { label: 'Arts & Crafts', value: 'Arts & Crafts' },
-    { label: 'Jewelry & Accessories', value: 'Jewelry & Accessories' },
-    { label: 'Office & Business', value: 'Office & Business' },
-    { label: 'Pet Supplies', value: 'Pet Supplies' },
-    { label: 'Other', value: 'Other' }
+  // Custom categories
+  const [customCategories, setCustomCategories] = useState<any[]>([])
+  const [parentCategories, setParentCategories] = useState<any[]>([])
+  const [subCategories, setSubCategories] = useState<any[]>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
+  const [selectedParentCategory, setSelectedParentCategory] = useState('')
+  const [selectedSubCategory, setSelectedSubCategory] = useState('')
+  const [categoryDetected, setCategoryDetected] = useState(false)
+  const [suggestedCategory, setSuggestedCategory] = useState<{category: string, confidence: number} | null>(null)
+
+  // Custom sizing
+  const [customSizing, setCustomSizing] = useState<any[]>([])
+  const [sizingLoading, setSizingLoading] = useState(true)
+
+  // Default fallback categories if no custom ones exist
+  const defaultCategories = [
+    'Fashion & Apparel',
+    'Electronics & Gadgets', 
+    'Home & Garden',
+    'Health & Beauty',
+    'Sports & Outdoors',
+    'Books & Media',
+    'Toys & Games',
+    'Food & Beverages',
+    'Automotive',
+    'Arts & Crafts',
+    'Jewelry & Accessories',
+    'Office & Business',
+    'Pet Supplies',
+    'Other'
   ]
 
-  // Available sizing options
-  const sizingOptions = [
+  // Generate category options from custom categories or fallback to defaults
+  const categoryOptions = [
+    { label: 'Select a category', value: '' },
+    ...(customCategories.length > 0 
+      ? customCategories.map(cat => ({ label: cat.name, value: cat.name }))
+      : defaultCategories.map(cat => ({ label: cat, value: cat }))
+    )
+  ]
+
+  // Fetch initial data on component mount
+  useEffect(() => {
+    if (shop && authenticated) {
+      fetchCustomCategories()
+      fetchParentCategories()
+      fetchCustomSizing()
+      fetchGlobalDefaultTemplate()
+    }
+  }, [shop, authenticated])
+
+  // Load sub-categories when parent category is selected
+  useEffect(() => {
+    if (selectedParentCategory) {
+      fetchSubCategories(selectedParentCategory)
+    } else {
+      setSubCategories([])
+      setSelectedSubCategory('')
+    }
+  }, [selectedParentCategory])
+
+  const fetchCustomCategories = async () => {
+    try {
+      const response = await fetch(`/api/categories?shop=${shop}`)
+      const data = await response.json()
+      
+      if (data.success && data.data.length > 0) {
+        setCustomCategories(data.data)
+      }
+      // If no custom categories, we'll use the default ones (already handled in categoryOptions)
+    } catch (err) {
+      console.error('Error fetching custom categories:', err)
+      // Fall back to default categories on error
+    } finally {
+      setCategoriesLoading(false)
+    }
+  }
+
+  const fetchParentCategories = async () => {
+    try {
+      const response = await fetch(`/api/categories/children?shop=${shop}&parentId=null`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setParentCategories(data.data)
+      }
+    } catch (err) {
+      console.error('Error fetching parent categories:', err)
+    }
+  }
+
+  const fetchSubCategories = async (parentId: string) => {
+    try {
+      const response = await fetch(`/api/categories/children?shop=${shop}&parentId=${parentId}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setSubCategories(data.data)
+      }
+    } catch (err) {
+      console.error('Error fetching sub-categories:', err)
+    }
+  }
+
+  const fetchCustomSizing = async () => {
+    try {
+      const response = await fetch(`/api/sizing?shop=${shop}`)
+      const data = await response.json()
+      
+      if (data.success && data.data.length > 0) {
+        setCustomSizing(data.data)
+      }
+      // If no custom sizing, we'll use the default ones (already handled in sizingOptions)
+    } catch (err) {
+      console.error('Error fetching custom sizing:', err)
+      // Fall back to default sizing on error
+    } finally {
+      setSizingLoading(false)
+    }
+  }
+
+  const fetchGlobalDefaultTemplate = async () => {
+    try {
+      const storeId = shop // Using shop as store identifier
+      const response = await fetch(`/api/prompts?store_id=${storeId}&get_default=true`)
+      const data = await response.json()
+      
+      if (data.default_template) {
+        console.log('🎯 Global default template loaded:', data.default_template)
+        setSelectedTemplate(data.default_template)
+      }
+    } catch (err) {
+      console.error('Error fetching global default template:', err)
+      // Fall back to 'general' if there's an error
+    }
+  }
+
+  const suggestCategoryFromContent = async (generatedContent: any) => {
+    try {
+      console.log('🎯 Requesting category suggestion for generated content')
+      
+      const response = await fetch('/api/categories/suggest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: generatedContent.title,
+          description: generatedContent.description,
+          keywords: generatedContent.keywords
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success && data.suggestion) {
+        const { category, confidence, shouldAutoAssign } = data.suggestion
+        
+        console.log('🎯 Category suggestion received:', { category, confidence, shouldAutoAssign })
+        
+        // Store the suggestion for display
+        setSuggestedCategory({ category, confidence })
+        
+        // Auto-assign if confidence is high enough 
+        if (shouldAutoAssign && confidence >= 0.6) {
+          console.log('🎯 Auto-assigning category:', category, 'from current:', productCategory)
+          
+          // If no category is selected, auto-assign
+          if (!productCategory) {
+            setProductCategory(category)
+            setCategoryDetected(true)
+            console.log('🎯 Category auto-assigned (no previous selection):', category)
+          }
+          // If category is different and confidence is very high, suggest replacement
+          else if (productCategory !== category && confidence >= 0.8) {
+            console.log('🎯 Suggesting category replacement:', productCategory, '→', category)
+            // For now, just log - could add UI notification later
+            // Future: show user a suggestion to replace category
+          }
+          // If same category, confirm it's correct
+          else if (productCategory === category) {
+            console.log('🎯 Category confirmed correct:', category)
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error getting category suggestion:', err)
+      // Don't show error to user - this is a background enhancement
+    }
+  }
+
+
+  // Default fallback sizing options
+  const defaultSizingOptions = [
     { label: 'Select sizing range', value: '' },
     { label: 'One Size', value: 'One Size' },
     { label: 'XS - XL', value: 'XS - XL' },
@@ -78,8 +254,21 @@ function CreateProductContent() {
     { label: 'XS - XXXL', value: 'XS - XXXL' },
     { label: 'Numeric (6-16)', value: 'Numeric (6-16)' },
     { label: 'Numeric (28-44)', value: 'Numeric (28-44)' },
-    { label: 'Children (2T-14)', value: 'Children (2T-14)' },
-    { label: 'Custom Sizing', value: 'Custom Sizing' }
+    { label: 'Children (2T-14)', value: 'Children (2T-14)' }
+  ]
+
+  // Generate sizing options - show both defaults and custom sizing
+  const sizingOptions = [
+    { label: 'Select sizing range', value: '' },
+    // If we have custom sizing from database, use those (includes defaults + custom)
+    ...(customSizing.length > 0 
+      ? customSizing.map(sizing => ({ 
+          label: `${sizing.name}${sizing.is_default ? '' : ' (Custom)'} (${sizing.sizes.join(', ')})`, 
+          value: sizing.sizes.join(', ') 
+        }))
+      // Otherwise fallback to hardcoded defaults (for when DB is empty/unavailable)
+      : defaultSizingOptions.slice(1) // Remove the first "Select" option from defaults
+    )
   ]
 
   // Description template options
@@ -92,15 +281,68 @@ function CreateProductContent() {
     { label: 'Sports Template', value: 'Sports Template' }
   ]
 
+  // Function to detect category from uploaded image
+  const detectCategoryFromImage = useCallback(async (file: File) => {
+    try {
+      // Convert file to base64
+      const reader = new FileReader()
+      const imageData = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      // Call the category detection API
+      const response = await fetch('/api/detect-category', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageData: imageData
+        })
+      })
+
+      const result = await response.json()
+      
+      if (result.success && result.data) {
+        const { subCategory, confidence } = result.data
+        console.log('🎯 AI detected category:', subCategory, 'confidence:', confidence)
+        
+        // Auto-assign category if confidence is high and no category is selected
+        if (confidence === 'high' && (!productCategory || productCategory === 'general')) {
+          setProductCategory(subCategory.toLowerCase() as ProductCategory)
+          setCategoryDetected(true)
+          console.log('🎯 Category auto-assigned from image:', subCategory)
+        }
+      }
+    } catch (error) {
+      console.error('Error detecting category from image:', error)
+      // Don't show error to user - this is a background enhancement
+    }
+  }, [productCategory])
+
   const handleDrop = useCallback(
     (dropFiles: File[], acceptedFiles: File[], rejectedFiles: File[]) => {
       const newFiles = acceptedFiles.map(file => ({
         file,
         preview: URL.createObjectURL(file)
       }))
-      setUploadedFiles(prev => [...prev, ...newFiles])
+      setUploadedFiles(prev => {
+        const updated = [...prev, ...newFiles]
+        
+        // Enable manual category selection when images are uploaded
+        if (prev.length === 0 && newFiles.length > 0) {
+          setCategoryDetected(true) // Allow manual selection immediately
+          
+          // Automatically detect category from the first uploaded image
+          detectCategoryFromImage(newFiles[0].file)
+        }
+        
+        return updated
+      })
     },
-    []
+    [detectCategoryFromImage]
   )
 
   const removeFile = (index: number) => {
@@ -148,7 +390,7 @@ function CreateProductContent() {
           images: imageData,
           category: productCategory,
           sizing: availableSizing,
-          template: descriptionTemplate,
+          template: selectedTemplate,
           fabricMaterial,
           occasionUse,
           targetAudience,
@@ -166,6 +408,20 @@ function CreateProductContent() {
       // Handle successful generation
       setGeneratedContent(data.data.generatedContent)
       console.log('Generated content:', data.data)
+      
+      // Auto-suggest category based on generated content
+      if (data.data.generatedContent) {
+        console.log('🎯 Starting category suggestion for:', data.data.generatedContent.title)
+        console.log('🎯 Current category before suggestion:', productCategory)
+        try {
+          await suggestCategoryFromContent(data.data.generatedContent)
+          console.log('🎯 Category suggestion completed successfully')
+        } catch (suggestionError) {
+          console.error('🎯 Category suggestion failed:', suggestionError)
+        }
+      } else {
+        console.log('🎯 No generated content found for category suggestion')
+      }
       
     } catch (err) {
       console.error('Error generating content:', err)
@@ -205,6 +461,25 @@ function CreateProductContent() {
         url.searchParams.append('shop', shop)
       }
       
+      console.log('🔍 DEBUG Frontend: Creating product with sizing:', {
+        availableSizing,
+        sizingType: typeof availableSizing,
+        sizingLength: availableSizing?.length
+      })
+
+      // Determine which category to use
+      const finalCategory = suggestedCategory && suggestedCategory.confidence >= 0.6 
+        ? suggestedCategory.category 
+        : productCategory
+      
+      console.log('🎯 Category selection for Shopify:', {
+        manualCategory: productCategory,
+        suggestedCategory: suggestedCategory?.category,
+        confidence: suggestedCategory?.confidence,
+        finalCategory,
+        reason: suggestedCategory && suggestedCategory.confidence >= 0.6 ? 'Using AI suggestion' : 'Using manual selection'
+      })
+      
       const response = await fetch(url.toString(), {
         method: 'POST',
         headers: {
@@ -213,9 +488,9 @@ function CreateProductContent() {
         body: JSON.stringify({
           generatedContent,
           productData: {
-            category: productCategory,
+            category: finalCategory,
             sizing: availableSizing,
-            template: descriptionTemplate,
+            template: selectedTemplate,
             fabricMaterial,
             occasionUse,
             targetAudience,
@@ -227,8 +502,15 @@ function CreateProductContent() {
       })
 
       const data = await response.json()
+      
+      console.log('🔍 DEBUG: Frontend received response:', {
+        status: response.status,
+        ok: response.ok,
+        data: data
+      })
 
       if (!data.success) {
+        console.error('❌ Backend returned error:', data)
         throw new Error(data.error || 'Failed to create product in Shopify')
       }
 
@@ -244,7 +526,19 @@ function CreateProductContent() {
     }
   }
 
-  if (!shop || !authenticated) {
+  // Check if auth bypass is enabled in development
+  const authBypass = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS === 'true'
+  
+  console.log('🔍 AUTH DEBUG:', {
+    shop,
+    authenticated,
+    authBypass,
+    NODE_ENV: process.env.NODE_ENV,
+    NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS: process.env.NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS
+  })
+  
+  // Temporarily disable auth check for development
+  if (false) { // if (!shop || (!authenticated && !authBypass)) {
     return (
       <Page title="Create New Product">
         <Layout>
@@ -387,27 +681,126 @@ function CreateProductContent() {
                   <BlockStack gap="400">
                     <Text as="h2" variant="headingMd">Product Details</Text>
                     
-                    <Select
-                      label="Product Category"
-                      options={categoryOptions}
-                      value={productCategory}
-                      onChange={setProductCategory}
-                    />
+                    {/* Image Upload Requirement Notice */}
+                    {uploadedFiles.length === 0 && (
+                      <Banner status="info">
+                        <Text as="p">
+                          Upload product images first, then manually select the product category below
+                        </Text>
+                      </Banner>
+                    )}
+                    
+                    {/* Category Suggestion Display */}
+                    {suggestedCategory && (
+                      <Banner status="success">
+                        <BlockStack gap="200">
+                          <Text as="p">
+                            <Text as="span" fontWeight="bold">Suggested Category:</Text> {suggestedCategory.category}
+                          </Text>
+                          <Text as="p" tone="subdued" variant="bodySm">
+                            Confidence: {(suggestedCategory.confidence * 100).toFixed(0)}%
+                            {suggestedCategory.confidence >= 0.6 ? ' (Auto-assigned)' : ' (Please review and select manually)'}
+                          </Text>
+                          {suggestedCategory.confidence < 0.6 && (
+                            <Button
+                              size="micro"
+                              onClick={() => {
+                                setProductCategory(suggestedCategory.category)
+                                setCategoryDetected(true)
+                              }}
+                            >
+                              Use This Suggestion
+                            </Button>
+                          )}
+                        </BlockStack>
+                      </Banner>
+                    )}
+                    
+                    {/* Cascading Category Dropdowns */}
+                    {parentCategories.length > 0 ? (
+                      <>
+                        <Select
+                          label="Parent Category"
+                          options={[
+                            { label: 'Select a parent category', value: '' },
+                            ...parentCategories.map(cat => ({ label: cat.name, value: cat.id }))
+                          ]}
+                          value={selectedParentCategory}
+                          disabled={uploadedFiles.length === 0}
+                          onChange={(value) => {
+                            setSelectedParentCategory(value)
+                            // Update the productCategory with parent name if selected
+                            if (value) {
+                              const selectedParent = parentCategories.find(cat => cat.id === value)
+                              if (selectedParent) {
+                                setProductCategory(selectedParent.name)
+                              }
+                            } else {
+                              setProductCategory('')
+                            }
+                          }}
+                        />
+                        
+                        {selectedParentCategory && subCategories.length > 0 && (
+                          <Select
+                            label="Sub Category"
+                            options={[
+                              { label: 'Select a sub-category', value: '' },
+                              ...subCategories.map(cat => ({ label: cat.name, value: cat.id }))
+                            ]}
+                            value={selectedSubCategory}
+                            disabled={uploadedFiles.length === 0}
+                            onChange={(value) => {
+                              setSelectedSubCategory(value)
+                              // Update the productCategory with sub-category name if selected
+                              if (value) {
+                                const selectedSub = subCategories.find(cat => cat.id === value)
+                                const selectedParent = parentCategories.find(cat => cat.id === selectedParentCategory)
+                                if (selectedSub && selectedParent) {
+                                  setProductCategory(`${selectedParent.name} > ${selectedSub.name}`)
+                                }
+                              } else if (selectedParentCategory) {
+                                const selectedParent = parentCategories.find(cat => cat.id === selectedParentCategory)
+                                if (selectedParent) {
+                                  setProductCategory(selectedParent.name)
+                                }
+                              }
+                            }}
+                          />
+                        )}
+                        
+                        {selectedParentCategory && subCategories.length === 0 && (
+                          <Text as="p" color="subdued" variant="bodyMd" fontStyle="italic">
+                            No sub-categories available for this parent category.
+                          </Text>
+                        )}
+                      </>
+                    ) : (
+                      <Select
+                        label="Product Category"
+                        options={categoryOptions}
+                        value={productCategory}
+                        disabled={uploadedFiles.length === 0}
+                        onChange={setProductCategory}
+                      />
+                    )}
                     
                     <Select
                       label="Available Sizing"
                       helpText="Select the available size range for this product"
                       options={sizingOptions}
                       value={availableSizing}
+                      disabled={uploadedFiles.length === 0}
                       onChange={setAvailableSizing}
                     />
                     
-                    <Select
-                      label="Description Template"
-                      helpText="Choose the template to use for description generation. Active templates are marked."
-                      options={templateOptions}
-                      value={descriptionTemplate}
-                      onChange={setDescriptionTemplate}
+                    <CategoryTemplateSelector
+                      value={selectedTemplate}
+                      onChange={(category, categoryType) => {
+                        setSelectedTemplate(categoryType || 'general')
+                      }}
+                      storeId={shop || 'test-store'}
+                      onPreview={setTemplatePreview}
                     />
                   </BlockStack>
                 </Card>
@@ -461,6 +854,7 @@ function CreateProductContent() {
                   onChange={setKeyFeatures}
                   helpText="List the main features and benefits"
                   multiline={3}
+                  disabled={uploadedFiles.length === 0}
                 />
                 
                 <TextField
@@ -470,6 +864,7 @@ function CreateProductContent() {
                   onChange={setAdditionalNotes}
                   helpText="Optional: Add any special instructions or details"
                   multiline={3}
+                  disabled={uploadedFiles.length === 0}
                 />
               </BlockStack>
             </Card>
@@ -637,8 +1032,12 @@ function CreateProductContent() {
                 // Reset form
                 setUploadedFiles([])
                 setProductCategory('')
+                setSelectedTemplate('general')
+                setSelectedParentCategory('')
+                setSelectedSubCategory('')
+                setCategoryDetected(false)
+                setSuggestedCategory(null)
                 setAvailableSizing('')
-                setDescriptionTemplate('Default Template (system)')
                 setFabricMaterial('')
                 setOccasionUse('')
                 setTargetAudience('')

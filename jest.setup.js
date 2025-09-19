@@ -135,7 +135,7 @@ jest.mock('@supabase/supabase-js', () => ({
 
 // Mock environment variables
 process.env.NEXTAUTH_SECRET = 'test-secret'
-process.env.NEXTAUTH_URL = 'http://localhost:3000'
+process.env.NEXTAUTH_URL = 'http://localhost:3050'
 process.env.OPENAI_API_KEY = 'test-openai-key'
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
