@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import { openai } from '@/lib/openai'
 import { getCombinedPrompt, type ProductCategory } from '@/lib/prompts'
-
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('OPENAI_API_KEY environment variable is not set')
-}
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
 
 interface CreateProductRequest {
   images: string[] // base64 encoded images
@@ -58,8 +50,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Use the development store UUID directly (matches what's in database)
-    const storeId = '550e8400-e29b-41d4-a716-446655440000'  // Development store UUID
+    // Use configurable development store ID
+    const storeId = process.env.DEVELOPMENT_STORE_ID || '550e8400-e29b-41d4-a716-446655440000'
     
     // Frontend already sends the correct backend category key (e.g. 'womens_clothing')
     // No mapping needed - use the template value directly

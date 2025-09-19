@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, Suspense } from 'react'
+import { useState, useCallback, useEffect, Suspense, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
   Page,
@@ -18,7 +18,8 @@ import {
   DropZone,
   Thumbnail,
   Modal,
-  Frame
+  Frame,
+  ProgressBar
 } from '@shopify/polaris'
 import { CategoryTemplateSelector } from '@/app/components/CategoryTemplateSelector'
 import { type ProductCategory } from '@/lib/prompts'
@@ -66,6 +67,19 @@ function CreateProductContent() {
   const [generatedContent, setGeneratedContent] = useState<any>(null)
   const [creatingProduct, setCreatingProduct] = useState(false)
   const [productCreated, setProductCreated] = useState<any>(null)
+  const [progress, setProgress] = useState(0)
+  
+  // Progress timer ref
+  const progressTimer = useRef<NodeJS.Timeout | null>(null)
+  
+  // Cleanup progress timer on unmount
+  useEffect(() => {
+    return () => {
+      if (progressTimer.current) {
+        clearInterval(progressTimer.current)
+      }
+    }
+  }, [])
 
   // Custom categories
   const [customCategories, setCustomCategories] = useState<any[]>([])
@@ -491,7 +505,21 @@ function CreateProductContent() {
 
     setGenerating(true)
     setError(null)
+    setProgress(0)
     setShowModal(true)
+    
+    // Start progress animation (15 seconds to ~90%, then slow down)
+    let currentProgress = 0
+    progressTimer.current = setInterval(() => {
+      currentProgress += Math.random() * 8 + 2 // 2-10% increments
+      if (currentProgress >= 90) {
+        currentProgress = 90 // Cap at 90% until completion
+        if (progressTimer.current) {
+          clearInterval(progressTimer.current)
+        }
+      }
+      setProgress(Math.min(currentProgress, 90))
+    }, 800) // Update every 800ms
 
     try {
       // Convert primary photos to base64 for API (combine with secondary photos for description generation)
@@ -530,6 +558,12 @@ function CreateProductContent() {
         throw new Error(data.error || 'Generation failed')
       }
 
+      // Complete progress bar
+      if (progressTimer.current) {
+        clearInterval(progressTimer.current)
+      }
+      setProgress(100)
+      
       // Handle successful generation
       setGeneratedContent(data.data.generatedContent)
       console.log('Generated content:', data.data)
@@ -552,6 +586,10 @@ function CreateProductContent() {
       console.error('Error generating content:', err)
       setError('Failed to generate product description. Please try again.')
     } finally {
+      // Cleanup progress timer
+      if (progressTimer.current) {
+        clearInterval(progressTimer.current)
+      }
       setGenerating(false)
       setShowModal(false)
     }
@@ -1125,7 +1163,6 @@ function CreateProductContent() {
                   onChange={setKeyFeatures}
                   helpText="List the main features and benefits"
                   multiline={3}
-                  disabled={uploadedFiles.length === 0}
                 />
                 
                 <TextField
@@ -1135,7 +1172,6 @@ function CreateProductContent() {
                   onChange={setAdditionalNotes}
                   helpText="Optional: Add any special instructions or details"
                   multiline={3}
-                  disabled={uploadedFiles.length === 0}
                 />
               </BlockStack>
             </Card>
@@ -1182,8 +1218,8 @@ function CreateProductContent() {
                 Creating Your Product Description
               </Text>
               
-              <Box paddingBlockStart="400" paddingBlockEnd="400">
-                <Spinner size="large" />
+              <Box paddingBlockStart="400" paddingBlockEnd="400" width="100%">
+                <ProgressBar progress={progress} size="large" />
               </Box>
               
               <BlockStack gap="200" align="center">
