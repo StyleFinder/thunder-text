@@ -133,6 +133,15 @@ export async function POST(request: NextRequest) {
       willAddCategoryField: !!shopifyCategoryId
     })
 
+    // Parse color variants from detected colors
+    let colorVariants = []
+    if (productData?.colorVariants && productData.colorVariants.length > 0) {
+      colorVariants = productData.colorVariants.map(variant => 
+        variant.userOverride || variant.standardizedColor
+      )
+      console.log('🎨 DEBUG: Processing color variants:', colorVariants)
+    }
+
     // Parse sizing data to get available sizes (for explicit variant creation)
     let sizeVariants = []
     if (productData?.sizing) {
@@ -160,7 +169,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Prepare product data for Shopify (2025-01 API format) - Try productOptions with simple string format  
+    // Prepare product data for Shopify (2025-01 API format) - Handle both color and size variants
+    const productOptions = []
+    
+    // Add color option if we have color variants
+    if (colorVariants.length > 0) {
+      productOptions.push({
+        name: 'Color',
+        values: colorVariants.map(color => ({ name: color }))
+      })
+    }
+    
+    // Add size option if we have size variants
+    if (sizeVariants.length > 0) {
+      productOptions.push({
+        name: 'Size',
+        values: sizeVariants.map(size => ({ name: size }))
+      })
+    }
+    
     const productInput = {
       title: generatedContent.title,
       descriptionHtml: generatedContent.description, 
@@ -170,13 +197,8 @@ export async function POST(request: NextRequest) {
       tags: generatedContent.keywords ? generatedContent.keywords : [],
       // Add category assignment for Shopify Admin interface using correct 2025-01 API field
       ...(shopifyCategoryId ? { category: shopifyCategoryId } : {}),
-      // Use correct productOptions format with proper key-value objects
-      ...(sizeVariants.length > 0 ? {
-        productOptions: [{
-          name: 'Size',
-          values: sizeVariants.map(size => ({ name: size })) // Correct object format
-        }]
-      } : {})
+      // Include productOptions if we have any variants
+      ...(productOptions.length > 0 ? { productOptions } : {})
     }
 
     // TODO: Handle image uploads to Shopify
@@ -293,22 +315,57 @@ export async function POST(request: NextRequest) {
       // Continue anyway, metafields are not critical
     }
 
-    // Create explicit variants for each size (since productOptions alone don't create variants in 2025-01 API)
-    if (sizeVariants.length > 0) {
-      console.log('🔍 DEBUG: Creating explicit variants for sizes:', sizeVariants)
+    // Create explicit variants for color/size combinations (since productOptions alone don't create variants in 2025-01 API)
+    if (colorVariants.length > 0 || sizeVariants.length > 0) {
+      console.log('🔍 DEBUG: Creating explicit variants for colors:', colorVariants, 'sizes:', sizeVariants)
       
       try {
-        // Skip the first variant since Shopify auto-creates it from productOptions
-        const additionalVariants = sizeVariants.slice(1).map((size: string) => ({
-          optionValues: [
-            {
-              optionName: 'Size',
-              name: size
+        // Generate all combinations of colors and sizes
+        const allVariantCombinations = []
+        
+        if (colorVariants.length > 0 && sizeVariants.length > 0) {
+          // Both colors and sizes - create all combinations
+          console.log('🔍 DEBUG: Creating color + size combinations')
+          for (const color of colorVariants) {
+            for (const size of sizeVariants) {
+              allVariantCombinations.push({
+                optionValues: [
+                  { optionName: 'Color', name: color },
+                  { optionName: 'Size', name: size }
+                ],
+                price: '0.00',
+                inventoryPolicy: 'DENY'
+              })
             }
-          ],
-          price: '0.00', // Default price - can be updated later in Shopify admin
-          inventoryPolicy: 'DENY'
-        }))
+          }
+        } else if (colorVariants.length > 0) {
+          // Only colors
+          console.log('🔍 DEBUG: Creating color-only variants')
+          for (const color of colorVariants) {
+            allVariantCombinations.push({
+              optionValues: [
+                { optionName: 'Color', name: color }
+              ],
+              price: '0.00',
+              inventoryPolicy: 'DENY'
+            })
+          }
+        } else if (sizeVariants.length > 0) {
+          // Only sizes
+          console.log('🔍 DEBUG: Creating size-only variants')
+          for (const size of sizeVariants) {
+            allVariantCombinations.push({
+              optionValues: [
+                { optionName: 'Size', name: size }
+              ],
+              price: '0.00',
+              inventoryPolicy: 'DENY'
+            })
+          }
+        }
+
+        // Skip the first variant since Shopify auto-creates it from productOptions
+        const additionalVariants = allVariantCombinations.slice(1)
 
         console.log('🔍 DEBUG: Additional variant input data:', JSON.stringify(additionalVariants, null, 2))
         
@@ -320,7 +377,7 @@ export async function POST(request: NextRequest) {
             console.error('⚠️ Variant creation had errors:', variantResult.data.productVariantsBulkCreate.userErrors)
             // Continue anyway, product was created successfully
           } else {
-            console.log('✅ Additional size variants created successfully:', additionalVariants.length, 'variants')
+            console.log('✅ Additional variants created successfully:', additionalVariants.length, 'variants')
             
             // Create Google metafields for variants
             try {
@@ -330,10 +387,15 @@ export async function POST(request: NextRequest) {
               for (const variant of createdVariants) {
                 if (variant?.id) {
                   const variantTitle = variant.title || ''
+                  
+                  // Extract color and size from variant option values
+                  const colorOption = variant.selectedOptions?.find((opt: any) => opt.name === 'Color')
+                  const sizeOption = variant.selectedOptions?.find((opt: any) => opt.name === 'Size')
+                  
                   const googleVariantMetafields = generateGoogleVariantMetafields(
                     variantTitle,
-                    productData.color, // Use product color as default
-                    undefined, // Let function extract size from title
+                    colorOption?.value || productData.color, // Use variant color or fallback to product color
+                    sizeOption?.value, // Use variant size
                     undefined  // Material will be inherited from product
                   )
                   
@@ -352,10 +414,10 @@ export async function POST(request: NextRequest) {
             }
           }
         } else {
-          console.log('🔍 DEBUG: No additional variants to create (only one size)')
+          console.log('🔍 DEBUG: No additional variants to create (only default variant needed)')
         }
       } catch (variantError) {
-        console.error('⚠️ Error creating size variants (product still created):', variantError)
+        console.error('⚠️ Error creating variants (product still created):', variantError)
         // Continue anyway, product was created successfully
       }
     }

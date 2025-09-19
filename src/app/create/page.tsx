@@ -28,6 +28,16 @@ interface UploadedFile {
   preview: string
 }
 
+interface ColorVariant {
+  colorName: string
+  standardizedColor: string
+  confidence: number
+  imageIndices: number[]
+  primaryImageIndex: number
+  originalDetections: string[]
+  userOverride?: string
+}
+
 function CreateProductContent() {
   const searchParams = useSearchParams()
   const shop = searchParams?.get('shop')
@@ -35,6 +45,10 @@ function CreateProductContent() {
   
   // Form state
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+  const [primaryPhotos, setPrimaryPhotos] = useState<UploadedFile[]>([])
+  const [secondaryPhotos, setSecondaryPhotos] = useState<UploadedFile[]>([])
+  const [detectedVariants, setDetectedVariants] = useState<ColorVariant[]>([])
+  const [colorDetectionLoading, setColorDetectionLoading] = useState(false)
   const [productCategory, setProductCategory] = useState<ProductCategory>('general')
   const [selectedTemplate, setSelectedTemplate] = useState<ProductCategory>('general')
   const [availableSizing, setAvailableSizing] = useState('')
@@ -322,6 +336,116 @@ function CreateProductContent() {
     }
   }, [productCategory])
 
+  const detectColorsFromPrimaryPhotos = useCallback(async (photos: UploadedFile[]) => {
+    if (photos.length === 0) {
+      setDetectedVariants([])
+      return
+    }
+
+    setColorDetectionLoading(true)
+    console.log(`🎨 Starting color detection for ${photos.length} primary photos`)
+
+    try {
+      // Convert files to base64 for API
+      const imageData = await Promise.all(
+        photos.map(async ({ file }) => {
+          return new Promise<{ dataUrl: string; filename: string }>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = () => {
+              resolve({
+                dataUrl: reader.result as string,
+                filename: file.name
+              })
+            }
+            reader.readAsDataURL(file)
+          })
+        })
+      )
+
+      const response = await fetch('/api/detect-colors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: imageData })
+      })
+
+      const result = await response.json()
+      
+      if (result.success && result.variants) {
+        setDetectedVariants(result.variants)
+        console.log(`✅ Detected ${result.variants.length} color variants`)
+      } else {
+        console.error('Color detection failed:', result.error)
+        setDetectedVariants([])
+      }
+    } catch (error) {
+      console.error('Error detecting colors:', error)
+      setDetectedVariants([])
+    } finally {
+      setColorDetectionLoading(false)
+    }
+  }, [])
+
+  const updateVariantOverride = useCallback((standardizedColor: string, override: string) => {
+    setDetectedVariants(prev => prev.map(variant => 
+      variant.standardizedColor === standardizedColor 
+        ? { ...variant, userOverride: override.trim() || undefined }
+        : variant
+    ))
+  }, [])
+
+  const handlePrimaryPhotosDrop = useCallback((files: File[]) => {
+    const newFiles = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file)
+    }))
+    
+    setPrimaryPhotos(prev => {
+      const updated = [...prev, ...newFiles]
+      
+      // Trigger color detection when primary photos are added
+      detectColorsFromPrimaryPhotos(updated)
+      
+      // Also trigger category detection from first image
+      if (prev.length === 0 && newFiles.length > 0) {
+        setCategoryDetected(true)
+        detectCategoryFromImage(newFiles[0].file)
+      }
+      
+      return updated
+    })
+  }, [detectColorsFromPrimaryPhotos, detectCategoryFromImage])
+
+  const handleSecondaryPhotosDrop = useCallback((files: File[]) => {
+    const newFiles = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file)
+    }))
+    
+    setSecondaryPhotos(prev => [...prev, ...newFiles])
+  }, [])
+
+  const removePrimaryPhoto = (index: number) => {
+    setPrimaryPhotos(prev => {
+      const newPhotos = [...prev]
+      URL.revokeObjectURL(newPhotos[index].preview)
+      newPhotos.splice(index, 1)
+      
+      // Re-trigger color detection with remaining photos
+      detectColorsFromPrimaryPhotos(newPhotos)
+      
+      return newPhotos
+    })
+  }
+
+  const removeSecondaryPhoto = (index: number) => {
+    setSecondaryPhotos(prev => {
+      const newPhotos = [...prev]
+      URL.revokeObjectURL(newPhotos[index].preview)
+      newPhotos.splice(index, 1)
+      return newPhotos
+    })
+  }
+
   const handleDrop = useCallback(
     (dropFiles: File[], acceptedFiles: File[], rejectedFiles: File[]) => {
       const newFiles = acceptedFiles.map(file => ({
@@ -355,8 +479,8 @@ function CreateProductContent() {
   }
 
   const handleGenerateDescription = async () => {
-    if (uploadedFiles.length === 0) {
-      setError('Please upload at least one product image')
+    if (primaryPhotos.length === 0) {
+      setError('Please upload at least one primary photo')
       return
     }
 
@@ -370,9 +494,10 @@ function CreateProductContent() {
     setShowModal(true)
 
     try {
-      // Convert files to base64 for API
+      // Convert primary photos to base64 for API (combine with secondary photos for description generation)
+      const allPhotos = [...primaryPhotos, ...secondaryPhotos]
       const imageData = await Promise.all(
-        uploadedFiles.map(async ({ file }) => {
+        allPhotos.map(async ({ file }) => {
           return new Promise<string>((resolve) => {
             const reader = new FileReader()
             reader.onloadend = () => resolve(reader.result as string)
@@ -439,9 +564,10 @@ function CreateProductContent() {
     setError(null)
 
     try {
-      // Convert uploaded files to base64 for Shopify image upload
+      // Prepare all images for upload (primary photos will be used as variant images)
+      const allPhotos = [...primaryPhotos, ...secondaryPhotos]
       const uploadedImagesData = await Promise.all(
-        uploadedFiles.map(async ({ file }) => {
+        allPhotos.map(async ({ file }) => {
           return new Promise<{ dataUrl: string; name: string; altText: string }>((resolve) => {
             const reader = new FileReader()
             reader.onload = () => {
@@ -495,7 +621,8 @@ function CreateProductContent() {
             occasionUse,
             targetAudience,
             keyFeatures,
-            additionalNotes
+            additionalNotes,
+            colorVariants: detectedVariants
           },
           uploadedImages: uploadedImagesData
         })
@@ -608,46 +735,86 @@ function CreateProductContent() {
 
         <Layout.Section>
           <BlockStack gap="500">
-            {/* Image Upload Section */}
+            {/* Primary Photos Upload */}
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">Product Images</Text>
+                <Text as="h2" variant="headingMd">Primary Photos (One per color variant)</Text>
                 <Text as="p" tone="subdued">
-                  Drag & drop product images here, or click to select
+                  Upload one photo for each color variant of your product. These will be used for automatic color detection.
                 </Text>
-                <Text as="p" tone="subdued">
-                  Supported formats: JPG, PNG, WebP (max 10MB per image, up to 10 images)
-                </Text>
-                
                 <DropZone
-                  onDrop={handleDrop}
+                  onDrop={(files) => handlePrimaryPhotosDrop(files.filter(f => f instanceof File) as File[])}
                   accept="image/*"
                   type="image"
                   allowMultiple
                 >
-                  {uploadedFiles.length > 0 ? (
+                  {primaryPhotos.length > 0 ? (
                     <BlockStack gap="300">
                       <InlineStack gap="300" wrap={false}>
-                        {uploadedFiles.map(({ file, preview }, index) => (
-                          <Box key={index}>
-                            <Thumbnail
-                              source={preview}
-                              alt={file.name}
-                              size="large"
-                            />
-                            <Box paddingBlockStart="200">
-                              <Button 
-                                size="micro" 
-                                onClick={() => removeFile(index)}
-                              >
-                                Remove
-                              </Button>
+                        {primaryPhotos.map(({ file, preview }, index) => {
+                          // Find the detected color for this image index
+                          const detectionResult = detectedVariants.find(variant => 
+                            variant.imageIndices.includes(index)
+                          )
+                          
+                          return (
+                            <Box key={index}>
+                              <div style={{ position: 'relative' }}>
+                                <Thumbnail
+                                  source={preview}
+                                  alt={file.name}
+                                  size="large"
+                                />
+                                {/* Color detection badge */}
+                                {detectionResult && (
+                                  <div style={{
+                                    position: 'absolute',
+                                    top: '4px',
+                                    right: '4px',
+                                    background: detectionResult.confidence > 50 ? '#1f8f4f' : '#d72c0d',
+                                    color: 'white',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    fontSize: '10px',
+                                    fontWeight: 'bold',
+                                    maxWidth: '80px',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {detectionResult.userOverride || detectionResult.standardizedColor}
+                                  </div>
+                                )}
+                                {/* Loading indicator during detection */}
+                                {colorDetectionLoading && !detectionResult && (
+                                  <div style={{
+                                    position: 'absolute',
+                                    top: '4px',
+                                    right: '4px',
+                                    background: '#666',
+                                    color: 'white',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    fontSize: '10px'
+                                  }}>
+                                    ...
+                                  </div>
+                                )}
+                              </div>
+                              <Box paddingBlockStart="200">
+                                <Button 
+                                  size="micro" 
+                                  onClick={() => removePrimaryPhoto(index)}
+                                >
+                                  Remove
+                                </Button>
+                              </Box>
                             </Box>
-                          </Box>
-                        ))}
+                          )
+                        })}
                       </InlineStack>
                       <Text as="p" tone="subdued">
-                        Drop more files here to add them, or click to browse
+                        Drop more primary photos here, or click to browse
                       </Text>
                     </BlockStack>
                   ) : (
@@ -661,12 +828,116 @@ function CreateProductContent() {
                     }}>
                       <BlockStack gap="200">
                         <Text as="p" variant="bodyLg">
-                          📷 Upload Product Images
+                          📷 Upload Primary Photos
                         </Text>
                         <Text as="p" tone="subdued">
-                          Drop files here or click to browse
+                          One photo per color variant for automatic detection
                         </Text>
-                        <Button>Select Images</Button>
+                        <Button>Select Primary Photos</Button>
+                      </BlockStack>
+                    </div>
+                  )}
+                </DropZone>
+              </BlockStack>
+            </Card>
+
+            {/* Color Detection Results */}
+            {(colorDetectionLoading || detectedVariants.length > 0) && (
+              <Card>
+                <BlockStack gap="400">
+                  <Text as="h2" variant="headingMd">Detected Color Variants</Text>
+                  
+                  {colorDetectionLoading ? (
+                    <BlockStack gap="200" inlineAlign="center">
+                      <Spinner size="small" />
+                      <Text as="p" tone="subdued">Detecting colors from your primary photos...</Text>
+                    </BlockStack>
+                  ) : (
+                    <BlockStack gap="300">
+                      {detectedVariants.map((variant, index) => (
+                        <Card key={variant.standardizedColor} background="bg-surface-secondary">
+                          <BlockStack gap="200">
+                            <InlineStack align="space-between">
+                              <Text as="h3" variant="headingSm">
+                                {variant.userOverride || variant.standardizedColor}
+                              </Text>
+                              <Text as="p" tone="subdued" variant="bodySm">
+                                {variant.confidence}% confidence
+                              </Text>
+                            </InlineStack>
+                            <Text as="p" tone="subdued" variant="bodySm">
+                              {variant.imageIndices.length} image(s) • Original detection: {variant.colorName}
+                            </Text>
+                            <TextField
+                              label="Override color name (optional)"
+                              value={variant.userOverride || ''}
+                              onChange={(value) => updateVariantOverride(variant.standardizedColor, value)}
+                              placeholder={`Leave blank to use "${variant.standardizedColor}"`}
+                            />
+                          </BlockStack>
+                        </Card>
+                      ))}
+                    </BlockStack>
+                  )}
+                </BlockStack>
+              </Card>
+            )}
+
+            {/* Secondary Photos Upload */}
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">Additional Photos (Multiple angles)</Text>
+                <Text as="p" tone="subdued">
+                  Upload additional photos showing different angles of the same color variants. These won't be used for color detection.
+                </Text>
+                <DropZone
+                  onDrop={(files) => handleSecondaryPhotosDrop(files.filter(f => f instanceof File) as File[])}
+                  accept="image/*"
+                  type="image"
+                  allowMultiple
+                >
+                  {secondaryPhotos.length > 0 ? (
+                    <BlockStack gap="300">
+                      <InlineStack gap="300" wrap={false}>
+                        {secondaryPhotos.map(({ file, preview }, index) => (
+                          <Box key={index}>
+                            <Thumbnail
+                              source={preview}
+                              alt={file.name}
+                              size="large"
+                            />
+                            <Box paddingBlockStart="200">
+                              <Button 
+                                size="micro" 
+                                onClick={() => removeSecondaryPhoto(index)}
+                              >
+                                Remove
+                              </Button>
+                            </Box>
+                          </Box>
+                        ))}
+                      </InlineStack>
+                      <Text as="p" tone="subdued">
+                        Drop more additional photos here, or click to browse
+                      </Text>
+                    </BlockStack>
+                  ) : (
+                    <div style={{ 
+                      padding: '60px 40px', 
+                      textAlign: 'center',
+                      border: '2px dashed #cccccc',
+                      borderRadius: '8px',
+                      backgroundColor: '#fafafa',
+                      cursor: 'pointer'
+                    }}>
+                      <BlockStack gap="200">
+                        <Text as="p" variant="bodyLg">
+                          📷 Upload Additional Photos
+                        </Text>
+                        <Text as="p" tone="subdued">
+                          Optional: Multiple angles of the same color variants
+                        </Text>
+                        <Button>Select Additional Photos</Button>
                       </BlockStack>
                     </div>
                   )}
@@ -682,10 +953,10 @@ function CreateProductContent() {
                     <Text as="h2" variant="headingMd">Product Details</Text>
                     
                     {/* Image Upload Requirement Notice */}
-                    {uploadedFiles.length === 0 && (
+                    {primaryPhotos.length === 0 && (
                       <Banner status="info">
                         <Text as="p">
-                          Upload product images first, then manually select the product category below
+                          Upload primary photos first, then manually select the product category below
                         </Text>
                       </Banner>
                     )}
@@ -726,7 +997,7 @@ function CreateProductContent() {
                             ...parentCategories.map(cat => ({ label: cat.name, value: cat.id }))
                           ]}
                           value={selectedParentCategory}
-                          disabled={uploadedFiles.length === 0}
+                          disabled={primaryPhotos.length === 0}
                           onChange={(value) => {
                             setSelectedParentCategory(value)
                             // Update the productCategory with parent name if selected
@@ -749,7 +1020,7 @@ function CreateProductContent() {
                               ...subCategories.map(cat => ({ label: cat.name, value: cat.id }))
                             ]}
                             value={selectedSubCategory}
-                            disabled={uploadedFiles.length === 0}
+                            disabled={primaryPhotos.length === 0}
                             onChange={(value) => {
                               setSelectedSubCategory(value)
                               // Update the productCategory with sub-category name if selected
@@ -780,7 +1051,7 @@ function CreateProductContent() {
                         label="Product Category"
                         options={categoryOptions}
                         value={productCategory}
-                        disabled={uploadedFiles.length === 0}
+                        disabled={primaryPhotos.length === 0}
                         onChange={setProductCategory}
                       />
                     )}
@@ -790,7 +1061,7 @@ function CreateProductContent() {
                       helpText="Select the available size range for this product"
                       options={sizingOptions}
                       value={availableSizing}
-                      disabled={uploadedFiles.length === 0}
+                      disabled={primaryPhotos.length === 0}
                       onChange={setAvailableSizing}
                     />
                     
@@ -886,7 +1157,7 @@ function CreateProductContent() {
                   primary
                   loading={generating}
                   onClick={handleGenerateDescription}
-                  disabled={uploadedFiles.length === 0 || !productCategory}
+                  disabled={primaryPhotos.length === 0 || !productCategory}
                 >
                   {generating ? 'Generating...' : 'Generate Description'}
                 </Button>
