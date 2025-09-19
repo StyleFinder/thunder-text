@@ -216,3 +216,6 @@ CRITICAL: The "description" field must strictly follow the custom prompt guideli
 
 // Singleton instance for the application
 export const aiGenerator = new AIDescriptionGenerator()
+
+// Export the OpenAI client for direct use
+export { openai }
