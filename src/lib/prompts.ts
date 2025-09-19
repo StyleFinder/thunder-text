@@ -51,9 +51,9 @@ export async function getStoreId(shopDomain: string): Promise<string | null> {
     // In development mode with auth bypass, use static UUID for consistency
     const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
     
-    if (authBypass) {
-      // Use the same static development UUID that's used throughout the app
-      return '550e8400-e29b-41d4-a716-446655440000'
+    if (authBypass || process.env.NODE_ENV === 'development') {
+      // Use environment variable or fallback to development UUID
+      return process.env.DEVELOPMENT_STORE_ID || '550e8400-e29b-41d4-a716-446655440000'
     }
     
     // In production, try to find the store in the database

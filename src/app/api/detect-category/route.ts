@@ -21,10 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use OpenAI Vision API to analyze the image and detect clothing category
-    const { OpenAI } = await import('openai')
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    })
+    const { openai } = await import('@/lib/openai')
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",

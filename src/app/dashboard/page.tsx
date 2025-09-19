@@ -16,31 +16,7 @@ import {
   Spinner
 } from '@shopify/polaris'
 
-interface Product {
-  node: {
-    id: string
-    title: string
-    description: string
-    handle: string
-    images: {
-      edges: Array<{
-        node: {
-          id: string
-          url: string
-          altText: string
-        }
-      }>
-    }
-  }
-}
-
-interface GeneratedContent {
-  title: string
-  description: string
-  bulletPoints: string[]
-  metaDescription: string
-  keywords: string[]
-}
+// Removed unused interfaces - they were not being used anywhere in the component
 
 function DashboardContent() {
   const searchParams = useSearchParams()
@@ -49,8 +25,8 @@ function DashboardContent() {
   
   console.log('Dashboard render:', { shop, authenticated })
 
-  // Temporarily disable auth check for development
-  if (false) { // if (!shop || !authenticated) {
+  // Restore proper authentication check for security
+  if (!shop || !authenticated) {
     return (
       <Page title="Thunder Text Dashboard">
         <Layout>
