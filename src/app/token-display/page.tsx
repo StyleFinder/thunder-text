@@ -1,5 +1,8 @@
 'use client'
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 import { useSearchParams } from 'next/navigation'
 import { Page, Layout, Card, Text, Button, Banner, LegacyStack } from '@shopify/polaris'
 import { useState, Suspense } from 'react'
