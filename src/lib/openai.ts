@@ -43,9 +43,9 @@ export class AIDescriptionGenerator {
       // Build the prompt based on request parameters and custom prompts
       const prompt = await this.buildPrompt(request)
       
-      // Analyze images using GPT-4 Vision
+      // Analyze images using GPT-4o with vision
       const response = await openai.chat.completions.create({
-        model: "gpt-4-vision-preview",
+        model: "gpt-4o",
         messages: [
           {
             role: "user",

@@ -1,0 +1,4 @@
+{
+  "name": "product-description-generator",
+  "welcome": "Bienvenue dans l'extension {{target}}!"
+}
