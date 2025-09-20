@@ -23,6 +23,7 @@ import {
 } from '@shopify/polaris'
 import { CategoryTemplateSelector } from '@/app/components/CategoryTemplateSelector'
 import { type ProductCategory } from '@/lib/prompts'
+import { fetchProductDataForPrePopulation, formatKeyFeatures, formatSizingData, type PrePopulatedProductData } from '@/lib/shopify/product-prepopulation'
 
 interface UploadedFile {
   file: File
@@ -43,6 +44,22 @@ function CreateProductContent() {
   const searchParams = useSearchParams()
   const shop = searchParams?.get('shop')
   const authenticated = searchParams?.get('authenticated')
+  
+  // Admin extension redirect parameters
+  const productId = searchParams?.get('productId')
+  const productTitle = searchParams?.get('productTitle')
+  const productType = searchParams?.get('productType')
+  const vendor = searchParams?.get('vendor')
+  const description = searchParams?.get('description')
+  const tagsParam = searchParams?.get('tags')
+  const imagesParam = searchParams?.get('images')
+  const variantsParam = searchParams?.get('variants')
+  const source = searchParams?.get('source')
+  
+  // Pre-populated product data state
+  const [prePopulatedData, setPrePopulatedData] = useState<PrePopulatedProductData | null>(null)
+  const [dataLoading, setDataLoading] = useState(false)
+  const [dataLoadError, setDataLoadError] = useState<string | null>(null)
   
   // Form state
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
@@ -121,6 +138,84 @@ function CreateProductContent() {
       : defaultCategories.map(cat => ({ label: cat, value: cat }))
     )
   ]
+
+  // Fetch comprehensive product data when coming from admin extension
+  useEffect(() => {
+    async function fetchProductData() {
+      if (source === 'admin_extension' && productId && shop) {
+        setDataLoading(true)
+        setDataLoadError(null)
+        
+        try {
+          console.log('🚀 Thunder Text: Fetching comprehensive product data', {
+            productId, shop, source
+          })
+          
+          const data = await fetchProductDataForPrePopulation(productId, shop)
+          
+          if (data) {
+            console.log('✅ Product data loaded successfully:', {
+              title: data.title,
+              imageCount: data.images.length,
+              variantCount: data.variants.length
+            })
+            
+            setPrePopulatedData(data)
+            
+            // Auto-populate form fields
+            setProductCategory(data.category.primary || 'general')
+            setCategoryDetected(true)
+            
+            if (data.vendor) {
+              setTargetAudience(data.vendor)
+            }
+            
+            if (data.materials.fabric) {
+              setFabricMaterial(data.materials.fabric)
+            }
+            
+            // Format and set key features
+            const formattedFeatures = formatKeyFeatures(data)
+            if (formattedFeatures) {
+              setKeyFeatures(formattedFeatures)
+            }
+            
+            // Format and set sizing data
+            const formattedSizing = formatSizingData(data.metafields.sizing)
+            if (formattedSizing) {
+              setAvailableSizing(formattedSizing)
+            }
+            
+            // Set additional notes from existing description if available
+            if (data.existingDescription) {
+              setAdditionalNotes(`Existing description: ${data.existingDescription.replace(/<[^>]*>/g, '').substring(0, 200)}...`)
+            }
+            
+          } else {
+            setDataLoadError('Could not load product data from Shopify')
+          }
+          
+        } catch (error) {
+          console.error('❌ Error fetching product data:', error)
+          setDataLoadError(`Failed to load product data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+          
+          // Fallback to basic admin extension data if comprehensive fetch fails
+          console.log('🔄 Falling back to basic admin extension data')
+          if (productType) {
+            setProductCategory(productType)
+            setCategoryDetected(true)
+          }
+          if (vendor) {
+            setTargetAudience(vendor)
+          }
+        } finally {
+          setDataLoading(false)
+        }
+      }
+    }
+    
+    fetchProductData()
+  }, [source, productId, shop])
 
   // Fetch initial data on component mount
   useEffect(() => {
@@ -742,32 +837,81 @@ function CreateProductContent() {
         {/* Information Banners */}
         <Layout.Section>
           <BlockStack gap="400">
-            <Banner status="info">
-              <BlockStack gap="200">
-                <Text as="h3" variant="headingMd">How to create a new product</Text>
-                <Text as="p">
-                  1. Upload product images (up to 5)
-                </Text>
-                <Text as="p">
-                  2. Fill in product details and sizing
-                </Text>
-                <Text as="p">
-                  3. Click "Generate Description" to create AI-powered content
-                </Text>
-                <Text as="p">
-                  4. Review and create the product in Shopify
-                </Text>
-              </BlockStack>
-            </Banner>
+            {/* Product Data Loading State */}
+            {dataLoading && (
+              <Banner status="info">
+                <BlockStack gap="200" inlineAlign="center">
+                  <Spinner size="small" />
+                  <Text as="p">Loading product data from Shopify...</Text>
+                </BlockStack>
+              </Banner>
+            )}
             
-            <Banner status="warning">
-              <BlockStack gap="200">
-                <Text as="h3" variant="headingMd">Looking to update an existing product?</Text>
-                <Text as="p">
-                  Use the "Update Existing Product" option from the dashboard to generate descriptions for products already in your store.
-                </Text>
-              </BlockStack>
-            </Banner>
+            {/* Product Data Load Error */}
+            {dataLoadError && (
+              <Banner status="warning">
+                <BlockStack gap="200">
+                  <Text as="h3" variant="headingMd">Product Data Load Error</Text>
+                  <Text as="p">{dataLoadError}</Text>
+                  <Text as="p">You can still create a product manually by uploading images and filling in the details below.</Text>
+                </BlockStack>
+              </Banner>
+            )}
+            
+            {/* Pre-populated Data Success */}
+            {prePopulatedData && !dataLoading && (
+              <Banner status="success">
+                <BlockStack gap="200">
+                  <Text as="h3" variant="headingMd">✅ Product Data Loaded from Shopify</Text>
+                  <Text as="p">
+                    Successfully loaded data for: <strong>{prePopulatedData.title}</strong>
+                  </Text>
+                  <BlockStack gap="100">
+                    <Text as="p">• {prePopulatedData.images.length} images available</Text>
+                    <Text as="p">• Category: {prePopulatedData.category.primary}</Text>
+                    <Text as="p">• {prePopulatedData.variants.length} variant(s)</Text>
+                    {prePopulatedData.materials.fabric && (
+                      <Text as="p">• Material: {prePopulatedData.materials.fabric}</Text>
+                    )}
+                  </BlockStack>
+                  <Text as="p" tone="subdued">
+                    Form fields have been pre-populated. You can upload additional images or modify the details below, then generate your description.
+                  </Text>
+                </BlockStack>
+              </Banner>
+            )}
+            
+            {/* Standard Instructions (when not from admin extension) */}
+            {source !== 'admin_extension' && (
+              <>
+                <Banner status="info">
+                  <BlockStack gap="200">
+                    <Text as="h3" variant="headingMd">How to create a new product</Text>
+                    <Text as="p">
+                      1. Upload product images (up to 5)
+                    </Text>
+                    <Text as="p">
+                      2. Fill in product details and sizing
+                    </Text>
+                    <Text as="p">
+                      3. Click "Generate Description" to create AI-powered content
+                    </Text>
+                    <Text as="p">
+                      4. Review and create the product in Shopify
+                    </Text>
+                  </BlockStack>
+                </Banner>
+                
+                <Banner status="warning">
+                  <BlockStack gap="200">
+                    <Text as="h3" variant="headingMd">Looking to update an existing product?</Text>
+                    <Text as="p">
+                      Use the "Update Existing Product" option from the dashboard to generate descriptions for products already in your store.
+                    </Text>
+                  </BlockStack>
+                </Banner>
+              </>
+            )}
           </BlockStack>
         </Layout.Section>
 

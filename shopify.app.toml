@@ -2,7 +2,7 @@
 
 client_id = "fa85f3902882734b800968440c27447d"
 name = "Thunder Text Dev911"
-application_url = "http://localhost:3050"
+application_url = "https://fa2334dbbd3b.ngrok-free.app"
 embedded = true
 handle = "thunder-text-15"
 
@@ -19,7 +19,7 @@ optional_scopes = [ ]
 use_legacy_install_flow = false
 
 [auth]
-redirect_urls = [ "http://localhost:3050/api/auth/callback/shopify" ]
+redirect_urls = [ "https://fa2334dbbd3b.ngrok-free.app/api/auth/callback/shopify" ]
 
 [pos]
 embedded = false

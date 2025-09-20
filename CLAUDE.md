@@ -148,15 +148,54 @@ Thunder Text is an AI-powered Shopify application that generates SEO-optimized p
 - **Phase Transitions**: Update memory with new requirements, lessons learned
 - **Session End**: Store outcomes, next steps, blockers for future sessions
 
+## Server Management Rules
+
+### Critical Conflict Prevention
+**NEVER start development servers if user is running their own terminal**
+
+#### Pre-Server Startup Checklist
+1. **Always check server status first**: `./check-servers.sh`
+2. **If Shopify processes detected**: Inform user, do NOT start additional servers
+3. **If ports occupied**: Show status, let user decide action
+4. **Only start servers if**: No conflicts detected AND user explicitly requests
+
+#### Server Coordination Protocol
+- **User Terminal Priority**: User-managed terminals take precedence
+- **Background Server Limits**: Maximum 1 Shopify dev process at any time
+- **Conflict Resolution**: Kill Claude's background servers, preserve user's
+- **Status Transparency**: Always show server status before making changes
+
+#### Quick Commands for Server Management
+```bash
+# Quick status check (for Claude automation)
+./status.sh
+
+# Detailed server status (for user review)
+./check-servers.sh
+
+# Quick restart (only if no user terminals)
+./restart-dev.sh
+
+# Kill only Claude's background servers
+pkill -f "shopify app dev" 2>/dev/null
+```
+
+#### Claude Automation Rules
+- **ALWAYS run `./status.sh` before starting any servers**
+- **Exit code 0**: Safe to proceed with server operations
+- **Exit code 1**: Server conflict detected - inform user, do NOT start servers
+- **When in doubt**: Show status and ask user for guidance
+
 ## Development Workflow
 
 ### Daily Development Pattern
-1. **Context Loading** - Review project memories, current phase status
-2. **Task Planning** - Use TodoWrite for session organization
-3. **Implementation** - Follow phase-specific patterns and quality gates
-4. **Progress Tracking** - Update memories, mark todos complete
-5. **Quality Validation** - Run tests, performance checks, security scans
-6. **Session Summary** - Store outcomes, blockers, next priorities
+1. **Server Status Check** - Run `./check-servers.sh` before any operations
+2. **Context Loading** - Review project memories, current phase status
+3. **Task Planning** - Use TodoWrite for session organization
+4. **Implementation** - Follow phase-specific patterns and quality gates
+5. **Progress Tracking** - Update memories, mark todos complete
+6. **Quality Validation** - Run tests, performance checks, security scans
+7. **Session Summary** - Store outcomes, blockers, next priorities
 
 ### Cross-Session Continuity
 - Maintain development context through memory system
