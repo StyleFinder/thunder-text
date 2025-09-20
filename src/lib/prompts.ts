@@ -216,6 +216,22 @@ export async function getGlobalDefaultTemplate(storeId: string): Promise<Product
 }
 
 /**
+ * Get default category template for Shopify extensions
+ */
+function getDefaultCategoryTemplate(category: ProductCategory): string {
+  const templates: Record<ProductCategory, string> = {
+    'womens_clothing': "Focus on style, comfort, and versatility. Highlight fabric quality, fit, and how the piece can be styled for different occasions.",
+    'jewelry_accessories': "Emphasize craftsmanship, materials, and the emotional connection. Describe how the piece enhances personal style and makes the wearer feel special.",
+    'home_living': "Focus on functionality, aesthetic appeal, and how the item improves daily life. Highlight quality, design, and the ambiance it creates.",
+    'beauty_personal_care': "Emphasize benefits, ingredients, and results. Focus on how the product makes the user look and feel better.",
+    'electronics': "Highlight key features, performance, and value. Focus on how the technology improves the user's life or work.",
+    'general': "Focus on key benefits, quality, and value proposition. Highlight what makes this product special and worth purchasing."
+  }
+  
+  return templates[category] || templates.general
+}
+
+/**
  * Get combined prompt for AI generation
  */
 export async function getCombinedPrompt(
@@ -223,6 +239,19 @@ export async function getCombinedPrompt(
   category: ProductCategory = 'general'
 ): Promise<CombinedPrompt | null> {
   try {
+    // For Shopify extensions, use default fallback prompts
+    if (storeId === 'shopify-extension-demo') {
+      const defaultSystemPrompt = "You are a professional product description writer. Create compelling, accurate, and engaging product descriptions that convert browsers into buyers."
+      const defaultCategoryTemplate = getDefaultCategoryTemplate(category)
+      const combined = combinePrompts(defaultSystemPrompt, defaultCategoryTemplate)
+      
+      return {
+        system_prompt: defaultSystemPrompt,
+        category_template: defaultCategoryTemplate,
+        combined
+      }
+    }
+
     const [systemPrompt, categoryTemplate] = await Promise.all([
       getSystemPrompt(storeId),
       getCategoryTemplate(storeId, category)
