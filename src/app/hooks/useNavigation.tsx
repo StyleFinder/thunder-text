@@ -1,7 +1,7 @@
 'use client'
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
 
 export interface NavigationItem {
   label: string
@@ -16,13 +16,28 @@ export interface NavigationItem {
 
 export function useNavigation() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const pathname = usePathname()
-  
-  const shop = searchParams?.get('shop')
-  const authenticated = searchParams?.get('authenticated')
-  const host = searchParams?.get('host')
-  const embedded = searchParams?.get('embedded')
+  const [params, setParams] = useState({
+    shop: null as string | null,
+    authenticated: null as string | null,
+    host: null as string | null,
+    embedded: null as string | null,
+  })
+
+  // Get search params on client side only to avoid SSR issues
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      setParams({
+        shop: urlParams.get('shop'),
+        authenticated: urlParams.get('authenticated'),
+        host: urlParams.get('host'),
+        embedded: urlParams.get('embedded'),
+      })
+    }
+  }, [])
+
+  const { shop, authenticated, host, embedded } = params
 
   // Check if we're in an embedded context
   const isEmbedded = typeof window !== 'undefined' && 
