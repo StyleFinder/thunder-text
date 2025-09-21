@@ -3,6 +3,11 @@
   "outputDirectory": ".next",
   "framework": "nextjs",
   "installCommand": "npm install --legacy-peer-deps",
+  "env": {
+    "SHOPIFY_APP_URL": "https://thunder-text-nine.vercel.app",
+    "NEXTAUTH_URL": "https://thunder-text-nine.vercel.app",
+    "NODE_ENV": "production"
+  },
   "headers": [
     {
       "source": "/(.*)",
