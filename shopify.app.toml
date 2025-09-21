@@ -2,9 +2,9 @@
 
 client_id = "fa85f3902882734b800968440c27447d"
 name = "Thunder Text Dev911"
-application_url = "https://thunder-text-nine.vercel.app"
+application_url = "https://thunder-text-nine.vercel.app?v=9f5b58e&t=20250921"
 embedded = true
-handle = "thunder-text-22"
+handle = "thunder-text-23"
 
 [build]
 dev_store_url = "zunosai-staging-test-store.myshopify.com"

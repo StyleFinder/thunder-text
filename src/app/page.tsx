@@ -48,6 +48,14 @@ export default function HomePage() {
                 <Text as="h2" variant="headingMd">Deployment Complete - Services Ready</Text>
               </InlineStack>
               
+              <Banner status="info">
+                <Text as="p" variant="bodyMd">
+                  🚀 <strong>Version:</strong> Vercel Build 9f5b58e (2025-09-21 07:30 AM) | 
+                  🌐 <strong>Source:</strong> thunder-text-nine.vercel.app | 
+                  ⚡ <strong>Status:</strong> Live Production
+                </Text>
+              </Banner>
+              
               <Text as="p" variant="bodyMd">
                 Thunder Text is now deployed and ready to generate AI-powered product descriptions for your Shopify store.
               </Text>
