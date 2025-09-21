@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, createContext, useContext } from 'react'
-import { useSearchParams } from 'next/navigation'
 
 interface AppBridgeContextType {
   isEmbedded: boolean
@@ -28,13 +27,21 @@ interface AppBridgeProviderProps {
 }
 
 export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
-  const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [shop, setShop] = useState<string | null>(null)
+  const [host, setHost] = useState<string | null>(null)
+  const [embedded, setEmbedded] = useState<string | null>(null)
   
-  const shop = searchParams?.get('shop')
-  const host = searchParams?.get('host')
-  const embedded = searchParams?.get('embedded')
+  // Get search params on client side only to avoid SSR issues
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      setShop(urlParams.get('shop'))
+      setHost(urlParams.get('host'))
+      setEmbedded(urlParams.get('embedded'))
+    }
+  }, [])
   
   // Detect if we're running in an embedded context
   const isEmbedded = typeof window !== 'undefined' && 
