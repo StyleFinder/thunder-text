@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import {
   Navigation,
   TopBar,
   Frame,
+  Spinner,
+  Box,
 } from '@shopify/polaris'
 import {
   HomeIcon,
@@ -18,7 +20,7 @@ interface AppNavigationProps {
   children: React.ReactNode
 }
 
-export function AppNavigation({ children }: AppNavigationProps) {
+function NavigationContent({ children }: AppNavigationProps) {
   const [mobileNavigationActive, setMobileNavigationActive] = useState(false)
   const { buildUrl, navigateTo, isActive, getAuthParams } = useNavigation()
   
@@ -130,5 +132,58 @@ export function AppNavigation({ children }: AppNavigationProps) {
         </main>
       </Frame>
     </div>
+  )
+}
+
+function NavigationFallback() {
+  return (
+    <div style={{ minHeight: '100vh' }}>
+      <Frame
+        topBar={
+          <TopBar
+            showNavigationToggle
+            userMenu={
+              <TopBar.UserMenu
+                actions={[
+                  {
+                    items: [
+                      { content: 'Loading...', disabled: true },
+                    ],
+                  },
+                ]}
+                name="Thunder Text"
+                detail="Loading..."
+                initials="TT"
+              />
+            }
+          />
+        }
+        navigation={
+          <Navigation location="/">
+            <Navigation.Section
+              items={[]}
+              title="Thunder Text"
+            />
+          </Navigation>
+        }
+        skipToContentTarget="main-content"
+      >
+        <main id="main-content">
+          <Box padding="800" minHeight="400px">
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+              <Spinner size="small" />
+            </div>
+          </Box>
+        </main>
+      </Frame>
+    </div>
+  )
+}
+
+export function AppNavigation({ children }: AppNavigationProps) {
+  return (
+    <Suspense fallback={<NavigationFallback />}>
+      <NavigationContent>{children}</NavigationContent>
+    </Suspense>
   )
 }
