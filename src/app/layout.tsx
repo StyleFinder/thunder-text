@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { PolarisProvider } from './components/PolarisProvider';
 import { AppLayout } from './components/AppLayout';
+import { AppBridgeProvider } from './components/AppBridgeProvider';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,9 +21,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <PolarisProvider>
-          <AppLayout>
-            {children}
-          </AppLayout>
+          <AppBridgeProvider>
+            <AppLayout>
+              {children}
+            </AppLayout>
+          </AppBridgeProvider>
         </PolarisProvider>
       </body>
     </html>

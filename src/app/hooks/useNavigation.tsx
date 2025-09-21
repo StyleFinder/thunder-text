@@ -21,15 +21,26 @@ export function useNavigation() {
   
   const shop = searchParams?.get('shop')
   const authenticated = searchParams?.get('authenticated')
+  const host = searchParams?.get('host')
+  const embedded = searchParams?.get('embedded')
+
+  // Check if we're in an embedded context
+  const isEmbedded = typeof window !== 'undefined' && 
+    (window.top !== window.self || embedded === '1' || !!host)
 
   const buildUrl = useCallback((path: string) => {
     const params = new URLSearchParams()
+    
     if (shop) params.append('shop', shop)
-    // Always include authenticated=true in development mode
-    const authValue = authenticated || 'true'
+    if (host) params.append('host', host)
+    if (embedded) params.append('embedded', embedded)
+    
+    // In embedded context, ensure we have authentication
+    const authValue = isEmbedded ? (authenticated || 'true') : authenticated
     if (authValue) params.append('authenticated', authValue)
+    
     return `${path}${params.toString() ? `?${params.toString()}` : ''}`
-  }, [shop, authenticated])
+  }, [shop, authenticated, host, embedded, isEmbedded])
 
   const navigateTo = useCallback((path: string) => {
     router.push(buildUrl(path))
@@ -47,8 +58,11 @@ export function useNavigation() {
   const getAuthParams = useCallback(() => ({
     shop,
     authenticated,
-    hasAuth: !!(shop && authenticated)
-  }), [shop, authenticated])
+    host,
+    embedded,
+    isEmbedded,
+    hasAuth: !!(shop && (authenticated || isEmbedded))
+  }), [shop, authenticated, host, embedded, isEmbedded])
 
   return {
     buildUrl,
@@ -57,6 +71,9 @@ export function useNavigation() {
     getAuthParams,
     currentPath: pathname,
     shop,
-    authenticated
+    authenticated,
+    host,
+    embedded,
+    isEmbedded
   }
 }

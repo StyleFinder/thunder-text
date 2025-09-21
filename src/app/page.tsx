@@ -59,7 +59,7 @@ export default function HomePage() {
                     <List.Item>Database: Connected to Supabase</List.Item>
                     <List.Item>AI Engine: OpenAI GPT-4 Vision Ready</List.Item>
                     <List.Item>Shopify API: Authentication Configured</List.Item>
-                    <List.Item>Deployment: Live on Render</List.Item>
+                    <List.Item>Deployment: Live on Vercel</List.Item>
                   </List>
                 </BlockStack>
               </Banner>
