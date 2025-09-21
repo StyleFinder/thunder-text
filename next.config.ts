@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   // Configure for embedded Shopify app
-  assetPrefix: process.env.NODE_ENV === 'production' ? 'https://shopify-generator-staging.onrender.com' : undefined,
+  // assetPrefix: process.env.NODE_ENV === 'production' ? 'https://shopify-generator-staging.onrender.com' : undefined,
   // Enable serving static files correctly in embedded context
   trailingSlash: false,
   // Configure headers for embedded iframe context
