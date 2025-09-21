@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+
+export const dynamic = 'force-dynamic'
 import {
   Page,
   Layout,
