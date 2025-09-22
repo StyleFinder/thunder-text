@@ -63,8 +63,8 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
         // Don't return - continue with basic workflow
       }
       
-      // Use the new overlay workflow URL
-      const targetUrl = `/product-overlay?${params.toString()}`;
+      // TEMPORARY: Use simple HTML file to bypass React loading issues
+      const targetUrl = `/overlay-test.html?${params.toString()}`;
       const fullUrl = `https://thunder-text-nine.vercel.app${targetUrl}`;
       
       console.log('🚀 Opening Thunder Text overlay:', fullUrl);
