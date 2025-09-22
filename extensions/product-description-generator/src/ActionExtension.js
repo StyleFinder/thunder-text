@@ -30,7 +30,7 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
   buildUI();
 
   function handleOpenThunderText() {
-    console.log('🎯 Starting Thunder Text overlay workflow...');
+    console.log('🎯 Button clicked! Starting Thunder Text overlay workflow...');
     
     try {
       // Get shop domain and access token from current admin context
@@ -59,12 +59,12 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
           const accessToken = window.shopifyApp?.accessToken || window.sessionToken;
           if (accessToken) params.set('accessToken', accessToken);
         } else {
-          console.log('⚠️ No product selected or data unavailable');
-          return;
+          console.log('⚠️ No product selected or data unavailable - continuing with basic workflow');
+          // Don't return - continue with basic workflow
         }
       } catch (dataError) {
-        console.log('⚠️ Could not extract product data:', dataError);
-        return;
+        console.log('⚠️ Could not extract product data:', dataError, '- continuing with basic workflow');
+        // Don't return - continue with basic workflow
       }
       
       // Use the new overlay workflow URL
