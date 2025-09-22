@@ -15,19 +15,40 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
   // Configure headers for embedded iframe context
   async headers() {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const baseHeaders = [
+      {
+        key: 'X-Frame-Options',
+        value: 'ALLOWALL'
+      },
+      {
+        key: 'Content-Security-Policy',
+        value: "frame-ancestors https://*.shopify.com https://admin.shopify.com"
+      }
+    ];
+    
+    // Add cache-busting headers in development
+    if (isDevelopment) {
+      baseHeaders.push(
+        {
+          key: 'Cache-Control',
+          value: 'no-cache, no-store, must-revalidate, max-age=0'
+        },
+        {
+          key: 'Pragma',
+          value: 'no-cache'
+        },
+        {
+          key: 'Expires',
+          value: '0'
+        }
+      );
+    }
+    
     return [
       {
         source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'ALLOWALL'
-          },
-          {
-            key: 'Content-Security-Policy',
-            value: "frame-ancestors https://*.shopify.com https://admin.shopify.com"
-          }
-        ],
+        headers: baseHeaders,
       },
     ]
   },

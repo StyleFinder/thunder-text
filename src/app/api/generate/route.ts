@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     // Check if this is a Shopify extension request (no auth required)
     const userAgent = request.headers.get('user-agent') || ''
     const referer = request.headers.get('referer') || ''
-    const isShopifyExtension = userAgent.includes('Shopify') || referer.includes('shopify') || referer.includes('localhost:3000') || referer.includes('localhost:3050') || process.env.SHOPIFY_AUTH_BYPASS === 'true'
+    const isShopifyExtension = userAgent.includes('Shopify') || referer.includes('shopify') || referer.includes('thunder-text-nine.vercel.app') || process.env.SHOPIFY_AUTH_BYPASS === 'true'
     
     let storeId = null
     let store = null
