@@ -24,8 +24,8 @@ function ProductOverlayContent() {
   const [error, setError] = useState<string | null>(null)
   const [overlayOpen, setOverlayOpen] = useState(true)
 
-  // Version tracking - Fix loading spinner issue
-  const COMMIT_HASH = 'fix-spinner-v1-' + Date.now().toString().slice(-6)
+  // Version tracking - FORCE VERCEL REDEPLOY - No Loading Spinner
+  const COMMIT_HASH = 'FORCE_DEPLOY_' + Date.now().toString().slice(-6)
   
   useEffect(() => {
     console.log('🎯 Thunder Text Product Overlay - Commit:', COMMIT_HASH, 'Loaded:', new Date().toISOString())
