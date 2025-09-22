@@ -5,8 +5,9 @@ const TARGET = 'admin.product-details.action.render';
 
 // Thunder Text product description generator - Overlay Workflow Version
 const CACHE_BUSTER = Date.now(); // Current timestamp for cache busting
-const COMMIT_HASH = '5c8ae85'; // Latest commit hash for version tracking
+const COMMIT_HASH = 'DIRECT_OVERLAY_v6'; // Force new deploy - direct overlay mode
 export default extension(TARGET, (root, { i18n, close, data }) => {
+  console.log(`🔥🔥🔥 DIRECT OVERLAY MODE - NO UI - ActionExtension.js LOADED 🔥🔥🔥`);
   console.log(`🚀🚀🚀 THUNDER TEXT OVERLAY v5.0 - COMMIT: ${COMMIT_HASH} - CACHE BUSTER: ${CACHE_BUSTER} 🚀🚀🚀`);
   console.log('Extension loaded with data:', data);
   console.log('🏷️ Version tracking - Commit:', COMMIT_HASH, 'Deployed:', new Date().toISOString());
