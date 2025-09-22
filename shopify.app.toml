@@ -4,7 +4,7 @@ client_id = "fa85f3902882734b800968440c27447d"
 name = "Thunder Text Dev911"
 application_url = "https://thunder-text-nine.vercel.app"
 embedded = true
-handle = "thunder-text-28"
+handle = "thunder-text-29"
 
 [build]
 dev_store_url = "zunosai-staging-test-store.myshopify.com"
