@@ -24,14 +24,14 @@ The Thunder Text Shopify extension was stuck in a loading/spinning state when tr
 - ✅ Build successful
 - ✅ Ready, watching for changes in your app
 - ✅ Proxy server started on port 62832
-- ✅ Using URL: https://shopify-product-generator.onrender.com
+- ✅ Using URL: https://thunder-text-nine.vercel.app
 - ✅ Store: zunosai-staging-test-store.myshopify.com
 
 ### 3. Extension Code Status
 **File**: `/Users/bigdaddy/prod_desc/thunder-text/extensions/product-description-generator/src/ActionExtension.jsx`
 
 **Key Changes Made**:
-- Changed fetch URL from relative `/api/generate` to absolute `https://shopify-product-generator.onrender.com/api/generate`
+- Changed fetch URL from relative `/api/generate` to absolute `https://thunder-text-nine.vercel.app/api/generate`
 - Added comprehensive debug logging with emoji markers
 - Added "Debug Generate" button for testing
 - Console log: `🚀 Thunder Text Extension Loading v3 - FRESH SERVER...`
@@ -49,7 +49,7 @@ The Thunder Text Shopify extension was stuck in a loading/spinning state when tr
 
 ## Technical Details
 **Extension Target**: `admin.product-details.action.render`  
-**API Endpoint**: `https://shopify-product-generator.onrender.com/api/generate`  
+**API Endpoint**: `https://thunder-text-nine.vercel.app/api/generate`  
 **Development Port**: 62832 (proxy)  
 **Store**: zunosai-staging-test-store.myshopify.com
 

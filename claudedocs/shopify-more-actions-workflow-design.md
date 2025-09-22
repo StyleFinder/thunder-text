@@ -97,7 +97,7 @@ function ProductActionExtension() {
 function constructAppUrl(productId) {
   const baseUrl = process.env.NODE_ENV === 'development' 
     ? 'http://localhost:3050'
-    : 'https://your-thunder-text-app.onrender.com';
+    : 'https://thunder-text-nine.vercel.app';
     
   return `${baseUrl}/create?productId=${productId}&source=shopify_admin`;
 }
