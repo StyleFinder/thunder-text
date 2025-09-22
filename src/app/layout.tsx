@@ -4,6 +4,7 @@ import "./globals.css";
 import { PolarisProvider } from './components/PolarisProvider';
 import { AppLayout } from './components/AppLayout';
 import { AppBridgeProvider } from './components/AppBridgeProvider';
+import { ServiceWorkerCleanup } from './components/ServiceWorkerCleanup';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,6 +23,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <PolarisProvider>
           <AppBridgeProvider>
+            <ServiceWorkerCleanup />
             <AppLayout>
               {children}
             </AppLayout>
