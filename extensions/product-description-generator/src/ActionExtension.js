@@ -15,7 +15,7 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
   console.log('🏷️ Version tracking - Commit:', COMMIT_HASH, 'Deployed:', new Date().toISOString());
   
   // Force cache invalidation by setting no-cache headers when possible
-  if (typeof document !== 'undefined') {
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     const meta = document.createElement('meta');
     meta.httpEquiv = 'Cache-Control';
     meta.content = 'no-cache, no-store, must-revalidate';
@@ -30,7 +30,10 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
     
     try {
       // Get shop domain and access token from current admin context
-      const shopDomain = window.location.hostname.replace('.myshopify.com', '');
+      let shopDomain = '';
+      if (typeof window !== 'undefined') {
+        shopDomain = window.location.hostname.replace('.myshopify.com', '');
+      }
       
       // Build parameters for the new overlay workflow
       const params = new URLSearchParams({
@@ -52,7 +55,10 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
           if (product.vendor) params.set('vendor', product.vendor);
           
           // Try to get access token from session (if available)
-          const accessToken = window.shopifyApp?.accessToken || window.sessionToken;
+          let accessToken = null;
+          if (typeof window !== 'undefined') {
+            accessToken = window.shopifyApp?.accessToken || window.sessionToken;
+          }
           if (accessToken) params.set('accessToken', accessToken);
         } else {
           console.log('⚠️ No product selected or data unavailable - continuing with basic workflow');
@@ -72,6 +78,10 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
       
       // Try multiple methods to open the overlay
       try {
+        if (typeof window === 'undefined') {
+          console.error('window is undefined — cannot open popup');
+          return;
+        }
         // Method 1: Standard window.open
         const newWindow = window.open(fullUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
         
@@ -95,7 +105,7 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
           });
           
           // Method 2: Try top window
-          if (window.top && window.top !== window) {
+          if (typeof window !== 'undefined' && window.top && window.top !== window) {
             console.log('🔄 Trying window.top.open');
             try {
               const topWindow = window.top.open(fullUrl, '_blank');
@@ -113,7 +123,7 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
           }
           
           // Method 3: Try parent window
-          if (window.parent && window.parent !== window) {
+          if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
             console.log('🔄 Trying window.parent.open');
             try {
               const parentWindow = window.parent.open(fullUrl, '_blank');
