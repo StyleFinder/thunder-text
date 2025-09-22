@@ -5,7 +5,7 @@ const TARGET = 'admin.product-details.action.render';
 
 // Thunder Text product description generator - FORCE REBUILD v7.0 - CACHE BREAK
 const CACHE_BUSTER = Date.now(); // Current timestamp for cache busting  
-const COMMIT_HASH = '3478388'; // Latest commit: BYPASS REACT - Use simple HTML overlay
+const COMMIT_HASH = '8293e0e'; // Latest commit: AGGRESSIVE DEBUG - Multiple window.open fallback methods
 const FORCE_REBUILD = 'CACHE_BREAK_v7_' + Math.random().toString(36).substring(7);
 export default extension(TARGET, (root, { i18n, close, data }) => {
   console.log(`🔥🔥🔥 DIRECT OVERLAY MODE - NO UI - ActionExtension.js LOADED 🔥🔥🔥`);
@@ -75,40 +75,69 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
         // Method 1: Standard window.open
         const newWindow = window.open(fullUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
         
+        console.log('🔍 DEBUG: window.open returned:', newWindow);
+        console.log('🔍 DEBUG: newWindow type:', typeof newWindow);
+        console.log('🔍 DEBUG: newWindow === null:', newWindow === null);
+        
         if (newWindow && newWindow !== null && !newWindow.closed) {
           console.log('✅ Successfully opened overlay window via window.open');
+          console.log('🔍 DEBUG: Popup opened successfully, closing extension in 500ms');
           setTimeout(() => {
             console.log('🔄 Closing admin extension');
             close();
           }, 500);
         } else {
           console.log('⚠️ Method 1 failed - popup blocked or failed, trying alternatives');
+          console.log('🔍 DEBUG: newWindow details:', {
+            exists: !!newWindow,
+            isNull: newWindow === null,
+            isClosed: newWindow ? newWindow.closed : 'N/A'
+          });
           
           // Method 2: Try top window
           if (window.top && window.top !== window) {
             console.log('🔄 Trying window.top.open');
-            const topWindow = window.top.open(fullUrl, '_blank');
-            if (topWindow) {
-              console.log('✅ Opened via window.top');
-              close();
-              return;
+            try {
+              const topWindow = window.top.open(fullUrl, '_blank');
+              console.log('🔍 DEBUG: window.top.open returned:', topWindow);
+              if (topWindow && !topWindow.closed) {
+                console.log('✅ Opened via window.top');
+                close();
+                return;
+              } else {
+                console.log('⚠️ window.top.open failed');
+              }
+            } catch (topError) {
+              console.log('❌ Error with window.top.open:', topError);
             }
           }
           
           // Method 3: Try parent window
           if (window.parent && window.parent !== window) {
             console.log('🔄 Trying window.parent.open');
-            const parentWindow = window.parent.open(fullUrl, '_blank');
-            if (parentWindow) {
-              console.log('✅ Opened via window.parent');
-              close();
-              return;
+            try {
+              const parentWindow = window.parent.open(fullUrl, '_blank');
+              console.log('🔍 DEBUG: window.parent.open returned:', parentWindow);
+              if (parentWindow && !parentWindow.closed) {
+                console.log('✅ Opened via window.parent');
+                close();
+                return;
+              } else {
+                console.log('⚠️ window.parent.open failed');
+              }
+            } catch (parentError) {
+              console.log('❌ Error with window.parent.open:', parentError);
             }
           }
           
-          // Method 4: Last resort - navigate current window
-          console.log('🔄 Last resort: navigating current window');
-          window.location.href = fullUrl;
+          // Method 4: Show user instructions instead of navigation
+          console.log('🚨 ALL POPUP METHODS FAILED - POPUP BLOCKER DETECTED');
+          console.log('📋 INSTRUCTION: Please disable popup blocker and try again');
+          console.log('🔗 MANUAL URL:', fullUrl);
+          
+          // Don't navigate current window - just show error
+          alert('Popup blocked! Please:\n1. Allow popups for this site\n2. Try clicking the button again\n\nOr manually open:\n' + fullUrl);
+          close();
         }
       } catch (openError) {
         console.error('❌ Error in window.open calls:', openError);
