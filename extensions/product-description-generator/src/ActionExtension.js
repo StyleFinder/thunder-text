@@ -5,7 +5,7 @@ const TARGET = 'admin.product-details.action.render';
 
 // Thunder Text product description generator - FORCE REBUILD v7.0 - CACHE BREAK
 const CACHE_BUSTER = Date.now(); // Current timestamp for cache busting  
-const COMMIT_HASH = '6ad7b3f'; // Latest commit: Current HEAD - force cache invalidation
+const COMMIT_HASH = '3478388'; // Latest commit: BYPASS REACT - Use simple HTML overlay
 const FORCE_REBUILD = 'CACHE_BREAK_v7_' + Math.random().toString(36).substring(7);
 export default extension(TARGET, (root, { i18n, close, data }) => {
   console.log(`🔥🔥🔥 DIRECT OVERLAY MODE - NO UI - ActionExtension.js LOADED 🔥🔥🔥`);
@@ -68,26 +68,52 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
       const fullUrl = `https://thunder-text-nine.vercel.app${targetUrl}`;
       
       console.log('🚀 Opening Thunder Text overlay:', fullUrl);
+      console.log('🔍 DEBUG: About to call window.open with URL:', fullUrl);
       
-      // Open in new tab/window for overlay experience
-      const newWindow = window.open(fullUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
-      
-      if (newWindow) {
-        console.log('✅ Successfully opened overlay window');
-        // Close the admin action after a short delay
-        setTimeout(() => {
-          close();
-        }, 500);
-      } else {
-        console.log('⚠️ Popup blocked, trying alternative method');
+      // Try multiple methods to open the overlay
+      try {
+        // Method 1: Standard window.open
+        const newWindow = window.open(fullUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
         
-        // Fallback: Try parent window navigation
-        if (window.parent) {
-          window.parent.open(fullUrl, '_blank');
-          close();
+        if (newWindow && newWindow !== null && !newWindow.closed) {
+          console.log('✅ Successfully opened overlay window via window.open');
+          setTimeout(() => {
+            console.log('🔄 Closing admin extension');
+            close();
+          }, 500);
         } else {
-          console.error('❌ Failed to open Thunder Text overlay - popup blocked');
+          console.log('⚠️ Method 1 failed - popup blocked or failed, trying alternatives');
+          
+          // Method 2: Try top window
+          if (window.top && window.top !== window) {
+            console.log('🔄 Trying window.top.open');
+            const topWindow = window.top.open(fullUrl, '_blank');
+            if (topWindow) {
+              console.log('✅ Opened via window.top');
+              close();
+              return;
+            }
+          }
+          
+          // Method 3: Try parent window
+          if (window.parent && window.parent !== window) {
+            console.log('🔄 Trying window.parent.open');
+            const parentWindow = window.parent.open(fullUrl, '_blank');
+            if (parentWindow) {
+              console.log('✅ Opened via window.parent');
+              close();
+              return;
+            }
+          }
+          
+          // Method 4: Last resort - navigate current window
+          console.log('🔄 Last resort: navigating current window');
+          window.location.href = fullUrl;
         }
+      } catch (openError) {
+        console.error('❌ Error in window.open calls:', openError);
+        console.log('🔄 Final fallback: direct navigation');
+        window.location.href = fullUrl;
       }
       
     } catch (error) {
