@@ -1,11 +1,4 @@
-import { 
-  extension,
-  AdminAction,
-  BlockStack,
-  Button,
-  Text,
-  Link
-} from "@shopify/ui-extensions/admin";
+import { extension } from "@shopify/ui-extensions/admin";
 
 // The target used here must match the target used in the extension's toml file (./shopify.extension.toml)
 const TARGET = 'admin.product-details.action.render';
@@ -26,8 +19,8 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
     document.head?.appendChild(meta);
   }
   
-  // Build UI with proper Shopify navigation
-  buildUI();
+  // Immediately open Thunder Text overlay - no UI needed
+  handleOpenThunderText();
 
   function handleOpenThunderText() {
     console.log('🎯 Button clicked! Starting Thunder Text overlay workflow...');
@@ -99,49 +92,4 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
     }
   }
 
-  function buildUI() {
-    console.log('🎨 Building UI with official navigation');
-    
-    const content = root.createComponent(BlockStack, { gap: 'base' });
-
-    // Title with version info
-    content.append(
-      root.createComponent(Text, {
-        variant: 'headingMd'
-      }, `⚡ Thunder Text Overlay v5.0 🎯 [${COMMIT_HASH}]`)
-    );
-
-    // Description
-    content.append(
-      root.createComponent(Text, {
-        variant: 'bodyMd'
-      }, 'Generate AI-powered product descriptions with customizable settings and instant preview.')
-    );
-
-    // Main action button - using Button with custom navigation
-    content.append(
-      root.createComponent(Button, {
-        variant: 'primary',
-        onPress: () => {
-          console.log('🚀 Thunder Text overlay button clicked!');
-          handleOpenThunderText();
-        }
-      }, '✨ Generate Product Description')
-    );
-
-    // Cancel button
-    content.append(
-      root.createComponent(Button, {
-        onPress: close
-      }, 'Cancel')
-    );
-
-    root.append(
-      root.createComponent(AdminAction, {
-        title: 'Thunder Text - Product Description Generator'
-      }, content)
-    );
-    
-    console.log('✅ UI built successfully with official navigation');
-  }
 });
