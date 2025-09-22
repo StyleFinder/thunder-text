@@ -172,7 +172,7 @@ The application uses Supabase PostgreSQL with the following core tables:
    SUPABASE_SERVICE_KEY=your_production_service_key
    OPENAI_API_KEY=your_openai_master_key
    NEXTAUTH_SECRET=your_nextauth_secret
-   NEXTAUTH_URL=https://your-app.onrender.com
+   NEXTAUTH_URL=https://thunder-text-nine.vercel.app
    ```
 3. Deploy automatically on push to main branch
 4. Configure custom domain (optional)
@@ -190,8 +190,8 @@ The application uses Supabase PostgreSQL with the following core tables:
 1. Complete Partner Dashboard app configuration
 2. Add required app URLs and webhooks:
    ```
-   App URL: https://your-app.onrender.com
-   Allowed redirection URLs: https://your-app.onrender.com/api/auth/callback/shopify
+   App URL: https://thunder-text-nine.vercel.app
+   Allowed redirection URLs: https://thunder-text-nine.vercel.app/api/auth/callback/shopify
    ```
 3. Submit for review following Shopify guidelines
 

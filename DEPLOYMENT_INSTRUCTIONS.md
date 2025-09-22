@@ -62,7 +62,7 @@ All already configured in Render:
 - ✅ Core functionality (APIs, database) will work
 
 ## Post-Deployment Testing
-1. Health check: `https://your-app.onrender.com/api/health`
+1. Health check: `https://thunder-text-nine.vercel.app/api/health`
 2. Database connection: Confirmed working
 3. OpenAI integration: Confirmed working
 
