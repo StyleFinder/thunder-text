@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import ProductDescriptionOverlay from '@/app/components/ProductDescriptionOverlay'
+// Temporarily disabled for debugging
+// import ProductDescriptionOverlay from '@/app/components/ProductDescriptionOverlay'
 import { ProductData } from '@/lib/product-data-import'
 
 // Force dynamic rendering for this page
@@ -24,7 +25,7 @@ function ProductOverlayContent() {
   const [overlayOpen, setOverlayOpen] = useState(true)
 
   // Version tracking
-  const COMMIT_HASH = 'deployment-fix-1737590690'
+  const COMMIT_HASH = 'debug-overlay-1737590830'
   
   useEffect(() => {
     console.log('🎯 Thunder Text Product Overlay - Commit:', COMMIT_HASH, 'Loaded:', new Date().toISOString())
@@ -274,13 +275,72 @@ function ProductOverlayContent() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
-      <ProductDescriptionOverlay
-        isOpen={overlayOpen}
-        onClose={handleClose}
-        productData={productData}
-        onApply={handleApplyContent}
-      />
+    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb', padding: '2rem' }}>
+      <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '2rem', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1f2937' }}>
+          🎯 Thunder Text Product Overlay
+        </h1>
+        
+        <div style={{ marginBottom: '2rem', padding: '1rem', backgroundColor: '#f3f4f6', borderRadius: '6px' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem', color: '#374151' }}>
+            Debug Information
+          </h2>
+          <p><strong>Commit:</strong> {COMMIT_HASH}</p>
+          <p><strong>Product ID:</strong> {productId}</p>
+          <p><strong>Shop Domain:</strong> {shopDomain}</p>
+          <p><strong>Loading:</strong> {loading ? 'Yes' : 'No'}</p>
+          <p><strong>Product Data Available:</strong> {productData ? 'Yes' : 'No'}</p>
+          {error && <p style={{ color: '#dc2626' }}><strong>Error:</strong> {error}</p>}
+        </div>
+
+        {productData && (
+          <div style={{ marginBottom: '2rem', padding: '1rem', backgroundColor: '#ecfdf5', borderRadius: '6px' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem', color: '#065f46' }}>
+              Product Information
+            </h2>
+            <p><strong>Title:</strong> {productData.title}</p>
+            <p><strong>Type:</strong> {productData.productType}</p>
+            <p><strong>Vendor:</strong> {productData.vendor}</p>
+            <p><strong>Tags:</strong> {productData.tags.join(', ')}</p>
+            <p><strong>Images:</strong> {productData.images.length} available</p>
+            <p><strong>Variants:</strong> {productData.variants.length} available</p>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button 
+            style={{
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '6px',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              fontWeight: '500'
+            }}
+            onClick={() => alert('5-step workflow will be implemented here!')}
+          >
+            Start 5-Step Workflow
+          </button>
+          
+          <button 
+            style={{
+              backgroundColor: '#6b7280',
+              color: 'white',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '6px',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              fontWeight: '500'
+            }}
+            onClick={handleClose}
+          >
+            Close Overlay
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
