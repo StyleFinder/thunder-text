@@ -28,43 +28,54 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
   buildUI();
 
   function handleOpenThunderText() {
-    console.log('🎯 Starting Thunder Text navigation...');
+    console.log('🎯 Starting Thunder Text overlay workflow...');
     
     try {
-      // Build basic parameters with cache buster
+      // Get shop domain and access token from current admin context
+      const shopDomain = window.location.hostname.replace('.myshopify.com', '');
+      
+      // Build parameters for the new overlay workflow
       const params = new URLSearchParams({
         source: 'admin_extension',
-        authenticated: 'true',
+        shop: `${shopDomain}.myshopify.com`,
         cache_bust: CACHE_BUSTER.toString()
       });
       
-      // Try to get additional data from the extension data
+      // Extract product data from extension context
       try {
         if (data && data.selected && data.selected.length > 0) {
           const product = data.selected[0];
           console.log('📦 Product data available:', Object.keys(product));
           
+          // Pass product ID and basic data to the overlay
           if (product.id) params.set('productId', product.id);
           if (product.title) params.set('productTitle', product.title);
           if (product.productType) params.set('productType', product.productType);
           if (product.vendor) params.set('vendor', product.vendor);
+          
+          // Try to get access token from session (if available)
+          const accessToken = window.shopifyApp?.accessToken || window.sessionToken;
+          if (accessToken) params.set('accessToken', accessToken);
+        } else {
+          console.log('⚠️ No product selected or data unavailable');
+          return;
         }
       } catch (dataError) {
-        console.log('⚠️ Could not extract extension data:', dataError);
+        console.log('⚠️ Could not extract product data:', dataError);
+        return;
       }
       
-      let targetUrl = `/create?${params.toString()}`;
-      
-      // Try different navigation methods
+      // Use the new overlay workflow URL
+      const targetUrl = `/product-overlay?${params.toString()}`;
       const fullUrl = `https://thunder-text-nine.vercel.app${targetUrl}`;
       
-      console.log('🚀 Opening Thunder Text:', fullUrl);
+      console.log('🚀 Opening Thunder Text overlay:', fullUrl);
       
-      // Method 1: Try window.open (most reliable)
-      const newWindow = window.open(fullUrl, '_blank', 'noopener,noreferrer');
+      // Open in new tab/window for overlay experience
+      const newWindow = window.open(fullUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
       
       if (newWindow) {
-        console.log('✅ Successfully opened new window');
+        console.log('✅ Successfully opened overlay window');
         // Close the admin action after a short delay
         setTimeout(() => {
           close();
@@ -72,17 +83,17 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
       } else {
         console.log('⚠️ Popup blocked, trying alternative method');
         
-        // Method 2: Try parent window location
+        // Fallback: Try parent window navigation
         if (window.parent) {
           window.parent.open(fullUrl, '_blank');
           close();
         } else {
-          console.error('❌ Failed to open Thunder Text - popup blocked');
+          console.error('❌ Failed to open Thunder Text overlay - popup blocked');
         }
       }
       
     } catch (error) {
-      console.error('❌ Error opening Thunder Text:', error);
+      console.error('❌ Error opening Thunder Text overlay:', error);
     }
   }
 
@@ -102,7 +113,7 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
     content.append(
       root.createComponent(Text, {
         variant: 'bodyMd'
-      }, 'Generate AI-powered product descriptions using this product\'s information.')
+      }, 'Generate AI-powered product descriptions with customizable settings and instant preview.')
     );
 
     // Main action button - using Button with custom navigation
@@ -110,10 +121,10 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
       root.createComponent(Button, {
         variant: 'primary',
         onPress: () => {
-          console.log('🚀 Thunder Text button clicked!');
+          console.log('🚀 Thunder Text overlay button clicked!');
           handleOpenThunderText();
         }
-      }, '🚀 Open Thunder Text App')
+      }, '✨ Generate Product Description')
     );
 
     // Cancel button

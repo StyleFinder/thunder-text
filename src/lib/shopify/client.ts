@@ -38,7 +38,7 @@ export async function shopifyGraphQL(query: string, variables: any, shop: string
     console.log('📝 Query variables:', variables)
     
     // If this is a product query, handle it specially
-    if (query.includes('query GetProduct')) {
+    if (query.includes('query getProduct') || query.includes('product(id: $id)')) {
       return await executeProductQuery(client, variables.id)
     }
     
@@ -69,6 +69,9 @@ async function executeProductQuery(client: ShopifyAPI, productId: string) {
           vendor: "zunosai-staging-test-store",
           productType: "Tops",
           tags: ["wrinkle-resistant tops", "women's fashion"],
+          status: "ACTIVE",
+          createdAt: "2024-01-01T00:00:00Z",
+          updatedAt: "2024-01-15T00:00:00Z",
           seo: {
             title: "Effortless Elegance: Wrinkle-Resistant Tops - Premium Women's Fashion",
             description: "Discover wrinkle-resistant tops that combine style and comfort. Perfect for busy professionals who want to look polished all day long."
