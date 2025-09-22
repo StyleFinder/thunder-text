@@ -12,7 +12,7 @@ const TARGET = 'admin.product-details.action.render';
 
 // Thunder Text product description generator - Overlay Workflow Version
 const CACHE_BUSTER = Date.now(); // Current timestamp for cache busting
-const COMMIT_HASH = '2d201b0'; // Latest commit hash for version tracking
+const COMMIT_HASH = 'e3c8c94'; // Latest commit hash for version tracking
 export default extension(TARGET, (root, { i18n, close, data }) => {
   console.log(`🚀🚀🚀 THUNDER TEXT OVERLAY v5.0 - COMMIT: ${COMMIT_HASH} - CACHE BUSTER: ${CACHE_BUSTER} 🚀🚀🚀`);
   console.log('Extension loaded with data:', data);
