@@ -80,9 +80,12 @@ cp .env.example .env.local
 npx supabase db push
 ```
 
-6. Start the development server:
+6. Deploy to Vercel:
 ```bash
-npm run dev
+# Push to git (auto-deploys to Vercel)
+git add .
+git commit -m "Initial deployment"
+git push
 ```
 
 ### Environment Variables
@@ -153,16 +156,15 @@ The application uses Supabase PostgreSQL with the following core tables:
 
 ## Deployment
 
-### Render Deployment
+### Vercel Deployment
 
-1. Connect your GitHub repository to Render
-2. Configure environment variables in Render dashboard:
+1. Connect your GitHub repository to Vercel
+2. Configure environment variables in Vercel dashboard:
    ```bash
-   # Build Command
-   npm install && npm run build
-   
-   # Start Command  
-   npm start
+   # Auto-detected by Vercel
+   Build Command: npm run build
+   Output Directory: .next
+   Install Command: npm install --legacy-peer-deps
    
    # Environment Variables
    NODE_ENV=production
@@ -173,17 +175,19 @@ The application uses Supabase PostgreSQL with the following core tables:
    OPENAI_API_KEY=your_openai_master_key
    NEXTAUTH_SECRET=your_nextauth_secret
    NEXTAUTH_URL=https://thunder-text-nine.vercel.app
+   SHOPIFY_APP_URL=https://thunder-text-nine.vercel.app
    ```
 3. Deploy automatically on push to main branch
-4. Configure custom domain (optional)
+4. Custom domain: thunder-text-nine.vercel.app (already configured)
 
 ### Development Store Setup
 
 **Test Store**: `zunosai-staging-test-store.myshopify.com`
+**Production URL**: https://thunder-text-nine.vercel.app
 - Use this development store for testing OAuth flows
-- Test product generation and publishing
+- Test product generation and publishing via Vercel deployment
 - Validate metafield creation and SEO data
-- Test user workflows and edge cases
+- Test user workflows and edge cases using production URL
 
 ### Shopify App Store Submission
 

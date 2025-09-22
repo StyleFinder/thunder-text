@@ -4,9 +4,10 @@
 Thunder Text is an AI-powered Shopify application that generates SEO-optimized product descriptions from images using GPT-4 Vision API. This configuration optimizes SuperClaude for efficient development across all project phases.
 
 ### Development Environment
-- **Dev Server**: http://localhost:3050
+- **Production URL**: https://thunder-text-nine.vercel.app
 - **Dev Shop**: zunosai-staging-test-store
-- **Settings URL**: http://localhost:3050/settings?shop=zunosai-staging-test-store&authenticated=true
+- **Settings URL**: https://thunder-text-nine.vercel.app/settings?shop=zunosai-staging-test-store&authenticated=true
+- **Deployment**: Vercel (production hosting), not localhost
 - **Auth Bypass**: Enabled in development (SHOPIFY_AUTH_BYPASS=true)
 
 ## SuperClaude Framework Integration
@@ -150,20 +151,34 @@ Thunder Text is an AI-powered Shopify application that generates SEO-optimized p
 
 ## Server Management Rules
 
-### Critical Conflict Prevention
-**NEVER start development servers if user is running their own terminal**
+### Vercel Deployment Protocol
+**Thunder Text is deployed on Vercel, not local development servers**
 
-#### Pre-Server Startup Checklist
-1. **Always check server status first**: `./check-servers.sh`
-2. **If Shopify processes detected**: Inform user, do NOT start additional servers
-3. **If ports occupied**: Show status, let user decide action
-4. **Only start servers if**: No conflicts detected AND user explicitly requests
+#### Deployment Environment Setup
+1. **Production Environment**: https://thunder-text-nine.vercel.app
+2. **Auto-deployment**: Vercel deploys automatically from git commits
+3. **No local servers needed**: All development happens in production environment
+4. **Environment Variables**: Configured in Vercel dashboard, not local .env
+5. **Testing**: Use production URL with development store
 
-#### Server Coordination Protocol
-- **User Terminal Priority**: User-managed terminals take precedence
-- **Background Server Limits**: Maximum 1 Shopify dev process at any time
-- **Conflict Resolution**: Kill Claude's background servers, preserve user's
-- **Status Transparency**: Always show server status before making changes
+#### Vercel vs Local Development
+- **Current Setup**: Vercel-hosted production environment for development
+- **No localhost**: No need for local servers (npm run dev not used)
+- **Instant deployment**: Code changes deploy automatically via git
+- **Environment isolation**: Production URLs with development data
+- **Solution**: Use Vercel URLs for all development and testing
+
+#### Server Coordination Questions
+- "Do you have `shopify app dev` running? If not, should I start it?"
+- "Is there an active development server for this task?"
+- "Should I start [specific server] or do you prefer to manage it?"
+- "I see servers running - are these the ones we should use?"
+
+#### Server Management Approach
+- **Collaborative**: Ask before starting, respect user preference
+- **Conflict-Aware**: Prevent duplicate instances that cause URL issues
+- **Task-Oriented**: Start servers only when needed for specific tasks
+- **Transparent**: Always show server status and explain server needs
 
 #### Quick Commands for Server Management
 ```bash
@@ -229,12 +244,12 @@ pkill -f "shopify app dev" 2>/dev/null
 
 ### Development URLs (zunosai-staging-test-store)
 ```bash
-# Main pages with authentication parameters
-http://localhost:3050/?shop=zunosai-staging-test-store&authenticated=true
-http://localhost:3050/dashboard?shop=zunosai-staging-test-store&authenticated=true
-http://localhost:3050/settings?shop=zunosai-staging-test-store&authenticated=true
-http://localhost:3050/create?shop=zunosai-staging-test-store&authenticated=true
-http://localhost:3050/products?shop=zunosai-staging-test-store&authenticated=true
+# Main pages with authentication parameters (Vercel-hosted)
+https://thunder-text-nine.vercel.app/?shop=zunosai-staging-test-store&authenticated=true
+https://thunder-text-nine.vercel.app/dashboard?shop=zunosai-staging-test-store&authenticated=true
+https://thunder-text-nine.vercel.app/settings?shop=zunosai-staging-test-store&authenticated=true
+https://thunder-text-nine.vercel.app/create?shop=zunosai-staging-test-store&authenticated=true
+https://thunder-text-nine.vercel.app/products?shop=zunosai-staging-test-store&authenticated=true
 ```
 
 This configuration enables SuperClaude to provide optimal development support for Thunder Text across all phases, with intelligent tool selection, persistent context management, and phase-appropriate development patterns.
