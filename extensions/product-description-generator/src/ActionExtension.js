@@ -1,4 +1,5 @@
 import { extension } from "@shopify/ui-extensions/admin";
+import { useEffect, useState } from 'react';
 
 // The target used here must match the target used in the extension's toml file (./shopify.extension.toml)
 const TARGET = 'admin.product-details.action.render';
@@ -7,6 +8,12 @@ const TARGET = 'admin.product-details.action.render';
 const CACHE_BUSTER = Date.now(); // Current timestamp for cache busting  
 const COMMIT_HASH = '7163232'; // Latest commit: ULTIMATE DEBUG - Comprehensive popup debugging and protection
 const FORCE_REBUILD = 'CACHE_BREAK_v7_' + Math.random().toString(36).substring(7);
+
+// Hydration protection logic
+let isHydrated = false;
+if (typeof window !== 'undefined') {
+  isHydrated = true;
+}
 export default extension(TARGET, (root, { i18n, close, data }) => {
   console.log(`🔥🔥🔥 DIRECT OVERLAY MODE - NO UI - ActionExtension.js LOADED 🔥🔥🔥`);
   console.log(`🚀🚀🚀 THUNDER TEXT OVERLAY v7.0 - COMMIT: ${COMMIT_HASH} - CACHE BUSTER: ${CACHE_BUSTER} 🚀🚀🚀`);
@@ -22,8 +29,12 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
     document.head?.appendChild(meta);
   }
   
-  // Immediately open Thunder Text overlay - no UI needed
-  handleOpenThunderText();
+  // Immediately open Thunder Text overlay - no UI needed, with hydration protection
+  if (isHydrated) {
+    handleOpenThunderText();
+  } else {
+    console.log('🛑 Not hydrated yet — skipping overlay trigger.');
+  }
 
   function handleOpenThunderText() {
     console.log('🎯 Button clicked! Starting Thunder Text overlay workflow...');
