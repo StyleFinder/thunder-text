@@ -24,7 +24,7 @@ function ProductOverlayContent() {
   const [overlayOpen, setOverlayOpen] = useState(true)
 
   // Version tracking
-  const COMMIT_HASH = 'ccfd613'
+  const COMMIT_HASH = 'deployment-fix-1737590690'
   
   useEffect(() => {
     console.log('🎯 Thunder Text Product Overlay - Commit:', COMMIT_HASH, 'Loaded:', new Date().toISOString())
