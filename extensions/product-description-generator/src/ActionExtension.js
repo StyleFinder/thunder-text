@@ -5,7 +5,7 @@ const TARGET = 'admin.product-details.action.render';
 
 // Thunder Text product description generator - FORCE REBUILD v7.0 - CACHE BREAK
 const CACHE_BUSTER = Date.now(); // Current timestamp for cache busting  
-const COMMIT_HASH = '8293e0e'; // Latest commit: AGGRESSIVE DEBUG - Multiple window.open fallback methods
+const COMMIT_HASH = '7163232'; // Latest commit: ULTIMATE DEBUG - Comprehensive popup debugging and protection
 const FORCE_REBUILD = 'CACHE_BREAK_v7_' + Math.random().toString(36).substring(7);
 export default extension(TARGET, (root, { i18n, close, data }) => {
   console.log(`🔥🔥🔥 DIRECT OVERLAY MODE - NO UI - ActionExtension.js LOADED 🔥🔥🔥`);
@@ -141,8 +141,10 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
         }
       } catch (openError) {
         console.error('❌ Error in window.open calls:', openError);
-        console.log('🔄 Final fallback: direct navigation');
-        window.location.href = fullUrl;
+        console.log('🚫 NOT navigating - popup blocker protection active');
+        console.log('🔗 Manual URL for user:', fullUrl);
+        alert('Extension error! Please manually open:\n' + fullUrl);
+        close();
       }
       
     } catch (error) {
