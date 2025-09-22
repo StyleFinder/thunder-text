@@ -3,12 +3,14 @@ import { extension } from "@shopify/ui-extensions/admin";
 // The target used here must match the target used in the extension's toml file (./shopify.extension.toml)
 const TARGET = 'admin.product-details.action.render';
 
-// Thunder Text product description generator - Overlay Workflow Version
-const CACHE_BUSTER = Date.now(); // Current timestamp for cache busting
-const COMMIT_HASH = 'f9204cf'; // Latest commit: Fix extension deployment direct overlay mode
+// Thunder Text product description generator - FORCE REBUILD v7.0 - CACHE BREAK
+const CACHE_BUSTER = Date.now(); // Current timestamp for cache busting  
+const COMMIT_HASH = '6ad7b3f'; // Latest commit: Current HEAD - force cache invalidation
+const FORCE_REBUILD = 'CACHE_BREAK_v7_' + Math.random().toString(36).substring(7);
 export default extension(TARGET, (root, { i18n, close, data }) => {
   console.log(`🔥🔥🔥 DIRECT OVERLAY MODE - NO UI - ActionExtension.js LOADED 🔥🔥🔥`);
-  console.log(`🚀🚀🚀 THUNDER TEXT OVERLAY v5.0 - COMMIT: ${COMMIT_HASH} - CACHE BUSTER: ${CACHE_BUSTER} 🚀🚀🚀`);
+  console.log(`🚀🚀🚀 THUNDER TEXT OVERLAY v7.0 - COMMIT: ${COMMIT_HASH} - CACHE BUSTER: ${CACHE_BUSTER} 🚀🚀🚀`);
+  console.log(`💥💥💥 FORCE REBUILD: ${FORCE_REBUILD} 💥💥💥`);
   console.log('Extension loaded with data:', data);
   console.log('🏷️ Version tracking - Commit:', COMMIT_HASH, 'Deployed:', new Date().toISOString());
   
