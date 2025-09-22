@@ -23,6 +23,13 @@ function ProductOverlayContent() {
   const [error, setError] = useState<string | null>(null)
   const [overlayOpen, setOverlayOpen] = useState(true)
 
+  // Version tracking
+  const COMMIT_HASH = '2d201b0'
+  
+  useEffect(() => {
+    console.log('🎯 Thunder Text Product Overlay - Commit:', COMMIT_HASH, 'Loaded:', new Date().toISOString())
+  }, [])
+
   const productId = searchParams?.get('productId')
   const shopDomain = searchParams?.get('shop')
   const accessToken = searchParams?.get('accessToken')
