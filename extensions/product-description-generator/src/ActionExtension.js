@@ -10,11 +10,13 @@ import {
 // The target used here must match the target used in the extension's toml file (./shopify.extension.toml)
 const TARGET = 'admin.product-details.action.render';
 
-// Thunder Text product description generator - Simple Robust Version
+// Thunder Text product description generator - Overlay Workflow Version
 const CACHE_BUSTER = Date.now(); // Current timestamp for cache busting
+const COMMIT_HASH = '2d201b0'; // Latest commit hash for version tracking
 export default extension(TARGET, (root, { i18n, close, data }) => {
-  console.log(`🚀🚀🚀 THUNDER TEXT SIMPLE v4.0 - FRESH DEPLOY - CACHE BUSTER: ${CACHE_BUSTER} 🚀🚀🚀`);
+  console.log(`🚀🚀🚀 THUNDER TEXT OVERLAY v5.0 - COMMIT: ${COMMIT_HASH} - CACHE BUSTER: ${CACHE_BUSTER} 🚀🚀🚀`);
   console.log('Extension loaded with data:', data);
+  console.log('🏷️ Version tracking - Commit:', COMMIT_HASH, 'Deployed:', new Date().toISOString());
   
   // Force cache invalidation by setting no-cache headers when possible
   if (typeof document !== 'undefined') {
@@ -102,11 +104,11 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
     
     const content = root.createComponent(BlockStack, { gap: 'base' });
 
-    // Title with cache buster info
+    // Title with version info
     content.append(
       root.createComponent(Text, {
         variant: 'headingMd'
-      }, `⚡ Thunder Text Generator v4.0 🆕 FRESH [${CACHE_BUSTER.toString().slice(-6)}]`)
+      }, `⚡ Thunder Text Overlay v5.0 🎯 [${COMMIT_HASH}]`)
     );
 
     // Description
