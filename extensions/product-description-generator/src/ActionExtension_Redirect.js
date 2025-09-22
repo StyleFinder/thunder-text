@@ -139,7 +139,7 @@ export default extension(TARGET, (root, { i18n, close, data }) => {
     });
 
     // Build the Thunder Text app URL
-    const baseUrl = 'http://localhost:3050'; // Your Thunder Text app URL
+    const baseUrl = 'https://thunder-text-nine.vercel.app'; // Your Thunder Text app URL
     const redirectUrl = `${baseUrl}/create?${productParams.toString()}`;
     
     console.log('🚀 Redirecting to Thunder Text with product data:', redirectUrl);

@@ -3,13 +3,13 @@ api_version = "2025-04"
 [[extensions]]
 # Change the merchant-facing name of the extension in locales/en.default.json
 name = "t:name"
-handle = "product-description-generator"
+handle = "product-description-generator-v4"
+uid = "016c32c2-5562-751d-fe99-d9c0acfd8e1dc08ea819"
 type = "ui_extension"
-uid = "48a53568-5cb9-c147-0fdc-2f664a26d43796dac75e"
 
 # Only 1 target can be specified for each Admin action extension
 [[extensions.targeting]]
-module = "./src/ActionExtension.js"
+module = "./src/ActionExtension_Simple.js"
 target = "admin.product-details.action.render"
 
 
