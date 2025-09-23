@@ -1,0 +1,15 @@
+{
+  "name": "enhance-product-action",
+  "version": "1.0.0",
+  "description": "Admin action extension for enhancing product descriptions",
+  "main": "src/ActionExtension.jsx",
+  "scripts": {
+    "build": "shopify app build"
+  },
+  "dependencies": {
+    "@shopify/ui-extensions-react": "^2024.4.0",
+    "react": "^18.0.0"
+  },
+  "devDependencies": {},
+  "type": "module"
+}
