@@ -31,9 +31,9 @@ export async function GET(request: NextRequest) {
       shop, page, limit, query, status, sort, authBypass 
     })
 
-    // Auth bypass mode - return mock data for testing
-    if (authBypass) {
-      console.log('🧪 Auth bypass mode: returning mock products data')
+    // Development mode with auth bypass - return mock data
+    if (authBypass && process.env.NODE_ENV === 'development') {
+      console.log('🧪 Development mode: returning mock products data')
       
       // Generate mock products that match the expected structure
       const mockProducts = [
