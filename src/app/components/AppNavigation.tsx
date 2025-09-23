@@ -13,6 +13,7 @@ import {
   SettingsIcon,
   PlusCircleIcon,
   QuestionCircleIcon,
+  EditIcon,
 } from '@shopify/polaris-icons'
 import { useNavigation } from '../hooks/useNavigation'
 
@@ -54,6 +55,20 @@ function NavigationContent({ children }: AppNavigationProps) {
       }),
       exactMatch: false,
       matchPaths: ['/create', '/generate']
+    },
+    {
+      url: buildUrl('/enhance'),
+      label: 'Enhance Product',
+      icon: EditIcon,
+      onClick: () => navigateTo('/enhance'),
+      matches: isActive({ 
+        label: 'Enhance Product', 
+        url: buildUrl('/enhance'), 
+        matchPaths: ['/enhance'],
+        exactMatch: false 
+      }),
+      exactMatch: false,
+      matchPaths: ['/enhance']
     },
     {
       url: buildUrl('/settings'),

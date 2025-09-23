@@ -119,6 +119,16 @@ function DashboardContent() {
                     const params = new URLSearchParams()
                     if (shop) params.append('shop', shop)
                     if (authenticated) params.append('authenticated', authenticated)
+                    window.location.href = `/enhance?${params.toString()}`
+                  }}
+                >
+                  Enhance Product
+                </Button>
+                <Button 
+                  onClick={() => {
+                    const params = new URLSearchParams()
+                    if (shop) params.append('shop', shop)
+                    if (authenticated) params.append('authenticated', authenticated)
                     window.location.href = `/generate?${params.toString()}`
                   }}
                 >
