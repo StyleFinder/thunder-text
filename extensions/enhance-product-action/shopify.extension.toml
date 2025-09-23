@@ -4,11 +4,10 @@ api_version = "2025-07"
 
 [[extensions]]
 name = "enhance-product-action"
-type = "admin_action"
+handle = "enhance-product-action"
+uid = "be246396-9266-f9c1-940d-d0a645540fb08f32b355"
+type = "ui_extension"
 
-[extensions.targeting]
-target = "admin.product-details.action.render"
-
-[extensions.extension_points]
+[[extensions.extension_points]]
 target = "admin.product-details.action.render"
 module = "./src/ActionExtension.jsx"
