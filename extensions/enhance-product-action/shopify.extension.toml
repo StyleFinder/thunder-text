@@ -1,0 +1,14 @@
+# Learn more about configuring your extension at https://shopify.dev/docs/apps/app-extensions/configuration
+
+api_version = "2025-07"
+
+[[extensions]]
+name = "enhance-product-action"
+type = "admin_action"
+
+[extensions.targeting]
+target = "admin.product-details.action.render"
+
+[extensions.extension_points]
+target = "admin.product-details.action.render"
+module = "./src/ActionExtension.jsx"
