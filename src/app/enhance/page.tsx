@@ -43,10 +43,12 @@ interface EnhancementWorkflowState {
 
 function EnhanceProductContent() {
   const searchParams = useSearchParams()
-  const shop = searchParams?.get('shop')
+  const shop = searchParams?.get('shop') || 'zunosai-staging-test-store'  // Fallback to configured dev store
   const authenticated = searchParams?.get('authenticated')
   const productId = searchParams?.get('productId')
   const source = searchParams?.get('source')
+
+  console.log('🔍 Debug params:', { shop, authenticated, productId, source })
 
   // Workflow state management
   const [workflow, setWorkflow] = useState<EnhancementWorkflowState>({
