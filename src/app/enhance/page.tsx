@@ -26,6 +26,7 @@ import { ProductContextPanel } from './components/ProductContextPanel'
 import { EnhanceForm, EnhancementFormData } from './components/EnhanceForm'
 import { ComparisonView, ComparisonData } from './components/ComparisonView'
 import { RichTextEditor } from './components/RichTextEditor'
+import { ProductSelector } from './components/ProductSelector'
 import { fetchProductDataForEnhancement, EnhancementProductData } from '@/lib/shopify/product-enhancement'
 
 type WorkflowStep = 'loading' | 'context' | 'configure' | 'generating' | 'compare' | 'apply' | 'complete'
@@ -65,11 +66,22 @@ function EnhanceProductContent() {
   // Load product data on mount
   useEffect(() => {
     async function loadProductData() {
-      if (!productId || !shop) {
+      if (!shop) {
         setWorkflow(prev => ({
           ...prev,
-          error: 'Missing required parameters: productId and shop',
+          error: 'Missing required parameter: shop',
           currentStep: 'loading'
+        }))
+        return
+      }
+
+      // If no productId, we'll show product selection instead of loading
+      if (!productId) {
+        setWorkflow(prev => ({
+          ...prev,
+          currentStep: 'loading', // Will be handled by product selector rendering
+          progress: 0,
+          error: null
         }))
         return
       }
@@ -333,8 +345,27 @@ function EnhanceProductContent() {
     )
   }
 
-  // Loading state
+  // Loading state or Product Selection
   if (workflow.currentStep === 'loading') {
+    // If no productId provided, show product selector
+    if (!productId) {
+      return (
+        <Page title="Enhance Product Description">
+          <Layout>
+            <Layout.Section>
+              <ProductSelector 
+                shop={shop || ''} 
+                onProductSelect={(selectedProductId) => {
+                  // This will be handled by router navigation in ProductSelector
+                }} 
+              />
+            </Layout.Section>
+          </Layout>
+        </Page>
+      )
+    }
+
+    // Otherwise show loading spinner for product data
     return (
       <Page title="Enhance Product Description">
         <Layout>
