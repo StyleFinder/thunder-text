@@ -6,7 +6,9 @@
   "env": {
     "SHOPIFY_APP_URL": "https://thunder-text-nine.vercel.app",
     "NEXTAUTH_URL": "https://thunder-text-nine.vercel.app",
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "SHOPIFY_AUTH_BYPASS": "true",
+    "NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS": "true"
   },
   "headers": [
     {
