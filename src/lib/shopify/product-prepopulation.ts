@@ -111,6 +111,14 @@ export async function fetchProductDataForPrePopulation(
 }
 
 async function fetchShopifyProduct(productId: string, shop: string) {
+  // Ensure productId is in the correct GraphQL format
+  let formattedProductId = productId
+  if (!productId.startsWith('gid://')) {
+    // If it's just a numeric ID, convert to GraphQL format
+    formattedProductId = `gid://shopify/Product/${productId}`
+    console.log('📝 Converted product ID to GraphQL format:', formattedProductId)
+  }
+
   const query = `
     query GetProduct($id: ID!) {
       product(id: $id) {
@@ -182,10 +190,10 @@ async function fetchShopifyProduct(productId: string, shop: string) {
     }
   `
 
-  console.log('🔍 Executing GraphQL query for product:', productId)
-  
+  console.log('🔍 Executing GraphQL query for product:', formattedProductId)
+
   // Use authenticated Shopify GraphQL client
-  const response = await shopifyGraphQL(query, { id: productId }, shop)
+  const response = await shopifyGraphQL(query, { id: formattedProductId }, shop)
   
   if (!response.data || !response.data.product) {
     console.error('❌ No product found with ID:', productId)

@@ -52,7 +52,7 @@ export async function shopifyGraphQL(query: string, variables: any, shop: string
     console.log('📝 Query variables:', variables)
     
     // If this is a product query, handle it specially
-    if (query.includes('query getProduct') || query.includes('product(id: $id)')) {
+    if (query.includes('query GetProduct') || query.includes('product(id: $id)')) {
       return await executeProductQuery(client, variables.id)
     }
     
@@ -68,8 +68,11 @@ export async function shopifyGraphQL(query: string, variables: any, shop: string
 
 // Specialized product query handler
 async function executeProductQuery(client: ShopifyAPI, productId: string) {
-  // For development, we'll create a mock response that matches our expected structure
-  if (process.env.NODE_ENV === 'development') {
+  // For development with auth bypass or mock token, we'll create a mock response
+  const isMockMode = process.env.NODE_ENV === 'development' &&
+    (process.env.SHOPIFY_AUTH_BYPASS === 'true' || client.accessToken === 'mock_development_token_12345')
+
+  if (isMockMode) {
     console.log('🧪 Development mode: returning mock product data for:', productId)
     
     return {
