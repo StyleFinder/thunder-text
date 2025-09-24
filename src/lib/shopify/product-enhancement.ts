@@ -53,13 +53,21 @@ export async function fetchProductDataForEnhancement(
   shop: string
 ): Promise<EnhancementProductData | null> {
   try {
-    console.log('🔄 Fetching product data for enhancement:', { productId, shop })
-    
+    console.log('🔄 Fetching product data for enhancement:', {
+      productId,
+      shop,
+      idFormat: productId.startsWith('gid://') ? 'GraphQL' : 'Numeric'
+    })
+
     // Get base product data using existing utility
     const baseData = await fetchProductDataForPrePopulation(productId, shop)
-    
+
     if (!baseData) {
-      console.error('❌ Base product data not found')
+      console.error('❌ Base product data not found for ID:', productId)
+      console.error('📝 Attempted formats:', {
+        original: productId,
+        converted: productId.startsWith('gid://') ? productId : `gid://shopify/Product/${productId}`
+      })
       return null
     }
 
