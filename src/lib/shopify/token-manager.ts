@@ -69,6 +69,22 @@ export async function storeShopToken(
 export async function getShopToken(
   shopDomain: string
 ): Promise<{ success: boolean; accessToken?: string; error?: string }> {
+  // TEMPORARY: Use a base64 encoded token from environment
+  const encodedToken = process.env.NEXT_PUBLIC_SHOPIFY_TOKEN_B64
+
+  if (encodedToken) {
+    try {
+      const decodedToken = Buffer.from(encodedToken, 'base64').toString('utf-8')
+      console.log('✅ Using decoded token for shop:', shopDomain)
+      return {
+        success: true,
+        accessToken: decodedToken
+      }
+    } catch (error) {
+      console.error('❌ Failed to decode token:', error)
+    }
+  }
+
   // First check if we have an environment variable token (Vercel deployment)
   const envToken = process.env.SHOPIFY_ACCESS_TOKEN
   if (envToken && envToken !== '' && envToken !== 'placeholder-token') {
