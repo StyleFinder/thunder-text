@@ -69,6 +69,16 @@ export async function storeShopToken(
 export async function getShopToken(
   shopDomain: string
 ): Promise<{ success: boolean; accessToken?: string; error?: string }> {
+  // First check if we have an environment variable token (Vercel deployment)
+  const envToken = process.env.SHOPIFY_ACCESS_TOKEN
+  if (envToken && envToken !== '' && envToken !== 'placeholder-token') {
+    console.log('✅ Using environment variable token for shop:', shopDomain)
+    return {
+      success: true,
+      accessToken: envToken
+    }
+  }
+
   try {
     console.log('🔑 Retrieving access token for shop:', shopDomain)
     console.log('📍 Supabase URL:', supabaseUrl)
