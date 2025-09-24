@@ -32,20 +32,31 @@ export async function GET(request: NextRequest) {
       shop, page, limit, query, status, sort, authBypass
     })
 
-    // Try to get the access token from database
+    // Try to get the access token - priority order:
+    // 1. Session token from App Bridge (for embedded apps)
+    // 2. Access token from database (for OAuth flow)
+    // 3. Environment variable (legacy)
     let accessToken: string | undefined
 
-    const tokenResult = await getShopToken(shop)
-    if (tokenResult.success && tokenResult.accessToken) {
-      accessToken = tokenResult.accessToken
-      console.log('✅ Retrieved access token from database for shop:', shop)
+    // Check for session token in headers (from App Bridge)
+    const sessionToken = request.headers.get('authorization')?.replace('Bearer ', '')
+    if (sessionToken && sessionToken !== 'undefined') {
+      accessToken = sessionToken
+      console.log('✅ Using session token from App Bridge for shop:', shop)
     } else {
-      // Fallback to environment variable for backward compatibility
-      accessToken = process.env.SHOPIFY_ACCESS_TOKEN
-      if (accessToken && accessToken !== '' && accessToken !== 'placeholder-token') {
-        console.log('⚠️ Using environment variable token (legacy)')
+      // Try to get permanent access token from database
+      const tokenResult = await getShopToken(shop)
+      if (tokenResult.success && tokenResult.accessToken) {
+        accessToken = tokenResult.accessToken
+        console.log('✅ Retrieved access token from database for shop:', shop)
       } else {
-        accessToken = undefined
+        // Fallback to environment variable for backward compatibility
+        accessToken = process.env.SHOPIFY_ACCESS_TOKEN
+        if (accessToken && accessToken !== '' && accessToken !== 'placeholder-token') {
+          console.log('⚠️ Using environment variable token (legacy)')
+        } else {
+          accessToken = undefined
+        }
       }
     }
 

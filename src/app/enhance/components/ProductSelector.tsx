@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { authenticatedFetch } from '@/lib/shopify/api-client'
 import {
   Card,
   Text,
@@ -72,7 +73,7 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
         sort: sortOrder
       })
 
-      const response = await fetch(`/api/shopify/products?${params}`)
+      const response = await authenticatedFetch(`/api/shopify/products?${params}`)
       const result = await response.json()
 
       if (!response.ok) {

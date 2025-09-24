@@ -4,6 +4,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useCallback, useEffect, Suspense } from 'react'
+import { authenticatedFetch } from '@/lib/shopify/api-client'
 import { useSearchParams } from 'next/navigation'
 import {
   Page,
@@ -227,11 +228,8 @@ function EnhanceProductContent() {
     try {
       console.log('📝 Applying enhanced description to Shopify...')
       
-      const response = await fetch(`/api/shopify/products/${workflow.productData.id}/enhance?shop=${shop}`, {
+      const response = await authenticatedFetch(`/api/shopify/products/${workflow.productData.id}/enhance?shop=${shop}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           enhancedDescription: workflow.generatedContent.description,
           enhancedTitle: workflow.generatedContent.title

@@ -1,10 +1,30 @@
 import { ShopifyAPI } from '../shopify'
+import { getShopToken } from './token-manager'
 
 // Helper function to get Shopify access token for a shop
-async function getShopifyAccessToken(shop: string): Promise<string> {
-  // In a real implementation, you'd fetch this from your database
-  // For now, we'll try to get it from environment variables or session
-  
+async function getShopifyAccessToken(shop: string, sessionToken?: string): Promise<string> {
+  // Priority order for getting tokens:
+  // 1. Session token from App Bridge (for embedded apps)
+  // 2. Access token from database (for OAuth flow)
+  // 3. Mock token for development with auth bypass
+
+  // If session token is provided, use it directly
+  if (sessionToken && sessionToken !== 'undefined') {
+    console.log('✅ Using session token from App Bridge for shop:', shop)
+    return sessionToken
+  }
+
+  // Try to get permanent access token from database
+  try {
+    const tokenResult = await getShopToken(shop)
+    if (tokenResult.success && tokenResult.accessToken) {
+      console.log('✅ Retrieved access token from database for shop:', shop)
+      return tokenResult.accessToken
+    }
+  } catch (error) {
+    console.log('⚠️ Failed to retrieve token from database:', error)
+  }
+
   // Check if this is development and we have auth bypass
   if (process.env.NODE_ENV === 'development' && process.env.SHOPIFY_AUTH_BYPASS === 'true') {
     // For development, return a mock token to allow the mock data flow to work
@@ -12,20 +32,14 @@ async function getShopifyAccessToken(shop: string): Promise<string> {
     return 'mock_development_token_12345'
   }
 
-  // TODO: Implement proper token retrieval from your auth system
-  // This would typically involve:
-  // 1. Querying your database for the shop's access token
-  // 2. Validating the token is still valid
-  // 3. Refreshing if necessary
-  
   throw new Error(`Access token not found for shop: ${shop}. Please ensure the app is properly installed.`)
 }
 
 // Wrapper function that matches the expected interface
-export async function shopifyGraphQL(query: string, variables: any, shop: string) {
+export async function shopifyGraphQL(query: string, variables: any, shop: string, sessionToken?: string) {
   try {
     // Get the access token for this shop
-    const accessToken = await getShopifyAccessToken(shop)
+    const accessToken = await getShopifyAccessToken(shop, sessionToken)
     
     // Create ShopifyAPI instance
     const client = new ShopifyAPI(shop, accessToken)
