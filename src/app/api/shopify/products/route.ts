@@ -31,9 +31,11 @@ export async function GET(request: NextRequest) {
       shop, page, limit, query, status, sort, authBypass 
     })
 
-    // Development mode with auth bypass - return mock data
-    if (authBypass && process.env.NODE_ENV === 'development') {
-      console.log('🧪 Development mode: returning mock products data')
+    // Development mode with auth bypass OR no Shopify token - return mock data
+    const hasShopifyToken = process.env.SHOPIFY_ACCESS_TOKEN && process.env.SHOPIFY_ACCESS_TOKEN !== 'placeholder-token'
+
+    if ((authBypass && process.env.NODE_ENV === 'development') || !hasShopifyToken) {
+      console.log('🧪 Using mock products data (auth bypass or no Shopify token)')
       
       // Generate mock products that match the expected structure
       const mockProducts = [
@@ -109,7 +111,7 @@ export async function GET(request: NextRequest) {
           hasNextPage: false,
           hasPreviousPage: false
         },
-        message: 'Products fetched successfully (development mode)'
+        message: hasShopifyToken ? 'Products fetched successfully (development mode)' : 'Products fetched successfully (demo mode)'
       })
     }
 
