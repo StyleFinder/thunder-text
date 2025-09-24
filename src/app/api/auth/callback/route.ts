@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { storeShopToken } from '@/lib/shopify/token-manager'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -32,10 +33,21 @@ export async function GET(request: NextRequest) {
     
     const data = await response.json()
     const accessToken = data.access_token
-    
+    const scope = data.scope
+
     console.log('✅ Got access token:', accessToken.substring(0, 15) + '...')
-    
-    // Display token for copying
+
+    // Store the token in Supabase
+    const storeResult = await storeShopToken(shop, accessToken, scope)
+
+    if (!storeResult.success) {
+      console.error('Failed to store token:', storeResult.error)
+      // Continue anyway - token can still be copied manually
+    } else {
+      console.log('✅ Token stored in database for shop:', shop)
+    }
+
+    // Display token for copying (as backup)
     const html = `
       <!DOCTYPE html>
       <html>
