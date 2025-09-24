@@ -60,9 +60,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Use mock data if: auth bypass is enabled OR no valid Shopify token
-    if (authBypass || !accessToken) {
-      console.log('🧪 Using mock products data (auth bypass enabled or no valid token)')
+    // Use mock data only if no valid Shopify token (ignore auth bypass if we have a real token)
+    if (!accessToken) {
+      console.log('🧪 Using mock products data (no valid token found)')
       
       // Generate mock products that match the expected structure
       const mockProducts = [

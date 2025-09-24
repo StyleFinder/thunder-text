@@ -32,12 +32,19 @@ export async function storeShopToken(
       ? shopDomain
       : `${shopDomain}.myshopify.com`
 
+    // Upsert directly to the shops table
     const { data, error } = await supabase
-      .rpc('upsert_shop_token', {
-        p_shop_domain: fullShopDomain,
-        p_access_token: accessToken,
-        p_scope: scope || null
+      .from('shops')
+      .upsert({
+        shop_domain: fullShopDomain,
+        access_token: accessToken,
+        scope: scope || null,
+        is_active: true
+      }, {
+        onConflict: 'shop_domain'
       })
+      .select('id')
+      .single()
 
     if (error) {
       console.error('❌ Error storing token:', error)
@@ -45,7 +52,7 @@ export async function storeShopToken(
     }
 
     console.log('✅ Token stored successfully for shop:', fullShopDomain)
-    return { success: true, shopId: data }
+    return { success: true, shopId: data?.id }
 
   } catch (error) {
     console.error('❌ Unexpected error storing token:', error)
@@ -70,23 +77,26 @@ export async function getShopToken(
       ? shopDomain
       : `${shopDomain}.myshopify.com`
 
+    // Query the shops table directly
     const { data, error } = await supabase
-      .rpc('get_shop_access_token', {
-        p_shop_domain: fullShopDomain
-      })
+      .from('shops')
+      .select('access_token')
+      .eq('shop_domain', fullShopDomain)
+      .eq('is_active', true)
+      .single()
 
     if (error) {
       console.error('❌ Error retrieving token:', error)
       return { success: false, error: error.message }
     }
 
-    if (!data) {
+    if (!data || !data.access_token) {
       console.log('⚠️ No token found for shop:', fullShopDomain)
       return { success: false, error: 'No token found for this shop' }
     }
 
     console.log('✅ Token retrieved successfully for shop:', fullShopDomain)
-    return { success: true, accessToken: data }
+    return { success: true, accessToken: data.access_token }
 
   } catch (error) {
     console.error('❌ Unexpected error retrieving token:', error)
