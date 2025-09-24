@@ -1,6 +1,6 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "fa85f3902882734b800968440c27447d"
+client_id = "***REMOVED***"
 name = "Thunder Text Dev911"
 application_url = "https://thunder-text-nine.vercel.app"
 embedded = true
