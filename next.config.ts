@@ -9,6 +9,13 @@ const nextConfig: NextConfig = {
     // Disable TypeScript strict checks during production builds
     ignoreBuildErrors: true,
   },
+  // Ensure environment variables are available
+  env: {
+    SHOPIFY_ACCESS_TOKEN: process.env.SHOPIFY_ACCESS_TOKEN || '',
+    SHOPIFY_API_KEY: process.env.SHOPIFY_API_KEY || '',
+    SHOPIFY_API_SECRET: process.env.SHOPIFY_API_SECRET || '',
+    SHOPIFY_AUTH_BYPASS: process.env.SHOPIFY_AUTH_BYPASS || 'false',
+  },
   // Configure for embedded Shopify app
   // assetPrefix: process.env.NODE_ENV === 'production' ? 'https://thunder-text-nine.vercel.app' : undefined,
   // Enable serving static files correctly in embedded context
