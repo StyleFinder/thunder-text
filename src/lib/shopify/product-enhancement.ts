@@ -366,7 +366,7 @@ function identifyImprovementAreas(productData: EnhancementProductData): string[]
 
 /**
  * Update product with enhanced content
- * Wrapper function for the API route
+ * Wrapper function for the API route to update Shopify products
  */
 export async function updateProductWithEnhancement(
   productId: string,
