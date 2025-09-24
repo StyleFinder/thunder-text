@@ -83,7 +83,8 @@ export async function getShopToken(
       .select('access_token')
       .eq('shop_domain', fullShopDomain)
       .eq('is_active', true)
-      .single()
+      .limit(1)
+      .maybeSingle()
 
     if (error) {
       console.error('❌ Error retrieving token:', error)
