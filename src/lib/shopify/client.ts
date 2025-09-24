@@ -38,19 +38,26 @@ async function getShopifyAccessToken(shop: string, sessionToken?: string): Promi
 // Wrapper function that matches the expected interface
 export async function shopifyGraphQL(query: string, variables: any, shop: string, sessionToken?: string) {
   try {
+    console.log('🔍 Starting Shopify GraphQL query for shop:', shop)
+    console.log('📝 Query variables:', JSON.stringify(variables, null, 2))
+
     // Get the access token for this shop
     const accessToken = await getShopifyAccessToken(shop, sessionToken)
-    
+
     // Create ShopifyAPI instance
     const client = new ShopifyAPI(shop, accessToken)
-    
+
     // Execute the query using the existing client
     // Note: We'll need to call the underlying GraphQL client directly
     // For now, let's create a simple wrapper that uses the existing methods
-    
-    console.log('🔍 Executing Shopify GraphQL query for shop:', shop)
-    console.log('📝 Query variables:', variables)
-    
+
+    console.log('🔑 Access token status:', accessToken ? 'Available' : 'Missing')
+    console.log('🔍 Query type detection:', {
+      hasGetProduct: query.includes('query GetProduct'),
+      hasProductId: query.includes('product(id: $id)'),
+      isMockToken: accessToken === 'mock_development_token_12345'
+    })
+
     // If this is a product query, handle it specially
     if (query.includes('query GetProduct') || query.includes('product(id: $id)')) {
       return await executeProductQuery(client, variables.id)
@@ -62,6 +69,18 @@ export async function shopifyGraphQL(query: string, variables: any, shop: string
     
   } catch (error) {
     console.error('❌ Shopify GraphQL query failed:', error)
+
+    // In development with auth bypass, fall back to mock data
+    if (process.env.NODE_ENV === 'development' && process.env.SHOPIFY_AUTH_BYPASS === 'true') {
+      console.log('🧪 Falling back to mock data due to error in development mode')
+
+      // If this was a product query, return mock product data
+      if (query.includes('query GetProduct') || query.includes('product(id: $id)')) {
+        const mockClient = new ShopifyAPI(shop, 'mock_development_token_12345')
+        return await executeProductQuery(mockClient, variables.id)
+      }
+    }
+
     throw error
   }
 }
@@ -73,7 +92,9 @@ async function executeProductQuery(client: ShopifyAPI, productId: string) {
     (process.env.SHOPIFY_AUTH_BYPASS === 'true' || client.accessToken === 'mock_development_token_12345')
 
   if (isMockMode) {
-    console.log('🧪 Development mode: returning mock product data for:', productId)
+    console.log('🧪 Development mode: returning mock product data')
+    console.log('📦 Product ID requested:', productId)
+    console.log('📝 ID format:', productId.startsWith('gid://') ? 'GraphQL' : 'Numeric')
     
     return {
       data: {
