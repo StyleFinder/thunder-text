@@ -8,6 +8,7 @@ handle = "thunder-text-29"
 
 [build]
 dev_store_url = "zunosai-staging-test-store.myshopify.com"
+include_config_on_deploy = true
 
 [webhooks]
 api_version = "2025-07"
@@ -19,7 +20,7 @@ optional_scopes = [ ]
 use_legacy_install_flow = false
 
 [auth]
-redirect_urls = [ "https://thunder-text-nine.vercel.app/api/auth/callback" ]
+redirect_urls = [ "https://thunder-text-nine.vercel.app/api/auth/callback/shopify" ]
 
 [pos]
 embedded = false

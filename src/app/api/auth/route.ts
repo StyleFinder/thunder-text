@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Build the OAuth authorization URL
-  const redirectUri = `${process.env.SHOPIFY_APP_URL || 'https://thunder-text-nine.vercel.app'}/api/auth/callback`
+  const redirectUri = `${process.env.SHOPIFY_APP_URL || 'https://thunder-text-nine.vercel.app'}/api/auth/callback/shopify`
 
   const scopes = [
     'read_products',
