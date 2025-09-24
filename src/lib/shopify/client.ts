@@ -25,10 +25,16 @@ async function getShopifyAccessToken(shop: string, sessionToken?: string): Promi
     console.log('⚠️ Failed to retrieve token from database:', error)
   }
 
-  // Check if this is development and we have auth bypass
+  // Check for environment variable token (for development with real API)
+  const envToken = process.env.SHOPIFY_ACCESS_TOKEN
+  if (envToken && envToken !== '' && envToken !== 'placeholder-token') {
+    console.log('✅ Using access token from environment variable for shop:', shop)
+    return envToken
+  }
+
+  // Only use mock token if auth bypass is enabled AND no real token exists
   if (process.env.NODE_ENV === 'development' && process.env.SHOPIFY_AUTH_BYPASS === 'true') {
-    // For development, return a mock token to allow the mock data flow to work
-    console.log('🧪 Development mode: returning mock access token for shop:', shop)
+    console.log('🧪 Development mode with auth bypass: returning mock token for shop:', shop)
     return 'mock_development_token_12345'
   }
 
@@ -44,28 +50,48 @@ export async function shopifyGraphQL(query: string, variables: any, shop: string
     // Get the access token for this shop
     const accessToken = await getShopifyAccessToken(shop, sessionToken)
 
-    // Create ShopifyAPI instance
-    const client = new ShopifyAPI(shop, accessToken)
-
-    // Execute the query using the existing client
-    // Note: We'll need to call the underlying GraphQL client directly
-    // For now, let's create a simple wrapper that uses the existing methods
-
     console.log('🔑 Access token status:', accessToken ? 'Available' : 'Missing')
-    console.log('🔍 Query type detection:', {
-      hasGetProduct: query.includes('query GetProduct'),
-      hasProductId: query.includes('product(id: $id)'),
-      isMockToken: accessToken === 'mock_development_token_12345'
-    })
 
-    // If this is a product query, handle it specially
-    if (query.includes('query GetProduct') || query.includes('product(id: $id)')) {
-      return await executeProductQuery(client, variables.id)
+    // Skip mock mode if we have a real access token
+    const hasRealToken = accessToken &&
+      accessToken !== 'mock_development_token_12345' &&
+      accessToken !== '' &&
+      accessToken !== 'placeholder-token'
+
+    if (hasRealToken) {
+      console.log('✅ Using real Shopify API with access token')
+
+      // Use the GraphQLClient directly for real API calls
+      const { GraphQLClient } = await import('graphql-request')
+      const client = new GraphQLClient(
+        `https://${shop}.myshopify.com/admin/api/2025-01/graphql.json`,
+        {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+
+      try {
+        const response = await client.request(query, variables)
+        console.log('✅ Shopify GraphQL query successful')
+        return { data: response }
+      } catch (graphqlError) {
+        console.error('❌ GraphQL request failed:', graphqlError)
+        throw graphqlError
+      }
+    } else {
+      console.log('🧪 No valid token, using mock mode')
+
+      // Only use mock mode if no real token is available
+      if (query.includes('query GetProduct') || query.includes('product(id: $id)')) {
+        const mockClient = new ShopifyAPI(shop, 'mock_development_token_12345')
+        return await executeProductQuery(mockClient, variables.id)
+      }
+
+      throw new Error('No valid access token available and query type not supported in mock mode')
     }
-    
-    // For other queries, we'll need to extend the ShopifyAPI class
-    // For now, throw an error to indicate we need to implement specific handlers
-    throw new Error('GraphQL query type not yet implemented. Please implement specific handler.')
     
   } catch (error) {
     console.error('❌ Shopify GraphQL query failed:', error)
