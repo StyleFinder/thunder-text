@@ -274,11 +274,14 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Filter to only show draft products (all your test products are drafts)
-    // Change to 'active' for production
-    const products = allProducts.filter((product: any) => product.status === 'draft')
+    // Filter to show both draft AND active products
+    // This allows editing descriptions for new products (draft) and updating existing products (active)
+    // Exclude only archived products
+    const products = allProducts.filter((product: any) =>
+      product.status === 'draft' || product.status === 'active'
+    )
 
-    console.log(`📦 Filtered products: ${products.length} draft products out of ${allProducts.length} total`)
+    console.log(`📦 Filtered products: ${products.length} (draft + active) out of ${allProducts.length} total`)
 
     // Calculate total for pagination (simplified - in production you'd need a separate count query)
     const total = products.length + (shopifyData.data.products.pageInfo.hasNextPage ? limit : 0)
