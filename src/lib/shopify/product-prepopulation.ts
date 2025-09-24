@@ -113,10 +113,17 @@ export async function fetchProductDataForPrePopulation(
 async function fetchShopifyProduct(productId: string, shop: string) {
   // Ensure productId is in the correct GraphQL format
   let formattedProductId = productId
+
+  // Handle different ID formats
   if (!productId.startsWith('gid://')) {
     // If it's just a numeric ID, convert to GraphQL format
     formattedProductId = `gid://shopify/Product/${productId}`
-    console.log('📝 Converted product ID to GraphQL format:', formattedProductId)
+    console.log('📝 Converted numeric ID to GraphQL format:', {
+      original: productId,
+      formatted: formattedProductId
+    })
+  } else {
+    console.log('✅ Product ID already in GraphQL format:', formattedProductId)
   }
 
   const query = `
@@ -192,15 +199,32 @@ async function fetchShopifyProduct(productId: string, shop: string) {
 
   console.log('🔍 Executing GraphQL query for product:', formattedProductId)
 
-  // Use authenticated Shopify GraphQL client
-  const response = await shopifyGraphQL(query, { id: formattedProductId }, shop)
-  
-  if (!response.data || !response.data.product) {
-    console.error('❌ No product found with ID:', productId)
-    return null
-  }
+  try {
+    // Use authenticated Shopify GraphQL client
+    const response = await shopifyGraphQL(query, { id: formattedProductId }, shop)
 
-  return response.data.product
+    console.log('📦 GraphQL response received:', {
+      hasData: !!response?.data,
+      hasProduct: !!response?.data?.product,
+      productId: response?.data?.product?.id
+    })
+
+    if (!response?.data || !response.data.product) {
+      console.error('❌ No product found with ID:', formattedProductId)
+      console.error('📝 Response structure:', JSON.stringify(response, null, 2))
+      return null
+    }
+
+    console.log('✅ Product found:', response.data.product.title)
+    return response.data.product
+  } catch (error) {
+    console.error('❌ Error fetching product from Shopify:', error)
+    console.error('📝 Query details:', {
+      productId: formattedProductId,
+      shop
+    })
+    throw error
+  }
 }
 
 function extractPrimaryCategory(productData: any): string {
