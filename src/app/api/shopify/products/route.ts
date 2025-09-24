@@ -60,9 +60,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Use mock data only if no valid Shopify token (ignore auth bypass if we have a real token)
+    // IMPORTANT: Force use real token if available, never use mock data when token exists
+    // Deployment timestamp: ${Date.now()}
     if (!accessToken) {
-      console.log('🧪 Using mock products data (no valid token found)')
+      console.log('🧪 WARNING: No valid token found, falling back to mock data')
       
       // Generate mock products that match the expected structure
       const mockProducts = [

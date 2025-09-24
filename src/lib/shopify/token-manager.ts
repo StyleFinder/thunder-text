@@ -71,6 +71,7 @@ export async function getShopToken(
 ): Promise<{ success: boolean; accessToken?: string; error?: string }> {
   try {
     console.log('🔑 Retrieving access token for shop:', shopDomain)
+    console.log('📍 Supabase URL:', supabaseUrl)
 
     // Ensure we have the full shop domain
     const fullShopDomain = shopDomain.includes('.myshopify.com')
