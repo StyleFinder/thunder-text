@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getShopToken } from '@/lib/shopify/token-manager'
 
 // GET /api/shopify/products?shop={shop}&page={page}&limit={limit}&query={query}&status={status}&sort={sort}
 export async function GET(request: NextRequest) {
@@ -27,18 +28,30 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('🔄 Fetching products from Shopify:', { 
-      shop, page, limit, query, status, sort, authBypass 
+    console.log('🔄 Fetching products from Shopify:', {
+      shop, page, limit, query, status, sort, authBypass
     })
 
-    // Development mode with auth bypass OR no valid Shopify token - return mock data
-    const hasValidShopifyToken = process.env.SHOPIFY_ACCESS_TOKEN &&
-                                 process.env.SHOPIFY_ACCESS_TOKEN !== '' &&
-                                 process.env.SHOPIFY_ACCESS_TOKEN !== 'placeholder-token'
+    // Try to get the access token from database
+    let accessToken: string | undefined
+
+    const tokenResult = await getShopToken(shop)
+    if (tokenResult.success && tokenResult.accessToken) {
+      accessToken = tokenResult.accessToken
+      console.log('✅ Retrieved access token from database for shop:', shop)
+    } else {
+      // Fallback to environment variable for backward compatibility
+      accessToken = process.env.SHOPIFY_ACCESS_TOKEN
+      if (accessToken && accessToken !== '' && accessToken !== 'placeholder-token') {
+        console.log('⚠️ Using environment variable token (legacy)')
+      } else {
+        accessToken = undefined
+      }
+    }
 
     // Use mock data if: auth bypass is enabled OR no valid Shopify token
-    if (authBypass || !hasValidShopifyToken) {
-      console.log('🧪 Using mock products data (auth bypass enabled or no valid Shopify token)')
+    if (authBypass || !accessToken) {
+      console.log('🧪 Using mock products data (auth bypass enabled or no valid token)')
       
       // Generate mock products that match the expected structure
       const mockProducts = [
@@ -114,7 +127,7 @@ export async function GET(request: NextRequest) {
           hasNextPage: false,
           hasPreviousPage: false
         },
-        message: hasValidShopifyToken ? 'Products fetched successfully (development mode)' : 'Products fetched successfully (demo mode)'
+        message: accessToken ? 'Products fetched successfully (development mode)' : 'Products fetched successfully (demo mode)'
       })
     }
 
@@ -193,7 +206,7 @@ export async function GET(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN || ''
+        'X-Shopify-Access-Token': accessToken || ''
       },
       body: JSON.stringify({
         query: graphqlQuery,
