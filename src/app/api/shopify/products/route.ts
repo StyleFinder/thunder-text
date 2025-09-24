@@ -213,11 +213,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Make request to Shopify Admin API
-    const shopifyResponse = await fetch(`https://${shop}.myshopify.com/admin/api/2023-10/graphql.json`, {
+    const shopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+    const shopifyUrl = `https://${shopDomain}/admin/api/2025-01/graphql.json`
+
+    console.log('📡 Calling Shopify API:', {
+      url: shopifyUrl,
+      hasToken: !!accessToken,
+      tokenPreview: accessToken ? accessToken.substring(0, 15) + '...' : null
+    })
+
+    const shopifyResponse = await fetch(shopifyUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': accessToken || ''
+        'X-Shopify-Access-Token': accessToken
       },
       body: JSON.stringify({
         query: graphqlQuery,
@@ -225,11 +234,24 @@ export async function GET(request: NextRequest) {
       })
     })
 
+    const responseText = await shopifyResponse.text()
+
     if (!shopifyResponse.ok) {
-      throw new Error(`Shopify API error: ${shopifyResponse.statusText}`)
+      console.error('❌ Shopify API error:', {
+        status: shopifyResponse.status,
+        statusText: shopifyResponse.statusText,
+        response: responseText.substring(0, 500)
+      })
+      throw new Error(`Shopify API error: ${shopifyResponse.status} ${shopifyResponse.statusText}`)
     }
 
-    const shopifyData = await shopifyResponse.json()
+    let shopifyData
+    try {
+      shopifyData = JSON.parse(responseText)
+    } catch (e) {
+      console.error('❌ Failed to parse Shopify response:', responseText.substring(0, 500))
+      throw new Error('Invalid JSON response from Shopify')
+    }
 
     if (shopifyData.errors) {
       throw new Error(`GraphQL errors: ${JSON.stringify(shopifyData.errors)}`)
