@@ -18,7 +18,31 @@ export async function GET(request: NextRequest) {
 
   const shopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
 
+  // Check for required environment variables
+  const clientId = process.env.SHOPIFY_API_KEY || process.env.NEXT_PUBLIC_SHOPIFY_API_KEY
+  const clientSecret = process.env.SHOPIFY_API_SECRET
+
+  if (!clientId || !clientSecret) {
+    console.error('❌ Missing required environment variables:', {
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret
+    })
+    return NextResponse.json(
+      {
+        error: 'Missing API credentials',
+        details: 'SHOPIFY_API_KEY and SHOPIFY_API_SECRET must be set in environment variables'
+      },
+      { status: 500 }
+    )
+  }
+
   try {
+    console.log('🔄 Exchanging code for token:', {
+      shop: shopDomain,
+      hasCode: !!code,
+      clientId: clientId.substring(0, 10) + '...'
+    })
+
     // Exchange authorization code for access token
     const tokenResponse = await fetch(`https://${shopDomain}/admin/oauth/access_token`, {
       method: 'POST',
@@ -26,17 +50,34 @@ export async function GET(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        client_id: process.env.SHOPIFY_API_KEY || process.env.NEXT_PUBLIC_SHOPIFY_API_KEY,
-        client_secret: process.env.SHOPIFY_API_SECRET,
+        client_id: clientId,
+        client_secret: clientSecret,
         code,
       }),
     })
 
     if (!tokenResponse.ok) {
       const error = await tokenResponse.text()
-      console.error('❌ Failed to exchange code for token:', error)
+      console.error('❌ Failed to exchange code for token:', {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        error
+      })
+
+      // Parse error for more details
+      let errorDetails = 'Unknown error'
+      try {
+        const errorJson = JSON.parse(error)
+        errorDetails = errorJson.error_description || errorJson.error || error
+      } catch {
+        errorDetails = error
+      }
+
       return NextResponse.json(
-        { error: 'Failed to obtain access token' },
+        {
+          error: 'Failed to obtain access token',
+          details: errorDetails
+        },
         { status: 500 }
       )
     }
