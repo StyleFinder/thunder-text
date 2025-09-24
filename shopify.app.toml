@@ -19,7 +19,7 @@ optional_scopes = [ ]
 use_legacy_install_flow = false
 
 [auth]
-redirect_urls = [ "https://thunder-text-nine.vercel.app/api/auth/callback/shopify" ]
+redirect_urls = [ "https://thunder-text-nine.vercel.app/api/auth/callback" ]
 
 [pos]
 embedded = false
