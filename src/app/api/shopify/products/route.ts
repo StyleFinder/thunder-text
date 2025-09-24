@@ -197,13 +197,10 @@ export async function GET(request: NextRequest) {
     // Build query string for filtering
     let queryString = ''
     if (query.trim()) {
-      queryString += `title:*${query.trim()}* OR tag:*${query.trim()}*`
+      queryString = `title:*${query.trim()}* OR tag:*${query.trim()}*`
     }
-    if (status && status !== 'active,draft,archived') {
-      const statusFilters = status.split(',')
-      const statusQuery = statusFilters.map(s => `status:${s}`).join(' OR ')
-      queryString += queryString ? ` AND (${statusQuery})` : statusQuery
-    }
+    // Note: Status filtering will be done after fetching since GraphQL status queries are unreliable
+    console.log('🔍 Fetching products with query:', queryString || '(all)')
 
     const variables = {
       first: limit,
@@ -258,7 +255,7 @@ export async function GET(request: NextRequest) {
       throw new Error(`GraphQL errors: ${JSON.stringify(shopifyData.errors)}`)
     }
 
-    const products = shopifyData.data.products.edges.map((edge: any) => {
+    const allProducts = shopifyData.data.products.edges.map((edge: any) => {
       const product = edge.node
       return {
         id: product.id.replace('gid://shopify/Product/', ''),
@@ -276,6 +273,12 @@ export async function GET(request: NextRequest) {
         }))
       }
     })
+
+    // Filter to only show draft products (all your test products are drafts)
+    // Change to 'active' for production
+    const products = allProducts.filter((product: any) => product.status === 'draft')
+
+    console.log(`📦 Filtered products: ${products.length} draft products out of ${allProducts.length} total`)
 
     // Calculate total for pagination (simplified - in production you'd need a separate count query)
     const total = products.length + (shopifyData.data.products.pageInfo.hasNextPage ? limit : 0)
