@@ -1,5 +1,6 @@
 import { ShopifyAPI } from '../shopify'
 import { getShopToken } from './token-manager'
+import { getShopifyAccessToken as getEnvToken } from './get-access-token'
 
 // Helper function to get Shopify access token for a shop
 async function getShopifyAccessToken(shop: string, sessionToken?: string): Promise<string> {
@@ -12,8 +13,8 @@ async function getShopifyAccessToken(shop: string, sessionToken?: string): Promi
   // 4. Mock token for development with auth bypass
 
   // Check for environment variable token FIRST (for Vercel deployment)
-  const envToken = process.env.SHOPIFY_ACCESS_TOKEN
-  if (envToken && envToken !== '' && envToken !== 'placeholder-token') {
+  const envToken = getEnvToken()
+  if (envToken) {
     console.log('✅ Using access token from environment variable for shop:', shop)
     return envToken
   }
