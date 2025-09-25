@@ -63,20 +63,37 @@ export async function fetchProductDataForEnhancement(
     const response = await fetch(`/api/shopify/product-prepopulation?productId=${productId}&shop=${shop}`)
 
     if (!response.ok) {
-      console.error('❌ Failed to fetch product data:', response.status, response.statusText)
+      const errorText = await response.text()
+      console.error('❌ Failed to fetch product data:', response.status, errorText)
+
+      // Check if it's a JSON error response
+      try {
+        const errorData = JSON.parse(errorText)
+        if (errorData.error === 'Product not found') {
+          console.error('❌ Product not found in Shopify:', productId)
+          return null
+        }
+      } catch {
+        // Not JSON, use raw error
+      }
+
       return null
     }
 
     const baseData = await response.json()
 
-    if (!baseData) {
-      console.error('❌ Base product data not found for ID:', productId)
-      console.error('📝 Attempted formats:', {
-        original: productId,
-        converted: productId.startsWith('gid://') ? productId : `gid://shopify/Product/${productId}`
-      })
+    if (!baseData || Object.keys(baseData).length === 0) {
+      console.error('❌ Empty or invalid product data received')
+      console.error('📝 Response data:', baseData)
       return null
     }
+
+    console.log('✅ Received base product data:', {
+      id: baseData.id,
+      title: baseData.title,
+      hasImages: baseData.images?.length > 0,
+      hasVariants: baseData.variants?.length > 0
+    })
 
     // Enhance with additional data needed for enhancement workflows
     const enhancementData: EnhancementProductData = {

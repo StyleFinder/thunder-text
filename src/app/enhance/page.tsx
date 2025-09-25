@@ -66,9 +66,18 @@ function EnhanceProductContent() {
   const stepOrder: WorkflowStep[] = ['loading', 'context', 'configure', 'generating', 'compare', 'apply', 'complete']
   const currentStepIndex = stepOrder.indexOf(workflow.currentStep)
 
+  // Track if we're already loading to prevent duplicate calls
+  const [isLoading, setIsLoading] = useState(false)
+
   // Load product data on mount
   useEffect(() => {
     async function loadProductData() {
+      // Prevent duplicate calls
+      if (isLoading) {
+        console.log('⏳ Already loading product data, skipping duplicate call')
+        return
+      }
+
       if (!shop) {
         setWorkflow(prev => ({
           ...prev,
@@ -89,12 +98,14 @@ function EnhanceProductContent() {
         return
       }
 
+      setIsLoading(true)
+
       try {
         console.log('🔄 Loading product data for enhancement:', { productId, shop })
-        
+
         const data = await fetchProductDataForEnhancement(productId, shop)
-        
-        if (data) {
+
+        if (data && data.id) {
           setWorkflow(prev => ({
             ...prev,
             productData: data,
@@ -102,11 +113,15 @@ function EnhanceProductContent() {
             progress: 20,
             error: null
           }))
-          console.log('✅ Product data loaded successfully for enhancement')
+          console.log('✅ Product data loaded successfully for enhancement:', {
+            id: data.id,
+            title: data.title
+          })
         } else {
-          throw new Error('No product data returned')
+          console.error('❌ Invalid product data structure:', data)
+          throw new Error('No valid product data returned')
         }
-        
+
       } catch (err) {
         console.error('❌ Error loading product data:', err)
         setWorkflow(prev => ({
@@ -114,11 +129,13 @@ function EnhanceProductContent() {
           error: `Failed to load product data: ${err instanceof Error ? err.message : 'Unknown error'}`,
           currentStep: 'loading'
         }))
+      } finally {
+        setIsLoading(false)
       }
     }
 
     loadProductData()
-  }, [productId, shop])
+  }, [productId, shop, isLoading])
 
   // Handle form data changes
   const handleFormChange = useCallback((formData: EnhancementFormData) => {
