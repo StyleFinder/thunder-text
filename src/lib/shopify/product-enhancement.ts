@@ -59,8 +59,15 @@ export async function fetchProductDataForEnhancement(
       idFormat: productId.startsWith('gid://') ? 'GraphQL' : 'Numeric'
     })
 
-    // Get base product data using existing utility
-    const baseData = await fetchProductDataForPrePopulation(productId, shop)
+    // Get base product data using API endpoint (server-side for env vars)
+    const response = await fetch(`/api/shopify/product-prepopulation?productId=${productId}&shop=${shop}`)
+
+    if (!response.ok) {
+      console.error('❌ Failed to fetch product data:', response.status, response.statusText)
+      return null
+    }
+
+    const baseData = await response.json()
 
     if (!baseData) {
       console.error('❌ Base product data not found for ID:', productId)
