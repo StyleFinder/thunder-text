@@ -53,12 +53,22 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
     const initializeAppBridge = async () => {
       try {
         if (isEmbedded && shop) {
+          const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY
+
+          // Skip App Bridge initialization if API key is missing
+          if (!apiKey) {
+            console.warn('⚠️ Shopify API Key not found. App Bridge disabled.')
+            console.log('ℹ️ Add NEXT_PUBLIC_SHOPIFY_API_KEY to environment variables for full Shopify integration.')
+            setIsLoading(false)
+            return
+          }
+
           // Dynamic import to avoid SSR issues
           const { createApp } = await import('@shopify/app-bridge')
           const { getSessionToken } = await import('@shopify/app-bridge/utilities')
-          
+
           appBridge = createApp({
-            apiKey: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || '',
+            apiKey: apiKey,
             shop: shop,
             host: host || '',
             forceRedirect: true,

@@ -14,11 +14,18 @@ Due to GitHub's secret detection, we're using base64 encoding as a temporary wor
 
 2. **Add to Vercel Dashboard**:
    - Go to: https://vercel.com/stylefinder/thunder-text/settings/environment-variables
-   - Add new variable:
+
+   - Add Token Variable:
      - Name: `NEXT_PUBLIC_SHOPIFY_TOKEN_B64`
      - Value: [The base64 encoded string from step 1]
      - Environment: All (Production, Preview, Development)
-   - Click "Save"
+
+   - Add API Key Variable:
+     - Name: `NEXT_PUBLIC_SHOPIFY_API_KEY`
+     - Value: `fa85f3902882734b800968440c27447d`
+     - Environment: All (Production, Preview, Development)
+
+   - Click "Save" after adding both
 
 3. **Redeploy**: Push changes to trigger deployment
 

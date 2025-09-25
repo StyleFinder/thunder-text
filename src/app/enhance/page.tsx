@@ -68,13 +68,14 @@ function EnhanceProductContent() {
 
   // Track if we're already loading to prevent duplicate calls
   const [isLoading, setIsLoading] = useState(false)
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false)
 
   // Load product data on mount
   useEffect(() => {
     async function loadProductData() {
       // Prevent duplicate calls
-      if (isLoading) {
-        console.log('⏳ Already loading product data, skipping duplicate call')
+      if (isLoading || hasAttemptedLoad) {
+        console.log('⏳ Already loading or attempted load, skipping duplicate call')
         return
       }
 
@@ -99,6 +100,7 @@ function EnhanceProductContent() {
       }
 
       setIsLoading(true)
+      setHasAttemptedLoad(true)
 
       try {
         console.log('🔄 Loading product data for enhancement:', { productId, shop })
@@ -135,7 +137,7 @@ function EnhanceProductContent() {
     }
 
     loadProductData()
-  }, [productId, shop, isLoading])
+  }, [productId, shop])
 
   // Handle form data changes
   const handleFormChange = useCallback((formData: EnhancementFormData) => {
@@ -335,8 +337,8 @@ function EnhanceProductContent() {
     )
   }
 
-  // Error state
-  if (workflow.error && workflow.currentStep === 'loading') {
+  // Error state - only show if we've attempted to load and failed
+  if (workflow.error && workflow.currentStep === 'loading' && hasAttemptedLoad && !isLoading) {
     return (
       <Page title="Enhance Product Description">
         <Layout>
@@ -351,7 +353,11 @@ function EnhanceProductContent() {
                   There was an error loading the product data. Please try again or contact support.
                 </Text>
                 <InlineStack gap="300">
-                  <Button onClick={() => window.location.reload()}>Try Again</Button>
+                  <Button onClick={() => {
+                    setHasAttemptedLoad(false)
+                    setWorkflow(prev => ({ ...prev, error: null }))
+                    window.location.reload()
+                  }}>Try Again</Button>
                   <Button onClick={() => window.history.back()}>Go Back</Button>
                 </InlineStack>
               </BlockStack>
