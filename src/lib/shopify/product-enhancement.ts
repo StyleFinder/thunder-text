@@ -71,13 +71,16 @@ export async function fetchProductDataForEnhancement(
         const errorData = JSON.parse(errorText)
         if (errorData.error === 'Product not found') {
           console.error('❌ Product not found in Shopify:', productId)
-          return null
+          throw new Error('Product not found in Shopify')
         }
-      } catch {
+        throw new Error(errorData.error || `Server error: ${response.status}`)
+      } catch (parseError) {
         // Not JSON, use raw error
+        if (parseError instanceof Error && parseError.message.includes('Product not found')) {
+          throw parseError
+        }
+        throw new Error(`Failed to fetch product: ${response.status}`)
       }
-
-      return null
     }
 
     const baseData = await response.json()
@@ -85,7 +88,7 @@ export async function fetchProductDataForEnhancement(
     if (!baseData || Object.keys(baseData).length === 0) {
       console.error('❌ Empty or invalid product data received')
       console.error('📝 Response data:', baseData)
-      return null
+      throw new Error('Invalid product data received from server')
     }
 
     console.log('✅ Received base product data:', {
