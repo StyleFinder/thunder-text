@@ -7,10 +7,17 @@ export function getShopifyAccessToken(): string | undefined {
   // This avoids GitHub secret detection while we fix proper env access
   const encodedToken = process.env.NEXT_PUBLIC_SHOPIFY_TOKEN_B64
 
+  console.log('🔍 Token retrieval attempt:', {
+    hasEncodedToken: !!encodedToken,
+    encodedTokenLength: encodedToken?.length || 0,
+    nodeEnv: process.env.NODE_ENV
+  })
+
   if (encodedToken) {
     try {
       const decodedToken = Buffer.from(encodedToken, 'base64').toString('utf-8')
       console.log('✅ Using decoded Shopify access token from environment')
+      console.log('🔑 Decoded token prefix:', decodedToken.substring(0, 10) + '...')
       return decodedToken
     } catch (error) {
       console.error('❌ Failed to decode token:', error)
