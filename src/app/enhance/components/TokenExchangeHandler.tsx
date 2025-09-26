@@ -21,10 +21,10 @@ export function TokenExchangeHandler({ shop, isEmbedded, onSuccess }: TokenExcha
         return
       }
 
-      // Check if we already have a valid session
-      const existingToken = window.sessionStorage.getItem('shopify_session_token')
-      if (existingToken) {
-        console.log('✅ Session token already exists')
+      // Check if we already performed token exchange in this session
+      const exchangeCompleted = window.sessionStorage.getItem('token_exchange_completed')
+      if (exchangeCompleted === shop) {
+        console.log('✅ Token exchange already completed for this shop')
         onSuccess()
         return
       }
@@ -90,6 +90,9 @@ export function TokenExchangeHandler({ shop, isEmbedded, onSuccess }: TokenExcha
         }
 
         console.log('✅ Token exchange successful')
+
+        // Mark token exchange as completed for this shop
+        window.sessionStorage.setItem('token_exchange_completed', shop)
 
         // Refresh session token periodically (they expire after 1 minute)
         setInterval(async () => {
