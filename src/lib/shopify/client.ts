@@ -1,40 +1,32 @@
 import { ShopifyAPI } from '../shopify'
-import { getShopToken } from './token-manager'
-import { getShopifyAccessToken as getEnvToken } from './get-access-token'
+import { getOrExchangeToken, validateSessionToken } from './token-exchange'
 
 // Helper function to get Shopify access token for a shop
 async function getShopifyAccessToken(shop: string, sessionToken?: string): Promise<string> {
   console.log('🔍 Getting Shopify access token for shop:', shop)
 
-  // Priority order for getting tokens:
-  // 1. Session token from App Bridge (for embedded apps)
-  // 2. Access token from database (for OAuth flow)
-  // 3. Throw error if no token found (no more bypass logic)
+  // New Token Exchange flow:
+  // 1. Validate session token if provided
+  // 2. Exchange session token for access token OR get from database
+  // 3. Use access token for API calls
 
-  // If session token is provided, use it
   if (sessionToken && sessionToken !== 'undefined') {
-    console.log('✅ Using session token from App Bridge for shop:', shop)
-    return sessionToken
-  }
-
-  // Try to get permanent access token from database (PRIMARY METHOD)
-  try {
-    const tokenResult = await getShopToken(shop)
-    if (tokenResult.success && tokenResult.accessToken) {
-      console.log('✅ Retrieved access token from database for shop:', shop)
-      return tokenResult.accessToken
+    // Validate the session token first
+    if (!validateSessionToken(sessionToken)) {
+      throw new Error('Invalid or expired session token')
     }
-  } catch (error) {
-    console.log('⚠️ Failed to retrieve token from database:', error)
+    console.log('✅ Valid session token provided for shop:', shop)
   }
 
-  console.error('❌ No access token found for shop:', shop)
-  console.error('📝 Checked:', {
-    sessionToken: !!sessionToken,
-    databaseQuery: 'attempted'
-  })
-
-  throw new Error(`Access token not found for shop: ${shop}. Please ensure the app is properly installed through Shopify.`)
+  // Get or exchange for an access token
+  try {
+    const accessToken = await getOrExchangeToken(shop, sessionToken)
+    console.log('✅ Access token obtained for shop:', shop)
+    return accessToken
+  } catch (error) {
+    console.error('❌ Failed to get access token:', error)
+    throw new Error(`Access token not available for shop: ${shop}. Please ensure the app is properly installed.`)
+  }
 }
 
 // Wrapper function that matches the expected interface

@@ -185,6 +185,20 @@ export async function getShopDetails(
 }
 
 /**
+ * Save a shop's access token (alias for storeShopToken)
+ * Used by the Token Exchange flow
+ */
+export async function saveShopToken(
+  data: {
+    shop_domain: string
+    access_token: string
+    scope?: string
+  }
+): Promise<{ success: boolean; error?: string; shopId?: string }> {
+  return storeShopToken(data.shop_domain, data.access_token, data.scope)
+}
+
+/**
  * Deactivate a shop's token (soft delete)
  */
 export async function deactivateShopToken(
