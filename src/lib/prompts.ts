@@ -48,15 +48,7 @@ export type ProductCategory = typeof PRODUCT_CATEGORIES[number]['value']
  */
 export async function getStoreId(shopDomain: string): Promise<string | null> {
   try {
-    // In development mode with auth bypass, use static UUID for consistency
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-    
-    if (authBypass || process.env.NODE_ENV === 'development') {
-      // Use environment variable or fallback to development UUID
-      return process.env.DEVELOPMENT_STORE_ID || '550e8400-e29b-41d4-a716-446655440000'
-    }
-    
-    // In production, try to find the store in the database
+    // Always try to find the store in the database
     const { data, error } = await supabaseAdmin
       .from('stores')
       .select('id')

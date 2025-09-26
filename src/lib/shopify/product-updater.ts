@@ -241,11 +241,10 @@ export class ShopifyProductUpdater {
 }
 
 export async function createShopifyProductUpdater(shop: string): Promise<ShopifyProductUpdater> {
-  // TODO: Implement proper OAuth token retrieval
-  // For now, we'll need to get the access token from the session or environment
-  const accessToken = process.env.SHOPIFY_ACCESS_TOKEN || 'placeholder-token'
-  
-  if (!accessToken || accessToken === 'placeholder-token') {
+  // TODO: Implement proper OAuth token retrieval from database
+  const accessToken = process.env.SHOPIFY_ACCESS_TOKEN
+
+  if (!accessToken) {
     throw new Error('Shopify access token not available - ensure proper OAuth authentication')
   }
 

@@ -27,7 +27,7 @@ export function getShopifyAccessToken(): string | undefined {
   // Check environment variable (Vercel deployment)
   const envToken = process.env.SHOPIFY_ACCESS_TOKEN
 
-  if (envToken && envToken !== '' && envToken !== 'placeholder-token') {
+  if (envToken && envToken !== '') {
     console.log('✅ Found Shopify access token from environment')
     return envToken
   }
