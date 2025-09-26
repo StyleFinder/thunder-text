@@ -126,22 +126,26 @@ function EnhanceProductContent() {
         return
       }
 
+      // If no productId, we'll show product selection instead of loading
+      // This check comes BEFORE shop validation to ensure we show selector UI
+      if (!productId) {
+        console.log('🎯 No productId provided, will show ProductSelector')
+        setWorkflow(prev => ({
+          ...prev,
+          currentStep: 'loading', // Will be handled by product selector rendering
+          progress: 0,
+          error: null // Clear any previous errors
+        }))
+        setHasAttemptedLoad(true) // Mark as attempted to avoid re-running
+        return
+      }
+
+      // Only check for shop AFTER we know we need to load a specific product
       if (!shop) {
         setWorkflow(prev => ({
           ...prev,
           error: 'Missing required parameter: shop',
           currentStep: 'loading'
-        }))
-        return
-      }
-
-      // If no productId, we'll show product selection instead of loading
-      if (!productId) {
-        setWorkflow(prev => ({
-          ...prev,
-          currentStep: 'loading', // Will be handled by product selector rendering
-          progress: 0,
-          error: null
         }))
         return
       }
@@ -387,7 +391,7 @@ function EnhanceProductContent() {
 
   // Error state - only show if we've attempted to load and failed WITH a productId
   // Don't show error if no productId is provided (that means we should show product selector)
-  if (workflow.error && workflow.currentStep === 'loading' && hasAttemptedLoad && !isLoading && productId) {
+  if (workflow.error && workflow.currentStep === 'loading' && hasAttemptedLoad && !isLoading && productId && productId !== '') {
     return (
       <Page title="Enhance Product Description">
         <Layout>
