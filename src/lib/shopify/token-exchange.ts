@@ -61,8 +61,11 @@ export async function exchangeToken(params: TokenExchangeParams): Promise<TokenE
     requested_token_type: tokenTypeParam
   }
 
+  // Ensure shop domain includes .myshopify.com
+  const shopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+
   try {
-    const response = await fetch(`https://${shop}/admin/oauth/access_token`, {
+    const response = await fetch(`https://${shopDomain}/admin/oauth/access_token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getShopToken } from '@/lib/shopify/token-manager'
+import { getOrExchangeToken } from '@/lib/shopify/token-exchange'
 
 // GET /api/shopify/products?shop={shop}&page={page}&limit={limit}&query={query}&status={status}&sort={sort}
 export async function GET(request: NextRequest) {
@@ -31,18 +32,35 @@ export async function GET(request: NextRequest) {
       shop, page, limit, query, status, sort
     })
 
-    // Get the access token from database
-    // Note: Session tokens from App Bridge are NOT valid Shopify API access tokens
-    // They must be exchanged for access tokens via Token Exchange API
+    // Get session token from Authorization header if provided
+    const authHeader = request.headers.get('authorization')
+    const sessionToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined
+
+    console.log('🔑 Session token present:', !!sessionToken)
+
+    // Get the access token using Token Exchange if needed
     let accessToken: string | undefined
 
-    // Always get the permanent access token from database (obtained via Token Exchange)
-    const tokenResult = await getShopToken(shop)
-    if (tokenResult.success && tokenResult.accessToken) {
-      accessToken = tokenResult.accessToken
-      console.log('✅ Retrieved access token from database for shop:', shop)
-    } else {
-      console.log('❌ No access token found in database for shop:', shop)
+    try {
+      // Use getOrExchangeToken which will:
+      // 1. First check database for existing token
+      // 2. If no database token and session token provided, exchange it for access token
+      accessToken = await getOrExchangeToken(shop, sessionToken)
+      console.log('✅ Access token obtained successfully')
+    } catch (tokenError) {
+      console.error('❌ Failed to obtain access token:', tokenError)
+
+      // If we have a session token but exchange failed, it might be expired
+      if (sessionToken) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Session expired. Please refresh the page.',
+            requiresAuth: true
+          },
+          { status: 401 }
+        )
+      }
     }
 
     // IMPORTANT: We now require a valid token for all product fetches
