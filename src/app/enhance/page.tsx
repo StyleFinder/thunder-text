@@ -83,7 +83,10 @@ function EnhanceProductContent() {
     host,
     isEmbedded,
     shopFromParams,
-    shopFromHost
+    shopFromHost,
+    isInIframe: typeof window !== 'undefined' && window.top !== window.self,
+    hasHost: !!host,
+    windowLocation: typeof window !== 'undefined' ? window.location.href : 'SSR'
   })
 
   // Authentication state
@@ -360,8 +363,9 @@ function EnhanceProductContent() {
 
   // Auth check
   const authBypass = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS === 'true'
-  
-  if (!shop || (!authenticated && !authBypass)) {
+
+  // If we're in embedded context, skip this check as we'll handle auth via Token Exchange
+  if (!isEmbedded && !shop || (!isEmbedded && !authenticated && !authBypass)) {
     return (
       <Page title="Enhance Product Description">
         <Layout>

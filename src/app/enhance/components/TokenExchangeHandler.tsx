@@ -13,10 +13,15 @@ export function TokenExchangeHandler({ shop, isEmbedded, onSuccess }: TokenExcha
   const [isExchanging, setIsExchanging] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  console.log('🚀 TokenExchangeHandler initialized:', { shop, isEmbedded })
+
   useEffect(() => {
     async function performTokenExchange() {
+      console.log('🔄 performTokenExchange called:', { isEmbedded, shop })
+
       // Only perform token exchange if we're in an embedded context
       if (!isEmbedded || !shop) {
+        console.log('⏩ Skipping token exchange - not embedded or no shop')
         onSuccess() // Continue without token exchange for direct access
         return
       }
