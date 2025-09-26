@@ -74,10 +74,18 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
         sort: sortOrder
       })
 
+      // Check for demo mode in URL
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get('demo') === 'true') {
+        params.append('demo', 'true')
+        console.log('🧪 Demo mode enabled')
+      }
+
       console.log('🔍 Fetching products with params:', {
         shop: shopValue,
         page: currentPage,
-        query: searchQuery
+        query: searchQuery,
+        demo: urlParams.get('demo')
       })
 
       const response = await authenticatedFetch(`/api/shopify/products?${params}`)
