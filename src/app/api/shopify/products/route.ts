@@ -38,57 +38,51 @@ export async function GET(request: NextRequest) {
 
     console.log('🔑 Session token present:', !!sessionToken)
 
-    // Get the access token using Token Exchange if needed
+    // Get the access token - try database first, then Token Exchange if needed
     let accessToken: string | undefined
 
-    try {
-      // Use getOrExchangeToken which will:
-      // 1. First check database for existing token
-      // 2. If no database token and session token provided, exchange it for access token
-      accessToken = await getOrExchangeToken(shop, sessionToken)
-      console.log('✅ Access token obtained successfully')
-    } catch (tokenError) {
-      console.error('❌ Failed to obtain access token:', tokenError)
+    // First, always try to get from database (for non-embedded access)
+    const dbTokenResult = await getShopToken(shop)
+    if (dbTokenResult.success && dbTokenResult.accessToken) {
+      accessToken = dbTokenResult.accessToken
+      console.log('✅ Using stored access token from database')
+    } else if (sessionToken) {
+      // If no database token but we have a session token, try Token Exchange
+      console.log('🔄 No database token, attempting Token Exchange')
+      try {
+        accessToken = await getOrExchangeToken(shop, sessionToken)
+        console.log('✅ Access token obtained via Token Exchange')
+      } catch (tokenError) {
+        console.error('❌ Token Exchange failed:', tokenError)
 
-      // Check for specific error types
-      if (tokenError instanceof Error) {
-        // Missing API credentials - configuration issue
-        if (tokenError.message.includes('Missing Shopify API credentials')) {
-          return NextResponse.json(
-            {
-              success: false,
-              error: 'Server configuration error. Shopify API credentials not configured in environment.',
-              details: 'Please contact support or check Vercel environment variables.',
-              requiresConfig: true
-            },
-            { status: 500 }
-          )
+        // Check for specific error types
+        if (tokenError instanceof Error) {
+          // Missing API credentials - configuration issue
+          if (tokenError.message.includes('Missing Shopify API credentials')) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: 'Server configuration error. Shopify API credentials not configured in environment.',
+                details: 'Please contact support or check Vercel environment variables.',
+                requiresConfig: true
+              },
+              { status: 500 }
+            )
+          }
+
+          // Invalid session token
+          if (tokenError.message.includes('Invalid session token') ||
+              tokenError.message.includes('expired session token')) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: 'Session expired. Please refresh the page.',
+                requiresAuth: true
+              },
+              { status: 401 }
+            )
+          }
         }
-
-        // Invalid session token
-        if (tokenError.message.includes('Invalid session token') ||
-            tokenError.message.includes('expired session token')) {
-          return NextResponse.json(
-            {
-              success: false,
-              error: 'Session expired. Please refresh the page.',
-              requiresAuth: true
-            },
-            { status: 401 }
-          )
-        }
-      }
-
-      // Generic error for other cases
-      if (sessionToken) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Authentication failed. Please try refreshing the page.',
-            requiresAuth: true
-          },
-          { status: 401 }
-        )
       }
     }
 
