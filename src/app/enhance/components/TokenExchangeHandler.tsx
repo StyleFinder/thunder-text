@@ -35,32 +35,19 @@ export function TokenExchangeHandler({ shop, isEmbedded, onSuccess }: TokenExcha
       try {
         console.log('🔄 Starting token exchange for embedded app...')
 
-        // Load Shopify App Bridge
-        await new Promise<void>((resolve, reject) => {
-          if ((window as any).shopify?.createApp) {
-            resolve()
-            return
-          }
+        // Import Shopify App Bridge from npm package
+        const { createApp } = await import('@shopify/app-bridge')
+        const { getSessionToken } = await import('@shopify/app-bridge/utilities')
 
-          const script = document.createElement('script')
-          script.src = 'https://cdn.shopify.com/shopifycloud/app-bridge.js'
-          script.async = true
-
-          script.onload = () => resolve()
-          script.onerror = () => reject(new Error('Failed to load Shopify App Bridge'))
-
-          document.head.appendChild(script)
-        })
-
-        // Get App Bridge instance
-        const { createApp } = (window as any).shopify
+        // Create App Bridge instance
         const app = createApp({
           apiKey: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY!,
-          host: new URLSearchParams(window.location.search).get('host') || ''
+          host: new URLSearchParams(window.location.search).get('host') || '',
+          forceRedirect: false
         })
 
         // Get session token
-        const sessionToken = await app.sessionToken()
+        const sessionToken = await getSessionToken(app)
 
         if (!sessionToken) {
           throw new Error('Failed to get session token from Shopify')
@@ -97,7 +84,7 @@ export function TokenExchangeHandler({ shop, isEmbedded, onSuccess }: TokenExcha
         // Refresh session token periodically (they expire after 1 minute)
         setInterval(async () => {
           try {
-            const newToken = await app.sessionToken()
+            const newToken = await getSessionToken(app)
             if (newToken) {
               window.sessionStorage.setItem('shopify_session_token', newToken)
             }
