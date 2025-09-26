@@ -121,10 +121,14 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
 
   const handleProductSelect = (productId: string) => {
     // Navigate to enhance page with productId
+    const urlParams = new URLSearchParams(window.location.search)
     const params = new URLSearchParams({
       shop,
       authenticated: 'true',
-      productId
+      productId,
+      // Preserve embedded and host parameters if present
+      ...(urlParams.get('embedded') && { embedded: urlParams.get('embedded')! }),
+      ...(urlParams.get('host') && { host: urlParams.get('host')! })
     })
     router.push(`/enhance?${params}`)
   }
