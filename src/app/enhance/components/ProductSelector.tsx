@@ -88,15 +88,24 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
         demo: urlParams.get('demo')
       })
 
-      const response = await authenticatedFetch(`/api/shopify/products?${params}`)
+      const url = `/api/shopify/products?${params}`
+      console.log('🌐 ProductSelector: API URL:', url)
+      console.log('🔑 Session token available:', !!window.sessionStorage.getItem('shopify_session_token'))
+
+      const response = await authenticatedFetch(url)
+      console.log('📡 ProductSelector: Response status:', response.status)
+
       const result = await response.json()
+      console.log('📦 ProductSelector: Result:', result)
 
       if (!response.ok) {
+        console.error('❌ ProductSelector: API error:', result)
         throw new Error(result.error || 'Failed to fetch products')
       }
 
       setProducts(result.data.products || [])
       setTotalPages(Math.ceil((result.data.total || 0) / pageSize))
+      console.log('✅ ProductSelector: Loaded', result.data.products?.length || 0, 'products')
 
     } catch (err) {
       console.error('Error fetching products:', err)
