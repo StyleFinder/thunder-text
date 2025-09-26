@@ -44,12 +44,46 @@ interface EnhancementWorkflowState {
 
 function EnhanceProductContent() {
   const searchParams = useSearchParams()
-  const shop = searchParams?.get('shop') || 'zunosai-staging-test-store'  // Fallback to configured dev store
+
+  // Get shop from various sources - Shopify admin embeds might not always pass it correctly
+  const shopFromParams = searchParams?.get('shop')
+  let shopFromHost: string | null = null
+
+  // Decode host parameter if available (it's base64 encoded from Shopify)
+  if (typeof window !== 'undefined' && searchParams?.get('host')) {
+    try {
+      const decoded = atob(searchParams.get('host')!)
+      shopFromHost = decoded.split('/')[0]?.replace('.myshopify.com', '') || null
+    } catch (e) {
+      console.error('Failed to decode host parameter:', e)
+    }
+  }
+
+  // Use the first available shop value or fallback to dev store
+  const shop = shopFromParams || shopFromHost || 'zunosai-staging-test-store'
+
   const authenticated = searchParams?.get('authenticated')
   const productId = searchParams?.get('productId')
   const source = searchParams?.get('source')
+  const embedded = searchParams?.get('embedded')
+  const host = searchParams?.get('host')
 
-  console.log('🔍 Debug params:', { shop, authenticated, productId, source })
+  // Detect if we're in embedded context
+  const isEmbedded = (typeof window !== 'undefined' && window.top !== window.self) ||
+                     embedded === '1' ||
+                     !!host
+
+  console.log('🔍 Debug params:', {
+    shop,
+    authenticated,
+    productId,
+    source,
+    embedded,
+    host,
+    isEmbedded,
+    shopFromParams,
+    shopFromHost
+  })
 
   // Workflow state management
   const [workflow, setWorkflow] = useState<EnhancementWorkflowState>({

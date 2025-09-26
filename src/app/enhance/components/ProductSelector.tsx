@@ -58,19 +58,26 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
 
   // Fetch products from Shopify
   const fetchProducts = useCallback(async () => {
-    if (!shop) return
+    // Always ensure we have a shop value for the API call
+    const shopValue = shop || 'zunosai-staging-test-store'
 
     setLoading(true)
     setError(null)
 
     try {
       const params = new URLSearchParams({
-        shop,
+        shop: shopValue,
         page: currentPage.toString(),
         limit: pageSize.toString(),
         query: searchQuery,
         status: statusFilter.join(','),
         sort: sortOrder
+      })
+
+      console.log('🔍 Fetching products with params:', {
+        shop: shopValue,
+        page: currentPage,
+        query: searchQuery
       })
 
       const response = await authenticatedFetch(`/api/shopify/products?${params}`)
