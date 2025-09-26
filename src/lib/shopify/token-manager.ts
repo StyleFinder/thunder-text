@@ -1,10 +1,22 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Initialize Supabase client
+// Initialize Supabase client with proper key handling
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+// Use service key if available (server-side), otherwise use anon key
+// Service key is needed for bypassing RLS policies
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+// Log which key we're using (without exposing the actual key)
+if (typeof window === 'undefined') {
+  console.log('🔑 Token Manager initialized with:', {
+    url: supabaseUrl,
+    keyType: process.env.SUPABASE_SERVICE_KEY ? 'service' : 'anon',
+    keyLength: supabaseKey?.length || 0
+  })
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 export interface ShopTokenData {
   shop_domain: string
@@ -91,12 +103,26 @@ export async function getShopToken(
 
     if (error) {
       console.error('❌ Database error retrieving token:', error)
+      console.error('📝 Error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      })
+
+      // Check if it's an RLS policy error
+      if (error.code === '42501') {
+        console.error('🔒 RLS Policy Error: The anon key cannot read from shops table')
+        console.error('💡 Solution: Add RLS policy or use service key')
+      }
+
       return { success: false, error: error.message }
     }
 
     if (!data || !data.access_token) {
       console.log('⚠️ No token found for shop:', fullShopDomain)
       console.log('💡 Hint: Make sure the app is installed through Shopify OAuth flow')
+      console.log('📝 Query attempted for:', fullShopDomain)
       return { success: false, error: `No token found for shop: ${fullShopDomain}` }
     }
 
