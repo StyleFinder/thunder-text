@@ -32,7 +32,8 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
   const [shop, setShop] = useState<string | null>(null)
   const [host, setHost] = useState<string | null>(null)
   const [embedded, setEmbedded] = useState<string | null>(null)
-  
+  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null)
+
   // Get search params on client side only to avoid SSR issues
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -74,15 +75,30 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
             forceRedirect: true,
           })
 
-          // Get session token for API calls
+          // Get initial session token for API calls
           try {
             const token = await getSessionToken(appBridge)
-            console.log('Session token obtained successfully')
-            
+            console.log('Initial session token obtained successfully')
+
             // Store the token for API calls
             if (typeof window !== 'undefined') {
               window.sessionStorage.setItem('shopify_session_token', token)
             }
+
+            // Set up token refresh every 50 seconds (tokens expire after 60)
+            const interval = setInterval(async () => {
+              try {
+                const newToken = await getSessionToken(appBridge)
+                console.log('Session token refreshed successfully')
+                if (typeof window !== 'undefined') {
+                  window.sessionStorage.setItem('shopify_session_token', newToken)
+                }
+              } catch (refreshError) {
+                console.error('Failed to refresh session token:', refreshError)
+              }
+            }, 50000) // Refresh every 50 seconds
+
+            setRefreshInterval(interval)
           } catch (tokenError) {
             console.error('Failed to get session token:', tokenError)
             setError('Failed to authenticate with Shopify')
@@ -100,6 +116,9 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
     initializeAppBridge()
 
     return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval)
+      }
       if (appBridge) {
         try {
           appBridge.dispatch({ type: 'destroy' })
@@ -108,7 +127,7 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
         }
       }
     }
-  }, [isEmbedded, shop, host])
+  }, [isEmbedded, shop, host, refreshInterval])
 
   const contextValue: AppBridgeContextType = {
     isEmbedded,
