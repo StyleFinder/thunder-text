@@ -28,6 +28,7 @@ import { EnhanceForm, EnhancementFormData } from './components/EnhanceForm'
 import { ComparisonView, ComparisonData } from './components/ComparisonView'
 import { RichTextEditor } from './components/RichTextEditor'
 import { ProductSelector } from './components/ProductSelector'
+import { TokenExchangeHandler } from './components/TokenExchangeHandler'
 import { fetchProductDataForEnhancement, EnhancementProductData } from '@/lib/shopify/product-enhancement'
 
 type WorkflowStep = 'loading' | 'context' | 'configure' | 'generating' | 'compare' | 'apply' | 'complete'
@@ -85,6 +86,9 @@ function EnhanceProductContent() {
     shopFromHost
   })
 
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
   // Workflow state management
   const [workflow, setWorkflow] = useState<EnhancementWorkflowState>({
     currentStep: 'loading',
@@ -104,9 +108,15 @@ function EnhanceProductContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false)
 
-  // Load product data on mount
+  // Load product data after authentication
   useEffect(() => {
     async function loadProductData() {
+      // Wait for authentication in embedded context
+      if (isEmbedded && !isAuthenticated) {
+        console.log('⏳ Waiting for authentication...')
+        return
+      }
+
       // Prevent duplicate calls
       if (isLoading || hasAttemptedLoad) {
         console.log('⏳ Already loading or attempted load, skipping duplicate call')
@@ -171,7 +181,7 @@ function EnhanceProductContent() {
     }
 
     loadProductData()
-  }, [productId, shop])
+  }, [productId, shop, isEmbedded, isAuthenticated])
 
   // Handle form data changes
   const handleFormChange = useCallback((formData: EnhancementFormData) => {
@@ -402,6 +412,28 @@ function EnhanceProductContent() {
     )
   }
 
+  // Handle token exchange for embedded apps
+  if (isEmbedded && !isAuthenticated) {
+    return (
+      <Page title="Enhance Product Description">
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingLg">Connecting to Shopify...</Text>
+                <TokenExchangeHandler
+                  shop={shop || 'zunosai-staging-test-store'}
+                  isEmbedded={isEmbedded}
+                  onSuccess={() => setIsAuthenticated(true)}
+                />
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+      </Page>
+    )
+  }
+
   // Loading state or Product Selection
   if (workflow.currentStep === 'loading') {
     // If no productId provided, show product selector
@@ -410,11 +442,11 @@ function EnhanceProductContent() {
         <Page title="Enhance Product Description">
           <Layout>
             <Layout.Section>
-              <ProductSelector 
-                shop={shop || ''} 
+              <ProductSelector
+                shop={shop || ''}
                 onProductSelect={(selectedProductId) => {
                   // This will be handled by router navigation in ProductSelector
-                }} 
+                }}
               />
             </Layout.Section>
           </Layout>
