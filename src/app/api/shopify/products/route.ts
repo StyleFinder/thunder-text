@@ -299,7 +299,7 @@ export async function GET(request: NextRequest) {
     const allProducts = shopifyData.data.products.edges.map((edge: any) => {
       const product = edge.node
       return {
-        id: product.id.replace('gid://shopify/Product/', ''),
+        id: product.id, // Keep the full GraphQL ID format
         title: product.title,
         handle: product.handle,
         description: product.description || '',
