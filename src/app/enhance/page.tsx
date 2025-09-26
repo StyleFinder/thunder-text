@@ -111,6 +111,13 @@ function EnhanceProductContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false)
 
+  // Reset loading state when productId changes
+  useEffect(() => {
+    console.log('🔄 ProductId changed, resetting load state:', productId)
+    setHasAttemptedLoad(false)
+    setIsLoading(false)
+  }, [productId])
+
   // Load product data after authentication
   useEffect(() => {
     async function loadProductData() {
