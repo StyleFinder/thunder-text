@@ -385,8 +385,9 @@ function EnhanceProductContent() {
     )
   }
 
-  // Error state - only show if we've attempted to load and failed
-  if (workflow.error && workflow.currentStep === 'loading' && hasAttemptedLoad && !isLoading) {
+  // Error state - only show if we've attempted to load and failed WITH a productId
+  // Don't show error if no productId is provided (that means we should show product selector)
+  if (workflow.error && workflow.currentStep === 'loading' && hasAttemptedLoad && !isLoading && productId) {
     return (
       <Page title="Enhance Product Description">
         <Layout>
