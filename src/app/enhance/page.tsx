@@ -116,6 +116,16 @@ function EnhanceProductContent() {
     console.log('🔄 ProductId changed, resetting load state:', productId)
     setHasAttemptedLoad(false)
     setIsLoading(false)
+    // Reset workflow state when productId changes
+    setWorkflow({
+      currentStep: 'loading',
+      progress: 0,
+      productData: null,
+      formData: null,
+      generatedContent: null,
+      comparisonData: null,
+      error: null
+    })
   }, [productId])
 
   // Load product data after authentication
