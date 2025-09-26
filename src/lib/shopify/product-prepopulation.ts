@@ -129,8 +129,19 @@ async function fetchShopifyProduct(productId: string, shop: string) {
   // Check if we're in demo/development mode and should return mock data
   const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
   const hasRealToken = process.env.SHOPIFY_ACCESS_TOKEN &&
-                      process.env.SHOPIFY_ACCESS_TOKEN !== 'placeholder-token'
+                      process.env.SHOPIFY_ACCESS_TOKEN !== 'placeholder-token' &&
+                      process.env.SHOPIFY_ACCESS_TOKEN !== ''
 
+  // Log the environment state for debugging
+  console.log('🔐 Auth environment check:', {
+    authBypass,
+    hasRealToken,
+    tokenLength: process.env.SHOPIFY_ACCESS_TOKEN?.length || 0,
+    tokenPreview: process.env.SHOPIFY_ACCESS_TOKEN?.substring(0, 10) + '...' || 'not set'
+  })
+
+  // Only use mock data if auth bypass is enabled AND we don't have a real token
+  // This ensures production always uses real Shopify API
   if (authBypass && !hasRealToken) {
     console.log('🧪 Using mock product data for enhancement (demo mode)')
 
