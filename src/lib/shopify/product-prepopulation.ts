@@ -136,29 +136,6 @@ async function fetchShopifyProduct(productId: string, shop: string) {
 
     // Return mock product data matching the requested ID
     const mockProducts: Record<string, any> = {
-      // Default mock product if the ID doesn't match any specific one
-      'default': {
-        id: formattedProductId,
-        title: 'Sample Product for Enhancement',
-        handle: 'sample-product',
-        description: 'This is a sample product for testing the enhancement workflow.',
-        descriptionHtml: '<p>This is a sample product for testing the enhancement workflow.</p>',
-        vendor: 'Test Vendor',
-        productType: 'Sample',
-        tags: ['test', 'sample', 'demo'],
-        seo: {
-          title: 'Sample Product',
-          description: 'Sample product for testing'
-        },
-        images: { edges: [
-          { node: { url: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=800', altText: 'Sample product image', width: 800, height: 1000 }}
-        ]},
-        variants: { edges: [
-          { node: { id: 'gid://shopify/ProductVariant/1', title: 'Default', price: '19.99', sku: 'SAMPLE-001', weight: 0.2 }}
-        ]},
-        collections: { edges: [] },
-        metafields: { edges: [] }
-      },
       'gid://shopify/Product/8123456789': {
         id: 'gid://shopify/Product/8123456789',
         title: 'Effortless Elegance: Wrinkle-Resistant Tops',
@@ -209,11 +186,15 @@ async function fetchShopifyProduct(productId: string, shop: string) {
       }
     }
 
-    // Return matching mock product or the default one with the requested ID
-    const mockProduct = mockProducts[formattedProductId] || {
-      ...mockProducts['default'],
-      id: formattedProductId // Use the actual requested ID
+    // Return matching mock product or error if not found
+    const mockProduct = mockProducts[formattedProductId]
+
+    if (!mockProduct) {
+      console.error('❌ Product not found in mock data:', formattedProductId)
+      console.error('📝 Available mock products:', Object.keys(mockProducts))
+      throw new Error(`Product ${formattedProductId} not found. In demo mode, only specific test products are available. Please use a real Shopify connection for production testing.`)
     }
+
     console.log('📦 Returning mock product:', mockProduct.title)
     return mockProduct
   }

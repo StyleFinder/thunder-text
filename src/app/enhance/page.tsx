@@ -414,14 +414,28 @@ function EnhanceProductContent() {
         <Layout>
           <Layout.Section>
             <Banner status="critical">
-              <Text as="p">{workflow.error}</Text>
+              <BlockStack gap="200">
+                <Text as="p" variant="headingMd">Error Loading Product</Text>
+                <Text as="p">{workflow.error}</Text>
+                {workflow.error?.includes('demo mode') && (
+                  <Text as="p" tone="subdued">
+                    Connect to a real Shopify store for production testing.
+                  </Text>
+                )}
+              </BlockStack>
             </Banner>
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingLg">Unable to Load Product</Text>
-                <Text as="p">
-                  There was an error loading the product data. Please try again or contact support.
-                </Text>
+                <Text as="h2" variant="headingLg">Product Not Available</Text>
+                <BlockStack gap="200">
+                  <Text as="p">Product ID: {productId}</Text>
+                  <Text as="p" tone="subdued">
+                    {workflow.error?.includes('demo mode')
+                      ? 'This product is not available in demo mode. Use a real Shopify connection.'
+                      : 'Unable to load product data from Shopify. Check that the product exists and try again.'
+                    }
+                  </Text>
+                </BlockStack>
                 <InlineStack gap="300">
                   <Button onClick={() => {
                     setHasAttemptedLoad(false)
