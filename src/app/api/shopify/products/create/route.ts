@@ -12,34 +12,36 @@ export async function POST(request: NextRequest) {
 
   try {
     // Dynamic imports to avoid loading during build
-    const { auth } = await import('@/lib/auth')
     const { ShopifyOfficialAPI } = await import('@/lib/shopify-official')
-    const { supabaseAdmin } = await import('@/lib/supabase')
-    
-    // Check for development bypass or proper session
+    const { getShopToken } = await import('@/lib/shopify/token-manager')
+
+    // Get shop from query parameters
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-    
-    let session = null
-    let storeData = null
-    
-    if (authBypass && shop) {
-      // Development mode bypass
-      console.log('Using auth bypass for development')
-      // Use the configured test store and token for development
-      const testStore = process.env.SHOPIFY_TEST_STORE || 'zunosai-staging-test-store'
-      storeData = {
-        shop_domain: `${testStore}.myshopify.com`,
-        access_token: process.env.SHOPIFY_ACCESS_TOKEN || 'dev-token'
-      }
-    } else {
-      // Production authentication
-      session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
+
+    if (!shop) {
+      return NextResponse.json(
+        { error: 'Missing shop parameter' },
+        { status: 400 }
+      )
     }
+
+    // Get access token from database (obtained via Token Exchange)
+    const tokenResult = await getShopToken(shop)
+
+    if (!tokenResult.success || !tokenResult.accessToken) {
+      console.error('❌ No access token found for shop:', shop)
+      return NextResponse.json(
+        {
+          error: 'Authentication required',
+          details: 'Please ensure the app is properly installed through Shopify'
+        },
+        { status: 401 }
+      )
+    }
+
+    const accessToken = tokenResult.accessToken
+    const shopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
 
     const body = await request.json()
     const { generatedContent, productData, uploadedImages } = body
@@ -55,37 +57,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get store information
-    let store = storeData
-    if (!store && session?.user?.id) {
-      const { data: dbStore, error: storeError } = await supabaseAdmin
-        .from('stores')
-        .select('shop_domain, access_token')
-        .eq('id', session.user.id)
-        .single()
+    console.log('✅ Using access token for shop:', shopDomain)
+    console.log('🔑 Token preview:', accessToken.substring(0, 15) + '...')
 
-      if (storeError || !dbStore) {
-        return NextResponse.json(
-          { error: 'Store not found' },
-          { status: 404 }
-        )
-      }
-      store = dbStore
-    }
-
-    if (!store) {
-      return NextResponse.json(
-        { error: 'Store configuration not found' },
-        { status: 404 }
-      )
-    }
-
-    console.log('Store config:', { 
-      shop_domain: store.shop_domain, 
-      access_token: store.access_token?.substring(0, 10) + '...' 
-    })
-    
-    const shopify = new ShopifyOfficialAPI(store.shop_domain, store.access_token)
+    const shopify = new ShopifyOfficialAPI(shopDomain, accessToken)
 
     // Infer category from generated content if not provided
     let finalCategory = productData?.category || 'Fashion & Apparel'
