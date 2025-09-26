@@ -103,9 +103,11 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
         throw new Error(result.error || 'Failed to fetch products')
       }
 
-      setProducts(result.data.products || [])
-      setTotalPages(Math.ceil((result.data.total || 0) / pageSize))
-      console.log('✅ ProductSelector: Loaded', result.data.products?.length || 0, 'products')
+      const productsData = result.data?.products || result.products || []
+      setProducts(productsData)
+      setTotalPages(Math.ceil((result.data?.total || result.total || 0) / pageSize))
+      console.log('✅ ProductSelector: Loaded', productsData.length, 'products')
+      console.log('📋 ProductSelector: Products state will be:', productsData)
 
     } catch (err) {
       console.error('Error fetching products:', err)
@@ -220,6 +222,13 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
         onRemove: () => setStatusFilter(statusFilter.filter(s => s !== status))
       }))
     : []
+
+  console.log('🎨 ProductSelector rendering with:', {
+    loading,
+    error,
+    productsCount: products.length,
+    products: products.slice(0, 2) // Log first 2 products for debugging
+  })
 
   return (
     <Card>
