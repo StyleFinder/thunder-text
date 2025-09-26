@@ -43,17 +43,18 @@ export default function EmbeddedApp() {
 
   // Handle authentication success
   const handleAuthSuccess = () => {
-    console.log('✅ Authentication successful, redirecting to dashboard')
+    console.log('✅ Authentication successful, redirecting to enhance page')
     setIsAuthenticated(true)
 
-    // Redirect to the main app with authentication
+    // Redirect to the enhance page with authentication
     setTimeout(() => {
       const params = new URLSearchParams({
         shop,
         authenticated: 'true',
-        host
+        host,
+        embedded: '1'
       })
-      router.push(`/?${params.toString()}`)
+      router.push(`/enhance?${params.toString()}`)
     }, 500)
   }
 
