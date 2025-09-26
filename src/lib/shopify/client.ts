@@ -7,17 +7,9 @@ async function getShopifyAccessToken(shop: string, sessionToken?: string): Promi
   console.log('🔍 Getting Shopify access token for shop:', shop)
 
   // Priority order for getting tokens:
-  // 1. Environment variable token (for Vercel deployment)
-  // 2. Session token from App Bridge (for embedded apps)
-  // 3. Access token from database (for OAuth flow)
-  // 4. Mock token for development with auth bypass
-
-  // Check for environment variable token FIRST (for Vercel deployment)
-  const envToken = getEnvToken()
-  if (envToken) {
-    console.log('✅ Using access token from environment variable for shop:', shop)
-    return envToken
-  }
+  // 1. Session token from App Bridge (for embedded apps)
+  // 2. Access token from database (for OAuth flow)
+  // 3. Throw error if no token found (no more bypass logic)
 
   // If session token is provided, use it
   if (sessionToken && sessionToken !== 'undefined') {
@@ -25,7 +17,7 @@ async function getShopifyAccessToken(shop: string, sessionToken?: string): Promi
     return sessionToken
   }
 
-  // Try to get permanent access token from database
+  // Try to get permanent access token from database (PRIMARY METHOD)
   try {
     const tokenResult = await getShopToken(shop)
     if (tokenResult.success && tokenResult.accessToken) {
@@ -36,20 +28,13 @@ async function getShopifyAccessToken(shop: string, sessionToken?: string): Promi
     console.log('⚠️ Failed to retrieve token from database:', error)
   }
 
-  // Only use mock token if auth bypass is enabled AND no real token exists
-  if (process.env.NODE_ENV === 'development' && process.env.SHOPIFY_AUTH_BYPASS === 'true') {
-    console.log('🧪 Development mode with auth bypass: returning mock token for shop:', shop)
-    return 'mock_development_token_12345'
-  }
-
-  console.error('❌ No access token found. Checked:', {
-    envToken: !!envToken,
+  console.error('❌ No access token found for shop:', shop)
+  console.error('📝 Checked:', {
     sessionToken: !!sessionToken,
-    authBypass: process.env.SHOPIFY_AUTH_BYPASS,
-    nodeEnv: process.env.NODE_ENV
+    databaseQuery: 'attempted'
   })
 
-  throw new Error(`Access token not found for shop: ${shop}. Please ensure the app is properly installed.`)
+  throw new Error(`Access token not found for shop: ${shop}. Please ensure the app is properly installed through Shopify.`)
 }
 
 // Wrapper function that matches the expected interface

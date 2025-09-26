@@ -64,37 +64,11 @@ export async function storeShopToken(
 }
 
 /**
- * Retrieve a shop's access token
+ * Retrieve a shop's access token from the database
  */
 export async function getShopToken(
   shopDomain: string
 ): Promise<{ success: boolean; accessToken?: string; error?: string }> {
-  // TEMPORARY: Use a base64 encoded token from environment
-  const encodedToken = process.env.NEXT_PUBLIC_SHOPIFY_TOKEN_B64
-
-  if (encodedToken) {
-    try {
-      const decodedToken = Buffer.from(encodedToken, 'base64').toString('utf-8')
-      console.log('✅ Using decoded token for shop:', shopDomain)
-      return {
-        success: true,
-        accessToken: decodedToken
-      }
-    } catch (error) {
-      console.error('❌ Failed to decode token:', error)
-    }
-  }
-
-  // First check if we have an environment variable token (Vercel deployment)
-  const envToken = process.env.SHOPIFY_ACCESS_TOKEN
-  if (envToken && envToken !== '' && envToken !== 'placeholder-token') {
-    console.log('✅ Using environment variable token for shop:', shopDomain)
-    return {
-      success: true,
-      accessToken: envToken
-    }
-  }
-
   try {
     console.log('🔑 Retrieving access token for shop:', shopDomain)
     console.log('📍 Supabase URL:', supabaseUrl)
@@ -103,6 +77,8 @@ export async function getShopToken(
     const fullShopDomain = shopDomain.includes('.myshopify.com')
       ? shopDomain
       : `${shopDomain}.myshopify.com`
+
+    console.log('🔍 Querying shops table for:', fullShopDomain)
 
     // Query the shops table directly
     const { data, error } = await supabase
@@ -114,13 +90,14 @@ export async function getShopToken(
       .maybeSingle()
 
     if (error) {
-      console.error('❌ Error retrieving token:', error)
+      console.error('❌ Database error retrieving token:', error)
       return { success: false, error: error.message }
     }
 
     if (!data || !data.access_token) {
       console.log('⚠️ No token found for shop:', fullShopDomain)
-      return { success: false, error: 'No token found for this shop' }
+      console.log('💡 Hint: Make sure the app is installed through Shopify OAuth flow')
+      return { success: false, error: `No token found for shop: ${fullShopDomain}` }
     }
 
     console.log('✅ Token retrieved successfully for shop:', fullShopDomain)

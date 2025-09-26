@@ -44,15 +44,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Store the shop information in Supabase
+    // IMPORTANT: Use 'shops' table to match token-manager.ts expectations
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+
     const { error: storeError } = await supabaseAdmin
-      .from('stores')
+      .from('shops')
       .upsert({
-        shop_domain: shop,
+        shop_domain: fullShopDomain,
         access_token: tokenData.access_token,
-        plan: 'starter',
-        settings: {},
-        usage_limits: 500,
-        current_usage: 0,
+        scope: tokenData.scope || '',
+        is_active: true,
+        installed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }, {
         onConflict: 'shop_domain',
       })

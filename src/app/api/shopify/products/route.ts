@@ -60,22 +60,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Check if we're in embedded app context (from Shopify admin) without proper token
-    const isEmbeddedApp = request.headers.get('sec-fetch-dest') === 'iframe' ||
-                          request.headers.get('referer')?.includes('admin.shopify.com') ||
-                          shop?.includes('myshopify.com')
+    // IMPORTANT: We now require a valid token for all product fetches
+    // No more demo mode or auth bypass
+    if (!accessToken) {
+      console.error('❌ No access token available for shop:', shop)
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Authentication required. Please install the app through Shopify.',
+          requiresAuth: true
+        },
+        { status: 401 }
+      )
+    }
 
-    // IMPORTANT: Force use real token if available, never use mock data when token exists
-    // Deployment timestamp: ${Date.now()}
-    // For embedded apps without token OR auth bypass mode, use demo data
-    if (!accessToken || authBypass || (isEmbeddedApp && !accessToken)) {
-      console.log('🧪 Using demo mode with sample products', {
-        reason: !accessToken ? 'No token available' :
-                authBypass ? 'Auth bypass enabled' :
-                'Embedded app without token',
-        isEmbeddedApp,
-        shop
-      })
+    // Only show demo products if explicitly requested (for testing)
+    const useDemoMode = searchParams.get('demo') === 'true'
+    if (useDemoMode) {
+      console.log('🧪 Demo mode explicitly requested')
 
       // Generate comprehensive mock products that match the expected structure
       const mockProducts = [
