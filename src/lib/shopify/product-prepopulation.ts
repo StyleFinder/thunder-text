@@ -126,6 +126,70 @@ async function fetchShopifyProduct(productId: string, shop: string) {
     console.log('✅ Product ID already in GraphQL format:', formattedProductId)
   }
 
+  // Check if we're in demo/development mode and should return mock data
+  const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
+  const hasRealToken = process.env.SHOPIFY_ACCESS_TOKEN &&
+                      process.env.SHOPIFY_ACCESS_TOKEN !== 'placeholder-token'
+
+  if (authBypass && !hasRealToken) {
+    console.log('🧪 Using mock product data for enhancement (demo mode)')
+
+    // Return mock product data matching the requested ID
+    const mockProducts: Record<string, any> = {
+      'gid://shopify/Product/8123456789': {
+        id: 'gid://shopify/Product/8123456789',
+        title: 'Effortless Elegance: Wrinkle-Resistant Tops',
+        handle: 'effortless-elegance-wrinkle-resistant-tops',
+        description: 'Step into a world of effortless elegance with these wrinkle-resistant tops.',
+        descriptionHtml: '<p>Step into a world of effortless elegance with these wrinkle-resistant tops.</p>',
+        vendor: 'Fashion Forward',
+        productType: 'Tops',
+        tags: ['wrinkle-resistant tops', 'women\'s fashion', 'professional', 'easy-care'],
+        seo: {
+          title: 'Wrinkle-Resistant Tops | Effortless Elegance',
+          description: 'Professional wrinkle-resistant tops for the modern woman'
+        },
+        images: { edges: [
+          { node: { url: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=800', altText: 'Elegant top', width: 800, height: 1000 }}
+        ]},
+        variants: { edges: [
+          { node: { id: 'gid://shopify/ProductVariant/1', title: 'Small', price: '49.99', sku: 'WRT-S-001', weight: 0.2 }}
+        ]},
+        collections: { edges: [
+          { node: { id: 'gid://shopify/Collection/1', title: 'Women\'s Fashion', handle: 'womens-fashion' }}
+        ]},
+        metafields: { edges: [] }
+      },
+      'gid://shopify/Product/8123456790': {
+        id: 'gid://shopify/Product/8123456790',
+        title: 'Premium Cotton Casual Shirt',
+        handle: 'premium-cotton-casual-shirt',
+        description: 'Comfortable and stylish casual shirt made from 100% premium cotton.',
+        descriptionHtml: '<p>Comfortable and stylish casual shirt made from 100% premium cotton.</p>',
+        vendor: 'Cotton Comfort',
+        productType: 'Shirts',
+        tags: ['cotton shirt', 'casual wear', 'comfortable', 'breathable'],
+        seo: {
+          title: 'Premium Cotton Casual Shirt',
+          description: 'Comfortable cotton shirt for everyday wear'
+        },
+        images: { edges: [
+          { node: { url: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800', altText: 'Cotton shirt', width: 800, height: 1000 }}
+        ]},
+        variants: { edges: [
+          { node: { id: 'gid://shopify/ProductVariant/2', title: 'Medium', price: '39.99', sku: 'PCS-M-001', weight: 0.25 }}
+        ]},
+        collections: { edges: [
+          { node: { id: 'gid://shopify/Collection/2', title: 'Casual Wear', handle: 'casual-wear' }}
+        ]},
+        metafields: { edges: [] }
+      }
+    }
+
+    const mockProduct = mockProducts[formattedProductId] || mockProducts['gid://shopify/Product/8123456789']
+    return mockProduct
+  }
+
   const query = `
     query GetProduct($id: ID!) {
       product(id: $id) {

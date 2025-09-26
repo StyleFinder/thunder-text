@@ -62,59 +62,93 @@ export async function GET(request: NextRequest) {
 
     // IMPORTANT: Force use real token if available, never use mock data when token exists
     // Deployment timestamp: ${Date.now()}
-    if (!accessToken) {
-      console.log('🧪 WARNING: No valid token found, falling back to mock data')
-      
-      // Generate mock products that match the expected structure
+    if (!accessToken || authBypass) {
+      console.log('🧪 Using demo mode with sample products (auth bypass enabled or no token)')
+
+      // Generate comprehensive mock products that match the expected structure
       const mockProducts = [
         {
-          id: '8123456789',
+          id: 'gid://shopify/Product/8123456789',
           title: 'Effortless Elegance: Wrinkle-Resistant Tops',
           handle: 'effortless-elegance-wrinkle-resistant-tops',
-          description: 'Step into a world of effortless elegance with these wrinkle-resistant tops, crafted from a luxurious blend of premium fabrics.',
+          description: 'Step into a world of effortless elegance with these wrinkle-resistant tops, crafted from a luxurious blend of premium fabrics. Perfect for the modern professional who values style and convenience.',
           status: 'active',
-          tags: ['wrinkle-resistant tops', 'women\'s fashion'],
+          tags: ['wrinkle-resistant tops', 'women\'s fashion', 'professional', 'easy-care'],
           createdAt: '2024-01-01T00:00:00Z',
           updatedAt: '2024-01-15T00:00:00Z',
           price: '49.99',
           images: [
             {
-              url: 'https://cdn.shopify.com/s/files/1/0234/567/890/products/elegant-top-1.jpg',
+              url: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=800',
               altText: 'Elegant wrinkle-resistant top in navy blue'
             }
           ]
         },
         {
-          id: '8123456790',
+          id: 'gid://shopify/Product/8123456790',
           title: 'Premium Cotton Casual Shirt',
           handle: 'premium-cotton-casual-shirt',
-          description: 'Comfortable and stylish casual shirt made from 100% premium cotton.',
+          description: 'Comfortable and stylish casual shirt made from 100% premium cotton. Breathable fabric perfect for all-day wear.',
           status: 'active',
-          tags: ['cotton shirt', 'casual wear'],
+          tags: ['cotton shirt', 'casual wear', 'comfortable', 'breathable'],
           createdAt: '2024-01-02T00:00:00Z',
           updatedAt: '2024-01-16T00:00:00Z',
           price: '39.99',
           images: [
             {
-              url: 'https://cdn.shopify.com/s/files/1/0234/567/890/products/cotton-shirt-1.jpg',
+              url: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800',
               altText: 'Premium cotton casual shirt in white'
             }
           ]
         },
         {
-          id: '8123456791',
+          id: 'gid://shopify/Product/8123456791',
           title: 'Designer Leather Handbag',
           handle: 'designer-leather-handbag',
-          description: 'Luxury designer handbag crafted from genuine Italian leather.',
+          description: 'Luxury designer handbag crafted from genuine Italian leather. Features multiple compartments and gold-plated hardware for the ultimate in sophistication.',
           status: 'active',
-          tags: ['leather handbag', 'luxury accessories'],
+          tags: ['leather handbag', 'luxury accessories', 'Italian leather', 'designer'],
           createdAt: '2024-01-03T00:00:00Z',
           updatedAt: '2024-01-17T00:00:00Z',
           price: '199.99',
           images: [
             {
-              url: 'https://cdn.shopify.com/s/files/1/0234/567/890/products/leather-handbag-1.jpg',
+              url: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=800',
               altText: 'Designer leather handbag in brown'
+            }
+          ]
+        },
+        {
+          id: 'gid://shopify/Product/8123456792',
+          title: 'Organic Cotton T-Shirt',
+          handle: 'organic-cotton-t-shirt',
+          description: 'Sustainable and comfortable t-shirt made from 100% organic cotton. Eco-friendly dyes and ethical manufacturing.',
+          status: 'active',
+          tags: ['organic', 'cotton', 't-shirt', 'sustainable', 'eco-friendly'],
+          createdAt: '2024-01-04T00:00:00Z',
+          updatedAt: '2024-01-18T00:00:00Z',
+          price: '29.99',
+          images: [
+            {
+              url: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800',
+              altText: 'Organic cotton t-shirt in natural color'
+            }
+          ]
+        },
+        {
+          id: 'gid://shopify/Product/8123456793',
+          title: 'Vintage Denim Jacket',
+          handle: 'vintage-denim-jacket',
+          description: 'Classic vintage-style denim jacket with modern comfort. Pre-washed for softness and featuring brass buttons.',
+          status: 'active',
+          tags: ['denim', 'jacket', 'vintage', 'outerwear'],
+          createdAt: '2024-01-05T00:00:00Z',
+          updatedAt: '2024-01-19T00:00:00Z',
+          price: '79.99',
+          images: [
+            {
+              url: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=800',
+              altText: 'Vintage denim jacket in classic blue'
             }
           ]
         }
