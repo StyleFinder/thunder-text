@@ -50,12 +50,41 @@ export async function GET(request: NextRequest) {
     } catch (tokenError) {
       console.error('❌ Failed to obtain access token:', tokenError)
 
-      // If we have a session token but exchange failed, it might be expired
+      // Check for specific error types
+      if (tokenError instanceof Error) {
+        // Missing API credentials - configuration issue
+        if (tokenError.message.includes('Missing Shopify API credentials')) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Server configuration error. Shopify API credentials not configured in environment.',
+              details: 'Please contact support or check Vercel environment variables.',
+              requiresConfig: true
+            },
+            { status: 500 }
+          )
+        }
+
+        // Invalid session token
+        if (tokenError.message.includes('Invalid session token') ||
+            tokenError.message.includes('expired session token')) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Session expired. Please refresh the page.',
+              requiresAuth: true
+            },
+            { status: 401 }
+          )
+        }
+      }
+
+      // Generic error for other cases
       if (sessionToken) {
         return NextResponse.json(
           {
             success: false,
-            error: 'Session expired. Please refresh the page.',
+            error: 'Authentication failed. Please try refreshing the page.',
             requiresAuth: true
           },
           { status: 401 }
