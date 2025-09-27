@@ -28,8 +28,8 @@ import { EnhanceForm, EnhancementFormData } from './components/EnhanceForm'
 import { ComparisonView, ComparisonData } from './components/ComparisonView'
 import { RichTextEditor } from './components/RichTextEditor'
 import { ProductSelector } from './components/ProductSelector'
-import { TokenExchangeHandler } from './components/TokenExchangeHandler'
 import { fetchProductDataForEnhancement, EnhancementProductData } from '@/lib/shopify/product-enhancement'
+import { useUnifiedAuth } from '../components/UnifiedAuthProvider'
 
 type WorkflowStep = 'loading' | 'context' | 'configure' | 'generating' | 'compare' | 'apply' | 'complete'
 
@@ -45,52 +45,21 @@ interface EnhancementWorkflowState {
 
 function EnhanceProductContent() {
   const searchParams = useSearchParams()
+  const { isAuthenticated, isEmbedded, shop, isLoading: authLoading, error: authError } = useUnifiedAuth()
 
-  // Get shop from various sources - Shopify admin embeds might not always pass it correctly
-  const shopFromParams = searchParams?.get('shop')
-  let shopFromHost: string | null = null
-
-  // Decode host parameter if available (it's base64 encoded from Shopify)
-  if (typeof window !== 'undefined' && searchParams?.get('host')) {
-    try {
-      const decoded = atob(searchParams.get('host')!)
-      shopFromHost = decoded.split('/')[0]?.replace('.myshopify.com', '') || null
-    } catch (e) {
-      console.error('Failed to decode host parameter:', e)
-    }
-  }
-
-  // Use the first available shop value or fallback to dev store
-  const shop = shopFromParams || shopFromHost || 'zunosai-staging-test-store'
-
-  const authenticated = searchParams?.get('authenticated')
   const productId = searchParams?.get('productId')
   const source = searchParams?.get('source')
-  const embedded = searchParams?.get('embedded')
-  const host = searchParams?.get('host')
-
-  // Detect if we're in embedded context
-  const isEmbedded = (typeof window !== 'undefined' && window.top !== window.self) ||
-                     embedded === '1' ||
-                     !!host
 
   console.log('🔍 Debug params:', {
     shop,
-    authenticated,
     productId,
     source,
-    embedded,
-    host,
     isEmbedded,
-    shopFromParams,
-    shopFromHost,
-    isInIframe: typeof window !== 'undefined' && window.top !== window.self,
-    hasHost: !!host,
+    isAuthenticated,
+    authLoading,
+    authError,
     windowLocation: typeof window !== 'undefined' ? window.location.href : 'SSR'
   })
-
-  // Authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   // Workflow state management
   const [workflow, setWorkflow] = useState<EnhancementWorkflowState>({
@@ -131,9 +100,15 @@ function EnhanceProductContent() {
   // Load product data after authentication
   useEffect(() => {
     async function loadProductData() {
+      // Wait for authentication to complete
+      if (authLoading) {
+        console.log('⏳ Waiting for authentication to complete...')
+        return
+      }
+
       // Wait for authentication in embedded context
       if (isEmbedded && !isAuthenticated) {
-        console.log('⏳ Waiting for authentication...')
+        console.log('⏳ Waiting for authentication in embedded context...')
         return
       }
 
@@ -218,7 +193,7 @@ function EnhanceProductContent() {
     }
 
     loadProductData()
-  }, [productId, shop, isEmbedded, isAuthenticated])
+  }, [productId, shop, isEmbedded, isAuthenticated, authLoading])
 
   // Handle form data changes
   const handleFormChange = useCallback((formData: EnhancementFormData) => {
@@ -413,11 +388,60 @@ function EnhanceProductContent() {
     }))
   }, [currentStepIndex, stepOrder])
 
-  // Auth check
-  const authBypass = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS === 'true'
+  // Wait for authentication to complete
+  if (authLoading) {
+    return (
+      <Page title="Enhance Product Description">
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <Box padding="600">
+                <InlineStack align="center" gap="400">
+                  <Spinner size="large" />
+                  <BlockStack gap="200">
+                    <Text variant="headingMd">Authenticating...</Text>
+                    <Text variant="bodyMd" tone="subdued">
+                      Connecting to Shopify
+                    </Text>
+                  </BlockStack>
+                </InlineStack>
+              </Box>
+            </Card>
+          </Layout.Section>
+        </Layout>
+      </Page>
+    )
+  }
 
-  // If we're in embedded context, skip this check as we'll handle auth via Token Exchange
-  if (!isEmbedded && !shop || (!isEmbedded && !authenticated && !authBypass)) {
+  // Authentication error
+  if (authError) {
+    return (
+      <Page title="Enhance Product Description">
+        <Layout>
+          <Layout.Section>
+            <Banner status="critical">
+              <BlockStack gap="200">
+                <Text as="p" variant="headingMd">Authentication Error</Text>
+                <Text as="p">{authError}</Text>
+              </BlockStack>
+            </Banner>
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingLg">Unable to Authenticate</Text>
+                <Text as="p">Please try accessing this page through your Shopify admin panel.</Text>
+                <Button primary onClick={() => window.location.href = '/'}>
+                  Back to Home
+                </Button>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+      </Page>
+    )
+  }
+
+  // Check authentication for embedded apps
+  if (isEmbedded && !isAuthenticated) {
     return (
       <Page title="Enhance Product Description">
         <Layout>
@@ -483,27 +507,6 @@ function EnhanceProductContent() {
     )
   }
 
-  // Handle token exchange for embedded apps
-  if (isEmbedded && !isAuthenticated) {
-    return (
-      <Page title="Enhance Product Description">
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingLg">Connecting to Shopify...</Text>
-                <TokenExchangeHandler
-                  shop={shop || 'zunosai-staging-test-store'}
-                  isEmbedded={isEmbedded}
-                  onSuccess={() => setIsAuthenticated(true)}
-                />
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-        </Layout>
-      </Page>
-    )
-  }
 
   // Loading state or Product Selection
   if (workflow.currentStep === 'loading') {

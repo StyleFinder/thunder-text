@@ -64,30 +64,46 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
             return
           }
 
-          // Load App Bridge dynamically
-          // First, check if shopifyApp is already available
-          if (!window.shopifyApp) {
-            // Dynamically load App Bridge script
+          // Check if App Bridge script is already loaded
+          const existingScript = document.querySelector('script[src="https://cdn.shopify.com/shopifycloud/app-bridge.js"]')
+
+          if (!existingScript && typeof window.shopify === 'undefined') {
+            // Load App Bridge script
             await new Promise((resolve, reject) => {
               const script = document.createElement('script')
               script.src = 'https://cdn.shopify.com/shopifycloud/app-bridge.js'
+              script.async = false // Avoid async warnings
               script.onload = resolve
               script.onerror = reject
               document.head.appendChild(script)
             })
           }
 
-          // Initialize App Bridge using the new API from the guide
-          const app = window.shopifyApp({
-            apiKey: apiKey
-          })
+          // Wait for shopify global to be available
+          let retries = 0
+          while (typeof window.shopify === 'undefined' && retries < 20) {
+            await new Promise(resolve => setTimeout(resolve, 100))
+            retries++
+          }
 
-          console.log('✅ App Bridge initialized successfully')
-          setAppBridge(app)
+          if (typeof window.shopify === 'undefined') {
+            throw new Error('Shopify App Bridge failed to load')
+          }
 
-          // Get initial session token using the new idToken() method
+          // Add API key meta tag if not present
+          if (!document.querySelector('meta[name="shopify-api-key"]')) {
+            const metaTag = document.createElement('meta')
+            metaTag.name = 'shopify-api-key'
+            metaTag.content = apiKey
+            document.head.appendChild(metaTag)
+          }
+
+          console.log('✅ App Bridge loaded, using window.shopify')
+          setAppBridge(window.shopify)
+
+          // Get initial session token using the shopify.idToken() method
           try {
-            const token = await app.idToken()
+            const token = await window.shopify.idToken()
             console.log('✅ Initial session token obtained successfully')
 
             // Store the token for API calls
@@ -100,7 +116,7 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
             // This is more reliable and follows the guide's recommendation
             window.getShopifySessionToken = async () => {
               try {
-                const freshToken = await app.idToken()
+                const freshToken = await window.shopify.idToken()
                 window.sessionStorage.setItem('shopify_session_token', freshToken)
                 return freshToken
               } catch (error) {
@@ -152,7 +168,10 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
 // Extend window type for TypeScript
 declare global {
   interface Window {
-    shopifyApp: any
+    shopify: {
+      idToken: () => Promise<string>
+      [key: string]: any
+    }
     getShopifySessionToken?: () => Promise<string>
   }
 }
