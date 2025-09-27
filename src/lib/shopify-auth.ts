@@ -177,16 +177,32 @@ export async function authenticateRequest(
 
     // If we have a session token, verify and exchange it
     if (sessionToken) {
-      // Verify the token signature
-      if (!verifySessionToken(sessionToken)) {
-        console.error('❌ Session token signature verification failed')
-        throw new Error('Invalid session token signature')
+      // Parse the token to check its validity
+      const payload = parseJWT(sessionToken)
+      console.log('🔍 Session token payload:', {
+        dest: payload?.dest,
+        exp: payload?.exp,
+        aud: payload?.aud,
+        sub: payload?.sub
+      })
+
+      // Check if auth bypass is enabled for development
+      const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
+
+      if (!authBypass) {
+        // Verify the token signature
+        if (!verifySessionToken(sessionToken)) {
+          console.error('❌ Session token signature verification failed')
+          throw new Error('Invalid session token signature')
+        }
+      } else {
+        console.log('⚠️ Auth bypass enabled - skipping signature verification')
       }
 
       // Check token expiry
-      const payload = parseJWT(sessionToken)
       if (payload?.exp && payload.exp * 1000 < Date.now()) {
-        console.error('❌ Session token expired')
+        console.error('❌ Session token expired at:', new Date(payload.exp * 1000))
+        console.error('❌ Current time:', new Date())
         throw new Error('Session token expired')
       }
 

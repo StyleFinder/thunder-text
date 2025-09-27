@@ -36,10 +36,16 @@ export async function GET(request: NextRequest) {
     const sessionToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined
 
     console.log('🔑 Session token present:', !!sessionToken)
+    console.log('🏪 Shop:', shop)
 
     // Get the access token using official Shopify authentication
     let accessToken: string
     try {
+      // For embedded apps, we need to handle session tokens properly
+      if (sessionToken) {
+        console.log('📱 Using session token for embedded app authentication')
+      }
+
       accessToken = await getAccessToken(shop, sessionToken)
       console.log('✅ Got access token successfully')
     } catch (error) {
