@@ -41,11 +41,11 @@ export default function DebugAppBridge() {
         try {
           addLog('✅ App Bridge script loaded')
 
-          // Check if shopifyApp is available
-          if (typeof window.shopifyApp === 'undefined') {
-            throw new Error('window.shopifyApp is undefined')
+          // Check if shopify global is available (new App Bridge CDN version)
+          if (typeof window.shopify === 'undefined') {
+            throw new Error('window.shopify is undefined')
           }
-          addLog('✅ window.shopifyApp is available')
+          addLog('✅ window.shopify is available')
 
           // Get API key
           const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY
@@ -55,23 +55,19 @@ export default function DebugAppBridge() {
             throw new Error('NEXT_PUBLIC_SHOPIFY_API_KEY is not set')
           }
 
-          // Get host parameter (required for embedded apps)
-          const host = searchParams?.get('host')
-          addLog(`🏠 Host parameter: ${host ? 'SET' : 'NOT SET'}`)
-
-          if (!host) {
-            throw new Error('Host parameter is required for embedded apps')
+          // Create meta tag with API key if it doesn't exist
+          if (!document.querySelector('meta[name="shopify-api-key"]')) {
+            const metaTag = document.createElement('meta')
+            metaTag.name = 'shopify-api-key'
+            metaTag.content = apiKey
+            document.head.appendChild(metaTag)
+            addLog('✅ Added shopify-api-key meta tag')
+          } else {
+            addLog('✅ shopify-api-key meta tag already exists')
           }
 
-          addLog('🔄 Creating App Bridge app instance...')
-          const app = window.shopifyApp({
-            apiKey: apiKey,
-            host: host
-          })
-          addLog('✅ App Bridge app instance created')
-
-          addLog('🔄 Getting session token...')
-          const token = await app.idToken()
+          addLog('🔄 Getting session token using shopify.idToken()...')
+          const token = await window.shopify.idToken()
           addLog(`✅ Session token received: ${token ? 'YES' : 'NO'}`)
           addLog(`📝 Token length: ${token ? token.length : 0}`)
           addLog(`📝 Token preview: ${token ? token.substring(0, 50) + '...' : 'null'}`)

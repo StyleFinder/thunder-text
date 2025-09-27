@@ -66,23 +66,24 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
 
       script.onload = async () => {
         try {
-          // Use the new App Bridge API
-          if (!window.shopifyApp) {
+          // Check if shopify global is available (new App Bridge CDN version)
+          if (typeof window.shopify === 'undefined') {
             throw new Error('Shopify App Bridge not loaded correctly')
           }
 
-          const host = searchParams?.get('host')
-          if (!host) {
-            throw new Error('Host parameter is required for embedded apps')
+          console.log('✅ App Bridge loaded, using shopify global')
+
+          // For the new App Bridge from CDN, we need to use the meta tag approach
+          // Create meta tag with API key if it doesn't exist
+          if (!document.querySelector('meta[name="shopify-api-key"]')) {
+            const metaTag = document.createElement('meta')
+            metaTag.name = 'shopify-api-key'
+            metaTag.content = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY!
+            document.head.appendChild(metaTag)
           }
 
-          const app = window.shopifyApp({
-            apiKey: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY!,
-            host: host
-          })
-
-          // Get session token from App Bridge using the new idToken() method
-          const sessionToken = await app.idToken()
+          // Use shopify.idToken() directly for session token
+          const sessionToken = await window.shopify.idToken()
 
           if (!sessionToken) {
             throw new Error('Failed to get session token from Shopify')
@@ -158,6 +159,9 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
 // Extend window type for TypeScript
 declare global {
   interface Window {
-    shopifyApp: any
+    shopify: {
+      idToken: () => Promise<string>
+      [key: string]: any
+    }
   }
 }
