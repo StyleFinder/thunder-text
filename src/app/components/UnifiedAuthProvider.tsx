@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 interface UnifiedAuthContextType {
@@ -31,7 +31,7 @@ interface UnifiedAuthProviderProps {
   children: ReactNode
 }
 
-export function UnifiedAuthProvider({ children }: UnifiedAuthProviderProps) {
+function UnifiedAuthProviderContent({ children }: UnifiedAuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [shop, setShop] = useState<string | null>(null)
   const [host, setHost] = useState<string | null>(null)
@@ -187,5 +187,27 @@ export function UnifiedAuthProvider({ children }: UnifiedAuthProviderProps) {
     }}>
       {children}
     </UnifiedAuthContext.Provider>
+  )
+}
+
+// Wrapper component with Suspense
+export function UnifiedAuthProvider({ children }: UnifiedAuthProviderProps) {
+  return (
+    <Suspense fallback={
+      <UnifiedAuthContext.Provider value={{
+        isAuthenticated: false,
+        isEmbedded: false,
+        shop: null,
+        host: null,
+        isLoading: true,
+        error: null,
+        sessionToken: null,
+        performTokenExchange: async () => {}
+      }}>
+        {children}
+      </UnifiedAuthContext.Provider>
+    }>
+      <UnifiedAuthProviderContent>{children}</UnifiedAuthProviderContent>
+    </Suspense>
   )
 }
