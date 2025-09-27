@@ -59,8 +59,26 @@ export async function fetchProductDataForEnhancement(
       idFormat: productId.startsWith('gid://') ? 'GraphQL' : 'Numeric'
     })
 
+    // Get session token from sessionStorage if available (App Bridge stores it there)
+    const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('shopify-session-token') : null
+
+    // Prepare headers with authentication if available
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+
+    if (sessionToken) {
+      headers['Authorization'] = `Bearer ${sessionToken}`
+      console.log('🔑 Including session token in API request')
+    } else {
+      console.log('⚠️ No session token available, will use database token')
+    }
+
     // Get base product data using API endpoint (server-side for env vars)
-    const response = await fetch(`/api/shopify/product-prepopulation?productId=${productId}&shop=${shop}`)
+    const response = await fetch(
+      `/api/shopify/product-prepopulation?productId=${productId}&shop=${shop}`,
+      { headers }
+    )
 
     if (!response.ok) {
       const errorText = await response.text()

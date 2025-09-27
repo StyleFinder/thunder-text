@@ -46,13 +46,14 @@ export interface PrePopulatedProductData {
 
 export async function fetchProductDataForPrePopulation(
   productId: string,
-  shop: string
+  shop: string,
+  sessionToken?: string
 ): Promise<PrePopulatedProductData | null> {
   try {
     console.log('🔍 Fetching comprehensive product data for:', productId)
     
     // Use Shopify Admin API to fetch comprehensive product data
-    const productData = await fetchShopifyProduct(productId, shop)
+    const productData = await fetchShopifyProduct(productId, shop, sessionToken)
     
     if (!productData) {
       console.error('❌ No product data returned from Shopify')
@@ -110,7 +111,7 @@ export async function fetchProductDataForPrePopulation(
   }
 }
 
-async function fetchShopifyProduct(productId: string, shop: string) {
+async function fetchShopifyProduct(productId: string, shop: string, sessionToken?: string) {
   // Ensure productId is in the correct GraphQL format
   let formattedProductId = productId
 
@@ -204,17 +205,30 @@ async function fetchShopifyProduct(productId: string, shop: string) {
   try {
     // Use authenticated Shopify GraphQL client
     // Note: This is server-side, so no session token - will use stored token
-    const response = await shopifyGraphQL(query, { id: formattedProductId }, shop, undefined)
+    console.log('🔑 Calling shopifyGraphQL with:', {
+      shop,
+      productId: formattedProductId,
+      hasSessionToken: !!sessionToken
+    })
+
+    const response = await shopifyGraphQL(query, { id: formattedProductId }, shop, sessionToken)
 
     console.log('📦 GraphQL response received:', {
       hasData: !!response?.data,
       hasProduct: !!response?.data?.product,
-      productId: response?.data?.product?.id
+      productId: response?.data?.product?.id,
+      errors: response?.errors
     })
+
+    // Check for GraphQL errors
+    if (response?.errors) {
+      console.error('❌ GraphQL errors:', response.errors)
+      throw new Error(`GraphQL errors: ${JSON.stringify(response.errors)}`)
+    }
 
     if (!response?.data || !response.data.product) {
       console.error('❌ No product found with ID:', formattedProductId)
-      console.error('📝 Response structure:', JSON.stringify(response, null, 2))
+      console.error('📝 Full response:', JSON.stringify(response, null, 2))
       return null
     }
 
