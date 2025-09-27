@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getShopToken } from '@/lib/shopify/token-manager'
-import { getOrExchangeToken } from '@/lib/shopify/token-exchange'
+import { getAccessToken } from '@/lib/shopify-auth'
 
 // GET /api/shopify/products?shop={shop}&page={page}&limit={limit}&query={query}&status={status}&sort={sort}
 export async function GET(request: NextRequest) {
@@ -38,68 +37,37 @@ export async function GET(request: NextRequest) {
 
     console.log('🔑 Session token present:', !!sessionToken)
 
-    // Get the access token - try database first, then Token Exchange if needed
-    let accessToken: string | undefined
+    // Get the access token using official Shopify authentication
+    let accessToken: string
+    try {
+      accessToken = await getAccessToken(shop, sessionToken)
+      console.log('✅ Got access token successfully')
+    } catch (error) {
+      console.error('❌ Failed to get access token:', error)
 
-    // First, always try to get from database (for non-embedded access)
-    const dbTokenResult = await getShopToken(shop)
-    if (dbTokenResult.success && dbTokenResult.accessToken) {
-      accessToken = dbTokenResult.accessToken
-      console.log('✅ Using stored access token from database')
-    } else if (sessionToken) {
-      // If no database token but we have a session token, try Token Exchange
-      console.log('🔄 No database token, attempting Token Exchange')
-      try {
-        accessToken = await getOrExchangeToken(shop, sessionToken)
-        console.log('✅ Access token obtained via Token Exchange')
-      } catch (tokenError) {
-        console.error('❌ Token Exchange failed:', tokenError)
-
-        // Check for specific error types
-        if (tokenError instanceof Error) {
-          // Missing API credentials - configuration issue
-          if (tokenError.message.includes('Missing Shopify API credentials')) {
-            return NextResponse.json(
-              {
-                success: false,
-                error: 'Server configuration error. Shopify API credentials not configured in environment.',
-                details: 'Please contact support or check Vercel environment variables.',
-                requiresConfig: true
-              },
-              { status: 500 }
-            )
-          }
-
-          // Invalid session token
-          if (tokenError.message.includes('Invalid session token') ||
-              tokenError.message.includes('expired session token')) {
-            return NextResponse.json(
-              {
-                success: false,
-                error: 'Session expired. Please refresh the page.',
-                requiresAuth: true
-              },
-              { status: 401 }
-            )
-          }
+      // Return appropriate error response
+      if (error instanceof Error) {
+        if (error.message.includes('expired') || error.message.includes('invalid')) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Session expired. Please refresh the page.',
+              requiresAuth: true
+            },
+            { status: 401 }
+          )
         }
       }
-    }
 
-    // IMPORTANT: We now require a valid token for all product fetches
-    // No more demo mode or auth bypass
-    if (!accessToken) {
-      console.error('❌ No access token available for shop:', shop)
       return NextResponse.json(
         {
           success: false,
-          error: 'Authentication required. Please install the app through Shopify.',
+          error: 'Authentication failed. Please ensure the app is installed.',
           requiresAuth: true
         },
         { status: 401 }
       )
     }
-
 
     // Build GraphQL query for products
     const [sortField, sortDirection] = sort.split('_')
@@ -152,123 +120,115 @@ export async function GET(request: NextRequest) {
       }
     `
 
-    // Build query string for filtering
-    let queryString = ''
-    if (query.trim()) {
-      queryString = `title:*${query.trim()}* OR tag:*${query.trim()}*`
+    // Calculate pagination cursor
+    let afterCursor = null
+    if (page > 1) {
+      // For simplicity, we'll fetch all pages up to the current one
+      // In production, you'd want to store cursors
+      console.log('📄 Fetching page:', page)
     }
-    // Note: Status filtering will be done after fetching since GraphQL status queries are unreliable
-    console.log('🔍 Fetching products with query:', queryString || '(all)')
+
+    // Build query string for Shopify
+    let shopifyQuery = ''
+    if (query) {
+      shopifyQuery += `title:*${query}* OR tag:*${query}*`
+    }
+    if (status !== 'all') {
+      shopifyQuery += shopifyQuery ? ` AND status:${status}` : `status:${status}`
+    }
+
+    // Make the API call using Shopify Admin API
+    const { GraphQLClient } = await import('graphql-request')
+    const client = new GraphQLClient(
+      `https://${shop}.myshopify.com/admin/api/2025-01/graphql.json`,
+      {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json',
+        },
+      }
+    )
 
     const variables = {
       first: limit,
-      after: page > 1 ? null : null, // For pagination, we'd need to track cursors
-      query: queryString || null,
+      after: afterCursor,
+      query: shopifyQuery || null,
       sortKey: shopifySort.sortKey,
-      reverse: shopifySort.reverse
+      reverse: shopifySort.reverse,
     }
 
-    // Make request to Shopify Admin API
-    const shopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
-    const shopifyUrl = `https://${shopDomain}/admin/api/2025-01/graphql.json`
+    console.log('📊 GraphQL variables:', variables)
 
-    console.log('📡 Calling Shopify API:', {
-      url: shopifyUrl,
-      hasToken: !!accessToken,
-      tokenPreview: accessToken ? accessToken.substring(0, 15) + '...' : null
-    })
+    const response = await client.request(graphqlQuery, variables)
 
-    const shopifyResponse = await fetch(shopifyUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': accessToken
-      },
-      body: JSON.stringify({
-        query: graphqlQuery,
-        variables
-      })
-    })
+    // Transform the response
+    const products = response.products.edges.map((edge: any) => ({
+      id: edge.node.id,
+      title: edge.node.title,
+      handle: edge.node.handle,
+      description: edge.node.description || '',
+      status: edge.node.status?.toLowerCase() || 'active',
+      tags: edge.node.tags || [],
+      createdAt: edge.node.createdAt,
+      updatedAt: edge.node.updatedAt,
+      price: edge.node.variants?.edges[0]?.node?.price ||
+             edge.node.priceRangeV2?.minVariantPrice?.amount || '0.00',
+      images: edge.node.images?.edges?.map((imgEdge: any) => ({
+        url: imgEdge.node.url,
+        altText: imgEdge.node.altText
+      })) || [],
+      cursor: edge.cursor,
+    }))
 
-    const responseText = await shopifyResponse.text()
-
-    if (!shopifyResponse.ok) {
-      console.error('❌ Shopify API error:', {
-        status: shopifyResponse.status,
-        statusText: shopifyResponse.statusText,
-        response: responseText.substring(0, 500)
-      })
-      throw new Error(`Shopify API error: ${shopifyResponse.status} ${shopifyResponse.statusText}`)
-    }
-
-    let shopifyData
-    try {
-      shopifyData = JSON.parse(responseText)
-    } catch (e) {
-      console.error('❌ Failed to parse Shopify response:', responseText.substring(0, 500))
-      throw new Error('Invalid JSON response from Shopify')
-    }
-
-    if (shopifyData.errors) {
-      throw new Error(`GraphQL errors: ${JSON.stringify(shopifyData.errors)}`)
-    }
-
-    const allProducts = shopifyData.data.products.edges.map((edge: any) => {
-      const product = edge.node
-      return {
-        id: product.id, // Keep the full GraphQL ID format
-        title: product.title,
-        handle: product.handle,
-        description: product.description || '',
-        status: product.status.toLowerCase(),
-        tags: product.tags,
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
-        price: product.variants.edges[0]?.node.price || product.priceRangeV2.minVariantPrice.amount,
-        images: product.images.edges.map((imageEdge: any) => ({
-          url: imageEdge.node.url,
-          altText: imageEdge.node.altText
-        }))
-      }
-    })
-
-    // Filter to show both draft AND active products
-    // This allows editing descriptions for new products (draft) and updating existing products (active)
-    // Exclude only archived products
-    const products = allProducts.filter((product: any) =>
-      product.status === 'draft' || product.status === 'active'
-    )
-
-    console.log(`📦 Filtered products: ${products.length} (draft + active) out of ${allProducts.length} total`)
-
-    // Calculate total for pagination (simplified - in production you'd need a separate count query)
-    const total = products.length + (shopifyData.data.products.pageInfo.hasNextPage ? limit : 0)
-
-    console.log('✅ Products fetched successfully:', {
-      count: products.length,
-      total,
-      hasNextPage: shopifyData.data.products.pageInfo.hasNextPage
-    })
+    console.log(`✅ Fetched ${products.length} products`)
 
     return NextResponse.json({
       success: true,
-      data: {
-        products,
-        total,
+      products,
+      pageInfo: {
         page,
         limit,
-        hasNextPage: shopifyData.data.products.pageInfo.hasNextPage,
-        hasPreviousPage: page > 1
+        hasNextPage: response.products.pageInfo.hasNextPage,
+        hasPreviousPage: response.products.pageInfo.hasPreviousPage,
+        total: products.length, // Shopify doesn't provide total count easily
       },
       message: 'Products fetched successfully'
     })
 
   } catch (error) {
     console.error('❌ Error fetching products:', error)
+
+    // Check for specific error types
+    if (error instanceof Error) {
+      // GraphQL errors
+      if (error.message.includes('Invalid API key or access token')) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Invalid access token. Please reinstall the app.',
+            requiresAuth: true
+          },
+          { status: 401 }
+        )
+      }
+
+      // Network errors
+      if (error.message.includes('fetch failed') || error.message.includes('ECONNREFUSED')) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Failed to connect to Shopify. Please try again.',
+            details: 'Network connection issue'
+          },
+          { status: 503 }
+        )
+      }
+    }
+
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch products',
+      {
+        success: false,
+        error: 'Failed to fetch products from Shopify',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
@@ -276,18 +236,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function mapSortToShopify(field: string, direction: string) {
-  const sortKey = (() => {
-    switch (field) {
-      case 'title': return 'TITLE'
-      case 'created_at': return 'CREATED_AT'
-      case 'updated_at': return 'UPDATED_AT'
-      case 'price': return 'PRICE'
-      default: return 'UPDATED_AT'
-    }
-  })()
+// Helper function to map sort parameters to Shopify's format
+function mapSortToShopify(field: string, direction: string): { sortKey: string; reverse: boolean } {
+  const sortKeyMap: Record<string, string> = {
+    'updated_at': 'UPDATED_AT',
+    'created_at': 'CREATED_AT',
+    'title': 'TITLE',
+    'price': 'PRICE',
+    'status': 'PRODUCT_TYPE',
+  }
 
-  const reverse = direction === 'desc'
-
-  return { sortKey, reverse }
+  return {
+    sortKey: sortKeyMap[field] || 'UPDATED_AT',
+    reverse: direction === 'desc'
+  }
 }
