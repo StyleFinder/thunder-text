@@ -35,7 +35,8 @@ export default function DebugAppBridge() {
       // Load App Bridge script
       const script = document.createElement('script')
       script.src = 'https://cdn.shopify.com/shopifycloud/app-bridge.js'
-      script.async = true
+      // Don't use async to avoid App Bridge warnings
+      script.async = false
 
       script.onload = async () => {
         try {

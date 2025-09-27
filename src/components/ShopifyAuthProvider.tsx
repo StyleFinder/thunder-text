@@ -30,14 +30,24 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
   const [shop, setShop] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isExchanging, setIsExchanging] = useState(false)
   const searchParams = useSearchParams()
 
   const performTokenExchange = async () => {
+    // Prevent multiple simultaneous token exchanges
+    if (isExchanging) {
+      console.log('Token exchange already in progress, skipping...')
+      return
+    }
+
     try {
+      setIsExchanging(true)
+
       const shopParam = searchParams?.get('shop')
       if (!shopParam) {
         console.log('No shop parameter found')
         setIsLoading(false)
+        setIsExchanging(false)
         return
       }
 
@@ -54,6 +64,7 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
         const authenticated = searchParams?.get('authenticated') === 'true'
         setIsAuthenticated(authenticated)
         setIsLoading(false)
+        setIsExchanging(false)
         return
       }
 
@@ -62,7 +73,8 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
       // Load Shopify App Bridge
       const script = document.createElement('script')
       script.src = 'https://cdn.shopify.com/shopifycloud/app-bridge.js'
-      script.async = true
+      // Don't use async to avoid App Bridge warnings
+      script.async = false
 
       script.onload = async () => {
         try {
@@ -120,6 +132,7 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
           setIsAuthenticated(false)
         } finally {
           setIsLoading(false)
+          setIsExchanging(false)
         }
       }
 
@@ -127,6 +140,7 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
         console.error('Failed to load Shopify App Bridge')
         setError('Failed to load Shopify App Bridge')
         setIsLoading(false)
+        setIsExchanging(false)
       }
 
       document.head.appendChild(script)
@@ -136,6 +150,7 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
       setError(err instanceof Error ? err.message : 'Authentication failed')
       setIsAuthenticated(false)
       setIsLoading(false)
+      setIsExchanging(false)
     }
   }
 
