@@ -136,24 +136,39 @@ export async function getOrExchangeToken(
 
   // If no database token and we have a session token, exchange it
   if (sessionToken) {
-    console.log('🔄 No database token found, exchanging session token')
+    console.log('🔄 No database token found, attempting token exchange')
 
     const clientId = process.env.SHOPIFY_API_KEY
     const clientSecret = process.env.SHOPIFY_API_SECRET
 
     if (!clientId || !clientSecret) {
+      console.error('❌ Missing Shopify API credentials in environment')
       throw new Error('Missing Shopify API credentials in environment')
     }
 
-    const tokenResponse = await exchangeToken({
-      shop,
-      sessionToken,
-      clientId,
-      clientSecret,
-      requestedTokenType: 'offline' // Use offline for persistent access
-    })
+    try {
+      const tokenResponse = await exchangeToken({
+        shop,
+        sessionToken,
+        clientId,
+        clientSecret,
+        requestedTokenType: 'offline' // Use offline for persistent access
+      })
 
-    return tokenResponse.access_token
+      return tokenResponse.access_token
+    } catch (exchangeError) {
+      console.error('⚠️ Token exchange failed, will check database again:', exchangeError)
+
+      // Try database one more time - maybe it was just added
+      const retryDbToken = await getShopToken(shop)
+      if (retryDbToken.success && retryDbToken.accessToken) {
+        console.log('✅ Found database token on retry after exchange failure')
+        return retryDbToken.accessToken
+      }
+
+      // Re-throw the exchange error if we still don't have a token
+      throw exchangeError
+    }
   }
 
   throw new Error(`No access token available for shop: ${shop}`)
