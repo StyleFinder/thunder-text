@@ -140,13 +140,26 @@ function verifySessionToken(token: string): boolean {
     // Generate Base64url encoded signature (no padding, URL-safe)
     const calculatedSignature = hmac.digest('base64url')
 
-    // Compare signatures (timing-safe comparison would be better in production)
-    const isValid = calculatedSignature === signature
+    // Use timing-safe comparison to prevent timing attacks
+    const expected = Buffer.from(calculatedSignature, 'utf8')
+    const received = Buffer.from(signature, 'utf8')
+
+    // Check length first (fast fail, not timing sensitive)
+    if (expected.length !== received.length) {
+      console.error('❌ Session token signature verification failed (length mismatch)')
+      return false
+    }
+
+    // Timing-safe comparison using crypto.timingSafeEqual
+    const isValid = crypto.timingSafeEqual(expected, received)
 
     if (!isValid) {
       console.error('❌ Session token signature verification failed')
-      console.error('📝 Expected signature:', calculatedSignature)
-      console.error('📝 Received signature:', signature)
+      // Don't log actual signatures in production to avoid leaking them
+      if (process.env.NODE_ENV === 'development') {
+        console.error('📝 Expected signature:', calculatedSignature)
+        console.error('📝 Received signature:', signature)
+      }
     } else {
       console.log('✅ Session token signature verified successfully')
     }

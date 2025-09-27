@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors';
 
 export async function GET(request: NextRequest) {
-  // Add CORS headers for extension access
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
+  // Use secure CORS headers that restrict to Shopify domains
+  const corsHeaders = createCorsHeaders(request);
 
   try {
     // Extract shop domain from query parameters (app proxy format)
@@ -79,13 +76,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request);
 }
