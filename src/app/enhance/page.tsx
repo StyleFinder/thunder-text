@@ -128,7 +128,8 @@ function EnhanceProductContent() {
           progress: 0,
           error: null // Clear any previous errors
         }))
-        setHasAttemptedLoad(true) // Mark as attempted to avoid re-running
+        // Don't set hasAttemptedLoad here - no productId is a valid state
+        // and we want to load when a productId is later provided
         return
       }
 
