@@ -2,7 +2,7 @@
  * API endpoint to refresh access token
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { verifySessionToken } from '@/lib/shopify-auth'
+import { authenticateRequest } from '@/lib/shopify-auth'
 import { tokenRefreshManager } from '@/lib/auth/token-refresh'
 import { createCorsHeaders } from '@/lib/middleware/cors'
 
@@ -28,9 +28,9 @@ export async function POST(request: NextRequest) {
 
     const sessionToken = authHeader.substring(7)
 
-    // Verify session token
-    const isValid = await verifySessionToken(sessionToken)
-    if (!isValid) {
+    // Verify session token using authenticateRequest
+    const authResult = await authenticateRequest(sessionToken)
+    if (!authResult.authenticated) {
       return NextResponse.json(
         { error: 'Invalid session token' },
         { status: 401, headers: corsHeaders }
