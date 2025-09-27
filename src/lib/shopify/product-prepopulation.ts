@@ -211,29 +211,37 @@ async function fetchShopifyProduct(productId: string, shop: string, sessionToken
       hasSessionToken: !!sessionToken
     })
 
-    const response = await shopifyGraphQL(query, { id: formattedProductId }, shop, sessionToken)
+    // Use the new authentication method
+    const { getAccessToken } = await import('../shopify-auth')
+    const accessToken = await getAccessToken(shop, sessionToken)
+
+    // Make direct GraphQL call with access token
+    const { GraphQLClient } = await import('graphql-request')
+    const client = new GraphQLClient(
+      `https://${shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`}/admin/api/2025-01/graphql.json`,
+      {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+
+    const response = await client.request(query, { id: formattedProductId })
 
     console.log('📦 GraphQL response received:', {
-      hasData: !!response?.data,
-      hasProduct: !!response?.data?.product,
-      productId: response?.data?.product?.id,
-      errors: response?.errors
+      hasProduct: !!response?.product,
+      productId: response?.product?.id
     })
 
-    // Check for GraphQL errors
-    if (response?.errors) {
-      console.error('❌ GraphQL errors:', response.errors)
-      throw new Error(`GraphQL errors: ${JSON.stringify(response.errors)}`)
-    }
-
-    if (!response?.data || !response.data.product) {
+    if (!response || !response.product) {
       console.error('❌ No product found with ID:', formattedProductId)
       console.error('📝 Full response:', JSON.stringify(response, null, 2))
       return null
     }
 
-    console.log('✅ Product found:', response.data.product.title)
-    return response.data.product
+    console.log('✅ Product found:', response.product.title)
+    return response.product
   } catch (error) {
     console.error('❌ Error fetching product from Shopify:', error)
     console.error('📝 Query details:', {
