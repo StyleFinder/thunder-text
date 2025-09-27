@@ -86,29 +86,45 @@ async function exchangeToken(sessionToken: string, shop: string): Promise<TokenE
 /**
  * Verify JWT signature for session token
  * This ensures the token is genuinely from Shopify
+ * According to Shopify docs, session tokens are signed with the app's client secret
  */
 function verifySessionToken(token: string): boolean {
-  if (!process.env.SHOPIFY_API_SECRET) {
-    console.error('❌ SHOPIFY_API_SECRET not configured')
+  // Session tokens use the CLIENT SECRET, not API SECRET for signing
+  const clientSecret = process.env.SHOPIFY_API_SECRET // This is actually the client secret
+
+  if (!clientSecret) {
+    console.error('❌ SHOPIFY_API_SECRET (client secret) not configured')
     return false
   }
 
   try {
     const [header, payload, signature] = token.split('.')
 
-    // Create the signing input
+    if (!header || !payload || !signature) {
+      console.error('❌ Invalid token format')
+      return false
+    }
+
+    // Create the signing input (header.payload)
     const signingInput = `${header}.${payload}`
 
-    // Create HMAC signature using the API secret
-    const hmac = crypto.createHmac('sha256', process.env.SHOPIFY_API_SECRET)
+    // Create HMAC-SHA256 signature using the client secret
+    // Session tokens use HS256 algorithm according to Shopify docs
+    const hmac = crypto.createHmac('sha256', clientSecret)
     hmac.update(signingInput)
+
+    // Generate Base64url encoded signature (no padding, URL-safe)
     const calculatedSignature = hmac.digest('base64url')
 
-    // Compare signatures
+    // Compare signatures (timing-safe comparison would be better in production)
     const isValid = calculatedSignature === signature
 
     if (!isValid) {
       console.error('❌ Session token signature verification failed')
+      console.error('📝 Expected signature:', calculatedSignature)
+      console.error('📝 Received signature:', signature)
+    } else {
+      console.log('✅ Session token signature verified successfully')
     }
 
     return isValid
@@ -180,23 +196,43 @@ export async function authenticateRequest(
       // Parse the token to check its validity
       const payload = parseJWT(sessionToken)
       console.log('🔍 Session token payload:', {
+        iss: payload?.iss,
         dest: payload?.dest,
-        exp: payload?.exp,
         aud: payload?.aud,
-        sub: payload?.sub
+        sub: payload?.sub,
+        exp: payload?.exp,
+        nbf: payload?.nbf,
+        iat: payload?.iat
       })
 
-      // Check if auth bypass is enabled for development
-      const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
+      // Validate required fields per Shopify documentation
+      if (!payload?.iss || !payload?.dest || !payload?.aud || !payload?.sub) {
+        console.error('❌ Session token missing required fields')
+        throw new Error('Invalid session token: missing required fields')
+      }
 
-      if (!authBypass) {
-        // Verify the token signature
-        if (!verifySessionToken(sessionToken)) {
-          console.error('❌ Session token signature verification failed')
-          throw new Error('Invalid session token signature')
-        }
-      } else {
-        console.log('⚠️ Auth bypass enabled - skipping signature verification')
+      // Verify the dest field matches the shop
+      if (!payload.dest.includes(shop.replace('.myshopify.com', ''))) {
+        console.error('❌ Session token dest does not match shop:', {
+          dest: payload.dest,
+          shop
+        })
+        throw new Error('Session token shop mismatch')
+      }
+
+      // Verify the aud field matches our app's client ID
+      if (process.env.SHOPIFY_API_KEY && payload.aud !== process.env.SHOPIFY_API_KEY) {
+        console.error('❌ Session token audience does not match app client ID:', {
+          aud: payload.aud,
+          expected: process.env.SHOPIFY_API_KEY
+        })
+        throw new Error('Session token audience mismatch')
+      }
+
+      // Check token nbf (not before)
+      if (payload?.nbf && payload.nbf * 1000 > Date.now()) {
+        console.error('❌ Session token not yet valid')
+        throw new Error('Session token not yet valid')
       }
 
       // Check token expiry
@@ -205,6 +241,15 @@ export async function authenticateRequest(
         console.error('❌ Current time:', new Date())
         throw new Error('Session token expired')
       }
+
+      // Verify the token signature - REQUIRED for production
+      if (!verifySessionToken(sessionToken)) {
+        console.error('❌ Session token signature verification failed')
+        console.error('❌ This is required for production security')
+        throw new Error('Invalid session token signature')
+      }
+
+      console.log('✅ Session token validation passed')
 
       // Exchange for access token
       const tokenData = await exchangeToken(sessionToken, shop)
