@@ -70,7 +70,22 @@ function ProductsContent() {
         params.append('cursor', nextCursor)
       }
 
-      const response = await fetch(`/api/shopify/products?${params}`)
+      // Get session token from sessionStorage for authenticated requests
+      const sessionToken = typeof window !== 'undefined'
+        ? window.sessionStorage.getItem('shopify_session_token')
+        : null
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`
+      }
+
+      const response = await fetch(`/api/shopify/products?${params}`, {
+        headers
+      })
       const data: ProductsResponse = await response.json()
 
       if (!data.success) {
