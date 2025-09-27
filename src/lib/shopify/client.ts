@@ -43,9 +43,12 @@ export async function shopifyGraphQL(query: string, variables: any, shop: string
     // Use the GraphQLClient for real API calls
     console.log('✅ Using Shopify API with access token')
 
+    // Ensure shop domain format is correct
+    const shopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+
     const { GraphQLClient } = await import('graphql-request')
     const client = new GraphQLClient(
-      `https://${shop}.myshopify.com/admin/api/2025-01/graphql.json`,
+      `https://${shopDomain}/admin/api/2025-01/graphql.json`,
       {
         headers: {
           'X-Shopify-Access-Token': accessToken,

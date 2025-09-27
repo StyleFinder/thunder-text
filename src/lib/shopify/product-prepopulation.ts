@@ -203,7 +203,8 @@ async function fetchShopifyProduct(productId: string, shop: string) {
 
   try {
     // Use authenticated Shopify GraphQL client
-    const response = await shopifyGraphQL(query, { id: formattedProductId }, shop)
+    // Note: This is server-side, so no session token - will use stored token
+    const response = await shopifyGraphQL(query, { id: formattedProductId }, shop, undefined)
 
     console.log('📦 GraphQL response received:', {
       hasData: !!response?.data,
