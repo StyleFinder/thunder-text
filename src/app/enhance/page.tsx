@@ -157,6 +157,19 @@ function EnhanceProductContent() {
         return
       }
 
+      // Validate productId - prevent invalid values
+      const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test']
+      if (invalidProductIds.includes(productId.toLowerCase())) {
+        console.error('❌ Invalid productId detected:', productId)
+        setWorkflow(prev => ({
+          ...prev,
+          error: `Invalid product ID: "${productId}". Please select a valid product.`,
+          currentStep: 'loading'
+        }))
+        setHasAttemptedLoad(true)
+        return
+      }
+
       // Only check for shop AFTER we know we need to load a specific product
       if (!shop) {
         setWorkflow(prev => ({
@@ -324,9 +337,16 @@ function EnhanceProductContent() {
     }))
 
     try {
+      // Validate product ID before attempting to apply
+      const productId = workflow.productData.id
+      if (!productId || ['undefined', 'null', 'metafields', 'staging-test'].includes(productId.toLowerCase())) {
+        console.error('❌ Invalid productId when applying enhancement:', productId)
+        throw new Error(`Invalid product ID: "${productId}"`)
+      }
+
       console.log('📝 Applying enhanced description to Shopify...')
-      
-      const response = await authenticatedFetch(`/api/shopify/products/${workflow.productData.id}/enhance?shop=${shop}`, {
+
+      const response = await authenticatedFetch(`/api/shopify/products/${productId}/enhance?shop=${shop}`, {
         method: 'PUT',
         body: JSON.stringify({
           enhancedDescription: workflow.generatedContent.description,
