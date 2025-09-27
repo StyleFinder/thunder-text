@@ -18,6 +18,53 @@ if (typeof window === 'undefined') {
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+// In-memory token cache to reduce database queries
+// Tokens are cached for 23 hours (online tokens expire after 24 hours)
+// This follows the guide's recommendation for token caching (line 321-326)
+interface CachedToken {
+  accessToken: string
+  scope?: string
+  cachedAt: number
+  expiresAt: number
+}
+
+const tokenCache = new Map<string, CachedToken>()
+const CACHE_DURATION = 23 * 60 * 60 * 1000 // 23 hours in milliseconds
+
+/**
+ * Check if a cached token is still valid
+ */
+function isTokenCacheValid(cached: CachedToken): boolean {
+  const now = Date.now()
+  return now < cached.expiresAt
+}
+
+/**
+ * Get token from cache if valid
+ */
+function getCachedToken(shopDomain: string): string | null {
+  const cached = tokenCache.get(shopDomain)
+  if (cached && isTokenCacheValid(cached)) {
+    console.log('✅ Using cached token for shop:', shopDomain)
+    return cached.accessToken
+  }
+  return null
+}
+
+/**
+ * Store token in cache
+ */
+function setCachedToken(shopDomain: string, accessToken: string, scope?: string) {
+  const now = Date.now()
+  tokenCache.set(shopDomain, {
+    accessToken,
+    scope,
+    cachedAt: now,
+    expiresAt: now + CACHE_DURATION
+  })
+  console.log('💾 Token cached for shop:', shopDomain)
+}
+
 export interface ShopTokenData {
   shop_domain: string
   access_token: string
@@ -63,6 +110,9 @@ export async function storeShopToken(
       return { success: false, error: error.message }
     }
 
+    // Update cache with the new token
+    setCachedToken(fullShopDomain, accessToken, scope)
+
     console.log('✅ Token stored successfully for shop:', fullShopDomain)
     return { success: true, shopId: data?.id }
 
@@ -76,26 +126,32 @@ export async function storeShopToken(
 }
 
 /**
- * Retrieve a shop's access token from the database
+ * Retrieve a shop's access token from cache or database
+ * Implements caching as recommended in the guide (line 321-336)
  */
 export async function getShopToken(
   shopDomain: string
 ): Promise<{ success: boolean; accessToken?: string; error?: string }> {
   try {
-    console.log('🔑 Retrieving access token for shop:', shopDomain)
-    console.log('📍 Supabase URL:', supabaseUrl)
-
     // Ensure we have the full shop domain
     const fullShopDomain = shopDomain.includes('.myshopify.com')
       ? shopDomain
       : `${shopDomain}.myshopify.com`
 
+    // Check cache first
+    const cachedToken = getCachedToken(fullShopDomain)
+    if (cachedToken) {
+      return { success: true, accessToken: cachedToken }
+    }
+
+    console.log('🔑 Retrieving access token from database for shop:', shopDomain)
+    console.log('📍 Supabase URL:', supabaseUrl)
     console.log('🔍 Querying shops table for:', fullShopDomain)
 
     // Query the shops table directly
     const { data, error } = await supabase
       .from('shops')
-      .select('access_token')
+      .select('access_token, scope')
       .eq('shop_domain', fullShopDomain)
       .eq('is_active', true)
       .limit(1)
@@ -125,6 +181,9 @@ export async function getShopToken(
       console.log('📝 Query attempted for:', fullShopDomain)
       return { success: false, error: `No token found for shop: ${fullShopDomain}` }
     }
+
+    // Cache the token for future use
+    setCachedToken(fullShopDomain, data.access_token, data.scope)
 
     console.log('✅ Token retrieved successfully for shop:', fullShopDomain)
     return { success: true, accessToken: data.access_token }

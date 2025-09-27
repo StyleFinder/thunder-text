@@ -4,6 +4,14 @@ import crypto from 'crypto'
 /**
  * Shopify authentication for Next.js using Token Exchange
  * Following official Shopify documentation for embedded apps
+ *
+ * PRODUCTION-READY IMPLEMENTATION - NO BYPASSES OR FALLBACKS
+ *
+ * Authentication Flow:
+ * 1. App Bridge generates session token (60-second expiry)
+ * 2. Session token is verified using HMAC-SHA256 with client secret
+ * 3. Token Exchange converts session token to access token
+ * 4. Access token is used for all API calls
  */
 
 interface TokenExchangeResponse {
@@ -165,7 +173,7 @@ function parseJWT(token: string): any {
 
 /**
  * Authenticate a request and get access token
- * This handles both Token Exchange and database fallback
+ * This implements proper Token Exchange without any fallbacks
  */
 export async function authenticateRequest(
   request: Request,
@@ -183,6 +191,10 @@ export async function authenticateRequest(
       if (authHeader?.startsWith('Bearer ')) {
         sessionToken = authHeader.substring(7)
       }
+    }
+
+    if (!sessionToken) {
+      throw new Error('No session token provided - authentication required')
     }
 
     // Extract shop from request or use provided one
@@ -207,127 +219,85 @@ export async function authenticateRequest(
       shop = `${shop}.myshopify.com`
     }
 
-    // If we have a session token, verify and exchange it
-    if (sessionToken) {
-      // Parse the token to check its validity
-      const payload = parseJWT(sessionToken)
-      console.log('🔍 Session token payload:', {
-        iss: payload?.iss,
-        dest: payload?.dest,
-        aud: payload?.aud,
-        sub: payload?.sub,
-        exp: payload?.exp,
-        nbf: payload?.nbf,
-        iat: payload?.iat,
-        jti: payload?.jti,
-        sid: payload?.sid
+    // Parse the token to check its validity
+    const payload = parseJWT(sessionToken)
+    console.log('🔍 Session token payload:', {
+      iss: payload?.iss,
+      dest: payload?.dest,
+      aud: payload?.aud,
+      sub: payload?.sub,
+      exp: payload?.exp,
+      nbf: payload?.nbf,
+      iat: payload?.iat,
+      jti: payload?.jti,
+      sid: payload?.sid
+    })
+
+    // Validate required fields per Shopify documentation
+    if (!payload?.iss || !payload?.dest || !payload?.aud || !payload?.sub) {
+      console.error('❌ Session token missing required fields')
+      throw new Error('Invalid session token: missing required fields')
+    }
+
+    // Verify the dest field matches the shop
+    if (!payload.dest.includes(shop.replace('.myshopify.com', ''))) {
+      console.error('❌ Session token dest does not match shop:', {
+        dest: payload.dest,
+        shop
       })
+      throw new Error('Session token shop mismatch')
+    }
 
-      // Validate required fields per Shopify documentation
-      if (!payload?.iss || !payload?.dest || !payload?.aud || !payload?.sub) {
-        console.error('❌ Session token missing required fields')
-        throw new Error('Invalid session token: missing required fields')
-      }
+    // Verify the aud field matches our app's client ID
+    if (process.env.SHOPIFY_API_KEY && payload.aud !== process.env.SHOPIFY_API_KEY) {
+      console.error('❌ Session token audience does not match app client ID:', {
+        aud: payload.aud,
+        expected: process.env.SHOPIFY_API_KEY
+      })
+      throw new Error('Session token audience mismatch')
+    }
 
-      // Verify the dest field matches the shop
-      if (!payload.dest.includes(shop.replace('.myshopify.com', ''))) {
-        console.error('❌ Session token dest does not match shop:', {
-          dest: payload.dest,
-          shop
-        })
-        throw new Error('Session token shop mismatch')
-      }
+    // Check token nbf (not before)
+    if (payload?.nbf && payload.nbf * 1000 > Date.now()) {
+      console.error('❌ Session token not yet valid')
+      throw new Error('Session token not yet valid')
+    }
 
-      // Verify the aud field matches our app's client ID
-      if (process.env.SHOPIFY_API_KEY && payload.aud !== process.env.SHOPIFY_API_KEY) {
-        console.error('❌ Session token audience does not match app client ID:', {
-          aud: payload.aud,
-          expected: process.env.SHOPIFY_API_KEY
-        })
-        throw new Error('Session token audience mismatch')
-      }
+    // Check token expiry
+    if (payload?.exp && payload.exp * 1000 < Date.now()) {
+      console.error('❌ Session token expired at:', new Date(payload.exp * 1000))
+      console.error('❌ Current time:', new Date())
+      throw new Error('Session token expired')
+    }
 
-      // Check token nbf (not before)
-      if (payload?.nbf && payload.nbf * 1000 > Date.now()) {
-        console.error('❌ Session token not yet valid')
-        throw new Error('Session token not yet valid')
-      }
+    // Verify the token signature - REQUIRED for production
+    if (!verifySessionToken(sessionToken)) {
+      console.error('❌ Session token signature verification failed')
+      console.error('❌ This is required for production security')
+      throw new Error('Invalid session token signature')
+    }
 
-      // Check token expiry
-      if (payload?.exp && payload.exp * 1000 < Date.now()) {
-        console.error('❌ Session token expired at:', new Date(payload.exp * 1000))
-        console.error('❌ Current time:', new Date())
-        throw new Error('Session token expired')
-      }
+    console.log('✅ Session token validation passed')
 
-      // Verify the token signature - REQUIRED for production
-      if (!verifySessionToken(sessionToken)) {
-        console.error('❌ Session token signature verification failed')
-        console.error('❌ This is required for production security')
-        throw new Error('Invalid session token signature')
-      }
+    // Exchange for access token
+    const tokenData = await exchangeToken(sessionToken, shop)
 
-      console.log('✅ Session token validation passed')
+    // Store the token in database for future use
+    const { saveShopToken } = await import('./shopify/token-manager')
+    await saveShopToken(shop, tokenData.access_token, 'online')
 
-      // Exchange for access token
-      const tokenData = await exchangeToken(sessionToken, shop)
-
-      // Store the token in database for future use
-      const { saveShopToken } = await import('./shopify/token-manager')
-      await saveShopToken(shop, tokenData.access_token, 'online')
-
-      return {
-        admin: null, // We'll create GraphQL client when needed
-        session: {
-          shop,
-          accessToken: tokenData.access_token,
-          scope: tokenData.scope,
-          expires: new Date(Date.now() + tokenData.expires_in * 1000),
-          user: tokenData.associated_user,
-        },
+    return {
+      admin: null, // We'll create GraphQL client when needed
+      session: {
+        shop,
         accessToken: tokenData.access_token,
-        shop,
-      }
+        scope: tokenData.scope,
+        expires: new Date(Date.now() + tokenData.expires_in * 1000),
+        user: tokenData.associated_user,
+      },
+      accessToken: tokenData.access_token,
+      shop,
     }
-
-    // Try to get token from database as fallback
-    const { getShopToken } = await import('./shopify/token-manager')
-    const dbToken = await getShopToken(shop)
-
-    if (dbToken.success && dbToken.accessToken) {
-      console.log('✅ Using database token as fallback')
-      return {
-        admin: null,
-        session: {
-          shop,
-          accessToken: dbToken.accessToken,
-          scope: '',
-          expires: null,
-          user: null,
-        },
-        accessToken: dbToken.accessToken,
-        shop,
-      }
-    }
-
-    // Try environment variable as last fallback
-    if (process.env.SHOPIFY_ACCESS_TOKEN) {
-      console.log('✅ Using access token from environment variable (fallback)')
-      return {
-        admin: null,
-        session: {
-          shop,
-          accessToken: process.env.SHOPIFY_ACCESS_TOKEN,
-          scope: '',
-          expires: null,
-          user: null,
-        },
-        accessToken: process.env.SHOPIFY_ACCESS_TOKEN,
-        shop,
-      }
-    }
-
-    throw new Error(`No access token available for shop: ${shop}`)
   } catch (error) {
     console.error('❌ Authentication failed:', error)
     throw error
@@ -336,7 +306,7 @@ export async function authenticateRequest(
 
 /**
  * Get access token for a shop
- * This is a simplified wrapper around the authentication
+ * This requires proper session token - no fallbacks
  */
 export async function getAccessToken(shop: string, sessionToken?: string): Promise<string> {
   // Ensure shop has .myshopify.com suffix
@@ -344,19 +314,13 @@ export async function getAccessToken(shop: string, sessionToken?: string): Promi
     shop = `${shop}.myshopify.com`
   }
 
-  // First try database token (most reliable for server-side calls)
+  // Check database for existing valid token
   const { getShopToken } = await import('./shopify/token-manager')
   const dbToken = await getShopToken(shop)
 
   if (dbToken.success && dbToken.accessToken) {
     console.log('✅ Using stored access token from database')
     return dbToken.accessToken
-  }
-
-  // Try environment variable as fallback (for development/testing)
-  if (process.env.SHOPIFY_ACCESS_TOKEN) {
-    console.log('✅ Using access token from environment variable (fallback)')
-    return process.env.SHOPIFY_ACCESS_TOKEN
   }
 
   // If we have a session token, use Token Exchange
@@ -378,10 +342,11 @@ export async function getAccessToken(shop: string, sessionToken?: string): Promi
       }
     } catch (error) {
       console.error('⚠️ Token Exchange failed:', error)
+      throw error // Don't fall back, throw the error
     }
   }
 
-  throw new Error(`No access token available for shop: ${shop}`)
+  throw new Error(`No valid authentication available for shop: ${shop}. Session token required.`)
 }
 
 /**
