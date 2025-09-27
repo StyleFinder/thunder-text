@@ -8,7 +8,10 @@ Thunder Text is an AI-powered Shopify application that generates SEO-optimized p
 - **Dev Shop**: zunosai-staging-test-store
 - **Settings URL**: https://thunder-text-nine.vercel.app/settings?shop=zunosai-staging-test-store&authenticated=true
 - **Deployment**: Vercel (production hosting), not localhost
-- **Auth Bypass**: Enabled in development (SHOPIFY_AUTH_BYPASS=true)
+- **Authentication**: PRODUCTION-READY - NO AUTH BYPASS
+  - ⚠️ NEVER use SHOPIFY_AUTH_BYPASS in production
+  - ✅ Always use proper Token Exchange with JWT verification
+  - ✅ Follow Shopify's official OAuth and Token Exchange documentation
 
 ## SuperClaude Framework Integration
 
