@@ -86,20 +86,21 @@ function ProductsContent() {
       const response = await fetch(`/api/shopify/products?${params}`, {
         headers
       })
-      const data: ProductsResponse = await response.json()
+      const data = await response.json()
 
       if (!data.success) {
-        throw new Error('Failed to fetch products')
+        throw new Error(data.error || 'Failed to fetch products')
       }
 
+      // The API returns products directly, not nested in data.products.edges
       if (nextCursor) {
-        setProducts(prev => [...prev, ...data.data.products.edges])
+        setProducts(prev => [...prev, ...data.products])
       } else {
-        setProducts(data.data.products.edges)
+        setProducts(data.products || [])
       }
 
-      setHasNextPage(data.data.products.pageInfo.hasNextPage)
-      setCursor(data.data.products.pageInfo.endCursor)
+      setHasNextPage(data.pageInfo?.hasNextPage || false)
+      setCursor(data.pageInfo?.endCursor || null)
       setError(null)
     } catch (err) {
       console.error('Error fetching products:', err)
@@ -290,14 +291,14 @@ function ProductsContent() {
           gap: '1.5rem',
           marginBottom: '2rem'
         }}>
-          {products.map((product) => {
-            const { node } = product
-            const primaryImage = node.images.edges[0]?.node
-            const isGenerating = generatingIds.has(node.id)
+          {products.map((product: any) => {
+            // Products are now flat objects, not nested in node
+            const primaryImage = product.images?.[0]
+            const isGenerating = generatingIds.has(product.id)
             
             return (
               <div
-                key={node.id}
+                key={product.id}
                 style={{
                   backgroundColor: 'white',
                   border: '1px solid #e5e7eb',
@@ -327,7 +328,7 @@ function ProductsContent() {
                   {primaryImage ? (
                     <img
                       src={primaryImage.url}
-                      alt={primaryImage.altText || node.title}
+                      alt={primaryImage.altText || product.title}
                       style={{
                         width: '100%',
                         height: '100%',
@@ -355,17 +356,17 @@ function ProductsContent() {
                     margin: '0 0 0.5rem 0',
                     lineHeight: '1.3'
                   }}>
-                    {truncateText(node.title, 60)}
+                    {truncateText(product.title, 60)}
                   </h3>
                   
-                  {node.description && (
+                  {product.description && (
                     <p style={{ 
                       color: '#6b7280', 
                       fontSize: '0.9rem', 
                       margin: '0 0 1rem 0',
                       lineHeight: '1.4'
                     }}>
-                      {truncateText(stripHtml(node.description), 100)}
+                      {truncateText(stripHtml(product.description), 100)}
                     </p>
                   )}
 
@@ -383,7 +384,7 @@ function ProductsContent() {
                         cursor: isGenerating ? 'not-allowed' : 'pointer',
                         transition: 'background-color 0.2s ease'
                       }}
-                      onClick={() => handleGenerateDescription(node.id)}
+                      onClick={() => handleGenerateDescription(product.id)}
                       disabled={isGenerating}
                       onMouseEnter={(e) => {
                         if (!isGenerating) {
