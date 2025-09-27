@@ -2,7 +2,7 @@
  * Token refresh manager for handling online access token renewal
  * Online tokens expire after 24 hours and need to be refreshed
  */
-import { tokenExchange } from '@/lib/shopify/token-exchange'
+import { exchangeToken } from '@/lib/shopify/token-exchange'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export class TokenRefreshManager {
@@ -191,9 +191,11 @@ export class TokenRefreshManager {
       console.log(`📱 Processing client token refresh for ${shop}`)
 
       // Exchange session token for new access token
-      const response = await tokenExchange({
+      const response = await exchangeToken({
         shop,
         sessionToken,
+        clientId: process.env.SHOPIFY_API_KEY || '',
+        clientSecret: process.env.SHOPIFY_API_SECRET || '',
         requestedTokenType: 'online' // Online tokens for embedded apps
       })
 
