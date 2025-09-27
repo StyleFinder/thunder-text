@@ -66,16 +66,17 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
 
       script.onload = async () => {
         try {
-          // @ts-ignore - Shopify global will be available after script loads
-          const { createApp } = window.shopify
+          // Use the new App Bridge API
+          if (!window.shopifyApp) {
+            throw new Error('Shopify App Bridge not loaded correctly')
+          }
 
-          const app = createApp({
-            apiKey: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY!,
-            host: new URLSearchParams(window.location.search).get('host') || ''
+          const app = window.shopifyApp({
+            apiKey: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY!
           })
 
-          // Get session token from App Bridge
-          const sessionToken = await app.sessionToken()
+          // Get session token from App Bridge using the new idToken() method
+          const sessionToken = await app.idToken()
 
           if (!sessionToken) {
             throw new Error('Failed to get session token from Shopify')
@@ -146,4 +147,11 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
       {children}
     </AuthContext.Provider>
   )
+}
+
+// Extend window type for TypeScript
+declare global {
+  interface Window {
+    shopifyApp: any
+  }
 }
