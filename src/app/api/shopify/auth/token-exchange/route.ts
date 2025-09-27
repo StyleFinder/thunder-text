@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeToken } from '@/lib/shopify/token-exchange'
+import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors'
+
+// OPTIONS handler for CORS preflight
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
+}
 
 // POST /api/shopify/auth/token-exchange
 // Exchange a Shopify session token for an access token
 export async function POST(request: NextRequest) {
+  const corsHeaders = createCorsHeaders(request)
+
   try {
     const body = await request.json()
     const { shop, sessionToken } = body
@@ -14,7 +22,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: 'Missing required parameters: shop and sessionToken'
         },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       )
     }
 
@@ -31,7 +39,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: 'Server configuration error - missing API credentials'
         },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       )
     }
 
@@ -52,7 +60,7 @@ export async function POST(request: NextRequest) {
       scope: tokenResponse.scope,
       expiresIn: tokenResponse.expires_in || 'permanent',
       message: 'Token exchange successful'
-    })
+    }, { headers: corsHeaders })
 
   } catch (error) {
     console.error('❌ Token exchange error:', error)
@@ -79,7 +87,7 @@ export async function POST(request: NextRequest) {
         error: errorMessage,
         details: error instanceof Error ? error.message : 'Unknown error'
       },
-      { status: statusCode }
+      { status: statusCode, headers: corsHeaders }
     )
   }
 }

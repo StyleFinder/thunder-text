@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchProductDataForPrePopulation } from '@/lib/shopify/product-prepopulation'
+import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors'
+
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
+}
 
 export async function GET(request: NextRequest) {
+  const corsHeaders = createCorsHeaders(request)
+
   try {
     const searchParams = request.nextUrl.searchParams
     const productId = searchParams.get('productId')
@@ -10,7 +17,7 @@ export async function GET(request: NextRequest) {
     if (!productId || !shop) {
       return NextResponse.json(
         { error: 'Missing productId or shop parameter' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       )
     }
 
@@ -27,18 +34,18 @@ export async function GET(request: NextRequest) {
       console.error('❌ API: No product data found for ID:', productId)
       return NextResponse.json(
         { error: 'Product not found' },
-        { status: 404 }
+        { status: 404, headers: corsHeaders }
       )
     }
 
     console.log('✅ API: Successfully fetched product data')
-    return NextResponse.json(productData)
+    return NextResponse.json(productData, { headers: corsHeaders })
 
   } catch (error) {
     console.error('❌ API: Error fetching product data:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch product data' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     )
   }
 }
