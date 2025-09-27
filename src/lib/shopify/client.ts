@@ -6,27 +6,57 @@ async function getShopifyAccessToken(shop: string, sessionToken?: string): Promi
   console.log('🔍 Getting Shopify access token for shop:', shop)
 
   // New Token Exchange flow:
-  // 1. Validate session token if provided
-  // 2. Exchange session token for access token OR get from database
+  // 1. First check database for offline token
+  // 2. If no database token, validate and exchange session token
   // 3. Use access token for API calls
 
+  // Always try database first - this is most reliable
+  try {
+    const { getShopToken } = await import('./shopify/token-manager')
+    const dbToken = await getShopToken(shop)
+    if (dbToken.success && dbToken.accessToken) {
+      console.log('✅ Using existing access token from database')
+      return dbToken.accessToken
+    }
+  } catch (error) {
+    console.log('⚠️ Could not check database for token:', error)
+  }
+
+  // If we have a session token, try to use it
   if (sessionToken && sessionToken !== 'undefined') {
     // Validate the session token first
     if (!validateSessionToken(sessionToken)) {
-      throw new Error('Invalid or expired session token')
+      console.log('⚠️ Session token invalid or expired, will check database')
+      // Don't throw here - let it fall through to database check
+    } else {
+      console.log('✅ Valid session token provided for shop:', shop)
+
+      // Try to exchange the session token
+      try {
+        const accessToken = await getOrExchangeToken(shop, sessionToken)
+        console.log('✅ Access token obtained via token exchange')
+        return accessToken
+      } catch (exchangeError) {
+        console.error('⚠️ Token exchange failed:', exchangeError)
+        // Don't throw yet - might still have database token
+      }
     }
-    console.log('✅ Valid session token provided for shop:', shop)
   }
 
-  // Get or exchange for an access token
+  // Final attempt - try database one more time (in case it was just added)
   try {
-    const accessToken = await getOrExchangeToken(shop, sessionToken)
-    console.log('✅ Access token obtained for shop:', shop)
-    return accessToken
+    const { getShopToken } = await import('./shopify/token-manager')
+    const dbToken = await getShopToken(shop)
+    if (dbToken.success && dbToken.accessToken) {
+      console.log('✅ Found database token on retry')
+      return dbToken.accessToken
+    }
   } catch (error) {
-    console.error('❌ Failed to get access token:', error)
-    throw new Error(`Access token not available for shop: ${shop}. Please ensure the app is properly installed.`)
+    console.error('❌ Final database check failed:', error)
   }
+
+  // If we get here, we have no valid token
+  throw new Error(`Access token not available for shop: ${shop}. Please ensure the app is properly installed.`)
 }
 
 // Wrapper function that matches the expected interface
