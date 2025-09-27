@@ -72,7 +72,8 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
             apiKey: apiKey,
             shop: shop,
             host: host || '',
-            forceRedirect: true,
+            // forceRedirect is deprecated and causes permission errors
+            // Remove it for proper embedded app behavior
           })
 
           // Get initial session token for API calls
@@ -121,9 +122,11 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
       }
       if (appBridge) {
         try {
-          appBridge.dispatch({ type: 'destroy' })
+          // Don't call destroy as it can cause permission errors
+          // App Bridge will clean up automatically
+          console.log('Cleaning up App Bridge instance')
         } catch (err) {
-          console.error('Error destroying App Bridge:', err)
+          console.error('Error during App Bridge cleanup:', err)
         }
       }
     }
