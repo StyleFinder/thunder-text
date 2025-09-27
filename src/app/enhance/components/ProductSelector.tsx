@@ -51,7 +51,7 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [statusFilter, setStatusFilter] = useState<string[]>(['active'])
+  const [statusFilter, setStatusFilter] = useState<string[]>(['active', 'draft'])
   const [sortOrder, setSortOrder] = useState('updated_at_desc')
 
   const pageSize = 12
