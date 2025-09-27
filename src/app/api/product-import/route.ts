@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { importProductData, detectProductCategory, generateSuggestedKeywords, analyzeExistingDescription } from '@/lib/product-data-import'
+import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors'
 
 export async function GET(request: NextRequest) {
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Shopify-Shop-Domain, X-Shopify-Access-Token',
-  }
+  const corsHeaders = createCorsHeaders(request)
 
   try {
     const url = new URL(request.url)
@@ -58,13 +55,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Shopify-Shop-Domain, X-Shopify-Access-Token',
-    },
-  })
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
