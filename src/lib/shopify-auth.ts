@@ -310,6 +310,23 @@ export async function authenticateRequest(
       }
     }
 
+    // Try environment variable as last fallback
+    if (process.env.SHOPIFY_ACCESS_TOKEN) {
+      console.log('✅ Using access token from environment variable (fallback)')
+      return {
+        admin: null,
+        session: {
+          shop,
+          accessToken: process.env.SHOPIFY_ACCESS_TOKEN,
+          scope: '',
+          expires: null,
+          user: null,
+        },
+        accessToken: process.env.SHOPIFY_ACCESS_TOKEN,
+        shop,
+      }
+    }
+
     throw new Error(`No access token available for shop: ${shop}`)
   } catch (error) {
     console.error('❌ Authentication failed:', error)
@@ -334,6 +351,12 @@ export async function getAccessToken(shop: string, sessionToken?: string): Promi
   if (dbToken.success && dbToken.accessToken) {
     console.log('✅ Using stored access token from database')
     return dbToken.accessToken
+  }
+
+  // Try environment variable as fallback (for development/testing)
+  if (process.env.SHOPIFY_ACCESS_TOKEN) {
+    console.log('✅ Using access token from environment variable (fallback)')
+    return process.env.SHOPIFY_ACCESS_TOKEN
   }
 
   // If we have a session token, use Token Exchange
