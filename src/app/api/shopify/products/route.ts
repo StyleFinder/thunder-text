@@ -11,10 +11,20 @@ export async function OPTIONS(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request)
 
-  // Check if we're in a build environment without proper configuration
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co') {
+  // Log environment status for debugging
+  console.log('🔍 Environment check:', {
+    hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    nodeEnv: process.env.NODE_ENV,
+    platform: process.env.VERCEL ? 'Vercel' : 'Local'
+  })
+
+  // Only fail on obvious placeholder values, not missing env vars
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co') {
     return NextResponse.json(
-      { error: 'Application not properly configured' },
+      {
+        error: 'Application not properly configured',
+        details: 'Placeholder configuration detected'
+      },
       { status: 503, headers: corsHeaders }
     )
   }
