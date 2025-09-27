@@ -158,7 +158,14 @@ export async function GET(request: NextRequest) {
       shopifyQuery += `title:*${query}* OR tag:*${query}*`
     }
     if (status !== 'all') {
-      shopifyQuery += shopifyQuery ? ` AND status:${status}` : `status:${status}`
+      // Handle comma-separated statuses (e.g., "active,draft")
+      const statuses = status.split(',').map(s => s.trim()).filter(s => s)
+      if (statuses.length === 1) {
+        shopifyQuery += shopifyQuery ? ` AND status:${statuses[0]}` : `status:${statuses[0]}`
+      } else if (statuses.length > 1) {
+        const statusQuery = statuses.map(s => `status:${s}`).join(' OR ')
+        shopifyQuery += shopifyQuery ? ` AND (${statusQuery})` : `(${statusQuery})`
+      }
     }
 
     // Make the API call using Shopify Admin API
