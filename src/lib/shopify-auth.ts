@@ -92,11 +92,7 @@ async function exchangeToken(sessionToken: string, shop: string): Promise<TokenE
     }
 
     const data = await response.json() as TokenExchangeResponse
-    console.log('✅ Token exchange successful:', {
-      scope: data.scope,
-      expiresIn: data.expires_in,
-      user: data.associated_user?.email,
-    })
+    // Token exchange successful
 
     return data
   } catch (error) {
@@ -234,17 +230,7 @@ export async function authenticateRequest(
 
     // Parse the token to check its validity
     const payload = parseJWT(sessionToken)
-    console.log('🔍 Session token payload:', {
-      iss: payload?.iss,
-      dest: payload?.dest,
-      aud: payload?.aud,
-      sub: payload?.sub,
-      exp: payload?.exp,
-      nbf: payload?.nbf,
-      iat: payload?.iat,
-      jti: payload?.jti,
-      sid: payload?.sid
-    })
+    // Session token parsed successfully
 
     // Validate required fields per Shopify documentation
     if (!payload?.iss || !payload?.dest || !payload?.aud || !payload?.sub) {
