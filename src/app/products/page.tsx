@@ -63,6 +63,9 @@ function ProductsContent() {
     try {
       const params = new URLSearchParams()
       params.append('limit', '12')
+      if (shop) {
+        params.append('shop', shop)
+      }
       if (nextCursor) {
         params.append('cursor', nextCursor)
       }
