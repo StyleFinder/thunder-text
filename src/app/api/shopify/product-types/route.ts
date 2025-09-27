@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors'
+
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
+}
 
 export async function GET(request: NextRequest) {
+  const corsHeaders = createCorsHeaders(request)
+
   // Check if we're in a build environment without proper configuration
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co') {
     return NextResponse.json(
       { error: 'Application not properly configured' },
-      { status: 503 }
+      { status: 503, headers: corsHeaders }
     )
   }
 
@@ -34,7 +41,7 @@ export async function GET(request: NextRequest) {
       // Production authentication
       session = await auth()
       if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders })
       }
       
       // Get store information
@@ -56,7 +63,7 @@ export async function GET(request: NextRequest) {
     if (!store) {
       return NextResponse.json(
         { error: 'Store configuration not found' },
-        { status: 404 }
+        { status: 404, headers: corsHeaders }
       )
     }
 
@@ -88,13 +95,13 @@ export async function GET(request: NextRequest) {
         productTypes: uniqueTypes,
         count: uniqueTypes.length
       },
-    })
+    }, { headers: corsHeaders })
 
   } catch (error) {
     console.error('Shopify product types API error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch product types' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     )
   }
 }

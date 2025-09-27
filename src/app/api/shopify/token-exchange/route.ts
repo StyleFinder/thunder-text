@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors'
+
+// OPTIONS handler for CORS preflight
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
+}
 
 // Token Exchange endpoint for embedded apps
 // This exchanges a session token for an access token
 export async function POST(request: NextRequest) {
+  const corsHeaders = createCorsHeaders(request)
+
   try {
     const body = await request.json()
     const { sessionToken, shop } = body
@@ -12,7 +20,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         error: 'Missing session token or shop parameter'
-      }, { status: 400 })
+      }, { status: 400, headers: corsHeaders })
     }
 
     console.log('🔄 Token Exchange requested for shop:', shop)
@@ -87,13 +95,13 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Token exchange completed successfully',
       scope: tokenData.scope
-    })
+    }, { headers: corsHeaders })
 
   } catch (error) {
     console.error('❌ Unexpected error in token exchange:', error)
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Token exchange failed'
-    }, { status: 500 })
+    }, { status: 500, headers: corsHeaders })
   }
 }
