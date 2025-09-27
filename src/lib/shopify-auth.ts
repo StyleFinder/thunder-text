@@ -65,7 +65,21 @@ async function exchangeToken(sessionToken: string, shop: string): Promise<TokenE
         status: response.status,
         statusText: response.statusText,
         error: errorText,
+        url: tokenExchangeUrl,
+        clientId: process.env.SHOPIFY_API_KEY,
       })
+
+      // Parse error if it's JSON
+      try {
+        const errorJson = JSON.parse(errorText)
+        console.error('📝 Error details:', errorJson)
+        if (errorJson.error_description) {
+          throw new Error(`Token exchange failed: ${errorJson.error_description}`)
+        }
+      } catch (e) {
+        // Not JSON, use raw text
+      }
+
       throw new Error(`Token exchange failed: ${response.status} ${errorText}`)
     }
 
@@ -96,6 +110,8 @@ function verifySessionToken(token: string): boolean {
     console.error('❌ SHOPIFY_API_SECRET (client secret) not configured')
     return false
   }
+
+  console.log('🔐 Using client secret for verification (first 8 chars):', clientSecret.substring(0, 8) + '...')
 
   try {
     const [header, payload, signature] = token.split('.')
@@ -202,7 +218,9 @@ export async function authenticateRequest(
         sub: payload?.sub,
         exp: payload?.exp,
         nbf: payload?.nbf,
-        iat: payload?.iat
+        iat: payload?.iat,
+        jti: payload?.jti,
+        sid: payload?.sid
       })
 
       // Validate required fields per Shopify documentation
