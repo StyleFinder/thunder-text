@@ -5,28 +5,11 @@ import { getAccessToken } from '../shopify-auth'
 async function getShopifyAccessToken(shop: string, sessionToken?: string): Promise<string> {
   console.log('🔍 Getting Shopify access token for shop:', shop)
 
-  try {
-    // Use the official Shopify authentication library
-    const accessToken = await getAccessToken(shop, sessionToken)
-    console.log('✅ Access token obtained')
-    return accessToken
-  } catch (error) {
-    console.error('❌ Failed to get access token:', error)
-
-    // Last resort - try database directly
-    try {
-      const { getShopToken } = await import('./token-manager')
-      const dbToken = await getShopToken(shop)
-      if (dbToken.success && dbToken.accessToken) {
-        console.log('✅ Found database token as last resort')
-        return dbToken.accessToken
-      }
-    } catch (dbError) {
-      console.error('❌ Database fallback also failed:', dbError)
-    }
-
-    throw new Error(`Access token not available for shop: ${shop}. Please ensure the app is properly installed.`)
-  }
+  // Use the official Shopify authentication library
+  // This will either use database token or Token Exchange
+  const accessToken = await getAccessToken(shop, sessionToken)
+  console.log('✅ Access token obtained')
+  return accessToken
 }
 
 // Wrapper function that matches the expected interface

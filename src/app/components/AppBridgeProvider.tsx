@@ -8,6 +8,7 @@ interface AppBridgeContextType {
   host: string | null
   isLoading: boolean
   error: string | null
+  app: any | null
 }
 
 const AppBridgeContext = createContext<AppBridgeContextType>({
@@ -15,7 +16,8 @@ const AppBridgeContext = createContext<AppBridgeContextType>({
   shop: null,
   host: null,
   isLoading: true,
-  error: null
+  error: null,
+  app: null
 })
 
 export function useAppBridge() {
@@ -32,7 +34,7 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
   const [shop, setShop] = useState<string | null>(null)
   const [host, setHost] = useState<string | null>(null)
   const [embedded, setEmbedded] = useState<string | null>(null)
-  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null)
+  const [appBridge, setAppBridge] = useState<any>(null)
 
   // Get search params on client side only to avoid SSR issues
   useEffect(() => {
@@ -43,14 +45,12 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
       setEmbedded(urlParams.get('embedded'))
     }
   }, [])
-  
+
   // Detect if we're running in an embedded context
-  const isEmbedded = typeof window !== 'undefined' && 
+  const isEmbedded = typeof window !== 'undefined' &&
     (window.top !== window.self || embedded === '1' || !!host)
 
   useEffect(() => {
-    let appBridge: any = null
-
     const initializeAppBridge = async () => {
       try {
         if (isEmbedded && shop) {
@@ -64,48 +64,57 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
             return
           }
 
-          // Dynamic import to avoid SSR issues
-          const { createApp } = await import('@shopify/app-bridge')
-          const { getSessionToken } = await import('@shopify/app-bridge/utilities')
+          // Load App Bridge dynamically
+          // First, check if shopifyApp is already available
+          if (!window.shopifyApp) {
+            // Dynamically load App Bridge script
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script')
+              script.src = 'https://cdn.shopify.com/shopifycloud/app-bridge.js'
+              script.onload = resolve
+              script.onerror = reject
+              document.head.appendChild(script)
+            })
+          }
 
-          appBridge = createApp({
-            apiKey: apiKey,
-            shop: shop,
-            host: host || '',
-            // forceRedirect is deprecated and causes permission errors
-            // Remove it for proper embedded app behavior
+          // Initialize App Bridge using the new API from the guide
+          const app = window.shopifyApp({
+            apiKey: apiKey
           })
 
-          // Get initial session token for API calls
+          console.log('✅ App Bridge initialized successfully')
+          setAppBridge(app)
+
+          // Get initial session token using the new idToken() method
           try {
-            const token = await getSessionToken(appBridge)
-            console.log('Initial session token obtained successfully')
+            const token = await app.idToken()
+            console.log('✅ Initial session token obtained successfully')
 
             // Store the token for API calls
             if (typeof window !== 'undefined') {
               window.sessionStorage.setItem('shopify_session_token', token)
             }
 
-            // Set up token refresh every 50 seconds (tokens expire after 60)
-            const interval = setInterval(async () => {
+            // Set up automatic token refresh
+            // Instead of a timer, we'll fetch fresh tokens on each request
+            // This is more reliable and follows the guide's recommendation
+            window.getShopifySessionToken = async () => {
               try {
-                const newToken = await getSessionToken(appBridge)
-                console.log('Session token refreshed successfully')
-                if (typeof window !== 'undefined') {
-                  window.sessionStorage.setItem('shopify_session_token', newToken)
-                }
-              } catch (refreshError) {
-                console.error('Failed to refresh session token:', refreshError)
+                const freshToken = await app.idToken()
+                window.sessionStorage.setItem('shopify_session_token', freshToken)
+                return freshToken
+              } catch (error) {
+                console.error('Failed to get session token:', error)
+                throw error
               }
-            }, 50000) // Refresh every 50 seconds
+            }
 
-            setRefreshInterval(interval)
           } catch (tokenError) {
-            console.error('Failed to get session token:', tokenError)
+            console.error('Failed to get initial session token:', tokenError)
             setError('Failed to authenticate with Shopify')
           }
         }
-        
+
         setIsLoading(false)
       } catch (err) {
         console.error('App Bridge initialization failed:', err)
@@ -117,27 +126,20 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
     initializeAppBridge()
 
     return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval)
-      }
-      if (appBridge) {
-        try {
-          // Don't call destroy as it can cause permission errors
-          // App Bridge will clean up automatically
-          console.log('Cleaning up App Bridge instance')
-        } catch (err) {
-          console.error('Error during App Bridge cleanup:', err)
-        }
+      // Cleanup
+      if (window.getShopifySessionToken) {
+        delete window.getShopifySessionToken
       }
     }
-  }, [isEmbedded, shop, host, refreshInterval])
+  }, [isEmbedded, shop, host])
 
   const contextValue: AppBridgeContextType = {
     isEmbedded,
     shop,
     host,
     isLoading,
-    error
+    error,
+    app: appBridge
   }
 
   return (
@@ -145,4 +147,12 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
       {children}
     </AppBridgeContext.Provider>
   )
+}
+
+// Extend window type for TypeScript
+declare global {
+  interface Window {
+    shopifyApp: any
+    getShopifySessionToken?: () => Promise<string>
+  }
 }
