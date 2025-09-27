@@ -12,10 +12,14 @@ export function createCorsHeaders(request: Request): HeadersInit {
     /^https:\/\/[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/,
     /^https:\/\/admin\.shopify\.com$/,
     /^https:\/\/[a-zA-Z0-9][a-zA-Z0-9-]*\.spin\.dev$/,  // Shopify development stores
-    // Our app domain
+    /^https:\/\/[a-zA-Z0-9][a-zA-Z0-9-]*\.shopifypreview\.com$/,  // Shopify preview stores
+    // Our app domains (various Vercel deployments)
+    /^https:\/\/thunder-text.*\.vercel\.app$/,
+    'https://thunder-text-nine.vercel.app',
+    'https://thunder-text.vercel.app',
     process.env.NEXT_PUBLIC_VERCEL_URL
       ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : 'https://thunder-text-nine.vercel.app',
+      : null,
     // Development
     process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null
   ].filter(Boolean)
@@ -28,10 +32,16 @@ export function createCorsHeaders(request: Request): HeadersInit {
     return pattern === origin
   })
 
-  // Log for debugging (remove in production)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔒 CORS check:', { origin, isAllowed })
-  }
+  // Log for debugging
+  console.log('🔒 CORS check:', { origin, isAllowed })
+
+  // For embedded Shopify apps, sometimes origin is not sent
+  // Check referer header as fallback
+  const referer = request.headers.get('referer') || ''
+  const isShopifyReferer = referer.includes('.myshopify.com') ||
+                           referer.includes('admin.shopify.com') ||
+                           referer.includes('thunder-text') ||
+                           referer.includes('.spin.dev')
 
   if (!isAllowed && origin) {
     // Return restrictive headers for unauthorized origins
@@ -43,12 +53,24 @@ export function createCorsHeaders(request: Request): HeadersInit {
     }
   }
 
+  // If no origin but valid Shopify referer, allow it (embedded app case)
+  if (!origin && isShopifyReferer) {
+    console.log('✅ Allowing embedded app request from referer:', referer)
+    return {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      'Access-Control-Allow-Credentials': 'false', // Can't use credentials with *
+      'Access-Control-Max-Age': '86400'
+    }
+  }
+
   // Return permissive headers for allowed origins
   return {
     'Access-Control-Allow-Origin': origin || '*', // Use * only for no-origin requests
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Credentials': origin ? 'true' : 'false', // Only true with specific origin
     'Access-Control-Max-Age': '86400' // 24 hours
   }
 }

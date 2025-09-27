@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAccessToken } from '@/lib/shopify-auth'
+import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors'
+
+// OPTIONS handler for CORS preflight requests
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
+}
 
 // GET /api/shopify/products?shop={shop}&page={page}&limit={limit}&query={query}&status={status}&sort={sort}
 export async function GET(request: NextRequest) {
+  const corsHeaders = createCorsHeaders(request)
+
   // Check if we're in a build environment without proper configuration
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co') {
     return NextResponse.json(
       { error: 'Application not properly configured' },
-      { status: 503 }
+      { status: 503, headers: corsHeaders }
     )
   }
 
@@ -23,7 +31,7 @@ export async function GET(request: NextRequest) {
     if (!shop) {
       return NextResponse.json(
         { success: false, error: 'Missing required parameter: shop' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       )
     }
 
@@ -60,7 +68,7 @@ export async function GET(request: NextRequest) {
               error: 'Session expired. Please refresh the page.',
               requiresAuth: true
             },
-            { status: 401 }
+            { status: 401, headers: corsHeaders }
           )
         }
       }
@@ -71,7 +79,7 @@ export async function GET(request: NextRequest) {
           error: 'Authentication failed. Please ensure the app is installed.',
           requiresAuth: true
         },
-        { status: 401 }
+        { status: 401, headers: corsHeaders }
       )
     }
 
@@ -199,7 +207,7 @@ export async function GET(request: NextRequest) {
         total: products.length, // Shopify doesn't provide total count easily
       },
       message: 'Products fetched successfully'
-    })
+    }, { headers: corsHeaders })
 
   } catch (error) {
     console.error('❌ Error fetching products:', error)
@@ -214,7 +222,7 @@ export async function GET(request: NextRequest) {
             error: 'Invalid access token. Please reinstall the app.',
             requiresAuth: true
           },
-          { status: 401 }
+          { status: 401, headers: corsHeaders }
         )
       }
 
@@ -226,7 +234,7 @@ export async function GET(request: NextRequest) {
             error: 'Failed to connect to Shopify. Please try again.',
             details: 'Network connection issue'
           },
-          { status: 503 }
+          { status: 503, headers: corsHeaders }
         )
       }
     }
@@ -237,7 +245,7 @@ export async function GET(request: NextRequest) {
         error: 'Failed to fetch products from Shopify',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     )
   }
 }
