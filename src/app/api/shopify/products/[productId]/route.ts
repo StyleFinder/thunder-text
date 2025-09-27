@@ -27,6 +27,20 @@ export async function GET(
       )
     }
 
+    // Validate productId - prevent invalid values
+    const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test']
+    if (invalidProductIds.includes(productId.toLowerCase())) {
+      console.error('❌ Invalid productId received:', productId)
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid product ID',
+          details: `Product ID "${productId}" is not valid`
+        },
+        { status: 400 }
+      )
+    }
+
     console.log('🔄 Fetching single product from Shopify:', { shop, productId })
 
     // Get session token from Authorization header if provided

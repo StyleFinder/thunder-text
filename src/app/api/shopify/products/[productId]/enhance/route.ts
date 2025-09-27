@@ -24,6 +24,20 @@ export async function GET(
       )
     }
 
+    // Validate productId - prevent invalid values
+    const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test']
+    if (invalidProductIds.includes(productId.toLowerCase())) {
+      console.error('❌ Invalid productId received in GET:', productId)
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid product ID',
+          details: `Product ID "${productId}" is not valid`
+        },
+        { status: 400 }
+      )
+    }
+
     console.log('🔄 Fetching product data for enhancement:', { productId, shop })
 
     // Validate product exists and can be enhanced
@@ -85,6 +99,20 @@ export async function PUT(
     if (!shop || !productId) {
       return NextResponse.json(
         { success: false, error: 'Missing required parameters: shop and productId' },
+        { status: 400 }
+      )
+    }
+
+    // Validate productId - prevent invalid values
+    const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test']
+    if (invalidProductIds.includes(productId.toLowerCase())) {
+      console.error('❌ Invalid productId received in PUT:', productId)
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid product ID',
+          details: `Product ID "${productId}" is not valid`
+        },
         { status: 400 }
       )
     }

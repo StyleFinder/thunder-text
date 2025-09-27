@@ -92,6 +92,13 @@ export async function fetchProducts(params: URLSearchParams) {
  * Enhance a product with authentication
  */
 export async function enhanceProduct(productId: string, shop: string, data: any) {
+  // Validate productId before making request
+  const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test', '']
+  if (!productId || invalidProductIds.includes(productId.toLowerCase())) {
+    console.error('❌ Invalid productId in enhanceProduct:', productId)
+    throw new Error(`Invalid product ID: "${productId}"`)
+  }
+
   const response = await authenticatedFetch(
     `/api/shopify/products/${productId}/enhance?shop=${shop}`,
     {
@@ -113,6 +120,13 @@ export async function enhanceProduct(productId: string, shop: string, data: any)
  * Get product data for prepopulation
  */
 export async function getProductPrepopulation(productId: string, shop: string) {
+  // Validate productId before making request
+  const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test', '']
+  if (!productId || invalidProductIds.includes(productId.toLowerCase())) {
+    console.error('❌ Invalid productId in getProductPrepopulation:', productId)
+    throw new Error(`Invalid product ID: "${productId}"`)
+  }
+
   const response = await authenticatedFetch(
     `/api/shopify/product-prepopulation?productId=${productId}&shop=${shop}`
   )
