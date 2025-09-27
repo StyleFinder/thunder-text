@@ -16,6 +16,20 @@ interface CreateProductRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check for session token in Authorization header
+    const authHeader = request.headers.get('authorization')
+    const sessionToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined
+
+    if (!sessionToken) {
+      console.error('❌ No session token provided for generate/create API')
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    console.log('✅ Session token present for generate/create API')
+
     const body: CreateProductRequest = await request.json()
     
     const { 

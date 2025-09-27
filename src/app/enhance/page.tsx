@@ -228,12 +228,23 @@ function EnhanceProductContent() {
 
     try {
       console.log('🤖 Generating enhanced description...')
-      
+
+      // Get session token for authentication
+      const sessionToken = typeof window !== 'undefined'
+        ? window.sessionStorage.getItem('shopify_session_token')
+        : null
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`
+      }
+
       const response = await fetch('/api/generate/enhance', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           existingProduct: workflow.productData,
           enhancementInputs: {
