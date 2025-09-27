@@ -16,8 +16,12 @@ export async function GET(request: NextRequest) {
 
     console.log('📦 API: Fetching product data for prepopulation:', { productId, shop })
 
+    // Get session token from Authorization header if provided
+    const authHeader = request.headers.get('authorization')
+    const sessionToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined
+
     // This will run server-side where environment variables are available
-    const productData = await fetchProductDataForPrePopulation(productId, shop)
+    const productData = await fetchProductDataForPrePopulation(productId, shop, sessionToken)
 
     if (!productData) {
       console.error('❌ API: No product data found for ID:', productId)
