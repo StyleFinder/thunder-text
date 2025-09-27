@@ -71,8 +71,14 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
             throw new Error('Shopify App Bridge not loaded correctly')
           }
 
+          const host = searchParams?.get('host')
+          if (!host) {
+            throw new Error('Host parameter is required for embedded apps')
+          }
+
           const app = window.shopifyApp({
-            apiKey: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY!
+            apiKey: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY!,
+            host: host
           })
 
           // Get session token from App Bridge using the new idToken() method

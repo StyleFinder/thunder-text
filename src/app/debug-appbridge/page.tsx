@@ -55,9 +55,18 @@ export default function DebugAppBridge() {
             throw new Error('NEXT_PUBLIC_SHOPIFY_API_KEY is not set')
           }
 
+          // Get host parameter (required for embedded apps)
+          const host = searchParams?.get('host')
+          addLog(`🏠 Host parameter: ${host ? 'SET' : 'NOT SET'}`)
+
+          if (!host) {
+            throw new Error('Host parameter is required for embedded apps')
+          }
+
           addLog('🔄 Creating App Bridge app instance...')
           const app = window.shopifyApp({
-            apiKey: apiKey
+            apiKey: apiKey,
+            host: host
           })
           addLog('✅ App Bridge app instance created')
 
