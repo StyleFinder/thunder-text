@@ -18,7 +18,7 @@ import {
   Spinner,
 } from '@shopify/polaris'
 import { useNavigation } from './hooks/useNavigation'
-import { TokenExchangeHandler } from './enhance/components/TokenExchangeHandler'
+import { useUnifiedAuth } from './components/UnifiedAuthProvider'
 
 interface GenerationResult {
   title: string
