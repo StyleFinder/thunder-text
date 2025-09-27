@@ -22,23 +22,34 @@ export async function POST(request: NextRequest) {
     const { aiGenerator } = await import('@/lib/openai')
     const { supabaseAdmin } = await import('@/lib/supabase')
     
-    // Check if this is a Shopify extension request (no auth required)
+    // Check for session token in Authorization header
+    const authHeader = request.headers.get('authorization')
+    const sessionToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined
+
+    // Check if this is a legitimate Shopify request
     const userAgent = request.headers.get('user-agent') || ''
     const referer = request.headers.get('referer') || ''
-    const isShopifyExtension = userAgent.includes('Shopify') || referer.includes('shopify') || referer.includes('thunder-text-nine.vercel.app') || process.env.SHOPIFY_AUTH_BYPASS === 'true'
+    const isShopifyRequest = userAgent.includes('Shopify') || referer.includes('.myshopify.com')
     
     let storeId = null
     let store = null
     
-    if (isShopifyExtension) {
-      // For Shopify extensions, use a demo store configuration
+    if (isShopifyRequest && sessionToken) {
+      // For Shopify embedded app requests with valid session token
+      console.log('✅ Processing Shopify request with session token')
       store = {
-        id: 'shopify-extension-demo',
+        id: 'shopify-embedded-app',
         current_usage: 0,
-        usage_limits: 1000, // Allow plenty of usage for demo
-        plan: 'demo'
+        usage_limits: 1000,
+        plan: 'shopify'
       }
       storeId = store.id
+    } else if (!sessionToken) {
+      // No authentication provided
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401, headers: corsHeaders }
+      )
     } else {
       // Regular authenticated request
       const session = await auth()

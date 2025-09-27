@@ -6,6 +6,20 @@ import { type EnhancementProductData } from '@/lib/shopify/product-enhancement'
 // Generate enhanced description for existing product
 export async function POST(request: NextRequest) {
   try {
+    // Check for session token in Authorization header
+    const authHeader = request.headers.get('authorization')
+    const sessionToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined
+
+    if (!sessionToken) {
+      console.error('❌ No session token provided for enhance API')
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    console.log('✅ Session token present for enhance API')
+
     const body = await request.json()
     const {
       existingProduct,
