@@ -13,50 +13,38 @@ import {
   Button,
   Banner
 } from '@shopify/polaris'
-import { TokenExchangeHandler } from '../enhance/components/TokenExchangeHandler'
 import { useRouter } from 'next/navigation'
+import { useUnifiedAuth } from '../components/UnifiedAuthProvider'
 
 export default function EmbeddedApp() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { isAuthenticated, isEmbedded, shop, isLoading, error } = useUnifiedAuth()
 
-  // Get shop from URL params
-  const shop = searchParams?.get('shop') || ''
-  const host = searchParams?.get('host') || ''
-
-  // Always treat this page as embedded since it's the embedded entry point
-  const isEmbedded = true
-
-  console.log('🚀 Embedded App loaded:', { shop, host, isEmbedded })
+  console.log('🚀 Embedded App loaded:', { shop, isEmbedded, isAuthenticated })
 
   useEffect(() => {
     // Log the current context
     console.log('📍 Embedded context check:', {
       isInIframe: window.top !== window.self,
-      hasHost: !!host,
+      hasHost: !!searchParams?.get('host'),
       shop,
-      locationHref: window.location.href
+      locationHref: window.location.href,
+      isAuthenticated
     })
-  }, [shop, host])
 
-  // Handle authentication success
-  const handleAuthSuccess = () => {
-    console.log('✅ Authentication successful, redirecting to enhance page')
-    setIsAuthenticated(true)
-
-    // Redirect to the enhance page with authentication
-    setTimeout(() => {
+    // Redirect to enhance page when authenticated
+    if (isAuthenticated && shop) {
+      console.log('✅ Authentication successful, redirecting to enhance page')
       const params = new URLSearchParams({
         shop,
         authenticated: 'true',
-        host,
+        host: searchParams?.get('host') || '',
         embedded: '1'
       })
       router.push(`/enhance?${params.toString()}`)
-    }, 500)
-  }
+    }
+  }, [isAuthenticated, shop, searchParams, router])
 
   if (!shop) {
     return (
@@ -65,6 +53,39 @@ export default function EmbeddedApp() {
           <Layout.Section>
             <Banner tone="critical">
               <Text as="p">Missing shop parameter. Please access this app through your Shopify Admin.</Text>
+            </Banner>
+          </Layout.Section>
+        </Layout>
+      </Page>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <Page title="Thunder Text">
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <InlineStack gap="300" align="center">
+                  <Spinner size="small" />
+                  <Text as="span" variant="bodyMd">Connecting to Shopify...</Text>
+                </InlineStack>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+      </Page>
+    )
+  }
+
+  if (error) {
+    return (
+      <Page title="Thunder Text">
+        <Layout>
+          <Layout.Section>
+            <Banner tone="critical">
+              <Text as="p">{error}</Text>
             </Banner>
           </Layout.Section>
         </Layout>
@@ -97,12 +118,11 @@ export default function EmbeddedApp() {
         <Layout.Section>
           <Card>
             <BlockStack gap="400">
-              <Text as="h2" variant="headingLg">Connecting to Shopify...</Text>
-              <TokenExchangeHandler
-                shop={shop}
-                isEmbedded={isEmbedded}
-                onSuccess={handleAuthSuccess}
-              />
+              <Text as="h2" variant="headingLg">Authenticating...</Text>
+              <InlineStack gap="300" align="center">
+                <Spinner size="small" />
+                <Text as="span" variant="bodyMd">Please wait while we connect to Shopify...</Text>
+              </InlineStack>
             </BlockStack>
           </Card>
         </Layout.Section>
