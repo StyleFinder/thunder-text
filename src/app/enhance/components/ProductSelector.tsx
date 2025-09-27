@@ -122,6 +122,8 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
   }, [fetchProducts])
 
   const handleProductSelect = (productId: string) => {
+    console.log('🎯 Product selected:', productId)
+
     // Navigate to enhance page with productId
     const urlParams = new URLSearchParams(window.location.search)
     const params = new URLSearchParams({
@@ -132,7 +134,18 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
       ...(urlParams.get('embedded') && { embedded: urlParams.get('embedded')! }),
       ...(urlParams.get('host') && { host: urlParams.get('host')! })
     })
-    router.push(`/enhance?${params}`)
+
+    const newUrl = `/enhance?${params}`
+    console.log('🔗 Navigating to:', newUrl)
+
+    // In embedded context, we might need to use window.location for navigation
+    // as Next.js router might not work properly in iframes
+    if (typeof window !== 'undefined' && window.top !== window.self) {
+      console.log('📱 Embedded context detected, using window.location')
+      window.location.href = newUrl
+    } else {
+      router.push(newUrl)
+    }
   }
 
   const handleSearchChange = (value: string) => {

@@ -60,7 +60,7 @@ export async function fetchProductDataForEnhancement(
     })
 
     // Get session token from sessionStorage if available (App Bridge stores it there)
-    const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('shopify-session-token') : null
+    const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('shopify_session_token') : null
 
     // Prepare headers with authentication if available
     const headers: HeadersInit = {
