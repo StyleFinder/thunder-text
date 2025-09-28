@@ -313,17 +313,10 @@ export async function getAccessToken(shop: string, sessionToken?: string): Promi
     shop = `${shop}.myshopify.com`
   }
 
-  // Check database for existing valid token
-  const { getShopToken } = await import('./shopify/token-manager')
-  const dbToken = await getShopToken(shop)
-
-  if (dbToken.success && dbToken.accessToken) {
-    console.log('✅ Using stored access token from database')
-    return dbToken.accessToken
-  }
-
-  // If we have a session token, use Token Exchange
+  // For embedded apps, session token is required and takes priority
+  // Session tokens are short-lived (60 seconds) and must be exchanged for access tokens
   if (sessionToken) {
+    console.log('🔑 Session token provided, using Token Exchange')
     try {
       // Create a mock request with the session token
       const request = new Request(`https://${shop}/api/auth`, {
@@ -340,12 +333,23 @@ export async function getAccessToken(shop: string, sessionToken?: string): Promi
         return accessToken
       }
     } catch (error) {
-      console.error('⚠️ Token Exchange failed:', error)
+      console.error('❌ Token Exchange failed:', error)
       throw error // Don't fall back, throw the error
     }
   }
 
-  throw new Error(`No valid authentication available for shop: ${shop}. Session token required.`)
+  // Only check database if no session token provided (non-embedded context)
+  // This should rarely happen in production since embedded apps always have session tokens
+  console.log('⚠️ No session token provided, checking database for stored token')
+  const { getShopToken } = await import('./shopify/token-manager')
+  const dbToken = await getShopToken(shop)
+
+  if (dbToken.success && dbToken.accessToken) {
+    console.log('✅ Using stored access token from database')
+    return dbToken.accessToken
+  }
+
+  throw new Error(`No valid authentication available for shop: ${shop}. Session token required for embedded apps.`)
 }
 
 /**
