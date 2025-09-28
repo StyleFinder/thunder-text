@@ -51,12 +51,37 @@ export async function POST(request: NextRequest) {
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text()
-      console.error('❌ Token exchange failed:', errorText)
+      console.error('❌ Token exchange failed:', {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        error: errorText,
+        shop,
+        hasApiKey: !!process.env.NEXT_PUBLIC_SHOPIFY_API_KEY,
+        hasApiSecret: !!process.env.SHOPIFY_API_SECRET
+      })
+
+      // Try to parse Shopify's error response
+      let errorDetails = errorText
+      try {
+        const errorJson = JSON.parse(errorText)
+        errorDetails = errorJson.error_description || errorJson.error || errorText
+      } catch (e) {
+        // Not JSON, use raw text
+      }
+
       return NextResponse.json({
         success: false,
-        error: 'Token exchange failed',
-        details: errorText
-      }, { status: tokenResponse.status })
+        error: `Token exchange failed: ${errorDetails}`,
+        details: errorText,
+        debugInfo: {
+          shop,
+          status: tokenResponse.status,
+          hasCredentials: {
+            apiKey: !!process.env.NEXT_PUBLIC_SHOPIFY_API_KEY,
+            apiSecret: !!process.env.SHOPIFY_API_SECRET
+          }
+        }
+      }, { status: tokenResponse.status, headers: corsHeaders })
     }
 
     const tokenData = await tokenResponse.json()

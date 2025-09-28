@@ -134,6 +134,13 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
 
       // Exchange token with backend for access token
       console.log('🔄 Exchanging session token for access token...')
+      console.log('📝 Token exchange details:', {
+        endpoint: '/api/shopify/token-exchange',
+        shop: shopParam,
+        tokenLength: token.length,
+        tokenPrefix: token.substring(0, 20) + '...'
+      })
+
       const response = await authFetch.current('/api/shopify/token-exchange', {
         method: 'POST',
         headers: {
@@ -145,11 +152,29 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
         })
       })
 
+      console.log('📥 Token exchange response status:', response.status)
+
       const result = await response.json()
 
       if (!response.ok || !result.success) {
-        console.error('❌ Token exchange failed:', result.error)
-        setError(result.error || 'Authentication failed')
+        console.error('❌ Token exchange failed:', {
+          status: response.status,
+          error: result.error,
+          details: result.details,
+          debugInfo: result.debugInfo
+        })
+
+        // More specific error messages based on status
+        let errorMessage = 'Authentication failed'
+        if (response.status === 401) {
+          errorMessage = 'Invalid session token. Please refresh the page.'
+        } else if (response.status === 403) {
+          errorMessage = 'Token exchange forbidden. Check app configuration.'
+        } else if (result.error) {
+          errorMessage = result.error
+        }
+
+        setError(errorMessage)
         setIsAuthenticated(false)
       } else {
         console.log('✅ Authentication successful')
