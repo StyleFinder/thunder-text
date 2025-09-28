@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { PolarisProvider } from './components/PolarisProvider';
 import { AppLayout } from './components/AppLayout';
-import { UnifiedAuthProvider } from './components/UnifiedAuthProvider';
+import { ShopifyAuthProvider } from './components/ShopifyAuthProvider';
 import { ServiceWorkerCleanup } from './components/ServiceWorkerCleanup';
 
 const inter = Inter({ subsets: ["latin"] });
@@ -21,16 +21,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || '';
+
   return (
     <html lang="en">
+      <head>
+        <meta name="shopify-api-key" content={apiKey} />
+      </head>
       <body className={inter.className}>
         <PolarisProvider>
-          <UnifiedAuthProvider>
+          <ShopifyAuthProvider>
             <ServiceWorkerCleanup />
             <AppLayout>
               {children}
             </AppLayout>
-          </UnifiedAuthProvider>
+          </ShopifyAuthProvider>
         </PolarisProvider>
       </body>
     </html>

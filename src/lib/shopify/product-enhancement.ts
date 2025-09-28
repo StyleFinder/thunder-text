@@ -50,32 +50,44 @@ export interface EnhancementContext {
  */
 export async function fetchProductDataForEnhancement(
   productId: string,
-  shop: string
+  shop: string,
+  providedSessionToken?: string | null,
+  authenticatedFetch?: typeof fetch
 ): Promise<EnhancementProductData | null> {
   try {
     console.log('🔄 Fetching product data for enhancement:', {
       productId,
       shop,
-      idFormat: productId.startsWith('gid://') ? 'GraphQL' : 'Numeric'
+      idFormat: productId.startsWith('gid://') ? 'GraphQL' : 'Numeric',
+      hasProvidedToken: !!providedSessionToken,
+      hasAuthenticatedFetch: !!authenticatedFetch
     })
 
-    // Get session token from sessionStorage if available (App Bridge stores it there)
-    const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('shopify_session_token') : null
+    // Use authenticatedFetch if provided (from EmbeddedAuthProvider)
+    const fetchFn = authenticatedFetch || fetch
 
-    // Prepare headers with authentication if available
+    // If authenticatedFetch is provided, it will handle the token automatically
+    // Otherwise, use provided session token or sessionStorage
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     }
 
-    if (sessionToken) {
-      headers['Authorization'] = `Bearer ${sessionToken}`
-      console.log('🔑 Including session token in API request')
+    if (!authenticatedFetch) {
+      const sessionToken = providedSessionToken ||
+        (typeof window !== 'undefined' ? sessionStorage.getItem('shopify_session_token') : null)
+
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`
+        console.log('🔑 Including session token in API request')
+      } else {
+        console.log('⚠️ No session token available, will use database token')
+      }
     } else {
-      console.log('⚠️ No session token available, will use database token')
+      console.log('✅ Using authenticatedFetch (token handled automatically)')
     }
 
     // Get base product data using API endpoint (server-side for env vars)
-    const response = await fetch(
+    const response = await fetchFn(
       `/api/shopify/product-prepopulation?productId=${productId}&shop=${shop}`,
       { headers }
     )
@@ -189,10 +201,11 @@ export function generateEnhancementContext(
  */
 export async function validateProductForEnhancement(
   productId: string,
-  shop: string
+  shop: string,
+  sessionToken?: string | null
 ): Promise<{ isValid: boolean; reason?: string }> {
   try {
-    const productData = await fetchProductDataForEnhancement(productId, shop)
+    const productData = await fetchProductDataForEnhancement(productId, shop, sessionToken)
 
     if (!productData) {
       return { isValid: false, reason: 'Product not found or inaccessible' }

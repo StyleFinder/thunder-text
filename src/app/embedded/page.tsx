@@ -14,12 +14,12 @@ import {
   Banner
 } from '@shopify/polaris'
 import { useRouter } from 'next/navigation'
-import { useUnifiedAuth } from '../components/UnifiedAuthProvider'
+import { useShopifyAuth } from '../components/ShopifyAuthProvider'
 
 export default function EmbeddedApp() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { isAuthenticated, isEmbedded, shop, isLoading, error } = useUnifiedAuth()
+  const { isAuthenticated, isEmbedded, shop, isLoading, error } = useShopifyAuth()
 
   console.log('🚀 Embedded App loaded:', { shop, isEmbedded, isAuthenticated })
 

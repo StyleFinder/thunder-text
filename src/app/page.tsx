@@ -18,7 +18,7 @@ import {
   Spinner,
 } from '@shopify/polaris'
 import { useNavigation } from './hooks/useNavigation'
-import { useUnifiedAuth } from './components/UnifiedAuthProvider'
+import { useShopifyAuth } from './components/ShopifyAuthProvider'
 
 interface GenerationResult {
   title: string

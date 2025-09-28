@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>App Bridge Test</title>
+  <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
+</head>
+<body>
+  <h1>App Bridge Test</h1>
+  <div id="output"></div>
+  <script>
+    const output = document.getElementById('output');
+
+    // Test App Bridge NPM package approach
+    try {
+      const { createApp } = window['app-bridge'];
+      output.innerHTML += '<p>✅ App Bridge NPM package is available</p>';
+
+      // Check for required methods
+      if (window['app-bridge'].utilities) {
+        output.innerHTML += '<p>✅ App Bridge utilities available</p>';
+      }
+
+      // Log available methods
+      console.log('App Bridge methods:', Object.keys(window['app-bridge']));
+    } catch (error) {
+      output.innerHTML += '<p>❌ App Bridge not loaded: ' + error.message + '</p>';
+    }
+  </script>
+</body>
+</html>
