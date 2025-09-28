@@ -29,7 +29,7 @@ import { ComparisonView, ComparisonData } from './components/ComparisonView'
 import { RichTextEditor } from './components/RichTextEditor'
 import { ProductSelector } from './components/ProductSelector'
 import { fetchProductDataForEnhancement, EnhancementProductData } from '@/lib/shopify/product-enhancement'
-import { useUnifiedAuth } from '../components/UnifiedAuthProvider'
+import { useShopifyAuth } from '../components/ShopifyAuthProvider'
 
 type WorkflowStep = 'loading' | 'context' | 'configure' | 'generating' | 'compare' | 'apply' | 'complete'
 
@@ -45,7 +45,7 @@ interface EnhancementWorkflowState {
 
 function EnhanceProductContent() {
   const searchParams = useSearchParams()
-  const { isAuthenticated, isEmbedded, shop, isLoading: authLoading, error: authError } = useUnifiedAuth()
+  const { isAuthenticated, isEmbedded, shop, isLoading: authLoading, error: authError, sessionToken, authenticatedFetch } = useShopifyAuth()
 
   const productId = searchParams?.get('productId')
   const source = searchParams?.get('source')
@@ -160,9 +160,9 @@ function EnhanceProductContent() {
       setHasAttemptedLoad(true)
 
       try {
-        console.log('🔄 Loading product data for enhancement:', { productId, shop })
+        console.log('🔄 Loading product data for enhancement:', { productId, shop, hasToken: !!sessionToken })
 
-        const data = await fetchProductDataForEnhancement(productId, shop)
+        const data = await fetchProductDataForEnhancement(productId, shop, sessionToken, authenticatedFetch)
 
         if (data && data.id) {
           setWorkflow(prev => ({
@@ -194,7 +194,7 @@ function EnhanceProductContent() {
     }
 
     loadProductData()
-  }, [productId, shop, isEmbedded, isAuthenticated, authLoading])
+  }, [productId, shop, isEmbedded, isAuthenticated, authLoading, sessionToken, authenticatedFetch])
 
   // Handle form data changes
   const handleFormChange = useCallback((formData: EnhancementFormData) => {
