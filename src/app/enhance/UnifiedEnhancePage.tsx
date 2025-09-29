@@ -318,27 +318,18 @@ export default function UnifiedEnhancePage() {
       const result = await response.json()
       console.log('✅ Update result:', result)
 
-      // Set success message based on mode
-      const message = result.mode === 'development'
-        ? 'Changes applied successfully (Development Mode)'
-        : 'Product successfully updated!'
-
-      setSuccessMessage(message)
-      setShowPreviewModal(false)
-      setGeneratedContent(null)
-
-      // In development mode, update the local state directly
-      // since the backend doesn't actually persist changes
-      if (result.mode === 'development' && productData) {
+      // Always update the local state with the new data
+      // This ensures the UI reflects the changes immediately
+      if (productData) {
         const updatedData = { ...productData }
 
         // Update fields that were provided
-        if (editedContent.title !== undefined) {
+        if (editedContent.title !== undefined && editedContent.title !== null) {
           updatedData.title = editedContent.title
         }
-        if (editedContent.description !== undefined) {
+        if (editedContent.description !== undefined && editedContent.description !== null) {
           updatedData.description = editedContent.description
-          updatedData.descriptionHtml = editedContent.description
+          updatedData.descriptionHtml = `<p>${editedContent.description.replace(/\n/g, '</p><p>')}</p>`
         }
 
         // Update SEO fields if they exist
@@ -350,12 +341,19 @@ export default function UnifiedEnhancePage() {
           }
         }
 
+        console.log('📝 Updating local product data from:', productData)
+        console.log('📝 To updated data:', updatedData)
         setProductData(updatedData)
-        console.log('📝 Updated local product data with applied changes:', updatedData)
-      } else {
-        // In production, refresh from the server
-        await loadProduct()
       }
+
+      // Set success message based on mode
+      const message = result.mode === 'development'
+        ? 'Changes applied successfully (Development Mode)'
+        : 'Product successfully updated!'
+
+      setSuccessMessage(message)
+      setShowPreviewModal(false)
+      setGeneratedContent(null)
 
       // Clear error if any
       setError(null)
@@ -583,15 +581,34 @@ export default function UnifiedEnhancePage() {
             </InlineStack>
           </Layout.Section>
 
+          {/* Progress Modal */}
           {generating && (
-            <Layout.Section>
-              <Card>
+            <Modal
+              open={true}
+              onClose={() => {}}
+              title="Generating Enhanced Content"
+              titleHidden={false}
+              noScroll
+            >
+              <Modal.Section>
                 <BlockStack gap="400">
-                  <Text as="p" variant="bodyMd">Analyzing images and generating content...</Text>
-                  <ProgressBar progress={progress} />
+                  <Box paddingBlockEnd="200">
+                    <Text as="p" variant="bodyMd" alignment="center">
+                      AI is analyzing your product and generating enhanced content...
+                    </Text>
+                  </Box>
+                  <ProgressBar progress={progress} size="medium" />
+                  <Box paddingBlockStart="200">
+                    <Text as="p" variant="bodySm" tone="subdued" alignment="center">
+                      {progress < 30 ? '🔍 Preparing images for analysis...' :
+                       progress < 60 ? '🤖 Analyzing with GPT-4 Vision...' :
+                       progress < 90 ? '✍️ Generating enhanced descriptions...' :
+                       '✨ Finalizing your content...'}
+                    </Text>
+                  </Box>
                 </BlockStack>
-              </Card>
-            </Layout.Section>
+              </Modal.Section>
+            </Modal>
           )}
         </Layout>
 
