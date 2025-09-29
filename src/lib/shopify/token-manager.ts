@@ -248,13 +248,13 @@ export async function getShopDetails(
  * Used by the Token Exchange flow
  */
 export async function saveShopToken(
-  data: {
-    shop_domain: string
-    access_token: string
-    scope?: string
-  }
+  shopDomain: string,
+  accessToken: string,
+  tokenType: 'online' | 'offline' = 'offline',
+  scope?: string
 ): Promise<{ success: boolean; error?: string; shopId?: string }> {
-  return storeShopToken(data.shop_domain, data.access_token, data.scope)
+  console.log(`💾 Saving ${tokenType} access token for shop:`, shopDomain)
+  return storeShopToken(shopDomain, accessToken, scope)
 }
 
 /**
