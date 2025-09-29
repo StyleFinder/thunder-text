@@ -34,8 +34,12 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
 
   // Add session token to headers if available
   const headers: HeadersInit = {
-    ...options.headers,
-    'Content-Type': 'application/json'
+    ...options.headers
+  }
+
+  // Only set Content-Type if not sending FormData
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json'
   }
 
   if (sessionToken) {

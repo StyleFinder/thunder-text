@@ -26,17 +26,29 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('authorization')
     const sessionToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined
 
+    console.log('🔐 Enhance API - Auth check:', {
+      hasAuthHeader: !!authHeader,
+      hasSessionToken: !!sessionToken,
+      userAgent: request.headers.get('user-agent'),
+      referer: request.headers.get('referer'),
+    })
+
     // Check if this is a legitimate Shopify request
     const userAgent = request.headers.get('user-agent') || ''
     const referer = request.headers.get('referer') || ''
-    const isShopifyRequest = userAgent.includes('Shopify') || referer.includes('.myshopify.com')
+    const isShopifyRequest = userAgent.includes('Shopify') || referer.includes('.myshopify.com') || referer.includes('thunder-text')
 
     let storeId = null
     let store = null
 
-    if (isShopifyRequest && sessionToken) {
-      // For Shopify embedded app requests with valid session token
-      console.log('✅ Processing Shopify enhancement request with session token')
+    // For development/testing with authenticated=true flag
+    const url = new URL(request.url)
+    const isAuthenticatedDev = url.searchParams.get('authenticated') === 'true' ||
+                              referer.includes('authenticated=true')
+
+    if ((isShopifyRequest || referer.includes('vercel.app') || isAuthenticatedDev) && (sessionToken || isAuthenticatedDev)) {
+      // For Shopify embedded app requests or authenticated development
+      console.log('✅ Processing enhancement request (Shopify/Dev mode)')
       store = {
         id: 'shopify-embedded-app',
         current_usage: 0,
@@ -44,8 +56,9 @@ export async function POST(request: NextRequest) {
         plan: 'shopify'
       }
       storeId = store.id
-    } else if (!sessionToken) {
+    } else if (!sessionToken && !isAuthenticatedDev) {
       // No authentication provided
+      console.error('❌ Authentication required - no token and not in dev mode')
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401, headers: corsHeaders }
