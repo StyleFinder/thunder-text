@@ -8,7 +8,6 @@ handle = "thunder-text-29"
 
 [build]
 dev_store_url = "zunosai-staging-test-store.myshopify.com"
-include_config_on_deploy = true
 
 [webhooks]
 api_version = "2025-01"
@@ -27,8 +26,11 @@ scopes = "read_content,read_files,read_inventory,read_metaobject_definitions,rea
 optional_scopes = [ ]
 use_legacy_install_flow = false
 
-# Modern Shopify-managed installation - no auth section needed
-# Token Exchange handles authentication without redirects
+[auth]
+redirect_urls = [
+  "https://thunder-text-nine.vercel.app/api/auth/callback",
+  "https://thunder-text-nine.vercel.app/api/auth/shopify/callback"
+]
 
 [pos]
 embedded = false
