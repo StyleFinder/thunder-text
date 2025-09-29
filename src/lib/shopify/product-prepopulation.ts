@@ -203,45 +203,29 @@ async function fetchShopifyProduct(productId: string, shop: string, sessionToken
   console.log('🔍 Executing GraphQL query for product:', formattedProductId)
 
   try {
-    // Use authenticated Shopify GraphQL client
-    // Note: This is server-side, so no session token - will use stored token
-    console.log('🔑 Calling shopifyGraphQL with:', {
+    console.log('🔑 Calling Shopify GraphQL with:', {
       shop,
       productId: formattedProductId,
       hasSessionToken: !!sessionToken
     })
 
-    // Use the new authentication method
-    const { getAccessToken } = await import('../shopify-auth')
-    const accessToken = await getAccessToken(shop, sessionToken)
-
-    // Make direct GraphQL call with access token
-    const { GraphQLClient } = await import('graphql-request')
-    const client = new GraphQLClient(
-      `https://${shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`}/admin/api/2025-01/graphql.json`,
-      {
-        headers: {
-          'X-Shopify-Access-Token': accessToken,
-          'Content-Type': 'application/json',
-        },
-      }
-    )
-
-    const response = await client.request(query, { id: formattedProductId })
+    // Use shopifyGraphQL helper which handles authentication properly
+    const response = await shopifyGraphQL(query, { id: formattedProductId }, shop, sessionToken)
 
     console.log('📦 GraphQL response received:', {
-      hasProduct: !!response?.product,
-      productId: response?.product?.id
+      hasData: !!response?.data,
+      hasProduct: !!response?.data?.product,
+      productId: response?.data?.product?.id
     })
 
-    if (!response || !response.product) {
+    if (!response?.data?.product) {
       console.error('❌ No product found with ID:', formattedProductId)
       console.error('📝 Full response:', JSON.stringify(response, null, 2))
       return null
     }
 
-    console.log('✅ Product found:', response.product.title)
-    return response.product
+    console.log('✅ Product found:', response.data.product.title)
+    return response.data.product
   } catch (error) {
     console.error('❌ Error fetching product from Shopify:', error)
     console.error('📝 Query details:', {
