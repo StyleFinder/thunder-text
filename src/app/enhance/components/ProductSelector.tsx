@@ -120,7 +120,7 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
     } finally {
       setLoading(false)
     }
-  }, [shop, currentPage, searchQuery, statusFilter, sortOrder])
+  }, [shop, currentPage, debouncedSearchQuery, statusFilter, sortOrder])
 
   useEffect(() => {
     fetchProducts()
