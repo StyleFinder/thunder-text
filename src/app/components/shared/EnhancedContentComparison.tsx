@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Modal,
   Card,
@@ -56,6 +56,32 @@ export default function EnhancedContentComparison({
   const [editedContent, setEditedContent] = useState(enhancedContent)
   const [editingField, setEditingField] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'comparison' | 'preview'>('comparison')
+
+  // Force modal to be wider when it opens
+  useEffect(() => {
+    if (active) {
+      // Wait for modal to render
+      setTimeout(() => {
+        // Find all modal-related elements and force their width
+        const modalDialog = document.querySelector('.Polaris-Modal-Dialog')
+        const modalContainer = document.querySelector('.Polaris-Modal-Dialog__Container')
+        const modalModal = document.querySelector('.Polaris-Modal-Dialog__Modal')
+
+        if (modalDialog) {
+          (modalDialog as HTMLElement).style.maxWidth = '95vw'
+          ;(modalDialog as HTMLElement).style.width = '95vw'
+        }
+        if (modalContainer) {
+          (modalContainer as HTMLElement).style.maxWidth = '100%'
+          ;(modalContainer as HTMLElement).style.width = '100%'
+        }
+        if (modalModal) {
+          (modalModal as HTMLElement).style.maxWidth = '100%'
+          ;(modalModal as HTMLElement).style.width = '100%'
+        }
+      }, 100)
+    }
+  }, [active])
 
   const handleEdit = (field: string) => {
     setEditingField(field)
