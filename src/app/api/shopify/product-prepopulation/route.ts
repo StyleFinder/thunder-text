@@ -111,7 +111,6 @@ export async function GET(request: NextRequest) {
                 title
                 price
                 sku
-                weight
               }
             }
           }
@@ -164,7 +163,6 @@ export async function GET(request: NextRequest) {
         title: node.title,
         price: node.price,
         sku: node.sku,
-        weight: node.weight,
       })),
       materials: {
         fabric: undefined,
