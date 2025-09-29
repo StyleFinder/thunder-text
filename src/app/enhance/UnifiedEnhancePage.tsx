@@ -96,12 +96,47 @@ export default function UnifiedEnhancePage() {
           setProductData(data)
 
           // Pre-fill form fields
-          if (data.productType) setParentCategory(data.productType)
+          if (data.productType) {
+            setParentCategory(data.productType.toLowerCase())
+          }
           if (data.vendor) setTargetAudience(data.vendor)
 
+          // Pre-populate sizing from variants
+          if (data.variants && data.variants.length > 0) {
+            const sizes = data.variants
+              .filter(v => v.selectedOptions?.some(opt => opt.name.toLowerCase() === 'size'))
+              .map(v => {
+                const sizeOption = v.selectedOptions?.find(opt => opt.name.toLowerCase() === 'size')
+                return sizeOption?.value
+              })
+              .filter(Boolean)
+
+            if (sizes.length > 0) {
+              // Detect sizing pattern
+              const uniqueSizes = [...new Set(sizes)]
+              if (uniqueSizes.includes('XS') && uniqueSizes.includes('XL')) {
+                setAvailableSizing('xs-xl')
+              } else if (uniqueSizes.includes('XS') && uniqueSizes.includes('XXL')) {
+                setAvailableSizing('xs-xxl')
+              } else if (uniqueSizes.includes('S') && uniqueSizes.includes('XXXL')) {
+                setAvailableSizing('s-xxxl')
+              } else if (uniqueSizes.length === 1 && uniqueSizes[0] === 'One Size') {
+                setAvailableSizing('onesize')
+              }
+            }
+          }
+
           // Extract and pre-fill material info from tags/metafields
-          if (data.tags?.includes('cotton')) setFabricMaterial('Cotton')
-          if (data.tags?.includes('polyester')) setFabricMaterial('Polyester')
+          if (data.tags) {
+            const tagsArray = Array.isArray(data.tags) ? data.tags : data.tags.split(',').map(t => t.trim())
+            const materials = tagsArray.filter(tag =>
+              tag.toLowerCase().includes('cotton') ||
+              tag.toLowerCase().includes('polyester') ||
+              tag.toLowerCase().includes('wool') ||
+              tag.toLowerCase().includes('silk')
+            ).join(', ')
+            if (materials) setFabricMaterial(materials)
+          }
 
           // Pre-fill key features from existing description
           if (data.description) {
@@ -111,6 +146,20 @@ export default function UnifiedEnhancePage() {
               .map(line => line.replace(/^[•\-]\s*/, ''))
               .join('\n')
             if (features) setKeyFeatures(features)
+          }
+
+          // Set appropriate template based on product type
+          if (data.productType) {
+            const type = data.productType.toLowerCase()
+            if (type.includes('cloth') || type.includes('apparel') || type.includes('shirt') || type.includes('dress')) {
+              setSelectedTemplate('clothing')
+            } else if (type.includes('jewelry') || type.includes('accessory')) {
+              setSelectedTemplate('jewelry')
+            } else if (type.includes('home') || type.includes('decor')) {
+              setSelectedTemplate('home')
+            } else {
+              setSelectedTemplate('general')
+            }
           }
         }
       } catch (err) {

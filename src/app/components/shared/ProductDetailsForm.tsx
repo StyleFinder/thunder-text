@@ -1,8 +1,7 @@
 'use client'
 
 import { Card, BlockStack, Select, TextField, Text } from '@shopify/polaris'
-import { CategoryTemplateSelector } from '@/app/components/CategoryTemplateSelector'
-import { type ProductCategory } from '@/lib/prompts'
+import { type ProductCategory, PRODUCT_CATEGORIES } from '@/lib/prompts'
 
 interface ProductDetailsFormProps {
   mode?: 'create' | 'enhance'
@@ -74,11 +73,19 @@ export function ProductDetailsForm({
           disabled={disabled}
         />
 
-        <CategoryTemplateSelector
-          selectedCategory={selectedTemplate}
-          onCategoryChange={setSelectedTemplate}
-          preview={templatePreview}
-          onPreviewChange={setTemplatePreview}
+        <Select
+          label="Product Category Template"
+          options={[
+            { label: "Women's Clothing", value: 'clothing' },
+            { label: "Jewelry & Accessories", value: 'jewelry' },
+            { label: "Home & Living", value: 'home' },
+            { label: "Beauty & Personal Care", value: 'beauty' },
+            { label: "Electronics", value: 'electronics' },
+            { label: "General Products", value: 'general' }
+          ]}
+          value={selectedTemplate}
+          onChange={(value) => setSelectedTemplate(value as ProductCategory)}
+          helpText="Choose a template that best matches your product type for optimized descriptions"
         />
       </BlockStack>
     </Card>
