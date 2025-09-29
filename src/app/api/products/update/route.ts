@@ -23,67 +23,77 @@ export async function POST(request: NextRequest) {
 
     console.log('📝 Updating product:', productId, 'for shop:', shop)
 
-    // Get the shop's access token
-    let tokenResult
-    try {
-      tokenResult = await getShopToken(shop)
-      console.log('🔑 Token retrieval result:', {
-        success: tokenResult.success,
-        hasToken: !!tokenResult.accessToken,
-        error: tokenResult.error
-      })
-    } catch (tokenError) {
-      console.error('❌ Error retrieving token:', tokenError)
-      tokenResult = { success: false, error: 'Token retrieval failed' }
-    }
+    // Get session token from the request
+    const sessionToken = request.headers.get('authorization')?.replace('Bearer ', '')
 
-    if (!tokenResult.success || !tokenResult.accessToken) {
-      console.log('⚠️ No access token found for shop:', shop)
+    // For the staging test store, we'll use a direct approach if no session token
+    const isTestStore = shop.includes('zunosai-staging-test-store')
 
-      // If no token exists, check if we're in a development/demo mode
-      // For staging test store, always use development mode if no token
-      const isDevMode = process.env.NODE_ENV === 'development' ||
-                        request.headers.get('referer')?.includes('authenticated=true') ||
-                        shop.includes('zunosai-staging-test-store')
-
-      if (isDevMode) {
-        console.log('🎭 Development mode - simulating successful update')
-
-        // Simulate a delay for realism
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        return NextResponse.json(
-          {
-            success: true,
-            message: 'Product updated successfully (development mode)',
-            productId,
-            updates: {
-              title: updates.title || null,
-              description: updates.description || null,
-              seoTitle: updates.seoTitle || null,
-              seoDescription: updates.seoDescription || null,
-              bulletPoints: updates.bulletPoints || null
-            },
-            mode: 'development'
-          },
-          { headers: corsHeaders }
-        )
-      }
-
+    if (!sessionToken && !isTestStore) {
+      console.error('❌ No session token provided in request')
       return NextResponse.json(
         {
-          error: 'Shop not authenticated',
-          details: 'Please ensure the app is properly installed in your Shopify store',
-          shop,
-          mode: 'production'
+          error: 'Authentication required',
+          details: 'Session token is missing. Please ensure you are accessing the app through Shopify admin.',
+          shop
         },
         { status: 401, headers: corsHeaders }
       )
     }
 
-    // Initialize Shopify API client with the shop's access token
+    // Get access token
+    let accessToken: string
+
+    try {
+      // For the test store, use the environment variable access token
+      if (isTestStore && process.env.SHOPIFY_ACCESS_TOKEN) {
+        console.log('✅ Using environment access token for test store')
+        accessToken = process.env.SHOPIFY_ACCESS_TOKEN
+      } else {
+        // For production stores, try to get a stored offline token first
+        const tokenResult = await getShopToken(shop)
+
+        if (tokenResult.success && tokenResult.accessToken) {
+          console.log('✅ Using stored offline access token for shop:', shop)
+          accessToken = tokenResult.accessToken
+        } else if (sessionToken) {
+          // If no offline token, perform token exchange with the session token
+          console.log('🔄 Performing token exchange for shop:', shop)
+
+          const { exchangeToken } = await import('@/lib/shopify/token-exchange')
+          const exchangeResult = await exchangeToken({
+            shop,
+            sessionToken,
+            clientId: process.env.SHOPIFY_API_KEY!,
+            clientSecret: process.env.SHOPIFY_API_SECRET!,
+            requestedTokenType: 'offline'
+          })
+
+          console.log('✅ Token exchange successful, received access token')
+          accessToken = exchangeResult.access_token
+
+          // Save the token for future use
+          const { saveShopToken } = await import('@/lib/shopify/token-manager')
+          await saveShopToken(shop, accessToken, exchangeResult.scope)
+        } else {
+          throw new Error('No access token available and no session token provided')
+        }
+      }
+    } catch (tokenError) {
+      console.error('❌ Failed to obtain access token:', tokenError)
+      return NextResponse.json(
+        {
+          error: 'Authentication failed',
+          details: tokenError instanceof Error ? tokenError.message : 'Failed to authenticate with Shopify',
+          shop
+        },
+        { status: 401, headers: corsHeaders }
+      )
+    }
+
+    // Initialize Shopify API client with the access token
     console.log('🔐 Initializing Shopify API client for shop:', shop)
-    const shopifyClient = new ShopifyAPI(shop, tokenResult.accessToken)
+    const shopifyClient = new ShopifyAPI(shop, accessToken)
 
     // Prepare the update input for Shopify GraphQL
     const productInput: any = {}

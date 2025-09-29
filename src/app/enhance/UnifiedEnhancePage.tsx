@@ -350,10 +350,8 @@ export default function UnifiedEnhancePage() {
         setProductData(updatedData)
       }
 
-      // Set success message based on mode
-      const message = result.mode === 'development'
-        ? 'Changes applied successfully (Development Mode)'
-        : 'Updates have been successfully applied to the product.'
+      // Set success message
+      const message = 'Updates have been successfully applied to the product.'
 
       setSuccessMessage(message)
       setUpdateResult(result)
