@@ -309,14 +309,14 @@ export default function UnifiedEnhancePage() {
         })
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to apply changes')
-      }
-
-      // Get the response data to check mode
+      // Parse the response body once
       const result = await response.json()
-      console.log('✅ Update result:', result)
+      console.log('✅ Update response:', result)
+
+      // Check for errors after parsing
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to apply changes')
+      }
 
       // Always update the local state with the new data
       // This ensures the UI reflects the changes immediately
