@@ -263,8 +263,8 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
               }}
             >
               <Text as="p">
-                {searchQuery 
-                  ? `No products match "${searchQuery}". Try adjusting your search.`
+                {debouncedSearchQuery
+                  ? `No products match "${debouncedSearchQuery}". Try adjusting your search.`
                   : 'Start by creating a product to enhance with AI-powered descriptions.'
                 }
               </Text>
