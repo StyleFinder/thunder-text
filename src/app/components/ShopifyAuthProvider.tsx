@@ -48,10 +48,10 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
   const authFetch = useRef<typeof fetch>(fetch)
 
   // Determine if we're in embedded context
+  // Only consider it embedded if we're actually in an iframe
   const isEmbedded = typeof window !== 'undefined' && (
     window.top !== window.self ||
-    searchParams?.get('embedded') === '1' ||
-    !!searchParams?.get('host')
+    searchParams?.get('embedded') === '1'
   )
 
   // Initialize authentication
@@ -70,13 +70,26 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
       setShop(shopParam)
       setHost(hostParam)
 
-      // Check if we're in embedded context (REQUIRED for production)
+      // Check if we're in embedded context (REQUIRED for production stores)
+      // Allow non-embedded access for test store only
+      const isTestStore = shopParam.includes('zunosai-staging-test-store')
+
       if (!isEmbedded) {
-        console.error('❌ App must be accessed through Shopify admin (embedded context)')
-        console.error('Direct URL access is not allowed in production')
-        setError('This app must be accessed through your Shopify admin panel')
-        setIsAuthenticated(false)
+        if (!isTestStore) {
+          console.error('❌ App must be accessed through Shopify admin (embedded context)')
+          console.error('Direct URL access is not allowed in production')
+          setError('This app must be accessed through your Shopify admin panel')
+          setIsAuthenticated(false)
+          setIsLoading(false)
+          return
+        }
+
+        // For test store in non-embedded mode, set up basic auth
+        console.log('✅ Test store detected in non-embedded mode, using direct authentication')
+        setIsAuthenticated(true)
         setIsLoading(false)
+        // Use regular fetch as authenticatedFetch
+        authFetch.current = fetch
         return
       }
 
