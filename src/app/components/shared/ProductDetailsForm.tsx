@@ -54,15 +54,19 @@ export function ProductDetailsForm({
   return (
     <Card>
       <BlockStack gap="400">
-        <Text as="h2" variant="headingMd">Product Details</Text>
+        <Text as="h2" variant="headingMd">
+          {mode === 'enhance' ? 'Enhancement Settings' : 'Product Details'}
+        </Text>
 
-        <Select
-          label="Parent Category"
-          options={parentCategoryOptions}
-          value={parentCategory}
-          onChange={setParentCategory}
-          disabled={disabled}
-        />
+        {mode === 'create' && (
+          <Select
+            label="Parent Category"
+            options={parentCategoryOptions}
+            value={parentCategory}
+            onChange={setParentCategory}
+            disabled={disabled}
+          />
+        )}
 
         {mode === 'create' && (
           <Select

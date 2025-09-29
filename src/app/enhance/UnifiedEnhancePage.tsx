@@ -232,7 +232,7 @@ export default function UnifiedEnhancePage() {
       formData.append('productId', productId || '')
       formData.append('shop', shop || '')
       formData.append('template', selectedTemplate)
-      formData.append('parentCategory', parentCategory)
+      formData.append('parentCategory', productData?.productType || parentCategory || 'general')
       formData.append('availableSizing', detectedSizing || 'Not specified')
       formData.append('fabricMaterial', fabricMaterial)
       formData.append('occasionUse', occasionUse)
