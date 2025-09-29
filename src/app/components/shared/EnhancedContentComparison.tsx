@@ -15,6 +15,7 @@ import {
   Box,
   Banner,
   Icon,
+  Checkbox,
 } from '@shopify/polaris'
 import {
   EditIcon,
@@ -56,6 +57,15 @@ export default function EnhancedContentComparison({
   const [editedContent, setEditedContent] = useState(enhancedContent)
   const [editingField, setEditingField] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'comparison' | 'preview'>('comparison')
+
+  // Track which fields to apply
+  const [fieldsToApply, setFieldsToApply] = useState({
+    title: !!enhancedContent.title,
+    description: !!enhancedContent.description,
+    seoTitle: !!enhancedContent.seoTitle,
+    seoDescription: !!enhancedContent.seoDescription,
+    bulletPoints: !!enhancedContent.bulletPoints && enhancedContent.bulletPoints.length > 0
+  })
 
   // Force modal to be wider when it opens
   useEffect(() => {
@@ -101,7 +111,26 @@ export default function EnhancedContentComparison({
   }
 
   const handleApplyChanges = () => {
-    onApply(editedContent)
+    // Only apply fields that are checked
+    const contentToApply: any = {}
+
+    if (fieldsToApply.title && editedContent.title) {
+      contentToApply.title = editedContent.title
+    }
+    if (fieldsToApply.description && editedContent.description) {
+      contentToApply.description = editedContent.description
+    }
+    if (fieldsToApply.seoTitle && editedContent.seoTitle) {
+      contentToApply.seoTitle = editedContent.seoTitle
+    }
+    if (fieldsToApply.seoDescription && editedContent.seoDescription) {
+      contentToApply.seoDescription = editedContent.seoDescription
+    }
+    if (fieldsToApply.bulletPoints && editedContent.bulletPoints) {
+      contentToApply.bulletPoints = editedContent.bulletPoints
+    }
+
+    onApply(contentToApply)
     onClose()
   }
 
@@ -148,9 +177,19 @@ export default function EnhancedContentComparison({
               <Card>
                 <BlockStack gap="2">
                   <InlineStack align="space-between">
-                    <Text variant="headingSm" as="h4" tone="success">
-                      Enhanced
-                    </Text>
+                    <InlineStack gap="2" blockAlign="center">
+                      <Checkbox
+                        label=""
+                        checked={fieldsToApply[fieldName as keyof typeof fieldsToApply]}
+                        onChange={(checked) => setFieldsToApply(prev => ({
+                          ...prev,
+                          [fieldName]: checked
+                        }))}
+                      />
+                      <Text variant="headingSm" as="h4" tone="success">
+                        Apply This Field
+                      </Text>
+                    </InlineStack>
                     {!isEditing && (
                       <Button
                         size="slim"
@@ -206,9 +245,19 @@ export default function EnhancedContentComparison({
             <Card>
               <BlockStack gap="2">
                 <InlineStack align="space-between">
-                  <Text variant="headingSm" as="h4">
-                    Preview
-                  </Text>
+                  <InlineStack gap="2" blockAlign="center">
+                    <Checkbox
+                      label=""
+                      checked={fieldsToApply[fieldName as keyof typeof fieldsToApply]}
+                      onChange={(checked) => setFieldsToApply(prev => ({
+                        ...prev,
+                        [fieldName]: checked
+                      }))}
+                    />
+                    <Text variant="headingSm" as="h4">
+                      Apply This Field
+                    </Text>
+                  </InlineStack>
                   {!isEditing && (
                     <Button
                       size="slim"
@@ -314,27 +363,78 @@ export default function EnhancedContentComparison({
       >
         <Modal.Section>
         <BlockStack gap="4">
-          {/* View Mode Toggle */}
+          {/* View Mode Toggle and Field Selection */}
           <Card>
-            <InlineStack align="space-between" blockAlign="center">
-              <Text variant="headingSm" as="h3">View Mode</Text>
-              <InlineStack gap="2">
-                <Button
-                  pressed={viewMode === 'comparison'}
-                  onClick={() => setViewMode('comparison')}
-                  icon={ViewIcon}
-                >
-                  Side-by-Side
-                </Button>
-                <Button
-                  pressed={viewMode === 'preview'}
-                  onClick={() => setViewMode('preview')}
-                >
-                  Preview Only
-                </Button>
+            <BlockStack gap="3">
+              <InlineStack align="space-between" blockAlign="center">
+                <Text variant="headingSm" as="h3">View Mode</Text>
+                <InlineStack gap="2">
+                  <Button
+                    pressed={viewMode === 'comparison'}
+                    onClick={() => setViewMode('comparison')}
+                    icon={ViewIcon}
+                  >
+                    Side-by-Side
+                  </Button>
+                  <Button
+                    pressed={viewMode === 'preview'}
+                    onClick={() => setViewMode('preview')}
+                  >
+                    Preview Only
+                  </Button>
+                </InlineStack>
               </InlineStack>
-            </InlineStack>
+
+              <Divider />
+
+              <InlineStack align="space-between" blockAlign="center">
+                <Text variant="headingSm" as="h3">Field Selection</Text>
+                <InlineStack gap="2">
+                  <Button
+                    size="slim"
+                    onClick={() => setFieldsToApply({
+                      title: true,
+                      description: true,
+                      seoTitle: true,
+                      seoDescription: true,
+                      bulletPoints: true
+                    })}
+                  >
+                    Select All
+                  </Button>
+                  <Button
+                    size="slim"
+                    onClick={() => setFieldsToApply({
+                      title: false,
+                      description: false,
+                      seoTitle: false,
+                      seoDescription: false,
+                      bulletPoints: false
+                    })}
+                  >
+                    Deselect All
+                  </Button>
+                </InlineStack>
+              </InlineStack>
+            </BlockStack>
           </Card>
+
+          {/* Selection Status */}
+          {(() => {
+            const selectedCount = Object.values(fieldsToApply).filter(Boolean).length
+            const totalCount = Object.keys(fieldsToApply).length
+            return (
+              <Banner
+                tone={selectedCount === 0 ? 'warning' : 'info'}
+              >
+                <Text as="p">
+                  {selectedCount === 0
+                    ? 'No fields selected. Please select at least one field to apply.'
+                    : `${selectedCount} of ${totalCount} fields selected for update`}
+                </Text>
+              </Banner>
+            )
+          })()}
 
           {/* Confidence Score */}
           {enhancedContent.confidence && (
