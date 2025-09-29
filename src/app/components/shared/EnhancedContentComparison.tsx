@@ -22,6 +22,7 @@ import {
   XIcon,
   ViewIcon,
 } from '@shopify/polaris-icons'
+import styles from './EnhancedContentComparison.module.css'
 
 interface EnhancedContentComparisonProps {
   active: boolean
@@ -267,24 +268,25 @@ export default function EnhancedContentComparison({
   }
 
   return (
-    <Modal
-      open={active}
-      onClose={onClose}
-      title="Review Enhanced Content"
-      primaryAction={{
-        content: 'Apply Changes',
-        onAction: handleApplyChanges,
-        loading: loading,
-      }}
-      secondaryActions={[
-        {
-          content: 'Cancel',
-          onAction: onClose,
-        },
-      ]}
-      large
-    >
-      <Modal.Section>
+    <div className={styles.wideModalWrapper}>
+      <Modal
+        open={active}
+        onClose={onClose}
+        title="Review Enhanced Content"
+        primaryAction={{
+          content: 'Apply Changes',
+          onAction: handleApplyChanges,
+          loading: loading,
+        }}
+        secondaryActions={[
+          {
+            content: 'Cancel',
+            onAction: onClose,
+          },
+        ]}
+        large
+      >
+        <Modal.Section>
         <BlockStack gap="4">
           {/* View Mode Toggle */}
           <Card>
@@ -378,5 +380,6 @@ export default function EnhancedContentComparison({
         </BlockStack>
       </Modal.Section>
     </Modal>
+    </div>
   )
 }
