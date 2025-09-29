@@ -10,7 +10,8 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const corsHeaders = createCorsHeaders(request)
-  const productId = params.id
+  // Decode the URL-encoded product ID
+  const productId = decodeURIComponent(params.id)
 
   try {
     const body = await request.json()
