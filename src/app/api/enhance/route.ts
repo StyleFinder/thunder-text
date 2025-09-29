@@ -137,22 +137,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate enhanced description using AI
-    const enhancedContent = await aiGenerator.enhanceProductDescription({
-      productId,
-      images: processedImages,
-      template,
-      productDetails: {
-        parentCategory,
-        availableSizing,
-        fabricMaterial,
-        occasionUse,
-        targetAudience,
-        keyFeatures,
-        additionalNotes
-      },
-      enhancementOptions,
+    // Use the standard generateProductDescription method which exists
+    const enhancedContent = await aiGenerator.generateProductDescription({
+      images: processedImages.length > 0 ? processedImages : ['https://via.placeholder.com/400'],
+      productTitle: `Product ${productId}`,
+      category: parentCategory || template || 'general',
+      brandVoice: `${targetAudience || 'General audience'}. ${occasionUse || ''}`.trim(),
+      targetLength: 'long',
+      keywords: keyFeatures ? keyFeatures.split('\n').filter(k => k.trim()) : [],
       storeId
     })
+
+    // Transform the response to match enhancement format
+    const formattedContent = {
+      title: enhancementOptions.generateTitle ? enhancedContent.title : undefined,
+      description: enhancementOptions.enhanceDescription ? enhancedContent.description : undefined,
+      seoTitle: enhancementOptions.generateSEO ? enhancedContent.metaDescription.substring(0, 60) : undefined,
+      seoDescription: enhancementOptions.generateSEO ? enhancedContent.metaDescription : undefined,
+      bulletPoints: enhancedContent.bulletPoints,
+      confidence: enhancedContent.confidence,
+      tokenUsage: enhancedContent.tokenUsage,
+      processingTime: enhancedContent.processingTime
+    }
 
     // Update usage count for non-Shopify requests
     if (!isShopifyRequest) {
@@ -172,7 +178,7 @@ export async function POST(request: NextRequest) {
           store_id: store.id,
           period: today,
           generations_count: 1,
-          ai_tokens_used: enhancedContent.tokenUsage?.total || 0,
+          ai_tokens_used: formattedContent.tokenUsage?.total || 0,
         }, {
           onConflict: 'store_id,period',
         })
@@ -180,7 +186,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: enhancedContent,
+      data: formattedContent,
       usage: {
         current: isShopifyRequest ? 0 : store.current_usage + 1,
         limit: store.usage_limits,
