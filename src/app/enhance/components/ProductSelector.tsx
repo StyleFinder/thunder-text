@@ -16,7 +16,6 @@ import {
   Spinner,
   Pagination,
   Select,
-  Filters,
   ChoiceList
 } from '@shopify/polaris'
 import { SearchIcon, ProductIcon } from '@shopify/polaris-icons'
@@ -153,12 +152,6 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
     setCurrentPage(1) // Reset to first page when searching
   }
 
-  const clearFilters = () => {
-    setSearchQuery('')
-    setStatusFilter(['active'])
-    setSortOrder('updated_at_desc')
-    setCurrentPage(1)
-  }
 
   const statusOptions = [
     { label: 'Active', value: 'active' },
@@ -210,32 +203,6 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
     )
   }
 
-  const filters = [
-    {
-      key: 'status',
-      label: 'Product status',
-      filter: (
-        <ChoiceList
-          title="Product status"
-          titleHidden
-          choices={statusOptions}
-          selected={statusFilter}
-          onChange={setStatusFilter}
-          allowMultiple
-        />
-      ),
-      shortcut: true
-    }
-  ]
-
-  const appliedFilters = statusFilter.length > 0 && statusFilter.length < statusOptions.length
-    ? statusFilter.map(status => ({
-        key: `status-${status}`,
-        label: statusOptions.find(option => option.value === status)?.label || status,
-        onRemove: () => setStatusFilter(statusFilter.filter(s => s !== status))
-      }))
-    : []
-
   console.log('🎨 ProductSelector rendering with:', {
     loading,
     error,
@@ -256,9 +223,6 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
                   Choose an existing product to enhance its description with AI
                 </Text>
               </BlockStack>
-              <Button onClick={() => router.push('/create')}>
-                Create New Product
-              </Button>
             </InlineStack>
 
             {/* Search and Filters */}
@@ -284,15 +248,6 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
                 />
               </InlineStack>
             </InlineStack>
-
-            <Filters
-              queryValue={searchQuery}
-              filters={filters}
-              appliedFilters={appliedFilters}
-              onQueryChange={handleSearchChange}
-              onQueryClear={() => handleSearchChange('')}
-              onClearAll={clearFilters}
-            />
           </BlockStack>
         </Box>
 
@@ -309,7 +264,7 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
             >
               <Text as="p">
                 {searchQuery 
-                  ? `No products match "${searchQuery}". Try adjusting your search or filters.`
+                  ? `No products match "${searchQuery}". Try adjusting your search.`
                   : 'Start by creating a product to enhance with AI-powered descriptions.'
                 }
               </Text>
