@@ -214,7 +214,12 @@ export default function UnifiedEnhancePage() {
 
       // Add images
       if (useExistingImages && productData?.images) {
-        productData.images.forEach(img => formData.append('existingImages', img.src))
+        productData.images.forEach(img => {
+          // Images have 'url' property
+          if (img.url) {
+            formData.append('existingImages', img.url)
+          }
+        })
       }
       uploadedFiles.forEach(file => formData.append('images', file.file))
 
@@ -370,7 +375,7 @@ export default function UnifiedEnhancePage() {
             <ProductImageUpload
               title="Product Images"
               description="Add new images or use existing ones for AI analysis"
-              existingImages={productData?.images?.map(img => img.src) || []}
+              existingImages={productData?.images?.map(img => img.url) || []}
               useExistingImages={useExistingImages}
               onFilesAdded={setUploadedFiles}
               onExistingImagesToggle={setUseExistingImages}
