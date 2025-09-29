@@ -64,14 +64,16 @@ export function ProductDetailsForm({
           disabled={disabled}
         />
 
-        <Select
-          label="Available Sizing"
-          options={sizingOptions}
-          value={availableSizing}
-          onChange={setAvailableSizing}
-          helpText="Select the available size range for this product"
-          disabled={disabled}
-        />
+        {mode === 'create' && (
+          <Select
+            label="Available Sizing"
+            options={sizingOptions}
+            value={availableSizing}
+            onChange={setAvailableSizing}
+            helpText="Select the available size range for this product"
+            disabled={disabled}
+          />
+        )}
 
         <Select
           label="Product Category Template"

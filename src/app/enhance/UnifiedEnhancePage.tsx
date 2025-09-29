@@ -212,12 +212,28 @@ export default function UnifiedEnhancePage() {
       }
       uploadedFiles.forEach(file => formData.append('images', file.file))
 
+      // Extract sizing information from existing variants
+      let detectedSizing = ''
+      if (productData?.variants && productData.variants.length > 0) {
+        const sizes = productData.variants
+          .filter(v => v.selectedOptions?.some(opt => opt.name.toLowerCase() === 'size'))
+          .map(v => {
+            const sizeOption = v.selectedOptions?.find(opt => opt.name.toLowerCase() === 'size')
+            return sizeOption?.value
+          })
+          .filter(Boolean)
+
+        if (sizes.length > 0) {
+          detectedSizing = [...new Set(sizes)].join(', ')
+        }
+      }
+
       // Add form data
       formData.append('productId', productId || '')
       formData.append('shop', shop || '')
       formData.append('template', selectedTemplate)
       formData.append('parentCategory', parentCategory)
-      formData.append('availableSizing', availableSizing)
+      formData.append('availableSizing', detectedSizing || 'Not specified')
       formData.append('fabricMaterial', fabricMaterial)
       formData.append('occasionUse', occasionUse)
       formData.append('targetAudience', targetAudience)
