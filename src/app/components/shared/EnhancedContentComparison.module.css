@@ -1,22 +1,41 @@
 /* Wide modal styles for enhanced content comparison */
+.wideModalWrapper :global(.Polaris-Modal-Dialog) {
+  max-width: 95vw !important;
+  width: 95vw !important;
+}
+
+.wideModalWrapper :global(.Polaris-Modal-Dialog__Modal) {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
 .wideModalWrapper :global(.Polaris-Modal-Dialog__Container) {
-  max-width: 1400px !important;
-  width: 90vw !important;
+  max-width: 100% !important;
+  width: 100% !important;
 }
 
 .wideModalWrapper :global(.Polaris-Modal-Section) {
   max-width: 100% !important;
+  width: 100% !important;
 }
 
 .wideModalWrapper :global(.Polaris-Modal-Header) {
   max-width: 100% !important;
+  width: 100% !important;
 }
 
 .wideModalWrapper :global(.Polaris-Modal-Footer) {
   max-width: 100% !important;
+  width: 100% !important;
 }
 
 /* Ensure content uses full width */
 .wideModalWrapper :global(.Polaris-InlineGrid) {
   max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* Override any max-width constraints */
+.wideModalWrapper :global([class*="Modal"]) {
+  max-width: none !important;
 }
