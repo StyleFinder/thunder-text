@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { authenticatedFetch } from '@/lib/shopify/api-client'
 import {
   Card,
@@ -48,10 +48,12 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [statusFilter, setStatusFilter] = useState<string[]>(['active', 'draft'])
   const [sortOrder, setSortOrder] = useState('updated_at_desc')
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null)
 
   const pageSize = 12
 
@@ -154,7 +156,26 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
   const handleSearchChange = (value: string) => {
     setSearchQuery(value)
     setCurrentPage(1) // Reset to first page when searching
+
+    // Debounce the search query
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current)
+    }
+
+    debounceTimeout.current = setTimeout(() => {
+      console.log('🔍 Setting debounced search query:', value)
+      setDebouncedSearchQuery(value)
+    }, 500) // 500ms delay
   }
+
+  // Clear timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current)
+      }
+    }
+  }, [])
 
 
   const statusOptions = [
