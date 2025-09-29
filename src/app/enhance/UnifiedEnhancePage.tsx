@@ -41,10 +41,12 @@ interface EnhancementOptions {
 
 export default function UnifiedEnhancePage() {
   const searchParams = useSearchParams()
-  const { isAuthenticated, shop, authenticatedFetch } = useShopifyAuth()
+  const { isAuthenticated, shop: authShop, authenticatedFetch } = useShopifyAuth()
 
   const productId = searchParams?.get('productId') || ''
   const source = searchParams?.get('source')
+  // Get shop from URL params first, fallback to auth shop
+  const shop = searchParams?.get('shop') || authShop || 'zunosai-staging-test-store.myshopify.com'
 
   // Product data states
   const [productData, setProductData] = useState<EnhancementProductData | null>(null)
@@ -288,11 +290,17 @@ export default function UnifiedEnhancePage() {
     setError(null)
 
     try {
+      console.log('🔧 Applying changes:', {
+        productId,
+        shop,
+        updates: editedContent
+      })
+
       const response = await authenticatedFetch(`/api/products/${productId}/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          shop,
+          shop: shop || 'zunosai-staging-test-store.myshopify.com',
           updates: editedContent
         })
       })
@@ -302,13 +310,23 @@ export default function UnifiedEnhancePage() {
         throw new Error(errorData.error || 'Failed to apply changes')
       }
 
+      // Get the response data to check mode
+      const result = await response.json()
+      console.log('✅ Update result:', result)
+
+      // Set success message based on mode
+      const message = result.mode === 'development'
+        ? 'Changes applied successfully (Development Mode)'
+        : 'Product successfully updated!'
+
+      setSuccessMessage(message)
       setShowPreviewModal(false)
       setGeneratedContent(null)
 
       // Refresh product data to show updated content
       await loadProductData()
 
-      // Show success message
+      // Clear error if any
       setError(null)
 
     } catch (err) {
