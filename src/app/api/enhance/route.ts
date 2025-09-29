@@ -157,15 +157,21 @@ export async function POST(request: NextRequest) {
       ? processedImages
       : ['https://via.placeholder.com/400x400/cccccc/969696?text=No+Image']
 
-    // Generate enhanced description using AI
-    // Use the standard generateProductDescription method which exists
-    const enhancedContent = await aiGenerator.generateProductDescription({
+    // Generate enhanced description using AI with enhancement-specific method
+    const enhancedContent = await aiGenerator.enhanceProductDescription({
+      productId,
       images: imagesToProcess,
-      productTitle: `Product ${productId}`,
-      category: parentCategory || template || 'general',
-      brandVoice: `${targetAudience || 'General audience'}. ${occasionUse || ''}`.trim(),
-      targetLength: 'long',
-      keywords: keyFeatures ? keyFeatures.split('\n').filter(k => k.trim()) : [],
+      template: template || 'general',
+      productDetails: {
+        parentCategory: parentCategory || 'general',
+        availableSizing: availableSizing || '',
+        fabricMaterial: fabricMaterial || '',
+        occasionUse: occasionUse || '',
+        targetAudience: targetAudience || '',
+        keyFeatures: keyFeatures || '',
+        additionalNotes: additionalNotes || ''
+      },
+      enhancementOptions,
       storeId
     })
 
@@ -173,9 +179,10 @@ export async function POST(request: NextRequest) {
     const formattedContent = {
       title: enhancementOptions.generateTitle ? enhancedContent.title : undefined,
       description: enhancementOptions.enhanceDescription ? enhancedContent.description : undefined,
-      seoTitle: enhancementOptions.generateSEO ? enhancedContent.metaDescription.substring(0, 60) : undefined,
-      seoDescription: enhancementOptions.generateSEO ? enhancedContent.metaDescription : undefined,
-      bulletPoints: enhancedContent.bulletPoints,
+      seoTitle: enhancementOptions.generateSEO ? enhancedContent.seoTitle : undefined,
+      seoDescription: enhancementOptions.generateSEO ? enhancedContent.seoDescription : undefined,
+      promoText: enhancementOptions.createPromo ? enhancedContent.promoText : undefined,
+      bulletPoints: enhancedContent.bulletPoints || [],
       confidence: enhancedContent.confidence,
       tokenUsage: enhancedContent.tokenUsage,
       processingTime: enhancedContent.processingTime

@@ -17,7 +17,6 @@ import {
   Banner,
   Spinner,
   Modal,
-  Frame,
   ProgressBar,
   Checkbox,
   Badge,
@@ -445,13 +444,12 @@ export default function UnifiedEnhancePage() {
   }
 
   return (
-    <Frame>
-      <Page
-        title="Enhance Product Description"
-        subtitle={productData ? productData.title : 'AI-powered enhancement'}
-        backAction={{ content: 'Back to Dashboard', url: `/dashboard?shop=${shop}` }}
-      >
-        <Layout>
+    <Page
+      title="Enhance Product Description"
+      subtitle={productData ? productData.title : 'AI-powered enhancement'}
+      backAction={{ content: 'Back to Dashboard', url: `/dashboard?shop=${shop}` }}
+    >
+      <Layout>
           {error && (
             <Layout.Section>
               <Banner tone="critical" onDismiss={() => setError(null)}>
@@ -725,12 +723,12 @@ export default function UnifiedEnhancePage() {
             title: productData?.title || '',
             description: productData?.descriptionHtml || '',
             seoTitle: productData?.seo?.title || '',
-            seoDescription: productData?.seo?.description || ''
+            seoDescription: productData?.seo?.description || '',
+            promoText: ''  // Products don't have existing promo text
           }}
           enhancedContent={generatedContent || {}}
           loading={applying}
         />
-      </Page>
-    </Frame>
+    </Page>
   )
 }
