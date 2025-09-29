@@ -54,7 +54,7 @@ async function exchangeToken(sessionToken: string, shop: string): Promise<TokenE
     subject_token: sessionToken,
     subject_token_type: 'urn:ietf:params:oauth:token-type:id_token',
     grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
-    requested_token_type: 'urn:shopify:params:oauth:token-type:online-access-token',
+    requested_token_type: 'urn:shopify:params:oauth:token-type:offline-access-token',
   }
 
   try {
@@ -283,7 +283,7 @@ export async function authenticateRequest(
 
     // Store the token in database for future use
     const { saveShopToken } = await import('./shopify/token-manager')
-    await saveShopToken(shop, tokenData.access_token, 'online')
+    await saveShopToken(shop, tokenData.access_token, 'offline')
 
     return {
       admin: null, // We'll create GraphQL client when needed

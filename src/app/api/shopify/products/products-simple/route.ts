@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createCorsHeaders } from '@/lib/middleware/cors'
 import { getProducts } from '@/lib/shopify/get-products'
-
-// Temporary hardcoded token for testing
-// This proves the app has access if we use the right token
-const TEMP_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN || ''
+import { getAccessToken } from '@/lib/shopify-auth'
 
 export async function GET(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request)
@@ -13,22 +10,33 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const shop = searchParams.get('shop') || 'zunosai-staging-test-store.myshopify.com'
 
+    // Get session token from Authorization header
+    const authHeader = request.headers.get('authorization')
+    const sessionToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined
+
     // Ensure shop has .myshopify.com
     const fullShop = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
 
-    console.log('🔍 Simple Products API - fetching for:', fullShop)
+    console.log('🔍 Products API - fetching for:', fullShop)
+    console.log('🔐 Has session token:', !!sessionToken)
 
-    // Use hardcoded token for now
-    if (!TEMP_ACCESS_TOKEN) {
+    // Get access token using proper Token Exchange
+    let accessToken: string
+    try {
+      accessToken = await getAccessToken(fullShop, sessionToken)
+      console.log('✅ Got access token via Token Exchange')
+    } catch (error) {
+      console.error('❌ Failed to get access token:', error)
       return NextResponse.json({
         success: false,
-        error: 'SHOPIFY_ACCESS_TOKEN not configured in environment',
-        hint: 'Add SHOPIFY_ACCESS_TOKEN to your Vercel environment variables'
-      }, { status: 500, headers: corsHeaders })
+        error: 'Authentication failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        hint: 'Ensure the app is properly installed and you have a valid session token'
+      }, { status: 401, headers: corsHeaders })
     }
 
-    // Get products using the simple direct approach
-    const { products, pageInfo } = await getProducts(fullShop, TEMP_ACCESS_TOKEN)
+    // Get products using the obtained access token
+    const { products, pageInfo } = await getProducts(fullShop, accessToken)
 
     console.log(`✅ Found ${products.length} products`)
 
@@ -44,7 +52,7 @@ export async function GET(request: NextRequest) {
     }, { headers: corsHeaders })
 
   } catch (error) {
-    console.error('❌ Error in simple products API:', error)
+    console.error('❌ Error in products API:', error)
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch products',

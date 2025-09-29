@@ -70,13 +70,21 @@ function ProductsContent() {
         params.append('cursor', nextCursor)
       }
 
-      // Try the simple products endpoint that uses a hardcoded token
-      // This bypasses Token Exchange issues for now
-      const response = await fetch(`/api/shopify/products-simple?${params}`, {
-        headers: {
+      // Use the authenticatedFetch provided by ShopifyAuthProvider
+      // This automatically includes the session token for proper authentication
+      let response
+      if (authenticatedFetch) {
+        response = await authenticatedFetch(`/api/shopify/products?${params}`)
+      } else {
+        // Fallback to regular fetch with session token if available
+        const headers: HeadersInit = {
           'Content-Type': 'application/json',
         }
-      })
+        if (sessionToken) {
+          headers['Authorization'] = `Bearer ${sessionToken}`
+        }
+        response = await fetch(`/api/shopify/products?${params}`, { headers })
+      }
       const data = await response.json()
 
       if (!data.success) {
