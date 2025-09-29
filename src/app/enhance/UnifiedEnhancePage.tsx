@@ -300,13 +300,13 @@ export default function UnifiedEnhancePage() {
         updates: editedContent
       })
 
-      // Encode the product ID for the URL
-      const encodedProductId = encodeURIComponent(productId)
-      const response = await authenticatedFetch(`/api/products/${encodedProductId}/update`, {
+      // Use the new endpoint structure with productId in the body
+      const response = await authenticatedFetch(`/api/products/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           shop: shop || 'zunosai-staging-test-store.myshopify.com',
+          productId: productId,
           updates: editedContent
         })
       })

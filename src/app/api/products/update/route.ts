@@ -5,19 +5,14 @@ export async function OPTIONS(request: NextRequest) {
   return handleCorsPreflightRequest(request)
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request)
-  // Decode the URL-encoded product ID
-  const productId = decodeURIComponent(params.id)
 
   try {
     const body = await request.json()
-    const { shop, updates } = body
+    const { shop, productId, updates } = body
 
-    if (!shop || !updates) {
+    if (!shop || !productId || !updates) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400, headers: corsHeaders }
