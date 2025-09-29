@@ -56,9 +56,9 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
   // According to Shopify docs, plain text search is case-insensitive across multiple fields
   let formattedQuery = null
   if (searchQuery && searchQuery.trim()) {
-    // Try with wildcards for partial matching
-    // This should help match "chic" to "Chic Black Sleeveless Tie-Front Top"
-    formattedQuery = `*${searchQuery.trim()}*`
+    // Use plain text search without wildcards
+    // Shopify should handle partial matching automatically
+    formattedQuery = searchQuery.trim()
   }
 
   console.log('🔍 Shopify search query:', {
@@ -67,10 +67,9 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     shop: shop
   })
 
-  // Increase the number of products fetched when searching
-  // to ensure we get all matching products
+  // When not searching, fetch all products; when searching, let Shopify filter
   const variables = {
-    first: searchQuery ? 50 : 20,
+    first: 100, // Always fetch more products
     query: formattedQuery
   }
 
@@ -87,7 +86,7 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     })
 
   // Transform to simpler format
-  const products = response.products.edges.map((edge: any) => ({
+  let products = response.products.edges.map((edge: any) => ({
     id: edge.node.id,
     title: edge.node.title,
     handle: edge.node.handle,
@@ -99,6 +98,29 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
       altText: imgEdge.node.altText
     })) || [],
   }))
+
+  // If we have a search query and Shopify didn't filter properly,
+  // apply client-side filtering as a fallback
+  if (searchQuery && searchQuery.trim()) {
+    const searchLower = searchQuery.toLowerCase().trim()
+    const filteredProducts = products.filter((product: any) => {
+      const titleMatch = product.title.toLowerCase().includes(searchLower)
+      const descriptionMatch = product.description?.toLowerCase().includes(searchLower)
+      return titleMatch || descriptionMatch
+    })
+
+    console.log('🔍 Client-side filtering:', {
+      originalCount: products.length,
+      filteredCount: filteredProducts.length,
+      searchTerm: searchLower
+    })
+
+    // Only use client-side filtering if it reduces the results
+    // (meaning Shopify didn't filter at all)
+    if (filteredProducts.length < products.length) {
+      products = filteredProducts
+    }
+  }
 
   return {
     products,
