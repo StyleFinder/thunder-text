@@ -113,15 +113,25 @@ export async function POST(request: NextRequest) {
     const enhancementOptions = JSON.parse(formData.get('enhancementOptions') as string || '{}')
 
     // Extract images - both existing URLs and new uploads
-    const existingImages = formData.getAll('existingImages').map(img => String(img))
+    const existingImages = formData.getAll('existingImages').map(img => String(img)).filter(img => img && img.length > 0)
     const uploadedImages = formData.getAll('images') as File[]
+
+    console.log('📸 Processing images:', {
+      existingImagesCount: existingImages.length,
+      existingImages: existingImages,
+      uploadedImagesCount: uploadedImages.length
+    })
 
     // Process uploaded images if any
     const processedImages = []
 
-    // Add existing images
+    // Add existing images (validate URLs first)
     for (const imgUrl of existingImages) {
-      processedImages.push(imgUrl)
+      if (imgUrl && imgUrl.length > 0 && (imgUrl.startsWith('http') || imgUrl.startsWith('data:'))) {
+        processedImages.push(imgUrl)
+      } else {
+        console.warn('⚠️ Invalid image URL skipped:', imgUrl)
+      }
     }
 
     // Process new uploads (in a real app, you'd upload these to storage first)
@@ -136,10 +146,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Log final processed images for debugging
+    console.log('🎨 Final processed images:', {
+      count: processedImages.length,
+      images: processedImages.slice(0, 2) // Log first 2 URLs for debugging
+    })
+
+    // Ensure we have valid images for AI processing
+    const imagesToProcess = processedImages.length > 0
+      ? processedImages
+      : ['https://via.placeholder.com/400x400/cccccc/969696?text=No+Image']
+
     // Generate enhanced description using AI
     // Use the standard generateProductDescription method which exists
     const enhancedContent = await aiGenerator.generateProductDescription({
-      images: processedImages.length > 0 ? processedImages : ['https://via.placeholder.com/400'],
+      images: imagesToProcess,
       productTitle: `Product ${productId}`,
       category: parentCategory || template || 'general',
       brandVoice: `${targetAudience || 'General audience'}. ${occasionUse || ''}`.trim(),

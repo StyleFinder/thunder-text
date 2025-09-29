@@ -213,13 +213,18 @@ export default function UnifiedEnhancePage() {
       const formData = new FormData()
 
       // Add images
-      if (useExistingImages && productData?.images) {
+      if (useExistingImages && productData?.images && productData.images.length > 0) {
         productData.images.forEach(img => {
-          // Images have 'url' property
-          if (img.url) {
+          // Images have 'url' property, validate before adding
+          if (img.url && img.url.length > 0 && (img.url.startsWith('http') || img.url.startsWith('//'))) {
             formData.append('existingImages', img.url)
+            console.log('✅ Adding existing image:', img.url)
+          } else {
+            console.warn('⚠️ Skipping invalid image URL:', img)
           }
         })
+      } else {
+        console.log('📸 No existing images to add or useExistingImages is false')
       }
       uploadedFiles.forEach(file => formData.append('images', file.file))
 
