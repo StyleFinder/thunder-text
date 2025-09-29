@@ -20,7 +20,9 @@ import {
   Frame,
   ProgressBar,
   Checkbox,
-  Badge
+  Badge,
+  Select,
+  Divider
 } from '@shopify/polaris'
 import { ProductImageUpload, type UploadedFile } from '@/app/components/shared/ProductImageUpload'
 import { ProductDetailsForm } from '@/app/components/shared/ProductDetailsForm'
@@ -325,8 +327,35 @@ export default function UnifiedEnhancePage() {
       setShowPreviewModal(false)
       setGeneratedContent(null)
 
-      // Refresh product data to show updated content
-      await loadProduct()
+      // In development mode, update the local state directly
+      // since the backend doesn't actually persist changes
+      if (result.mode === 'development' && productData) {
+        const updatedData = { ...productData }
+
+        // Update fields that were provided
+        if (editedContent.title !== undefined) {
+          updatedData.title = editedContent.title
+        }
+        if (editedContent.description !== undefined) {
+          updatedData.description = editedContent.description
+          updatedData.descriptionHtml = editedContent.description
+        }
+
+        // Update SEO fields if they exist
+        if (editedContent.seoTitle !== undefined || editedContent.seoDescription !== undefined) {
+          updatedData.seo = {
+            ...updatedData.seo,
+            title: editedContent.seoTitle !== undefined ? editedContent.seoTitle : updatedData.seo?.title,
+            description: editedContent.seoDescription !== undefined ? editedContent.seoDescription : updatedData.seo?.description
+          }
+        }
+
+        setProductData(updatedData)
+        console.log('📝 Updated local product data with applied changes:', updatedData)
+      } else {
+        // In production, refresh from the server
+        await loadProduct()
+      }
 
       // Clear error if any
       setError(null)
@@ -399,21 +428,66 @@ export default function UnifiedEnhancePage() {
           )}
 
           {productData && (
-            <Layout.Section>
-              <Card>
-                <BlockStack gap="200">
-                  <InlineStack gap="200" align="space-between">
-                    <Text as="h3" variant="headingMd">{productData.title}</Text>
-                    <Badge tone="info">{productData.status}</Badge>
-                  </InlineStack>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    SKU: {productData.variants[0]?.sku || 'N/A'} |
-                    Type: {productData.productType || 'N/A'} |
-                    Vendor: {productData.vendor || 'N/A'}
-                  </Text>
-                </BlockStack>
-              </Card>
-            </Layout.Section>
+            <>
+              <Layout.Section>
+                <Card>
+                  <BlockStack gap="200">
+                    <InlineStack gap="200" align="space-between">
+                      <Text as="h3" variant="headingMd">{productData.title}</Text>
+                      <Badge tone="info">{productData.status}</Badge>
+                    </InlineStack>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      SKU: {productData.variants[0]?.sku || 'N/A'} |
+                      Type: {productData.productType || 'N/A'} |
+                      Vendor: {productData.vendor || 'N/A'}
+                    </Text>
+                  </BlockStack>
+                </Card>
+              </Layout.Section>
+
+              <Layout.Section>
+                <Card>
+                  <BlockStack gap="300">
+                    <Text as="h3" variant="headingMd">Current Description</Text>
+                    <Box paddingBlock="200">
+                      {productData.description ? (
+                        <div
+                          dangerouslySetInnerHTML={{
+                            __html: productData.descriptionHtml || productData.description.replace(/\n/g, '<br />')
+                          }}
+                          style={{
+                            lineHeight: 1.6,
+                            whiteSpace: 'pre-wrap'
+                          }}
+                        />
+                      ) : (
+                        <Text as="p" tone="subdued">No description available</Text>
+                      )}
+                    </Box>
+                    {productData.seo && (productData.seo.title || productData.seo.description) && (
+                      <>
+                        <Divider />
+                        <BlockStack gap="200">
+                          <Text as="h4" variant="headingSm">SEO Information</Text>
+                          {productData.seo.title && (
+                            <Box>
+                              <Text as="p" variant="bodySm" tone="subdued">SEO Title:</Text>
+                              <Text as="p">{productData.seo.title}</Text>
+                            </Box>
+                          )}
+                          {productData.seo.description && (
+                            <Box>
+                              <Text as="p" variant="bodySm" tone="subdued">SEO Description:</Text>
+                              <Text as="p">{productData.seo.description}</Text>
+                            </Box>
+                          )}
+                        </BlockStack>
+                      </>
+                    )}
+                  </BlockStack>
+                </Card>
+              </Layout.Section>
+            </>
           )}
 
           <Layout.Section>
