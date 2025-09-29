@@ -27,8 +27,8 @@ scopes = "read_content,read_files,read_inventory,read_metaobject_definitions,rea
 optional_scopes = [ ]
 use_legacy_install_flow = false
 
-[auth]
-redirect_urls = [ "https://thunder-text-nine.vercel.app/api/auth/callback/shopify" ]
+# Modern Shopify-managed installation - no auth section needed
+# Token Exchange handles authentication without redirects
 
 [pos]
 embedded = false
