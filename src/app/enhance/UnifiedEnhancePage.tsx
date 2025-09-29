@@ -248,7 +248,7 @@ export default function UnifiedEnhancePage() {
       formData.append('additionalNotes', additionalNotes)
       formData.append('enhancementOptions', JSON.stringify(enhancementOptions))
 
-      const response = await fetch('/api/enhance', {
+      const response = await authenticatedFetch('/api/enhance', {
         method: 'POST',
         body: formData
       })

@@ -212,6 +212,127 @@ CRITICAL: The "description" field must strictly follow the custom prompt guideli
     const result = tokens * costPerToken
     return parseFloat(result.toFixed(6))
   }
+
+  // Enhanced product description for existing products
+  async enhanceProductDescription(request: {
+    productId: string
+    images: string[]
+    template: string
+    productDetails: {
+      parentCategory: string
+      availableSizing: string
+      fabricMaterial: string
+      occasionUse: string
+      targetAudience: string
+      keyFeatures: string
+      additionalNotes: string
+    }
+    enhancementOptions: {
+      generateTitle: boolean
+      enhanceDescription: boolean
+      generateSEO: boolean
+      createPromo: boolean
+    }
+    storeId: string
+  }): Promise<any> {
+    const startTime = Date.now()
+
+    try {
+      // Build enhancement prompt
+      const prompt = `You are an expert e-commerce copywriter specializing in creating compelling product descriptions.
+
+Based on the provided product images and details, generate enhanced content with these specifications:
+
+Product Details:
+- Category: ${request.productDetails.parentCategory}
+- Template Type: ${request.template}
+- Fabric/Material: ${request.productDetails.fabricMaterial || 'Not specified'}
+- Occasion/Use: ${request.productDetails.occasionUse || 'Not specified'}
+- Target Audience: ${request.productDetails.targetAudience || 'General'}
+- Available Sizing: ${request.productDetails.availableSizing || 'Not specified'}
+- Key Features: ${request.productDetails.keyFeatures || 'To be determined from images'}
+- Additional Notes: ${request.productDetails.additionalNotes || 'None'}
+
+Enhancement Options:
+${request.enhancementOptions.generateTitle ? '- Generate a compelling product title' : ''}
+${request.enhancementOptions.enhanceDescription ? '- Create an enhanced product description with HTML formatting' : ''}
+${request.enhancementOptions.generateSEO ? '- Generate SEO title and meta description' : ''}
+${request.enhancementOptions.createPromo ? '- Create promotional copy for marketing' : ''}
+
+Please provide the output in the following JSON format:
+{
+  ${request.enhancementOptions.generateTitle ? '"title": "New compelling product title",' : ''}
+  ${request.enhancementOptions.enhanceDescription ? '"description": "Enhanced HTML-formatted product description with bullet points and features",' : ''}
+  ${request.enhancementOptions.generateSEO ? '"seoTitle": "SEO-optimized title (60 chars max)", "seoDescription": "SEO meta description (160 chars max)",' : ''}
+  ${request.enhancementOptions.createPromo ? '"promoText": "Short promotional copy for marketing",' : ''}
+  "confidence": 0.95
+}`
+
+      // Call GPT-4 Vision with images
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: prompt,
+              },
+              ...request.images.slice(0, 5).map(image => ({
+                type: "image_url" as const,
+                image_url: {
+                  url: image,
+                  detail: "high" as const,
+                },
+              })),
+            ],
+          },
+        ],
+        max_tokens: 1500,
+        temperature: 0.7,
+      })
+
+      const content = response.choices[0]?.message?.content
+      if (!content) {
+        throw new Error('No content generated from OpenAI')
+      }
+
+      // Parse the response
+      let parsed
+      try {
+        // Extract JSON from the response
+        const jsonMatch = content.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          parsed = JSON.parse(jsonMatch[0])
+        } else {
+          parsed = JSON.parse(content)
+        }
+      } catch (e) {
+        console.error('Failed to parse enhanced content:', e)
+        // Fallback structure
+        parsed = {
+          description: content,
+          confidence: 0.7
+        }
+      }
+
+      const processingTime = Date.now() - startTime
+
+      return {
+        ...parsed,
+        processingTime,
+        tokenUsage: {
+          prompt: response.usage?.prompt_tokens || 0,
+          completion: response.usage?.completion_tokens || 0,
+          total: response.usage?.total_tokens || 0,
+        },
+      }
+    } catch (error) {
+      console.error('AI enhancement error:', error)
+      throw new Error(`Failed to enhance product description: ${error.message}`)
+    }
+  }
 }
 
 // Singleton instance for the application
