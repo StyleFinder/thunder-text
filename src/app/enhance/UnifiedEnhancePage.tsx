@@ -55,6 +55,8 @@ export default function UnifiedEnhancePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [updateResult, setUpdateResult] = useState<any>(null)
 
   // Image states
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
@@ -351,11 +353,13 @@ export default function UnifiedEnhancePage() {
       // Set success message based on mode
       const message = result.mode === 'development'
         ? 'Changes applied successfully (Development Mode)'
-        : 'Product successfully updated!'
+        : 'Updates have been successfully applied to the product.'
 
       setSuccessMessage(message)
+      setUpdateResult(result)
       setShowPreviewModal(false)
       setGeneratedContent(null)
+      setShowSuccessModal(true)
 
       // Clear error if any
       setError(null)
@@ -419,12 +423,71 @@ export default function UnifiedEnhancePage() {
             </Layout.Section>
           )}
 
-          {successMessage && (
-            <Layout.Section>
-              <Banner tone="success" onDismiss={() => setSuccessMessage(null)}>
-                <p>{successMessage}</p>
-              </Banner>
-            </Layout.Section>
+          {/* Success Modal */}
+          {showSuccessModal && (
+            <Modal
+              open={true}
+              onClose={() => {
+                setShowSuccessModal(false)
+                setSuccessMessage(null)
+                setUpdateResult(null)
+              }}
+              title="Product Updated Successfully"
+              primaryAction={{
+                content: 'View Product',
+                onAction: () => {
+                  // Build the Shopify admin URL
+                  const shopDomain = shop?.replace('.myshopify.com', '')
+                  const adminUrl = `https://admin.shopify.com/store/${shopDomain}/products/${productId?.split('/').pop()}`
+                  window.open(adminUrl, '_blank')
+                }
+              }}
+              secondaryActions={[
+                {
+                  content: 'Continue Editing',
+                  onAction: () => {
+                    setShowSuccessModal(false)
+                    setSuccessMessage(null)
+                    setUpdateResult(null)
+                  }
+                }
+              ]}
+            >
+              <Modal.Section>
+                <BlockStack gap="400">
+                  <Banner tone="success">
+                    <p>{successMessage}</p>
+                  </Banner>
+                  {updateResult?.shopifyResult && (
+                    <Box>
+                      <Text variant="bodySm" as="p">
+                        The following changes have been applied:
+                      </Text>
+                      <Box paddingBlockStart="200">
+                        {updateResult.updates.title && (
+                          <Text variant="bodySm" as="p">• Title updated</Text>
+                        )}
+                        {updateResult.updates.description && (
+                          <Text variant="bodySm" as="p">• Description updated</Text>
+                        )}
+                        {updateResult.updates.seoTitle && (
+                          <Text variant="bodySm" as="p">• SEO title updated</Text>
+                        )}
+                        {updateResult.updates.seoDescription && (
+                          <Text variant="bodySm" as="p">• SEO meta description updated</Text>
+                        )}
+                        {updateResult.updates.bulletPoints && (
+                          <Text variant="bodySm" as="p">• Bullet points added</Text>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+                  <Text variant="bodySm" as="p" tone="subdued">
+                    Click "View Product" to see the updated product in your Shopify admin, or "Continue Editing" to make more changes.
+                  </Text>
+                </BlockStack>
+              </Modal.Section>
+            </Modal>
           )}
 
           {productData && (
