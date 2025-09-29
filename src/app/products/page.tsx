@@ -70,8 +70,13 @@ function ProductsContent() {
         params.append('cursor', nextCursor)
       }
 
-      // Use authenticatedFetch from ShopifyAuthProvider
-      const response = await authenticatedFetch(`/api/shopify/products?${params}`)
+      // Try the simple products endpoint that uses a hardcoded token
+      // This bypasses Token Exchange issues for now
+      const response = await fetch(`/api/shopify/products-simple?${params}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
       const data = await response.json()
 
       if (!data.success) {

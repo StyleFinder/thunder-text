@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       }, { status: 401, headers: corsHeaders })
     }
 
-    // Make a simple GraphQL query to get products
+    // First, let's check what access we have
     const { GraphQLClient } = await import('graphql-request')
     const client = new GraphQLClient(
       `https://${shop}/admin/api/2025-01/graphql.json`,
@@ -49,9 +49,30 @@ export async function GET(request: NextRequest) {
       }
     )
 
+    // Check the shop and current app installation
+    const shopQuery = `
+      query {
+        shop {
+          name
+          id
+        }
+        currentAppInstallation {
+          id
+          accessScopes {
+            handle
+          }
+        }
+      }
+    `
+
+    console.log('📊 Checking shop and scopes...')
+    const shopResponse = await client.request(shopQuery)
+    console.log('🏪 Shop info:', JSON.stringify(shopResponse, null, 2))
+
+    // Now try to get products with different query approaches
     const query = `
       query {
-        products(first: 10) {
+        products(first: 10, query: "status:active") {
           edges {
             node {
               id
@@ -77,19 +98,44 @@ export async function GET(request: NextRequest) {
       status: edge.node.status
     })) || []
 
+    // Also try REST API as a comparison
+    let restProducts = []
+    try {
+      const restUrl = `https://${shop}/admin/api/2025-01/products.json?limit=10`
+      const restResponse = await fetch(restUrl, {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json',
+        }
+      })
+      const restData = await restResponse.json()
+      restProducts = restData.products || []
+      console.log('🔄 REST API products count:', restProducts.length)
+    } catch (restError) {
+      console.error('REST API error:', restError)
+    }
+
     return NextResponse.json({
       success: true,
       debug: {
         shop,
         hasSessionToken: !!sessionToken,
         hasAccessToken: !!accessToken,
-        productCount,
+        accessScopes: shopResponse.currentAppInstallation?.accessScopes || [],
+        shopName: shopResponse.shop?.name,
+        graphqlProductCount: productCount,
+        restProductCount: restProducts.length,
         hasMoreProducts: response.products?.pageInfo?.hasNextPage || false
       },
       products,
+      restProducts: restProducts.slice(0, 3).map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        status: p.status
+      })),
       message: productCount > 0
         ? `Found ${productCount} products in store`
-        : 'No products found in store - store might be empty'
+        : 'Check if app has read_products scope and is properly installed'
     }, { headers: corsHeaders })
 
   } catch (error) {
