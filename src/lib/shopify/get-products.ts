@@ -50,12 +50,26 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     }
   `
 
+  // Add wildcards for partial matching if search query exists
+  // This allows searching for "chic" to match "Chicago", "chic", "Chic Style", etc.
+  const formattedQuery = searchQuery ? `*${searchQuery}*` : null
+
+  console.log('🔍 Shopify search query:', {
+    original: searchQuery,
+    formatted: formattedQuery
+  })
+
   const variables = {
     first: 20,
-    query: searchQuery || null
+    query: formattedQuery
   }
 
   const response = await client.request(query, variables)
+
+  console.log('🔍 Shopify API response:', {
+    productsFound: response.products?.edges?.length || 0,
+    hasNextPage: response.products?.pageInfo?.hasNextPage
+  })
 
   // Transform to simpler format
   const products = response.products.edges.map((edge: any) => ({
