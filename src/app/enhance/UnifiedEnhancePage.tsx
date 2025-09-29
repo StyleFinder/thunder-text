@@ -42,7 +42,7 @@ export default function UnifiedEnhancePage() {
   const searchParams = useSearchParams()
   const { isAuthenticated, shop, authenticatedFetch } = useShopifyAuth()
 
-  const productId = searchParams?.get('productId')
+  const productId = searchParams?.get('productId') || ''
   const source = searchParams?.get('source')
 
   // Product data states
@@ -86,7 +86,7 @@ export default function UnifiedEnhancePage() {
   useEffect(() => {
     async function loadProduct() {
       // Only require productId and shop - authentication handled by the page wrapper
-      if (!productId || !shop) {
+      if (!productId || productId.trim() === '' || !shop) {
         console.log('Missing required params:', { productId, shop })
         return
       }
@@ -300,7 +300,15 @@ export default function UnifiedEnhancePage() {
   }
 
   if (!productId) {
-    return <ProductSelector />
+    return <ProductSelector
+      shop={shop || 'zunosai-staging-test-store'}
+      onProductSelect={(id) => {
+        // Navigate to enhance page with selected product
+        const params = new URLSearchParams(window.location.search)
+        params.set('productId', id)
+        window.location.href = `/enhance?${params}`
+      }}
+    />
   }
 
   if (loading) {
