@@ -85,21 +85,20 @@ export default function UnifiedEnhancePage() {
   const [applying, setApplying] = useState(false)
   const [progress, setProgress] = useState(0)
 
-  // Load product data
-  useEffect(() => {
-    async function loadProduct() {
-      // Only require productId and shop - authentication handled by the page wrapper
-      if (!productId || productId.trim() === '' || !shop) {
-        console.log('Missing required params:', { productId, shop })
-        return
-      }
+  // Load product data function
+  const loadProduct = useCallback(async () => {
+    // Only require productId and shop - authentication handled by the page wrapper
+    if (!productId || productId.trim() === '' || !shop) {
+      console.log('Missing required params:', { productId, shop })
+      return
+    }
 
-      setLoading(true)
-      setError(null)
+    setLoading(true)
+    setError(null)
 
-      try {
-        console.log('Loading product data for:', { productId, shop })
-        const data = await fetchProductDataForEnhancement(productId, shop)
+    try {
+      console.log('Loading product data for:', { productId, shop })
+      const data = await fetchProductDataForEnhancement(productId, shop, null, authenticatedFetch)
         if (data) {
           setProductData(data)
 
@@ -178,9 +177,12 @@ export default function UnifiedEnhancePage() {
         setLoading(false)
       }
     }
+  }, [productId, shop, authenticatedFetch])
 
+  // Load product data on mount and when dependencies change
+  useEffect(() => {
     loadProduct()
-  }, [productId, shop]) // Removed isAuthenticated dependency to ensure loading happens
+  }, [loadProduct])
 
   // Category options
   const parentCategoryOptions = [
@@ -324,7 +326,7 @@ export default function UnifiedEnhancePage() {
       setGeneratedContent(null)
 
       // Refresh product data to show updated content
-      await loadProductData()
+      await loadProduct()
 
       // Clear error if any
       setError(null)
