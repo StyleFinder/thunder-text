@@ -68,10 +68,14 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
         shop: shopValue,
         page: currentPage.toString(),
         limit: pageSize.toString(),
-        query: searchQuery,
         status: statusFilter.join(','),
         sort: sortOrder
       })
+
+      // Only add query param if there's a debounced search query
+      if (debouncedSearchQuery) {
+        params.append('query', debouncedSearchQuery)
+      }
 
       // Check for demo mode in URL
       const urlParams = new URLSearchParams(window.location.search)
@@ -83,7 +87,7 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
       console.log('🔍 Fetching products with params:', {
         shop: shopValue,
         page: currentPage,
-        query: searchQuery,
+        query: debouncedSearchQuery || 'none',
         demo: urlParams.get('demo')
       })
 
