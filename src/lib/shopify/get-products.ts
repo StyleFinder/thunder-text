@@ -4,7 +4,7 @@ import { GraphQLClient } from 'graphql-request'
  * Simple function to get products directly from Shopify
  * Uses the access token stored after app installation
  */
-export async function getProducts(shop: string, accessToken: string) {
+export async function getProducts(shop: string, accessToken: string, searchQuery?: string) {
   const client = new GraphQLClient(
     `https://${shop}/admin/api/2025-01/graphql.json`,
     {
@@ -16,8 +16,8 @@ export async function getProducts(shop: string, accessToken: string) {
   )
 
   const query = `
-    query getProducts($first: Int!) {
-      products(first: $first) {
+    query getProducts($first: Int!, $query: String) {
+      products(first: $first, query: $query) {
         edges {
           node {
             id
@@ -51,7 +51,8 @@ export async function getProducts(shop: string, accessToken: string) {
   `
 
   const variables = {
-    first: 20
+    first: 20,
+    query: searchQuery || null
   }
 
   const response = await client.request(query, variables)

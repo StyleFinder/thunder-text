@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const shop = searchParams.get('shop') || 'zunosai-staging-test-store.myshopify.com'
+    const query = searchParams.get('query') || undefined
 
     // Get session token from Authorization header
     const authHeader = request.headers.get('authorization')
@@ -19,6 +20,7 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 Products API - fetching for:', fullShop)
     console.log('🔐 Has session token:', !!sessionToken)
+    console.log('🔍 Search query:', query || 'none')
 
     // Get access token using proper Token Exchange
     let accessToken: string
@@ -36,9 +38,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Get products using the obtained access token
-    const { products, pageInfo } = await getProducts(fullShop, accessToken)
+    const { products, pageInfo } = await getProducts(fullShop, accessToken, query)
 
-    console.log(`✅ Found ${products.length} products`)
+    console.log(`✅ Found ${products.length} products${query ? ` matching "${query}"` : ''}`)
 
     return NextResponse.json({
       success: true,
