@@ -157,15 +157,22 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
     setSearchQuery(value)
     setCurrentPage(1) // Reset to first page when searching
 
-    // Debounce the search query
+    // Clear any existing timeout
     if (debounceTimeout.current) {
       clearTimeout(debounceTimeout.current)
     }
 
-    debounceTimeout.current = setTimeout(() => {
-      console.log('🔍 Setting debounced search query:', value)
-      setDebouncedSearchQuery(value)
-    }, 500) // 500ms delay
+    // If the search is cleared (empty string), update immediately
+    if (value === '') {
+      console.log('🔍 Clearing search query')
+      setDebouncedSearchQuery('')
+    } else {
+      // Otherwise, debounce the search query
+      debounceTimeout.current = setTimeout(() => {
+        console.log('🔍 Setting debounced search query:', value)
+        setDebouncedSearchQuery(value)
+      }, 500) // 500ms delay
+    }
   }
 
   // Clear timeout on unmount
