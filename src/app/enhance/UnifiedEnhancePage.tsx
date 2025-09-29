@@ -170,12 +170,11 @@ export default function UnifiedEnhancePage() {
           }
         }
       }
-      } catch (err) {
-        console.error('Error loading product:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load product')
-      } finally {
-        setLoading(false)
-      }
+    } catch (err) {
+      console.error('Error loading product:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load product')
+    } finally {
+      setLoading(false)
     }
   }, [productId, shop, authenticatedFetch])
 
