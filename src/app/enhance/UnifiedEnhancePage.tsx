@@ -30,7 +30,7 @@ import { AdditionalInfoForm } from '@/app/components/shared/AdditionalInfoForm'
 import EnhancedContentComparison from '@/app/components/shared/EnhancedContentComparison'
 import { type ProductCategory } from '@/lib/prompts'
 import { fetchProductDataForEnhancement, type EnhancementProductData } from '@/lib/shopify/product-enhancement'
-import { useShopifyAuth } from '../components/ShopifyAuthProvider'
+import { useShopifyAuth } from '@/app/components/ShopifyAuthProvider'
 import { ProductSelector } from './components/ProductSelector'
 
 interface EnhancementOptions {
@@ -103,7 +103,13 @@ export default function UnifiedEnhancePage() {
 
     try {
       console.log('Loading product data for:', { productId, shop })
-      const data = await fetchProductDataForEnhancement(productId, shop, null, authenticatedFetch)
+      // Determine fetch method based on context
+      const isTestStore = shop.includes('zunosai-staging-test-store')
+      const isEmbedded = typeof window !== 'undefined' && window.top !== window.self
+
+      // Pass authenticatedFetch only for embedded context
+      const fetchMethod = (isTestStore && !isEmbedded) ? undefined : authenticatedFetch
+      const data = await fetchProductDataForEnhancement(productId, shop, null, fetchMethod)
       if (data) {
         setProductData(data)
 
@@ -267,10 +273,24 @@ export default function UnifiedEnhancePage() {
       formData.append('additionalNotes', additionalNotes)
       formData.append('enhancementOptions', JSON.stringify(enhancementOptions))
 
-      const response = await authenticatedFetch('/api/enhance', {
-        method: 'POST',
-        body: formData
-      })
+      // Determine if we should use authenticatedFetch or regular fetch
+      const isTestStore = shop?.includes('zunosai-staging-test-store')
+      const isEmbedded = typeof window !== 'undefined' && window.top !== window.self
+
+      let response
+      if (isTestStore && !isEmbedded) {
+        // Direct fetch for test store in non-embedded mode
+        response = await fetch('/api/enhance', {
+          method: 'POST',
+          body: formData
+        })
+      } else {
+        // Use authenticatedFetch for embedded context
+        response = await authenticatedFetch('/api/enhance', {
+          method: 'POST',
+          body: formData
+        })
+      }
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -303,15 +323,34 @@ export default function UnifiedEnhancePage() {
       })
 
       // Use the new endpoint structure with productId in the body
-      const response = await authenticatedFetch(`/api/products/update`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shop: shop || 'zunosai-staging-test-store.myshopify.com',
-          productId: productId,
-          updates: editedContent
+      // For non-embedded context with test store, use regular fetch with test store auth
+      const isTestStore = shop?.includes('zunosai-staging-test-store')
+      const isEmbedded = typeof window !== 'undefined' && window.top !== window.self
+
+      let response
+      if (isTestStore && !isEmbedded) {
+        // Direct fetch for test store in non-embedded mode
+        response = await fetch(`/api/products/update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            shop: shop || 'zunosai-staging-test-store.myshopify.com',
+            productId: productId,
+            updates: editedContent
+          })
         })
-      })
+      } else {
+        // Use authenticatedFetch for embedded context
+        response = await authenticatedFetch(`/api/products/update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            shop: shop || 'zunosai-staging-test-store.myshopify.com',
+            productId: productId,
+            updates: editedContent
+          })
+        })
+      }
 
       // Parse the response body once
       const result = await response.json()
