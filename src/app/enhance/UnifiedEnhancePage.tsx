@@ -25,6 +25,7 @@ import {
 import { ProductImageUpload, type UploadedFile } from '@/app/components/shared/ProductImageUpload'
 import { ProductDetailsForm } from '@/app/components/shared/ProductDetailsForm'
 import { AdditionalInfoForm } from '@/app/components/shared/AdditionalInfoForm'
+import EnhancedContentComparison from '@/app/components/shared/EnhancedContentComparison'
 import { type ProductCategory } from '@/lib/prompts'
 import { fetchProductDataForEnhancement, type EnhancementProductData } from '@/lib/shopify/product-enhancement'
 import { useShopifyAuth } from '../components/ShopifyAuthProvider'
@@ -282,8 +283,9 @@ export default function UnifiedEnhancePage() {
     }
   }
 
-  const handleApplyChanges = async () => {
+  const handleApplyChanges = async (editedContent: any) => {
     setApplying(true)
+    setError(null)
 
     try {
       const response = await authenticatedFetch(`/api/products/${productId}/update`, {
@@ -291,16 +293,26 @@ export default function UnifiedEnhancePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           shop,
-          updates: generatedContent
+          updates: editedContent
         })
       })
 
-      if (!response.ok) throw new Error('Failed to apply changes')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to apply changes')
+      }
 
       setShowPreviewModal(false)
-      // Show success banner
+      setGeneratedContent(null)
+
+      // Refresh product data to show updated content
+      await loadProductData()
+
+      // Show success message
+      setError(null)
 
     } catch (err) {
+      console.error('Error applying changes:', err)
       setError(err instanceof Error ? err.message : 'Failed to apply changes')
     } finally {
       setApplying(false)
@@ -354,6 +366,14 @@ export default function UnifiedEnhancePage() {
             <Layout.Section>
               <Banner tone="critical" onDismiss={() => setError(null)}>
                 <p>{error}</p>
+              </Banner>
+            </Layout.Section>
+          )}
+
+          {successMessage && (
+            <Layout.Section>
+              <Banner tone="success" onDismiss={() => setSuccessMessage(null)}>
+                <p>{successMessage}</p>
               </Banner>
             </Layout.Section>
           )}
@@ -481,47 +501,22 @@ export default function UnifiedEnhancePage() {
           )}
         </Layout>
 
-        <Modal
-          open={showPreviewModal}
-          onClose={() => setShowPreviewModal(false)}
-          title="Preview Enhanced Content"
-          primaryAction={{
-            content: 'Apply Changes',
-            onAction: handleApplyChanges,
-            loading: applying
+        <EnhancedContentComparison
+          active={showPreviewModal}
+          onClose={() => {
+            setShowPreviewModal(false)
+            setError(null)
           }}
-          secondaryActions={[
-            {
-              content: 'Cancel',
-              onAction: () => setShowPreviewModal(false)
-            }
-          ]}
-        >
-          <Modal.Section>
-            {generatedContent && (
-              <BlockStack gap="400">
-                {generatedContent.title && (
-                  <div>
-                    <Text as="h3" variant="headingMd">New Title</Text>
-                    <Text as="p" variant="bodyMd">{generatedContent.title}</Text>
-                  </div>
-                )}
-                {generatedContent.description && (
-                  <div>
-                    <Text as="h3" variant="headingMd">Enhanced Description</Text>
-                    <div dangerouslySetInnerHTML={{ __html: generatedContent.description }} />
-                  </div>
-                )}
-                {generatedContent.seoTitle && (
-                  <div>
-                    <Text as="h3" variant="headingMd">SEO Title</Text>
-                    <Text as="p" variant="bodyMd">{generatedContent.seoTitle}</Text>
-                  </div>
-                )}
-              </BlockStack>
-            )}
-          </Modal.Section>
-        </Modal>
+          onApply={handleApplyChanges}
+          originalContent={{
+            title: productData?.title || '',
+            description: productData?.descriptionHtml || '',
+            seoTitle: productData?.seo?.title || '',
+            seoDescription: productData?.seo?.description || ''
+          }}
+          enhancedContent={generatedContent || {}}
+          loading={applying}
+        />
       </Page>
     </Frame>
   )
