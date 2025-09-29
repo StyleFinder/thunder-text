@@ -38,11 +38,36 @@ export class AIDescriptionGenerator {
     request: ProductDescriptionRequest
   ): Promise<ProductDescriptionResponse> {
     const startTime = Date.now()
-    
+
     try {
+      // Validate and filter images
+      const validImages = request.images.filter(img => {
+        if (!img || typeof img !== 'string' || img.length === 0) {
+          console.warn('⚠️ Skipping invalid image:', img)
+          return false
+        }
+        if (!img.startsWith('http') && !img.startsWith('data:') && !img.startsWith('//')) {
+          console.warn('⚠️ Skipping non-URL image:', img)
+          return false
+        }
+        return true
+      })
+
+      console.log('🎨 OpenAI API - Processing images:', {
+        originalCount: request.images.length,
+        validCount: validImages.length,
+        firstImage: validImages[0]?.substring(0, 100)
+      })
+
+      // Ensure we have at least one image
+      if (validImages.length === 0) {
+        console.log('🔴 No valid images provided, using placeholder')
+        validImages.push('https://via.placeholder.com/400x400/cccccc/969696?text=No+Image')
+      }
+
       // Build the prompt based on request parameters and custom prompts
       const prompt = await this.buildPrompt(request)
-      
+
       // Analyze images using GPT-4o with vision
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -54,7 +79,7 @@ export class AIDescriptionGenerator {
                 type: "text",
                 text: prompt,
               },
-              ...request.images.map(image => ({
+              ...validImages.map(image => ({
                 type: "image_url" as const,
                 image_url: {
                   url: image,
