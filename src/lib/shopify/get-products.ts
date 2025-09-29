@@ -50,9 +50,15 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     }
   `
 
-  // Add wildcards for partial matching if search query exists
-  // This allows searching for "chic" to match "Chicago", "chic", "Chic Style", etc.
-  const formattedQuery = searchQuery ? `*${searchQuery}*` : null
+  // Format search query for better matching
+  // Shopify's default search should handle partial matching in titles
+  // For "chic" to match "Chic Black Sleeveless Tie-Front Top"
+  let formattedQuery = null
+  if (searchQuery && searchQuery.trim()) {
+    // Use plain text search which searches across multiple fields
+    // Shopify handles case-insensitive matching automatically
+    formattedQuery = searchQuery.trim()
+  }
 
   console.log('🔍 Shopify search query:', {
     original: searchQuery,
@@ -64,12 +70,14 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     query: formattedQuery
   }
 
-  const response = await client.request(query, variables)
+  try {
+    const response = await client.request(query, variables)
 
-  console.log('🔍 Shopify API response:', {
-    productsFound: response.products?.edges?.length || 0,
-    hasNextPage: response.products?.pageInfo?.hasNextPage
-  })
+    console.log('🔍 Shopify API response:', {
+      productsFound: response.products?.edges?.length || 0,
+      hasNextPage: response.products?.pageInfo?.hasNextPage,
+      firstProduct: response.products?.edges?.[0]?.node?.title || 'none'
+    })
 
   // Transform to simpler format
   const products = response.products.edges.map((edge: any) => ({
@@ -88,5 +96,9 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
   return {
     products,
     pageInfo: response.products.pageInfo
+  }
+  } catch (error) {
+    console.error('🔴 Shopify GraphQL Error:', error)
+    throw error
   }
 }
