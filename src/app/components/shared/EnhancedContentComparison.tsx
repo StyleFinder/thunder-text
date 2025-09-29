@@ -371,7 +371,7 @@ export default function EnhancedContentComparison({
         <BlockStack gap="4">
           {/* View Mode Toggle and Field Selection */}
           <Card>
-            <BlockStack gap="3">
+            <BlockStack gap="2">
               <InlineStack align="space-between" blockAlign="center">
                 <Text variant="headingSm" as="h3">View Mode</Text>
                 <InlineStack gap="2">
@@ -390,8 +390,6 @@ export default function EnhancedContentComparison({
                   </Button>
                 </InlineStack>
               </InlineStack>
-
-              <Divider />
 
               <InlineStack align="space-between" blockAlign="center">
                 <Text variant="headingSm" as="h3">Field Selection</Text>
@@ -426,34 +424,6 @@ export default function EnhancedContentComparison({
               </InlineStack>
             </BlockStack>
           </Card>
-
-          {/* Selection Status */}
-          {(() => {
-            const selectedCount = Object.values(fieldsToApply).filter(Boolean).length
-            const totalCount = Object.keys(fieldsToApply).length
-            return (
-              <Banner
-                tone={selectedCount === 0 ? 'warning' : 'info'}
-              >
-                <Text as="p">
-                  {selectedCount === 0
-                    ? 'No fields selected. Please select at least one field to apply.'
-                    : `${selectedCount} of ${totalCount} fields selected for update`}
-                </Text>
-              </Banner>
-            )
-          })()}
-
-          {/* Confidence Score */}
-          {enhancedContent.confidence && (
-            <Banner
-              tone={enhancedContent.confidence > 0.8 ? 'success' : 'info'}
-            >
-              <Text as="p">
-                AI Confidence: {Math.round(enhancedContent.confidence * 100)}%
-              </Text>
-            </Banner>
-          )}
 
           {/* Content Fields */}
           <BlockStack gap="6">
