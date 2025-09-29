@@ -85,12 +85,17 @@ export default function UnifiedEnhancePage() {
   // Load product data
   useEffect(() => {
     async function loadProduct() {
-      if (!productId || !shop || !isAuthenticated) return
+      // Only require productId and shop - authentication handled by the page wrapper
+      if (!productId || !shop) {
+        console.log('Missing required params:', { productId, shop })
+        return
+      }
 
       setLoading(true)
       setError(null)
 
       try {
+        console.log('Loading product data for:', { productId, shop })
         const data = await fetchProductDataForEnhancement(productId, shop)
         if (data) {
           setProductData(data)
@@ -172,7 +177,7 @@ export default function UnifiedEnhancePage() {
     }
 
     loadProduct()
-  }, [productId, shop, isAuthenticated])
+  }, [productId, shop]) // Removed isAuthenticated dependency to ensure loading happens
 
   // Category options
   const parentCategoryOptions = [
@@ -435,7 +440,9 @@ export default function UnifiedEnhancePage() {
                 disabled={!isFormValid() || generating}
                 loading={generating}
               >
-                {generating ? 'Generating...' : 'Generate Enhanced Description'}
+                {generating ? 'Generating...' :
+                 !productData ? 'Loading Product Data...' :
+                 'Generate Enhanced Description'}
               </Button>
             </InlineStack>
           </Layout.Section>
