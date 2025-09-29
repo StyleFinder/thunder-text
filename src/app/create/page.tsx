@@ -884,37 +884,6 @@ function CreateProductContent() {
               </Banner>
             )}
             
-            {/* Standard Instructions (when not from admin extension) */}
-            {source !== 'admin_extension' && (
-              <>
-                <Banner status="info">
-                  <BlockStack gap="200">
-                    <Text as="h3" variant="headingMd">How to create a new product</Text>
-                    <Text as="p">
-                      1. Upload product images (up to 5)
-                    </Text>
-                    <Text as="p">
-                      2. Fill in product details and sizing
-                    </Text>
-                    <Text as="p">
-                      3. Click "Generate Description" to create AI-powered content
-                    </Text>
-                    <Text as="p">
-                      4. Review and create the product in Shopify
-                    </Text>
-                  </BlockStack>
-                </Banner>
-                
-                <Banner status="warning">
-                  <BlockStack gap="200">
-                    <Text as="h3" variant="headingMd">Looking to update an existing product?</Text>
-                    <Text as="p">
-                      Use the "Update Existing Product" option from the dashboard to generate descriptions for products already in your store.
-                    </Text>
-                  </BlockStack>
-                </Banner>
-              </>
-            )}
           </BlockStack>
         </Layout.Section>
 
@@ -923,7 +892,7 @@ function CreateProductContent() {
             {/* Primary Photos Upload */}
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">Primary Photos (One per color variant)</Text>
+                <Text as="h2" variant="headingMd">Step 1: Primary Photos (One per color variant)</Text>
                 <Text as="p" tone="subdued">
                   Upload one photo for each color variant of your product. These will be used for automatic color detection.
                 </Text>
@@ -1135,7 +1104,7 @@ function CreateProductContent() {
               <Layout.Section variant="oneHalf">
                 <Card>
                   <BlockStack gap="400">
-                    <Text as="h2" variant="headingMd">Product Details</Text>
+                    <Text as="h2" variant="headingMd">Step 2: Product Details</Text>
                     
                     {/* Image Upload Requirement Notice */}
                     {primaryPhotos.length === 0 && (
@@ -1265,7 +1234,7 @@ function CreateProductContent() {
               <Layout.Section variant="oneHalf">
                 <Card>
                   <BlockStack gap="400">
-                    <Text as="h2" variant="headingMd">Additional Information</Text>
+                    <Text as="h2" variant="headingMd">Step 3: Additional Information</Text>
                     
                     <TextField
                       label="Fabric/Material Content"
@@ -1301,7 +1270,7 @@ function CreateProductContent() {
             {/* Additional Features and Notes */}
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">Features & Additional Details</Text>
+                <Text as="h2" variant="headingMd">Step 4: Features & Additional Details</Text>
                 
                 <TextField
                   label="Key Features"
