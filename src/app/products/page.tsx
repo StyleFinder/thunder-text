@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
+import { useShopifyAuth } from '../components/ShopifyAuthProvider'
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic'
@@ -42,9 +43,8 @@ interface ProductsResponse {
 function ProductsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const shop = searchParams?.get('shop')
-  const authenticated = searchParams?.get('authenticated')
-  
+  const { shop, isAuthenticated, authenticatedFetch, sessionToken } = useShopifyAuth()
+
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -54,10 +54,10 @@ function ProductsContent() {
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    if (shop && authenticated) {
+    if (shop && isAuthenticated && authenticatedFetch) {
       fetchProducts()
     }
-  }, [shop, authenticated])
+  }, [shop, isAuthenticated, authenticatedFetch])
 
   const fetchProducts = async (nextCursor?: string) => {
     try {
@@ -70,22 +70,8 @@ function ProductsContent() {
         params.append('cursor', nextCursor)
       }
 
-      // Get session token from sessionStorage for authenticated requests
-      const sessionToken = typeof window !== 'undefined'
-        ? window.sessionStorage.getItem('shopify_session_token')
-        : null
-
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      }
-
-      if (sessionToken) {
-        headers['Authorization'] = `Bearer ${sessionToken}`
-      }
-
-      const response = await fetch(`/api/shopify/products?${params}`, {
-        headers
-      })
+      // Use authenticatedFetch from ShopifyAuthProvider
+      const response = await authenticatedFetch(`/api/shopify/products?${params}`)
       const data = await response.json()
 
       if (!data.success) {

@@ -33,16 +33,16 @@ export default function EmbeddedApp() {
       isAuthenticated
     })
 
-    // Redirect to enhance page when authenticated
+    // Redirect to products page when authenticated
     if (isAuthenticated && shop) {
-      console.log('✅ Authentication successful, redirecting to enhance page')
+      console.log('✅ Authentication successful, redirecting to products page')
       const params = new URLSearchParams({
         shop,
         authenticated: 'true',
         host: searchParams?.get('host') || '',
         embedded: '1'
       })
-      router.push(`/enhance?${params.toString()}`)
+      router.push(`/products?${params.toString()}`)
     }
   }, [isAuthenticated, shop, searchParams, router])
 
