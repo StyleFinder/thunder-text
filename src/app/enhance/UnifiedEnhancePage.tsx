@@ -104,9 +104,10 @@ export default function UnifiedEnhancePage() {
           // Pre-populate sizing from variants
           if (data.variants && data.variants.length > 0) {
             const sizes = data.variants
-              .filter(v => v.selectedOptions?.some(opt => opt.name.toLowerCase() === 'size'))
+              .filter(v => v.selectedOptions && Array.isArray(v.selectedOptions) &&
+                       v.selectedOptions.some(opt => opt && opt.name && opt.name.toLowerCase() === 'size'))
               .map(v => {
-                const sizeOption = v.selectedOptions?.find(opt => opt.name.toLowerCase() === 'size')
+                const sizeOption = v.selectedOptions?.find(opt => opt && opt.name && opt.name.toLowerCase() === 'size')
                 return sizeOption?.value
               })
               .filter(Boolean)
@@ -216,9 +217,10 @@ export default function UnifiedEnhancePage() {
       let detectedSizing = ''
       if (productData?.variants && productData.variants.length > 0) {
         const sizes = productData.variants
-          .filter(v => v.selectedOptions?.some(opt => opt.name.toLowerCase() === 'size'))
+          .filter(v => v.selectedOptions && Array.isArray(v.selectedOptions) &&
+                   v.selectedOptions.some(opt => opt && opt.name && opt.name.toLowerCase() === 'size'))
           .map(v => {
-            const sizeOption = v.selectedOptions?.find(opt => opt.name.toLowerCase() === 'size')
+            const sizeOption = v.selectedOptions?.find(opt => opt && opt.name && opt.name.toLowerCase() === 'size')
             return sizeOption?.value
           })
           .filter(Boolean)
@@ -287,7 +289,9 @@ export default function UnifiedEnhancePage() {
   }
 
   const isFormValid = () => {
-    return (useExistingImages && productData?.images?.length) || uploadedFiles.length > 0
+    // Form is valid as long as we have product data
+    // Images are optional - can use existing, upload new, or generate without images
+    return !!productData
   }
 
   if (!productId) {
