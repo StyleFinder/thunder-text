@@ -53,25 +53,26 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
   `
 
   // Format search query for better matching
-  // According to Shopify docs, plain text search is case-insensitive across multiple fields
+  // According to Shopify docs, we need to use specific field syntax for searches
   let formattedQuery = null
   if (searchQuery && searchQuery.trim()) {
-    // Use plain text search without wildcards
-    // Shopify should handle partial matching automatically
-    formattedQuery = searchQuery.trim()
+    // Use Shopify's search syntax: title:*term* for partial matching
+    // This searches for the term anywhere in the title field
+    formattedQuery = `title:*${searchQuery.trim()}*`
   }
 
   console.log('🔍 Shopify search query:', {
     original: searchQuery,
     formatted: formattedQuery,
     shop: shop,
-    typeOfQuery: typeof searchQuery
+    typeOfQuery: typeof searchQuery,
+    willFilter: !!searchQuery
   })
 
-  // When not searching, fetch all products; when searching, let Shopify filter
+  // Fetch products with optional search query
   const variables = {
-    first: 100, // Always fetch more products
-    query: formattedQuery
+    first: 100, // Fetch more products to ensure we get all matches
+    query: formattedQuery // Will be null if no search, or formatted query if searching
   }
 
   try {
@@ -100,25 +101,37 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     })) || [],
   }))
 
-  // If we have a search query and Shopify didn't filter properly,
-  // apply client-side filtering as a fallback
+  // Apply client-side filtering as an additional layer
+  // This ensures we catch products even if Shopify's search doesn't work perfectly
   if (searchQuery && typeof searchQuery === 'string' && searchQuery.trim()) {
     const searchLower = searchQuery.toLowerCase().trim()
+
+    // Check if Shopify already filtered (if we got fewer than max products)
+    const shopifyFiltered = products.length < 100
+
+    // Always apply client-side filtering for better matching
     const filteredProducts = products.filter((product: any) => {
-      const titleMatch = product.title.toLowerCase().includes(searchLower)
-      const descriptionMatch = product.description?.toLowerCase().includes(searchLower)
-      return titleMatch || descriptionMatch
+      // More flexible matching - check if any word in the search matches
+      const searchWords = searchLower.split(/\s+/)
+      const titleLower = product.title.toLowerCase()
+      const descriptionLower = product.description?.toLowerCase() || ''
+
+      // Check if ANY search word appears in title or description
+      return searchWords.some(word =>
+        titleLower.includes(word) || descriptionLower.includes(word)
+      )
     })
 
     console.log('🔍 Client-side filtering:', {
       originalCount: products.length,
       filteredCount: filteredProducts.length,
       searchTerm: searchLower,
-      titles: products.map((p: any) => p.title)
+      searchWords: searchLower.split(/\s+/),
+      shopifyFiltered,
+      sampleTitles: products.slice(0, 3).map((p: any) => p.title)
     })
 
-    // Always use filtered results when searching
-    // (even if Shopify returns the same number of results)
+    // Use filtered results
     products = filteredProducts
   }
 
