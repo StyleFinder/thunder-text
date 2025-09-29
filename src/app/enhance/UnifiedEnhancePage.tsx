@@ -52,6 +52,7 @@ export default function UnifiedEnhancePage() {
   const [productData, setProductData] = useState<EnhancementProductData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   // Image states
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
