@@ -34,12 +34,14 @@ interface EnhancedContentComparisonProps {
     description?: string
     seoTitle?: string
     seoDescription?: string
+    promoText?: string
   }
   enhancedContent: {
     title?: string
     description?: string
     seoTitle?: string
     seoDescription?: string
+    promoText?: string
     bulletPoints?: string[]
     confidence?: number
   }
@@ -64,6 +66,7 @@ export default function EnhancedContentComparison({
     description: !!enhancedContent.description,
     seoTitle: !!enhancedContent.seoTitle,
     seoDescription: !!enhancedContent.seoDescription,
+    promoText: !!enhancedContent.promoText,
     bulletPoints: !!enhancedContent.bulletPoints && enhancedContent.bulletPoints.length > 0
   })
 
@@ -125,6 +128,9 @@ export default function EnhancedContentComparison({
     }
     if (fieldsToApply.seoDescription && editedContent.seoDescription) {
       contentToApply.seoDescription = editedContent.seoDescription
+    }
+    if (fieldsToApply.promoText && editedContent.promoText) {
+      contentToApply.promoText = editedContent.promoText
     }
     if (fieldsToApply.bulletPoints && editedContent.bulletPoints) {
       contentToApply.bulletPoints = editedContent.bulletPoints
@@ -397,6 +403,7 @@ export default function EnhancedContentComparison({
                       description: true,
                       seoTitle: true,
                       seoDescription: true,
+                      promoText: true,
                       bulletPoints: true
                     })}
                   >
@@ -409,6 +416,7 @@ export default function EnhancedContentComparison({
                       description: false,
                       seoTitle: false,
                       seoDescription: false,
+                      promoText: false,
                       bulletPoints: false
                     })}
                   >
@@ -491,6 +499,19 @@ export default function EnhancedContentComparison({
                   'seoDescription',
                   originalContent.seoDescription,
                   enhancedContent.seoDescription,
+                  true
+                )}
+              </>
+            )}
+
+            {enhancedContent.promoText && (
+              <>
+                <Divider />
+                {renderField(
+                  'Promotional Copy',
+                  'promoText',
+                  originalContent.promoText,
+                  enhancedContent.promoText,
                   true
                 )}
               </>
