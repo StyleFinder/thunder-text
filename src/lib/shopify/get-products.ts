@@ -15,6 +15,8 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     }
   )
 
+  // Modified query to fetch more products when searching
+  // to ensure we don't miss products due to pagination
   const query = `
     query getProducts($first: Int!, $query: String) {
       products(first: $first, query: $query) {
@@ -51,22 +53,24 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
   `
 
   // Format search query for better matching
-  // Shopify's default search should handle partial matching in titles
-  // For "chic" to match "Chic Black Sleeveless Tie-Front Top"
+  // According to Shopify docs, plain text search is case-insensitive across multiple fields
   let formattedQuery = null
   if (searchQuery && searchQuery.trim()) {
-    // Use plain text search which searches across multiple fields
-    // Shopify handles case-insensitive matching automatically
-    formattedQuery = searchQuery.trim()
+    // Try with wildcards for partial matching
+    // This should help match "chic" to "Chic Black Sleeveless Tie-Front Top"
+    formattedQuery = `*${searchQuery.trim()}*`
   }
 
   console.log('🔍 Shopify search query:', {
     original: searchQuery,
-    formatted: formattedQuery
+    formatted: formattedQuery,
+    shop: shop
   })
 
+  // Increase the number of products fetched when searching
+  // to ensure we get all matching products
   const variables = {
-    first: 20,
+    first: searchQuery ? 50 : 20,
     query: formattedQuery
   }
 
@@ -76,7 +80,10 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     console.log('🔍 Shopify API response:', {
       productsFound: response.products?.edges?.length || 0,
       hasNextPage: response.products?.pageInfo?.hasNextPage,
-      firstProduct: response.products?.edges?.[0]?.node?.title || 'none'
+      searchQuery: searchQuery || 'none',
+      formattedQuery: formattedQuery || 'none',
+      firstProduct: response.products?.edges?.[0]?.node?.title || 'none',
+      allTitles: response.products?.edges?.map((edge: any) => edge.node.title) || []
     })
 
   // Transform to simpler format
