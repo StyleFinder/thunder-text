@@ -19,8 +19,8 @@ import {
 import {
   EditIcon,
   CheckIcon,
-  CancelSmallIcon,
-  CompareIcon,
+  XIcon,
+  ViewIcon,
 } from '@shopify/polaris-icons'
 
 interface EnhancedContentComparisonProps {
@@ -158,7 +158,7 @@ export default function EnhancedContentComparison({
                           </Button>
                           <Button
                             size="slim"
-                            icon={CancelSmallIcon}
+                            icon={XIcon}
                             onClick={handleCancel}
                           >
                             Cancel
@@ -216,7 +216,7 @@ export default function EnhancedContentComparison({
                         </Button>
                         <Button
                           size="slim"
-                          icon={CancelSmallIcon}
+                          icon={XIcon}
                           onClick={handleCancel}
                         >
                           Cancel
@@ -294,7 +294,7 @@ export default function EnhancedContentComparison({
                 <Button
                   pressed={viewMode === 'comparison'}
                   onClick={() => setViewMode('comparison')}
-                  icon={CompareIcon}
+                  icon={ViewIcon}
                 >
                   Side-by-Side
                 </Button>
