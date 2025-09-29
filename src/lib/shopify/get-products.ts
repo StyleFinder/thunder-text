@@ -64,7 +64,8 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
   console.log('🔍 Shopify search query:', {
     original: searchQuery,
     formatted: formattedQuery,
-    shop: shop
+    shop: shop,
+    typeOfQuery: typeof searchQuery
   })
 
   // When not searching, fetch all products; when searching, let Shopify filter
@@ -101,7 +102,7 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
 
   // If we have a search query and Shopify didn't filter properly,
   // apply client-side filtering as a fallback
-  if (searchQuery && searchQuery.trim()) {
+  if (searchQuery && typeof searchQuery === 'string' && searchQuery.trim()) {
     const searchLower = searchQuery.toLowerCase().trim()
     const filteredProducts = products.filter((product: any) => {
       const titleMatch = product.title.toLowerCase().includes(searchLower)
@@ -112,14 +113,13 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     console.log('🔍 Client-side filtering:', {
       originalCount: products.length,
       filteredCount: filteredProducts.length,
-      searchTerm: searchLower
+      searchTerm: searchLower,
+      titles: products.map((p: any) => p.title)
     })
 
-    // Only use client-side filtering if it reduces the results
-    // (meaning Shopify didn't filter at all)
-    if (filteredProducts.length < products.length) {
-      products = filteredProducts
-    }
+    // Always use filtered results when searching
+    // (even if Shopify returns the same number of results)
+    products = filteredProducts
   }
 
   return {
