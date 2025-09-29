@@ -300,7 +300,9 @@ export default function UnifiedEnhancePage() {
         updates: editedContent
       })
 
-      const response = await authenticatedFetch(`/api/products/${productId}/update`, {
+      // Encode the product ID for the URL
+      const encodedProductId = encodeURIComponent(productId)
+      const response = await authenticatedFetch(`/api/products/${encodedProductId}/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
