@@ -76,8 +76,8 @@ export class ShopifyAPI {
 
   async updateProduct(productId: string, input: any) {
     const mutation = `
-      mutation productUpdate($id: ID!, $product: ProductInput!) {
-        productUpdate(id: $id, product: $product) {
+      mutation productUpdate($input: ProductInput!) {
+        productUpdate(input: $input) {
           product {
             id
             title
@@ -93,8 +93,10 @@ export class ShopifyAPI {
     `
 
     return this.client.request(mutation, {
-      id: productId,
-      product: input,
+      input: {
+        id: productId,
+        ...input,
+      },
     })
   }
 
