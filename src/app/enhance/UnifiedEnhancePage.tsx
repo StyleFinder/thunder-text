@@ -253,7 +253,11 @@ export default function UnifiedEnhancePage() {
         body: formData
       })
 
-      if (!response.ok) throw new Error('Failed to generate content')
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Enhancement API error:', errorData)
+        throw new Error(errorData.error || `Failed to generate content: ${response.status}`)
+      }
 
       const result = await response.json()
       setGeneratedContent(result.data)
