@@ -36,11 +36,16 @@ interface TokenExchangeResponse {
  * https://shopify.dev/docs/apps/build/authentication-authorization/access-tokens/token-exchange
  */
 async function exchangeToken(sessionToken: string, shop: string): Promise<TokenExchangeResponse> {
-  if (!process.env.SHOPIFY_API_KEY) {
-    throw new Error('SHOPIFY_API_KEY environment variable is not set')
+  // Use NEXT_PUBLIC_SHOPIFY_API_KEY for client ID (visible to client)
+  // This will be the dev app's key in Preview environment
+  const clientId = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || process.env.SHOPIFY_API_KEY
+  const clientSecret = process.env.SHOPIFY_API_SECRET
+
+  if (!clientId) {
+    throw new Error('NEXT_PUBLIC_SHOPIFY_API_KEY or SHOPIFY_API_KEY environment variable is not set')
   }
 
-  if (!process.env.SHOPIFY_API_SECRET) {
+  if (!clientSecret) {
     throw new Error('SHOPIFY_API_SECRET environment variable is not set')
   }
 
@@ -49,8 +54,8 @@ async function exchangeToken(sessionToken: string, shop: string): Promise<TokenE
   const tokenExchangeUrl = `https://${shop}/admin/oauth/access_token`
 
   const requestBody = {
-    client_id: process.env.SHOPIFY_API_KEY,
-    client_secret: process.env.SHOPIFY_API_SECRET,
+    client_id: clientId,
+    client_secret: clientSecret,
     subject_token: sessionToken,
     subject_token_type: 'urn:ietf:params:oauth:token-type:id_token',
     grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
@@ -74,7 +79,7 @@ async function exchangeToken(sessionToken: string, shop: string): Promise<TokenE
         statusText: response.statusText,
         error: errorText,
         url: tokenExchangeUrl,
-        clientId: process.env.SHOPIFY_API_KEY,
+        clientId: clientId,
       })
 
       // Parse error if it's JSON
@@ -248,10 +253,12 @@ export async function authenticateRequest(
     }
 
     // Verify the aud field matches our app's client ID
-    if (process.env.SHOPIFY_API_KEY && payload.aud !== process.env.SHOPIFY_API_KEY) {
+    // Use NEXT_PUBLIC_SHOPIFY_API_KEY which is set per environment
+    const expectedClientId = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || process.env.SHOPIFY_API_KEY
+    if (expectedClientId && payload.aud !== expectedClientId) {
       console.error('❌ Session token audience does not match app client ID:', {
         aud: payload.aud,
-        expected: process.env.SHOPIFY_API_KEY
+        expected: expectedClientId
       })
       throw new Error('Session token audience mismatch')
     }
