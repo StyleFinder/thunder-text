@@ -80,75 +80,108 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
 
       console.log('🔄 Starting token exchange for shop:', shopParam)
 
-      // In embedded context, Shopify pre-loads App Bridge
-      // Wait for it to be available
-      console.log('🌐 Checking for Shopify App Bridge...')
+      // We need to load App Bridge ourselves
+      console.log('📦 Loading Shopify App Bridge script...')
 
-      let attempts = 0;
-      const maxAttempts = 20;
-
-      const checkAppBridge = async () => {
-        attempts++;
-        console.log(`🔍 Attempt ${attempts}: Checking window.shopify...`, {
-          exists: typeof window.shopify !== 'undefined',
-          hasIdToken: window.shopify && typeof window.shopify.idToken === 'function'
+      // Check if script is already in DOM
+      const existingScript = document.querySelector('script[src="https://cdn.shopify.com/shopifycloud/app-bridge.js"]')
+      if (existingScript) {
+        console.log('⏳ App Bridge script already in DOM, waiting for it to load...')
+        // Wait for existing script to load
+        existingScript.addEventListener('load', async () => {
+          console.log('✅ Existing App Bridge script loaded')
+          await handleAppBridgeReady(shopParam)
         })
+        return
+      }
 
-        if (window.shopify && typeof window.shopify.idToken === 'function') {
-          console.log('✅ App Bridge found! Proceeding with token exchange...')
-          try {
-            const sessionToken = await window.shopify.idToken()
-            console.log('📝 Got session token:', sessionToken ? 'Token received' : 'No token')
+      // Create and load App Bridge script
+      const script = document.createElement('script')
+      script.src = 'https://cdn.shopify.com/shopifycloud/app-bridge.js'
+      script.async = false
 
-            if (!sessionToken) {
-              throw new Error('Failed to get session token from Shopify')
-            }
+      const handleAppBridgeReady = async (shop: string) => {
+        try {
+          console.log('🎯 App Bridge ready, checking window.shopify...')
 
-            // Exchange session token for access token
-            const response = await fetch('/api/shopify/token-exchange', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                sessionToken,
-                shop: shopParam
-              })
-            })
+          // Wait a bit for initialization
+          await new Promise(resolve => setTimeout(resolve, 500))
 
-            const result = await response.json()
-
-            if (result.success) {
-              console.log('✅ Token exchange successful')
-              setIsAuthenticated(true)
-              setError(null)
-            } else {
-              console.error('❌ Token exchange failed:', result.error)
-              setError(result.error || 'Authentication failed')
-              setIsAuthenticated(false)
-            }
-          } catch (err) {
-            console.error('❌ Error during token exchange:', err)
-            setError(err instanceof Error ? err.message : 'Authentication error')
-            setIsAuthenticated(false)
-          } finally {
-            setIsLoading(false)
-            setIsExchanging(false)
+          if (typeof window.shopify === 'undefined') {
+            throw new Error('window.shopify not available after script load')
           }
-        } else if (attempts < maxAttempts) {
-          // Keep checking for App Bridge
-          setTimeout(checkAppBridge, 250)
-        } else {
-          console.error('❌ App Bridge not available after 5 seconds')
-          setError('Shopify App Bridge not available')
+
+          if (typeof window.shopify.idToken !== 'function') {
+            console.error('❌ window.shopify.idToken is not a function:', window.shopify)
+            throw new Error('idToken function not available')
+          }
+
+          console.log('✅ window.shopify.idToken is available')
+
+          // Ensure meta tag is present
+          if (!document.querySelector('meta[name="shopify-api-key"]')) {
+            const metaTag = document.createElement('meta')
+            metaTag.name = 'shopify-api-key'
+            metaTag.content = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY!
+            document.head.appendChild(metaTag)
+            console.log('📝 Added shopify-api-key meta tag')
+          }
+
+          const sessionToken = await window.shopify.idToken()
+          console.log('🎫 Session token obtained:', sessionToken ? 'Success' : 'Failed')
+
+          if (!sessionToken) {
+            throw new Error('Failed to get session token')
+          }
+
+          // Exchange token
+          const response = await fetch('/api/shopify/token-exchange', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              sessionToken,
+              shop
+            })
+          })
+
+          const result = await response.json()
+
+          if (result.success) {
+            console.log('✅ Token exchange successful')
+            setIsAuthenticated(true)
+            setError(null)
+          } else {
+            console.error('❌ Token exchange failed:', result.error)
+            setError(result.error || 'Authentication failed')
+            setIsAuthenticated(false)
+          }
+        } catch (err) {
+          console.error('❌ App Bridge error:', err)
+          setError(err instanceof Error ? err.message : 'Failed to initialize App Bridge')
+          setIsAuthenticated(false)
+        } finally {
           setIsLoading(false)
           setIsExchanging(false)
         }
       }
 
-      // Start checking for App Bridge
-      checkAppBridge()
-      return // Exit early since we're handling everything in checkAppBridge
+      script.onload = async () => {
+        console.log('✅ App Bridge script loaded')
+        await handleAppBridgeReady(shopParam)
+      }
+
+      script.onerror = () => {
+        console.error('❌ Failed to load App Bridge script')
+        setError('Failed to load Shopify App Bridge')
+        setIsLoading(false)
+        setIsExchanging(false)
+      }
+
+      document.head.appendChild(script)
+      console.log('📝 App Bridge script added to DOM')
+      return
 
       console.log('🌐 Checking window.shopify:', {
         exists: typeof window.shopify !== 'undefined',
