@@ -41,6 +41,7 @@ export default function HomePage() {
   const { navigateTo } = useNavigation()
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { isAuthenticated: authProviderAuthenticated, shop: authShop, isLoading: authLoading } = useShopifyAuth()
 
   // Get parameters
   const shop = searchParams?.get('shop') || ''
@@ -57,36 +58,70 @@ export default function HomePage() {
       host,
       authenticated,
       isEmbedded,
-      isInIframe: typeof window !== 'undefined' && window.top !== window.self
+      isInIframe: typeof window !== 'undefined' && window.top !== window.self,
+      apiKey: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY ? 'Set' : 'Missing',
+      authProviderStatus: {
+        authenticated: authProviderAuthenticated,
+        loading: authLoading,
+        shop: authShop
+      }
     })
 
     // For embedded context, we rely on ShopifyAuthProvider for authentication
     // No need to redirect - the provider handles Token Exchange
     if (isEmbedded && shop) {
       console.log('📱 Running in embedded context, authentication handled by ShopifyAuthProvider')
+      console.log('🔑 API Key status:', process.env.NEXT_PUBLIC_SHOPIFY_API_KEY ? 'Present' : 'Missing')
+      console.log('🔐 Auth Provider Status:', { authProviderAuthenticated, authLoading, authShop })
     }
-  }, [isEmbedded, shop, host])
+  }, [isEmbedded, shop, host, authProviderAuthenticated, authLoading, authShop])
 
   // For embedded apps, show loading while ShopifyAuthProvider handles auth
-  // We don't redirect to /embedded anymore to avoid loops
-  if (isEmbedded && !authenticated && shop) {
-    return (
-      <Page title="Thunder Text">
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingLg">Loading Thunder Text...</Text>
-                <InlineStack gap="300" align="center">
-                  <Spinner size="small" />
-                  <Text as="span" variant="bodyMd">Initializing app in Shopify admin...</Text>
-                </InlineStack>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-        </Layout>
-      </Page>
-    )
+  // Use authProvider status instead of URL params for embedded context
+  if (isEmbedded && shop) {
+    // If still loading auth, show spinner
+    if (authLoading) {
+      return (
+        <Page title="Thunder Text">
+          <Layout>
+            <Layout.Section>
+              <Card>
+                <BlockStack gap="400">
+                  <Text as="h2" variant="headingLg">Loading Thunder Text...</Text>
+                  <InlineStack gap="300" align="center">
+                    <Spinner size="small" />
+                    <Text as="span" variant="bodyMd">Authenticating with Shopify...</Text>
+                  </InlineStack>
+                </BlockStack>
+              </Card>
+            </Layout.Section>
+          </Layout>
+        </Page>
+      )
+    }
+
+    // If auth failed, show error
+    if (!authProviderAuthenticated && !authLoading) {
+      return (
+        <Page title="Thunder Text">
+          <Layout>
+            <Layout.Section>
+              <Card>
+                <BlockStack gap="400">
+                  <Text as="h2" variant="headingLg">Authentication Required</Text>
+                  <Text as="p" variant="bodyMd">
+                    Please ensure the app is properly installed in your Shopify store.
+                  </Text>
+                  <Text as="p" variant="bodyMd" tone="subdued">
+                    Shop: {shop}
+                  </Text>
+                </BlockStack>
+              </Card>
+            </Layout.Section>
+          </Layout>
+        </Page>
+      )
+    }
   }
 
   return (
