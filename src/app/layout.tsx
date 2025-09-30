@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { PolarisProvider } from './components/PolarisProvider';
 import { AppLayout } from './components/AppLayout';
-import { ShopifyAuthProvider } from './components/ShopifyAuthProvider';
+import { UnifiedShopifyAuth } from './components/UnifiedShopifyAuth';
 import { ServiceWorkerCleanup } from './components/ServiceWorkerCleanup';
 
 const inter = Inter({ subsets: ["latin"] });
@@ -30,12 +30,12 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <PolarisProvider>
-          <ShopifyAuthProvider>
+          <UnifiedShopifyAuth>
             <ServiceWorkerCleanup />
             <AppLayout>
               {children}
             </AppLayout>
-          </ShopifyAuthProvider>
+          </UnifiedShopifyAuth>
         </PolarisProvider>
       </body>
     </html>
