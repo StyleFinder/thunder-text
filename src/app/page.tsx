@@ -60,14 +60,15 @@ export default function HomePage() {
       isInIframe: typeof window !== 'undefined' && window.top !== window.self
     })
 
-    // If embedded and not authenticated, redirect to embedded page for Token Exchange
-    if (isEmbedded && !authenticated && shop) {
-      console.log('🔄 Redirecting to embedded page for authentication')
-      router.push(`/embedded?shop=${shop}&host=${host || ''}`)
+    // For embedded context, we rely on ShopifyAuthProvider for authentication
+    // No need to redirect - the provider handles Token Exchange
+    if (isEmbedded && shop) {
+      console.log('📱 Running in embedded context, authentication handled by ShopifyAuthProvider')
     }
-  }, [isEmbedded, authenticated, shop, host, router])
+  }, [isEmbedded, shop, host])
 
-  // Show Token Exchange for embedded apps without authentication
+  // For embedded apps, show loading while ShopifyAuthProvider handles auth
+  // We don't redirect to /embedded anymore to avoid loops
   if (isEmbedded && !authenticated && shop) {
     return (
       <Page title="Thunder Text">
@@ -75,10 +76,10 @@ export default function HomePage() {
           <Layout.Section>
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingLg">Initializing Thunder Text...</Text>
+                <Text as="h2" variant="headingLg">Loading Thunder Text...</Text>
                 <InlineStack gap="300" align="center">
                   <Spinner size="small" />
-                  <Text as="span" variant="bodyMd">Redirecting to authentication...</Text>
+                  <Text as="span" variant="bodyMd">Initializing app in Shopify admin...</Text>
                 </InlineStack>
               </BlockStack>
             </Card>
