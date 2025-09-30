@@ -39,14 +39,16 @@ async function exchangeToken(sessionToken: string, shop: string): Promise<TokenE
   // Use NEXT_PUBLIC_SHOPIFY_API_KEY for client ID (visible to client)
   // This will be the dev app's key in Preview environment
   const clientId = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || process.env.SHOPIFY_API_KEY
-  const clientSecret = process.env.SHOPIFY_API_SECRET
+
+  // For Preview environment, use DEV_SHOPIFY_API_SECRET if available, otherwise fall back to SHOPIFY_API_SECRET
+  const clientSecret = process.env.DEV_SHOPIFY_API_SECRET || process.env.SHOPIFY_API_SECRET
 
   if (!clientId) {
     throw new Error('NEXT_PUBLIC_SHOPIFY_API_KEY or SHOPIFY_API_KEY environment variable is not set')
   }
 
   if (!clientSecret) {
-    throw new Error('SHOPIFY_API_SECRET environment variable is not set')
+    throw new Error('DEV_SHOPIFY_API_SECRET or SHOPIFY_API_SECRET environment variable is not set')
   }
 
   console.log('🔄 Exchanging session token for access token:', { shop })
@@ -112,11 +114,12 @@ async function exchangeToken(sessionToken: string, shop: string): Promise<TokenE
  * According to Shopify docs, session tokens are signed with the app's client secret
  */
 function verifySessionToken(token: string): boolean {
-  // Session tokens use the CLIENT SECRET, not API SECRET for signing
-  const clientSecret = process.env.SHOPIFY_API_SECRET // This is actually the client secret
+  // Session tokens use the CLIENT SECRET for signing
+  // For Preview environment, use DEV_SHOPIFY_API_SECRET if available
+  const clientSecret = process.env.DEV_SHOPIFY_API_SECRET || process.env.SHOPIFY_API_SECRET
 
   if (!clientSecret) {
-    console.error('❌ SHOPIFY_API_SECRET (client secret) not configured')
+    console.error('❌ DEV_SHOPIFY_API_SECRET or SHOPIFY_API_SECRET (client secret) not configured')
     return false
   }
 
