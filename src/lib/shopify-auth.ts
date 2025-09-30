@@ -121,6 +121,7 @@ function verifySessionToken(token: string): boolean {
   }
 
   console.log('🔐 Using client secret for verification (first 8 chars):', clientSecret.substring(0, 8) + '...')
+  console.log('🔐 Client secret length:', clientSecret.length)
 
   try {
     const [header, payload, signature] = token.split('.')
@@ -235,7 +236,14 @@ export async function authenticateRequest(
 
     // Parse the token to check its validity
     const payload = parseJWT(sessionToken)
-    // Session token parsed successfully
+    console.log('📝 Session token payload:', {
+      iss: payload?.iss,
+      dest: payload?.dest,
+      aud: payload?.aud,
+      sub: payload?.sub,
+      exp: payload?.exp ? new Date(payload.exp * 1000).toISOString() : 'missing',
+      nbf: payload?.nbf ? new Date(payload.nbf * 1000).toISOString() : 'missing'
+    })
 
     // Validate required fields per Shopify documentation
     if (!payload?.iss || !payload?.dest || !payload?.aud || !payload?.sub) {
@@ -255,6 +263,12 @@ export async function authenticateRequest(
     // Verify the aud field matches our app's client ID
     // Use NEXT_PUBLIC_SHOPIFY_API_KEY which is set per environment
     const expectedClientId = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || process.env.SHOPIFY_API_KEY
+    console.log('🔍 Checking audience:', {
+      tokenAud: payload.aud,
+      expectedClientId: expectedClientId,
+      NEXT_PUBLIC_KEY: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY ? 'set' : 'not set',
+      SHOPIFY_API_KEY: process.env.SHOPIFY_API_KEY ? 'set' : 'not set'
+    })
     if (expectedClientId && payload.aud !== expectedClientId) {
       console.error('❌ Session token audience does not match app client ID:', {
         aud: payload.aud,
