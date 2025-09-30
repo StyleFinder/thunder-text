@@ -47,13 +47,13 @@ export function middleware(request: NextRequest) {
     const response = NextResponse.next()
 
     // Set frame-ancestors to allow embedding in Shopify admin
-    // Include all possible Shopify domains
+    // Use wildcard to allow all origins (Shopify embedded apps requirement)
     response.headers.set(
       'Content-Security-Policy',
-      "frame-ancestors 'self' https://*.myshopify.com https://admin.shopify.com https://*.spin.dev;"
+      "frame-ancestors *"
     )
 
-    // Remove X-Frame-Options to allow embedding
+    // Explicitly remove X-Frame-Options - Vercel adds it by default
     response.headers.delete('X-Frame-Options')
 
     // Add additional headers for embedding
