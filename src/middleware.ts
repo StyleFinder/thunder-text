@@ -43,6 +43,8 @@ export function middleware(request: NextRequest) {
       pathname.startsWith('/embed') ||
       pathname.startsWith('/debug-token') ||
       pathname.startsWith('/create') ||
+      pathname.startsWith('/enhance') ||
+      pathname.startsWith('/onboarding') ||
       pathname.startsWith('/products')) {
     const response = NextResponse.next()
 
@@ -73,6 +75,8 @@ export const config = {
     '/settings/:path*',
     '/create/:path*',
     '/products/:path*',
+    '/enhance/:path*',
+    '/onboarding/:path*',
     '/debug-token/:path*',
     '/embed/:path*'
   ]
