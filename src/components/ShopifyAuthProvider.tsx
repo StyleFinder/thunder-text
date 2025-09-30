@@ -80,6 +80,81 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
 
       console.log('🔄 Starting token exchange for shop:', shopParam)
 
+      // In embedded context, Shopify pre-loads App Bridge
+      // Wait for it to be available
+      console.log('🌐 Checking for Shopify App Bridge...')
+
+      let attempts = 0;
+      const maxAttempts = 20;
+
+      const checkAppBridge = async () => {
+        attempts++;
+        console.log(`🔍 Attempt ${attempts}: Checking window.shopify...`, {
+          exists: typeof window.shopify !== 'undefined',
+          hasIdToken: window.shopify && typeof window.shopify.idToken === 'function'
+        })
+
+        if (window.shopify && typeof window.shopify.idToken === 'function') {
+          console.log('✅ App Bridge found! Proceeding with token exchange...')
+          try {
+            const sessionToken = await window.shopify.idToken()
+            console.log('📝 Got session token:', sessionToken ? 'Token received' : 'No token')
+
+            if (!sessionToken) {
+              throw new Error('Failed to get session token from Shopify')
+            }
+
+            // Exchange session token for access token
+            const response = await fetch('/api/shopify/token-exchange', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                sessionToken,
+                shop: shopParam
+              })
+            })
+
+            const result = await response.json()
+
+            if (result.success) {
+              console.log('✅ Token exchange successful')
+              setIsAuthenticated(true)
+              setError(null)
+            } else {
+              console.error('❌ Token exchange failed:', result.error)
+              setError(result.error || 'Authentication failed')
+              setIsAuthenticated(false)
+            }
+          } catch (err) {
+            console.error('❌ Error during token exchange:', err)
+            setError(err instanceof Error ? err.message : 'Authentication error')
+            setIsAuthenticated(false)
+          } finally {
+            setIsLoading(false)
+            setIsExchanging(false)
+          }
+        } else if (attempts < maxAttempts) {
+          // Keep checking for App Bridge
+          setTimeout(checkAppBridge, 250)
+        } else {
+          console.error('❌ App Bridge not available after 5 seconds')
+          setError('Shopify App Bridge not available')
+          setIsLoading(false)
+          setIsExchanging(false)
+        }
+      }
+
+      // Start checking for App Bridge
+      checkAppBridge()
+      return // Exit early since we're handling everything in checkAppBridge
+
+      console.log('🌐 Checking window.shopify:', {
+        exists: typeof window.shopify !== 'undefined',
+        hasIdToken: window.shopify && typeof window.shopify.idToken === 'function'
+      })
+
       // Check if App Bridge is already loaded or loading
       if (window.shopify && typeof window.shopify.idToken === 'function') {
         console.log('✅ App Bridge already loaded, using existing instance')
@@ -142,6 +217,8 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
         setIsExchanging(false)
         return
       }
+
+      console.log('📦 App Bridge not found, loading script...')
 
       // Load Shopify App Bridge
       const script = document.createElement('script')
