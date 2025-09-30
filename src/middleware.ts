@@ -43,8 +43,6 @@ export function middleware(request: NextRequest) {
       pathname.startsWith('/embed') ||
       pathname.startsWith('/debug-token') ||
       pathname.startsWith('/create') ||
-      pathname.startsWith('/enhance') ||
-      pathname.startsWith('/onboarding') ||
       pathname.startsWith('/products')) {
     const response = NextResponse.next()
 
@@ -55,10 +53,8 @@ export function middleware(request: NextRequest) {
       "frame-ancestors 'self' https://*.myshopify.com https://admin.shopify.com https://*.spin.dev;"
     )
 
-    // CRITICAL: Override Vercel's default X-Frame-Options
-    // We use SAMEORIGIN as a fallback for older browsers
-    // Modern browsers will respect CSP frame-ancestors instead
-    response.headers.set('X-Frame-Options', 'SAMEORIGIN')
+    // Remove X-Frame-Options to allow embedding
+    response.headers.delete('X-Frame-Options')
 
     // Add additional headers for embedding
     response.headers.set('X-Content-Type-Options', 'nosniff')
@@ -66,15 +62,7 @@ export function middleware(request: NextRequest) {
     return response
   }
 
-  // For all other routes, still set proper headers
-  const response = NextResponse.next()
-  response.headers.set(
-    'Content-Security-Policy',
-    "frame-ancestors 'self' https://*.myshopify.com https://admin.shopify.com https://*.spin.dev;"
-  )
-  response.headers.set('X-Frame-Options', 'SAMEORIGIN')
-
-  return response
+  return NextResponse.next()
 }
 
 export const config = {
@@ -85,8 +73,6 @@ export const config = {
     '/settings/:path*',
     '/create/:path*',
     '/products/:path*',
-    '/enhance/:path*',
-    '/onboarding/:path*',
     '/debug-token/:path*',
     '/embed/:path*'
   ]
