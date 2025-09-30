@@ -116,7 +116,7 @@ export default function UnifiedEnhancePage() {
         if (data.productType) {
           setParentCategory(data.productType.toLowerCase())
         }
-        if (data.vendor) setTargetAudience(data.vendor)
+        // Don't pre-fill target audience with vendor
 
         // Pre-populate sizing from variants
         if (data.variants && data.variants.length > 0) {
@@ -548,10 +548,10 @@ export default function UnifiedEnhancePage() {
                   <BlockStack gap="300">
                     <Text as="h3" variant="headingMd">Current Description</Text>
                     <Box paddingBlock="200">
-                      {productData.description ? (
+                      {productData.description || productData.descriptionHtml ? (
                         <div
                           dangerouslySetInnerHTML={{
-                            __html: productData.descriptionHtml || productData.description.replace(/\n/g, '<br />')
+                            __html: productData.descriptionHtml || productData.description?.replace(/\n/g, '<br />') || ''
                           }}
                           style={{
                             lineHeight: 1.6,
@@ -602,83 +602,124 @@ export default function UnifiedEnhancePage() {
 
           <Layout.Section>
             <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">Enhancement Options</Text>
-                <BlockStack gap="200">
-                  <Checkbox
-                    label="Generate new title"
-                    checked={enhancementOptions.generateTitle}
-                    onChange={(value) => setEnhancementOptions(prev => ({ ...prev, generateTitle: value }))}
+              <BlockStack gap="600">
+                {/* Enhancement Options Section */}
+                <Box>
+                  <BlockStack gap="400">
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Text as="h2" variant="headingMd">Enhancement Options</Text>
+                      <Button
+                        size="slim"
+                        onClick={() => {
+                          const allSelected = enhancementOptions.generateTitle &&
+                            enhancementOptions.enhanceDescription &&
+                            enhancementOptions.generateSEO &&
+                            enhancementOptions.createPromo
+
+                          setEnhancementOptions({
+                            generateTitle: !allSelected,
+                            enhanceDescription: !allSelected,
+                            generateSEO: !allSelected,
+                            createPromo: !allSelected,
+                            updateImages: false
+                          })
+                        }}
+                      >
+                        {enhancementOptions.generateTitle &&
+                         enhancementOptions.enhanceDescription &&
+                         enhancementOptions.generateSEO &&
+                         enhancementOptions.createPromo ? 'Deselect All' : 'Select All'}
+                      </Button>
+                    </InlineStack>
+                    <BlockStack gap="200">
+                      <Checkbox
+                        label="Generate new title"
+                        checked={enhancementOptions.generateTitle}
+                        onChange={(value) => setEnhancementOptions(prev => ({ ...prev, generateTitle: value }))}
+                      />
+                      <Checkbox
+                        label="Enhance description"
+                        checked={enhancementOptions.enhanceDescription}
+                        onChange={(value) => setEnhancementOptions(prev => ({ ...prev, enhanceDescription: value }))}
+                      />
+                      <Checkbox
+                        label="Generate SEO metadata"
+                        checked={enhancementOptions.generateSEO}
+                        onChange={(value) => setEnhancementOptions(prev => ({ ...prev, generateSEO: value }))}
+                      />
+                      <Checkbox
+                        label="Create promotional copy"
+                        checked={enhancementOptions.createPromo}
+                        onChange={(value) => setEnhancementOptions(prev => ({ ...prev, createPromo: value }))}
+                      />
+                    </BlockStack>
+                  </BlockStack>
+                </Box>
+
+                <Divider />
+
+                {/* Product Details Section */}
+                <Box>
+                  <ProductDetailsForm
+                    mode="enhance"
+                    parentCategory={parentCategory}
+                    setParentCategory={setParentCategory}
+                    parentCategoryOptions={parentCategoryOptions}
+                    availableSizing={availableSizing}
+                    setAvailableSizing={setAvailableSizing}
+                    sizingOptions={sizingOptions}
+                    selectedTemplate={selectedTemplate}
+                    setSelectedTemplate={setSelectedTemplate}
+                    templatePreview={templatePreview}
+                    setTemplatePreview={setTemplatePreview}
                   />
-                  <Checkbox
-                    label="Enhance description"
-                    checked={enhancementOptions.enhanceDescription}
-                    onChange={(value) => setEnhancementOptions(prev => ({ ...prev, enhanceDescription: value }))}
+                </Box>
+
+                <Divider />
+
+                {/* Additional Information Section */}
+                <Box>
+                  <AdditionalInfoForm
+                    mode="enhance"
+                    fabricMaterial={fabricMaterial}
+                    setFabricMaterial={setFabricMaterial}
+                    occasionUse={occasionUse}
+                    setOccasionUse={setOccasionUse}
+                    targetAudience={targetAudience}
+                    setTargetAudience={setTargetAudience}
+                    keyFeatures={keyFeatures}
+                    setKeyFeatures={setKeyFeatures}
+                    additionalNotes={additionalNotes}
+                    setAdditionalNotes={setAdditionalNotes}
+                    prefilled={!!productData}
                   />
-                  <Checkbox
-                    label="Generate SEO metadata"
-                    checked={enhancementOptions.generateSEO}
-                    onChange={(value) => setEnhancementOptions(prev => ({ ...prev, generateSEO: value }))}
-                  />
-                  <Checkbox
-                    label="Create promotional copy"
-                    checked={enhancementOptions.createPromo}
-                    onChange={(value) => setEnhancementOptions(prev => ({ ...prev, createPromo: value }))}
-                  />
-                </BlockStack>
+                </Box>
               </BlockStack>
             </Card>
           </Layout.Section>
 
           <Layout.Section>
-            <ProductDetailsForm
-              mode="enhance"
-              parentCategory={parentCategory}
-              setParentCategory={setParentCategory}
-              parentCategoryOptions={parentCategoryOptions}
-              availableSizing={availableSizing}
-              setAvailableSizing={setAvailableSizing}
-              sizingOptions={sizingOptions}
-              selectedTemplate={selectedTemplate}
-              setSelectedTemplate={setSelectedTemplate}
-              templatePreview={templatePreview}
-              setTemplatePreview={setTemplatePreview}
-            />
-          </Layout.Section>
-
-          <Layout.Section>
-            <AdditionalInfoForm
-              mode="enhance"
-              fabricMaterial={fabricMaterial}
-              setFabricMaterial={setFabricMaterial}
-              occasionUse={occasionUse}
-              setOccasionUse={setOccasionUse}
-              targetAudience={targetAudience}
-              setTargetAudience={setTargetAudience}
-              keyFeatures={keyFeatures}
-              setKeyFeatures={setKeyFeatures}
-              additionalNotes={additionalNotes}
-              setAdditionalNotes={setAdditionalNotes}
-              prefilled={!!productData}
-            />
-          </Layout.Section>
-
-          <Layout.Section>
-            <InlineStack gap="200" align="end">
-              <Button onClick={() => window.location.href = `/dashboard?shop=${shop}`}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleGenerate}
-                disabled={!isFormValid() || generating}
-                loading={generating}
-              >
-                {generating ? 'Generating...' :
-                 !productData ? 'Loading Product Data...' :
-                 'Generate Enhanced Description'}
-              </Button>
-            </InlineStack>
+            <Box paddingBlockEnd="800">
+              <InlineStack gap="300" align="end">
+                <Button
+                  size="large"
+                  onClick={() => window.location.href = `/dashboard?shop=${shop}`}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  size="large"
+                  onClick={handleGenerate}
+                  disabled={!isFormValid() || generating}
+                  loading={generating}
+                >
+                  {generating ? 'Generating...' :
+                   !productData ? 'Loading Product Data...' :
+                   'Generate Enhanced Description'}
+                </Button>
+              </InlineStack>
+            </Box>
           </Layout.Section>
 
           {/* Progress Modal */}
