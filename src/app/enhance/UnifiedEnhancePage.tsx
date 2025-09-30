@@ -526,66 +526,21 @@ export default function UnifiedEnhancePage() {
           )}
 
           {productData && (
-            <>
-              <Layout.Section>
-                <Card>
-                  <BlockStack gap="200">
-                    <InlineStack gap="200" align="space-between">
-                      <Text as="h3" variant="headingMd">{productData.title}</Text>
-                      <Badge tone="info">{productData.status}</Badge>
-                    </InlineStack>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      SKU: {productData.variants[0]?.sku || 'N/A'} |
-                      Type: {productData.productType || 'N/A'} |
-                      Vendor: {productData.vendor || 'N/A'}
-                    </Text>
-                  </BlockStack>
-                </Card>
-              </Layout.Section>
-
-              <Layout.Section>
-                <Card>
-                  <BlockStack gap="300">
-                    <Text as="h3" variant="headingMd">Current Description</Text>
-                    <Box paddingBlock="200">
-                      {productData.description || productData.descriptionHtml ? (
-                        <div
-                          dangerouslySetInnerHTML={{
-                            __html: productData.descriptionHtml || productData.description?.replace(/\n/g, '<br />') || ''
-                          }}
-                          style={{
-                            lineHeight: 1.6,
-                            whiteSpace: 'pre-wrap'
-                          }}
-                        />
-                      ) : (
-                        <Text as="p" tone="subdued">No description available</Text>
-                      )}
-                    </Box>
-                    {productData.seo && (productData.seo.title || productData.seo.description) && (
-                      <>
-                        <Divider />
-                        <BlockStack gap="200">
-                          <Text as="h4" variant="headingSm">SEO Information</Text>
-                          {productData.seo.title && (
-                            <Box>
-                              <Text as="p" variant="bodySm" tone="subdued">SEO Title:</Text>
-                              <Text as="p">{productData.seo.title}</Text>
-                            </Box>
-                          )}
-                          {productData.seo.description && (
-                            <Box>
-                              <Text as="p" variant="bodySm" tone="subdued">SEO Description:</Text>
-                              <Text as="p">{productData.seo.description}</Text>
-                            </Box>
-                          )}
-                        </BlockStack>
-                      </>
-                    )}
-                  </BlockStack>
-                </Card>
-              </Layout.Section>
-            </>
+            <Layout.Section>
+              <Card>
+                <BlockStack gap="200">
+                  <InlineStack gap="200" align="space-between">
+                    <Text as="h3" variant="headingMd">{productData.title}</Text>
+                    <Badge tone="info">{productData.status}</Badge>
+                  </InlineStack>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    SKU: {productData.variants[0]?.sku || 'N/A'} |
+                    Type: {productData.productType || 'N/A'} |
+                    Vendor: {productData.vendor || 'N/A'}
+                  </Text>
+                </BlockStack>
+              </Card>
+            </Layout.Section>
           )}
 
           <Layout.Section>
