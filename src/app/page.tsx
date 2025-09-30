@@ -41,7 +41,6 @@ export default function HomePage() {
   const { navigateTo } = useNavigation()
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { isAuthenticated: authProviderAuthenticated, shop: authShop, isLoading: authLoading } = useShopifyAuth()
 
   // Get parameters
   const shop = searchParams?.get('shop') || ''
@@ -58,70 +57,35 @@ export default function HomePage() {
       host,
       authenticated,
       isEmbedded,
-      isInIframe: typeof window !== 'undefined' && window.top !== window.self,
-      apiKey: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY ? 'Set' : 'Missing',
-      authProviderStatus: {
-        authenticated: authProviderAuthenticated,
-        loading: authLoading,
-        shop: authShop
-      }
+      isInIframe: typeof window !== 'undefined' && window.top !== window.self
     })
 
-    // For embedded context, we rely on ShopifyAuthProvider for authentication
-    // No need to redirect - the provider handles Token Exchange
-    if (isEmbedded && shop) {
-      console.log('📱 Running in embedded context, authentication handled by ShopifyAuthProvider')
-      console.log('🔑 API Key status:', process.env.NEXT_PUBLIC_SHOPIFY_API_KEY ? 'Present' : 'Missing')
-      console.log('🔐 Auth Provider Status:', { authProviderAuthenticated, authLoading, authShop })
+    // If embedded and not authenticated, redirect to embedded page for Token Exchange
+    if (isEmbedded && !authenticated && shop) {
+      console.log('🔄 Redirecting to embedded page for authentication')
+      router.push(`/embedded?shop=${shop}&host=${host || ''}`)
     }
-  }, [isEmbedded, shop, host, authProviderAuthenticated, authLoading, authShop])
+  }, [isEmbedded, authenticated, shop, host, router])
 
-  // For embedded apps, show loading while ShopifyAuthProvider handles auth
-  // Use authProvider status instead of URL params for embedded context
-  if (isEmbedded && shop) {
-    // If still loading auth, show spinner
-    if (authLoading) {
-      return (
-        <Page title="Thunder Text">
-          <Layout>
-            <Layout.Section>
-              <Card>
-                <BlockStack gap="400">
-                  <Text as="h2" variant="headingLg">Loading Thunder Text...</Text>
-                  <InlineStack gap="300" align="center">
-                    <Spinner size="small" />
-                    <Text as="span" variant="bodyMd">Authenticating with Shopify...</Text>
-                  </InlineStack>
-                </BlockStack>
-              </Card>
-            </Layout.Section>
-          </Layout>
-        </Page>
-      )
-    }
-
-    // If auth failed, show error
-    if (!authProviderAuthenticated && !authLoading) {
-      return (
-        <Page title="Thunder Text">
-          <Layout>
-            <Layout.Section>
-              <Card>
-                <BlockStack gap="400">
-                  <Text as="h2" variant="headingLg">Authentication Required</Text>
-                  <Text as="p" variant="bodyMd">
-                    Please ensure the app is properly installed in your Shopify store.
-                  </Text>
-                  <Text as="p" variant="bodyMd" tone="subdued">
-                    Shop: {shop}
-                  </Text>
-                </BlockStack>
-              </Card>
-            </Layout.Section>
-          </Layout>
-        </Page>
-      )
-    }
+  // Show Token Exchange for embedded apps without authentication
+  if (isEmbedded && !authenticated && shop) {
+    return (
+      <Page title="Thunder Text">
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingLg">Initializing Thunder Text...</Text>
+                <InlineStack gap="300" align="center">
+                  <Spinner size="small" />
+                  <Text as="span" variant="bodyMd">Redirecting to authentication...</Text>
+                </InlineStack>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+      </Page>
+    )
   }
 
   return (
