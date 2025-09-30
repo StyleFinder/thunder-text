@@ -20,37 +20,41 @@ const nextConfig: NextConfig = {
   // Enable serving static files correctly in embedded context
   trailingSlash: false,
   // Configure headers for embedded iframe context
+  // CRITICAL: Vercel adds X-Frame-Options by default, we must explicitly override it
   async headers() {
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const baseHeaders = [
-      {
-        key: 'Content-Security-Policy',
-        value: "frame-ancestors 'self' https://*.myshopify.com https://admin.shopify.com https://*.spin.dev;"
-      }
-    ];
-
-    // Add cache-busting headers in development
-    if (isDevelopment) {
-      baseHeaders.push(
-        {
-          key: 'Cache-Control',
-          value: 'no-cache, no-store, must-revalidate, max-age=0'
-        },
-        {
-          key: 'Pragma',
-          value: 'no-cache'
-        },
-        {
-          key: 'Expires',
-          value: '0'
-        }
-      );
-    }
 
     return [
       {
+        // Apply to ALL routes to override Vercel defaults
         source: '/:path*',
-        headers: baseHeaders,
+        headers: [
+          // CSP frame-ancestors (modern approach for iframe control)
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'self' https://*.myshopify.com https://admin.shopify.com https://*.spin.dev;"
+          },
+          // Explicitly set X-Frame-Options to SAMEORIGIN (not DENY)
+          // Note: This is a fallback for older browsers. CSP takes precedence in modern browsers.
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN'
+          },
+          ...(isDevelopment ? [
+            {
+              key: 'Cache-Control',
+              value: 'no-cache, no-store, must-revalidate, max-age=0'
+            },
+            {
+              key: 'Pragma',
+              value: 'no-cache'
+            },
+            {
+              key: 'Expires',
+              value: '0'
+            }
+          ] : [])
+        ],
       },
     ]
   },

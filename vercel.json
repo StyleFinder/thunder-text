@@ -16,7 +16,11 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors https://*.myshopify.com https://admin.shopify.com https://*.spin.dev;"
+          "value": "frame-ancestors 'self' https://*.myshopify.com https://admin.shopify.com https://*.spin.dev;"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
         }
       ]
     }
