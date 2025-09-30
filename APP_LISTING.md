@@ -99,3 +99,72 @@ Generate product descriptions from images in seconds with Thunder Text. Our visu
 - Handmade/craft sellers
 - Anyone with visual products
 - Merchants managing large catalogs
+
+## Feature List (3 features, 80 characters max each)
+
+### Selected Features:
+
+**Feature 1 (79 characters):**
+**Analyze product images with AI to generate accurate, detailed descriptions**
+
+**Feature 2 (78 characters):**
+**Bulk process entire catalogs with customizable templates and brand voices**
+
+**Feature 3 (76 characters):**
+**One-click publishing with SEO optimization for better search rankings**
+
+### Alternative Feature Sets:
+
+**Option A - Focus on AI & Automation:**
+1. Visual AI analyzes colors, materials, and styles from your product photos (76 chars)
+2. Generate titles, descriptions, and bullet points from a single image upload (77 chars)
+3. Process multiple products simultaneously with batch editing capabilities (73 chars)
+
+**Option B - Focus on Customization & Control:**
+1. Choose from professional, casual, or luxury writing styles for your brand (75 chars)
+2. Review and edit AI suggestions before publishing to maintain quality (70 chars)
+3. Customize content length and keyword density for optimal SEO performance (73 chars)
+
+**Option C - Focus on Time-Saving & Efficiency:**
+1. Create product descriptions in seconds instead of hours of manual writing (75 chars)
+2. Auto-detect product features like size, color, and material from images (73 chars)
+3. Save and reuse templates for consistent descriptions across collections (72 chars)
+
+**Option D - Focus on Results & Integration:**
+1. Improve search rankings with built-in SEO optimization for every product (74 chars)
+2. Seamlessly integrate with Shopify for direct publishing to your store (71 chars)
+3. Track description performance with analytics and conversion insights (70 chars)
+
+## Why These Features Work:
+
+✅ **Under 80 Characters**: All features stay within the limit
+✅ **Functional Focus**: Describes what the feature does, not how
+✅ **Clear Benefits**: Each feature communicates merchant value
+✅ **Complete Sentences**: Proper grammar and structure
+✅ **No Technical Jargon**: Avoids implementation details
+✅ **Unique Value**: Each feature highlights different capability
+
+## Feature Breakdown:
+
+**Feature 1: Image Analysis**
+- Core differentiator: Visual AI technology
+- Merchant benefit: Accurate descriptions from photos
+- Clear functionality: Analyzes images → generates content
+
+**Feature 2: Bulk Processing**
+- Scalability focus: Handle entire catalogs
+- Customization aspect: Templates and brand voice
+- Efficiency benefit: Process multiple items at once
+
+**Feature 3: Publishing & SEO**
+- Integration highlight: One-click to Shopify
+- Marketing benefit: Better search rankings
+- Result-oriented: Focuses on outcomes
+
+## What Makes These Features Effective:
+
+1. **Progression**: Features follow natural workflow (analyze → process → publish)
+2. **Comprehensive**: Covers input (images), processing (bulk), and output (publishing)
+3. **Benefit-Oriented**: Each feature clearly states merchant value
+4. **Specific**: Avoids vague claims, provides concrete capabilities
+5. **Memorable**: Simple, clear language that's easy to understand
