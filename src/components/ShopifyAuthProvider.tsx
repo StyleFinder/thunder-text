@@ -34,6 +34,8 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
   const searchParams = useSearchParams()
 
   const performTokenExchange = async () => {
+    console.log('🚀 performTokenExchange called')
+
     // Prevent multiple simultaneous token exchanges
     if (isExchanging) {
       console.log('Token exchange already in progress, skipping...')
@@ -44,6 +46,8 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
       setIsExchanging(true)
 
       const shopParam = searchParams?.get('shop')
+      console.log('📍 Shop param:', shopParam)
+
       if (!shopParam) {
         console.log('No shop parameter found')
         setIsLoading(false)
@@ -56,6 +60,12 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
       // Check if we're in an embedded context
       const isEmbedded = searchParams?.get('embedded') === '1' ||
                         window.top !== window.self
+
+      console.log('🔍 Embedded check:', {
+        embedded: searchParams?.get('embedded'),
+        isIframe: window.top !== window.self,
+        result: isEmbedded
+      })
 
       if (!isEmbedded) {
         console.log('Not in embedded context, skipping token exchange')
@@ -218,9 +228,17 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
   }
 
   useEffect(() => {
+    console.log('🎯 ShopifyAuthProvider mounted')
+    console.log('🎯 Search params:', {
+      shop: searchParams?.get('shop'),
+      embedded: searchParams?.get('embedded'),
+      authenticated: searchParams?.get('authenticated')
+    })
+
     // Only perform token exchange once on mount
     // This prevents re-triggers from searchParams changes
     const timeoutId = setTimeout(() => {
+      console.log('⏰ Timeout triggered, calling performTokenExchange')
       performTokenExchange()
     }, 100) // Small delay to ensure DOM is ready
 
