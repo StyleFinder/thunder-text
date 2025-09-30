@@ -460,7 +460,10 @@ export default function EnhancedContentComparison({
               <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab}>
                 {/* Main Content Tab */}
                 {selectedTab === 0 && (
-                  <Box padding="4">
+                  <Box
+                    padding="4"
+                    style={{ minHeight: '600px' }}
+                  >
                     <BlockStack gap="6">
                       {enhancedContent.title && renderModernField(
                         'Product Title',
@@ -491,7 +494,10 @@ export default function EnhancedContentComparison({
 
                 {/* SEO & Marketing Tab */}
                 {selectedTab === 1 && (
-                  <Box padding="4">
+                  <Box
+                    padding="4"
+                    style={{ minHeight: '600px' }}
+                  >
                     <BlockStack gap="6">
                       {enhancedContent.seoTitle && renderModernField(
                         'SEO Title',
@@ -531,7 +537,10 @@ export default function EnhancedContentComparison({
 
                 {/* Key Features Tab */}
                 {selectedTab === 2 && (
-                  <Box padding="4">
+                  <Box
+                    padding="4"
+                    style={{ minHeight: '600px' }}
+                  >
                     {editedContent.bulletPoints && editedContent.bulletPoints.length > 0 ? (
                       renderBulletPoints()
                     ) : (
