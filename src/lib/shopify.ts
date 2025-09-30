@@ -571,10 +571,12 @@ export class ShopifyAPI {
 }
 
 // OAuth helper functions
+import { getOAuthCallbackUrl } from './get-app-url'
+
 export const getShopifyOAuthUrl = (shop: string) => {
   const scopes = process.env.SHOPIFY_SCOPES
-  const redirectUri = `${process.env.SHOPIFY_APP_URL}/auth/shopify/callback`
-  
+  const redirectUri = getOAuthCallbackUrl()
+
   return `https://${shop}.myshopify.com/admin/oauth/authorize?client_id=${process.env.SHOPIFY_API_KEY}&scope=${scopes}&redirect_uri=${redirectUri}&state=${shop}`
 }
 
