@@ -24,15 +24,11 @@ const nextConfig: NextConfig = {
     const isDevelopment = process.env.NODE_ENV === 'development';
     const baseHeaders = [
       {
-        key: 'X-Frame-Options',
-        value: 'ALLOWALL'
-      },
-      {
         key: 'Content-Security-Policy',
-        value: "frame-ancestors https://*.shopify.com https://admin.shopify.com"
+        value: "frame-ancestors 'self' https://*.myshopify.com https://admin.shopify.com https://*.spin.dev;"
       }
     ];
-    
+
     // Add cache-busting headers in development
     if (isDevelopment) {
       baseHeaders.push(
@@ -50,10 +46,10 @@ const nextConfig: NextConfig = {
         }
       );
     }
-    
+
     return [
       {
-        source: '/(.*)',
+        source: '/:path*',
         headers: baseHeaders,
       },
     ]
