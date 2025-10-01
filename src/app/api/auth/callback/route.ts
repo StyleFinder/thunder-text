@@ -24,6 +24,16 @@ export async function GET(request: NextRequest) {
     // Exchange authorization code for access token
     const tokenUrl = `https://${shop}/admin/oauth/access_token`
 
+    console.log('🔑 OAuth credentials check:', {
+      hasApiKey: !!process.env.NEXT_PUBLIC_SHOPIFY_API_KEY,
+      apiKeyPrefix: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY?.substring(0, 8),
+      hasApiSecret: !!process.env.SHOPIFY_API_SECRET,
+      apiSecretPrefix: process.env.SHOPIFY_API_SECRET?.substring(0, 8),
+      apiSecretLength: process.env.SHOPIFY_API_SECRET?.length,
+      hasCode: !!code,
+      codePrefix: code?.substring(0, 20)
+    })
+
     const tokenResponse = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
@@ -36,12 +46,27 @@ export async function GET(request: NextRequest) {
       })
     })
 
+    console.log('📥 OAuth response:', {
+      status: tokenResponse.status,
+      statusText: tokenResponse.statusText,
+      ok: tokenResponse.ok
+    })
+
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text()
-      console.error('❌ OAuth token exchange failed:', errorText)
+      console.error('❌ OAuth token exchange failed:', {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        errorText,
+        shop,
+        hasApiKey: !!process.env.NEXT_PUBLIC_SHOPIFY_API_KEY,
+        hasApiSecret: !!process.env.SHOPIFY_API_SECRET,
+        apiSecretLength: process.env.SHOPIFY_API_SECRET?.length
+      })
       return NextResponse.json({
         success: false,
-        error: 'Failed to exchange authorization code'
+        error: 'Failed to exchange authorization code',
+        details: errorText
       }, { status: tokenResponse.status })
     }
 
