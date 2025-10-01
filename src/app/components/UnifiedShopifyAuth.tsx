@@ -226,8 +226,11 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
   }, [searchParams, isEmbedded, refreshToken])
 
   useEffect(() => {
-    initializeAuth()
-  }, [initializeAuth])
+    // Only initialize once - don't re-run if already authenticated or if there's an error
+    if (!isAuthenticated && !error && isLoading) {
+      initializeAuth()
+    }
+  }, [isAuthenticated, error, isLoading, initializeAuth])
 
   return (
     <ShopifyAuthContext.Provider value={{
