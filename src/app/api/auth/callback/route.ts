@@ -102,8 +102,8 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ Access token stored successfully for shop:', fullShopDomain)
 
-    // Redirect to app with embedded parameter
-    const appUrl = `/?shop=${shop}&embedded=1`
+    // Redirect to app with embedded and authenticated parameters
+    const appUrl = `/?shop=${shop}&embedded=1&authenticated=true`
 
     return NextResponse.redirect(new URL(appUrl, request.url))
 
