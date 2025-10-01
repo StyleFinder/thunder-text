@@ -170,6 +170,24 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       sessionStorage.setItem('shopify_session_token', token)
       sessionStorage.setItem('shopify_shop', shopParam)
 
+      // Set up global session token getter for API calls
+      // This allows authenticatedFetch() to always get fresh tokens
+      if (appInstance) {
+        window.getShopifySessionToken = async () => {
+          try {
+            const freshToken = await getSessionToken(appInstance)
+            if (freshToken) {
+              sessionStorage.setItem('shopify_session_token', freshToken)
+            }
+            return freshToken
+          } catch (error) {
+            console.error('Failed to get fresh session token:', error)
+            return sessionStorage.getItem('shopify_session_token')
+          }
+        }
+        console.log('✅ Global session token getter configured')
+      }
+
       // Exchange token with backend for access token
       console.log('🔄 Exchanging session token for access token...')
 
@@ -217,7 +235,13 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
         }, 50000)
 
         // Cleanup on unmount
-        return () => clearInterval(refreshInterval)
+        return () => {
+          clearInterval(refreshInterval)
+          // Clean up global session token getter
+          if (window.getShopifySessionToken) {
+            delete window.getShopifySessionToken
+          }
+        }
       }
     } catch (error) {
       console.error('❌ Authentication initialization error:', error)
