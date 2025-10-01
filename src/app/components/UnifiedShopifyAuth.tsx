@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback, Suspense } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, Suspense, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import createApp from '@shopify/app-bridge'
 import { getSessionToken } from '@shopify/app-bridge/utilities'
@@ -45,6 +45,9 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
   const [sessionToken, setSessionToken] = useState<string | null>(null)
   const [app, setApp] = useState<ClientApplication | null>(null)
   const searchParams = useSearchParams()
+
+  // Use ref to track if initialization has been attempted
+  const initializationAttempted = useRef(false)
 
   // Determine if we're in embedded context
   const isEmbedded = typeof window !== 'undefined' && (
@@ -226,8 +229,9 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
   }, [searchParams, isEmbedded, refreshToken])
 
   useEffect(() => {
-    // Only initialize once - don't re-run if already authenticated or if there's an error
-    if (!isAuthenticated && !error && isLoading) {
+    // Only initialize once per component instance - use ref to prevent re-runs
+    if (!initializationAttempted.current && !isAuthenticated && !error && isLoading) {
+      initializationAttempted.current = true
       initializeAuth()
     }
   }, [isAuthenticated, error, isLoading, initializeAuth])
