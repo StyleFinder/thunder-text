@@ -24,6 +24,12 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🔄 Token Exchange requested for shop:', shop)
+    console.log('🔑 Environment check:', {
+      hasApiKey: !!process.env.NEXT_PUBLIC_SHOPIFY_API_KEY,
+      apiKeyPrefix: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY?.substring(0, 8),
+      hasApiSecret: !!process.env.SHOPIFY_API_SECRET,
+      apiSecretPrefix: process.env.SHOPIFY_API_SECRET?.substring(0, 8),
+    })
 
     // Prepare token exchange request
     const tokenExchangeUrl = `https://${shop}/admin/oauth/access_token`
@@ -37,7 +43,12 @@ export async function POST(request: NextRequest) {
       requested_token_type: 'urn:shopify:params:oauth:token-type:online-access-token'
     }
 
-    console.log('📤 Sending token exchange request to Shopify')
+    console.log('📤 Sending token exchange request to Shopify:', {
+      url: tokenExchangeUrl,
+      clientIdPrefix: exchangeBody.client_id.substring(0, 8),
+      hasSecret: !!exchangeBody.client_secret,
+      sessionTokenPrefix: sessionToken.substring(0, 20) + '...'
+    })
 
     // Exchange session token for access token
     const tokenResponse = await fetch(tokenExchangeUrl, {
