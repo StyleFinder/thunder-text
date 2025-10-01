@@ -37,38 +37,31 @@ interface GenerationResult {
 
 export default function HomePage() {
   const [deploymentStatus, setDeploymentStatus] = useState('checking')
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const { navigateTo } = useNavigation()
   const searchParams = useSearchParams()
   const router = useRouter()
 
+  // Get auth state from provider
+  const { isAuthenticated, isLoading, error, isEmbedded } = useShopifyAuth()
+
   // Get parameters
   const shop = searchParams?.get('shop') || ''
   const host = searchParams?.get('host') || ''
-  const authenticated = searchParams?.get('authenticated')
-
-  // Detect if we're in embedded context
-  const isEmbedded = (typeof window !== 'undefined' && window.top !== window.self) ||
-                     !!host
 
   useEffect(() => {
     console.log('🏠 Home page context:', {
       shop,
       host,
-      authenticated,
+      isAuthenticated,
+      isLoading,
       isEmbedded,
+      error,
       isInIframe: typeof window !== 'undefined' && window.top !== window.self
     })
+  }, [shop, host, isAuthenticated, isLoading, isEmbedded, error])
 
-    // If embedded and not authenticated, redirect to embedded page for Token Exchange
-    if (isEmbedded && !authenticated && shop) {
-      console.log('🔄 Redirecting to embedded page for authentication')
-      router.push(`/embedded?shop=${shop}&host=${host || ''}`)
-    }
-  }, [isEmbedded, authenticated, shop, host, router])
-
-  // Show Token Exchange for embedded apps without authentication
-  if (isEmbedded && !authenticated && shop) {
+  // Show loading state while authenticating
+  if (isLoading) {
     return (
       <Page title="Thunder Text">
         <Layout>
@@ -78,10 +71,28 @@ export default function HomePage() {
                 <Text as="h2" variant="headingLg">Initializing Thunder Text...</Text>
                 <InlineStack gap="300" align="center">
                   <Spinner size="small" />
-                  <Text as="span" variant="bodyMd">Redirecting to authentication...</Text>
+                  <Text as="span" variant="bodyMd">Authenticating with Shopify...</Text>
                 </InlineStack>
               </BlockStack>
             </Card>
+          </Layout.Section>
+        </Layout>
+      </Page>
+    )
+  }
+
+  // Show error state if authentication failed
+  if (error) {
+    return (
+      <Page title="Thunder Text">
+        <Layout>
+          <Layout.Section>
+            <Banner status="critical">
+              <BlockStack gap="200">
+                <Text as="h3" variant="headingSm">Authentication Error</Text>
+                <Text as="p" variant="bodyMd">{error}</Text>
+              </BlockStack>
+            </Banner>
           </Layout.Section>
         </Layout>
       </Page>
