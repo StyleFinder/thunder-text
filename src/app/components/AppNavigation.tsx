@@ -127,7 +127,6 @@ function NavigationContent({ children }: AppNavigationProps) {
               items: [
                 { content: 'Settings', onAction: () => navigateTo('/settings') },
                 { content: 'Help Center', onAction: () => navigateTo('/help') },
-                { content: 'Documentation', disabled: true },
               ],
             },
           ]}
