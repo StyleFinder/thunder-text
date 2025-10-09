@@ -27,6 +27,7 @@ import {
 import { CategoryTemplateSelector } from '@/app/components/CategoryTemplateSelector'
 import { type ProductCategory } from '@/lib/prompts'
 import { fetchProductDataForPrePopulation, formatKeyFeatures, formatSizingData, type PrePopulatedProductData } from '@/lib/shopify/product-prepopulation'
+import { authenticatedFetch } from '@/lib/shopify/api-client'
 
 interface UploadedFile {
   file: File
@@ -320,11 +321,8 @@ function CreateProductContent() {
     try {
       console.log('🎯 Requesting category suggestion for generated content')
       
-      const response = await fetch('/api/categories/suggest', {
+      const response = await authenticatedFetch('/api/categories/suggest', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           title: generatedContent.title,
           description: generatedContent.description,
@@ -419,11 +417,8 @@ function CreateProductContent() {
       })
 
       // Call the category detection API
-      const response = await fetch('/api/detect-category', {
+      const response = await authenticatedFetch('/api/detect-category', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           imageData: imageData
         })
@@ -474,9 +469,8 @@ function CreateProductContent() {
         })
       )
 
-      const response = await fetch('/api/detect-colors', {
+      const response = await authenticatedFetch('/api/detect-colors', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ images: imageData })
       })
 
@@ -632,11 +626,8 @@ function CreateProductContent() {
         })
       )
 
-      const response = await fetch('/api/generate/create', {
+      const response = await authenticatedFetch('/api/generate/create', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           images: imageData,
           category: productCategory,

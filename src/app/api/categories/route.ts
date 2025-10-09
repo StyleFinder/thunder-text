@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     // Get custom categories for this store with hierarchical structure
     const { data: categories, error: categoriesError } = await supabaseAdmin
-      .from('category_hierarchy')
+      .from('custom_categories')
       .select('*')
       .eq('store_id', storeId)
       .order('sort_order, name')

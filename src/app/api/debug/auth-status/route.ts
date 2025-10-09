@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getShopToken } from '@/lib/shopify/token-manager'
 
 export async function GET(request: NextRequest) {
   try {
+    // Check if we're in a build environment
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co') {
+      return NextResponse.json(
+        { error: 'Application not properly configured' },
+        { status: 503 }
+      )
+    }
+
+    // Dynamic import to avoid loading during build
+    const { getShopToken } = await import('@/lib/shopify/token-manager')
+
     const { searchParams } = new URL(request.url)
     const shop = searchParams.get('shop') || 'zunosai-staging-test-store'
 
