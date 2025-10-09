@@ -19,7 +19,15 @@ export async function POST(request: NextRequest) {
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
 
+    console.log('🛒 [PRODUCT-CREATE] Starting product creation request:', {
+      shop,
+      hasShop: !!shop,
+      requestUrl: request.url,
+      timestamp: new Date().toISOString()
+    })
+
     if (!shop) {
+      console.error('❌ [PRODUCT-CREATE] Missing shop parameter')
       return NextResponse.json(
         { error: 'Missing shop parameter' },
         { status: 400 }
@@ -27,14 +35,36 @@ export async function POST(request: NextRequest) {
     }
 
     // Get access token from database (obtained via Token Exchange)
+    console.log('🔑 [PRODUCT-CREATE] Retrieving access token from database for shop:', shop)
     const tokenResult = await getShopToken(shop)
 
+    console.log('🔑 [PRODUCT-CREATE] Token retrieval result:', {
+      success: tokenResult.success,
+      hasAccessToken: !!tokenResult.accessToken,
+      accessTokenLength: tokenResult.accessToken?.length,
+      error: tokenResult.error,
+      shop,
+      fullShopDomain: shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`,
+      timestamp: new Date().toISOString()
+    })
+
     if (!tokenResult.success || !tokenResult.accessToken) {
-      console.error('❌ No access token found for shop:', shop)
+      console.error('❌ [PRODUCT-CREATE] No access token found for shop:', {
+        shop,
+        fullShopDomain: shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`,
+        tokenResultSuccess: tokenResult.success,
+        tokenResultError: tokenResult.error,
+        hasAccessToken: !!tokenResult.accessToken,
+        timestamp: new Date().toISOString()
+      })
       return NextResponse.json(
         {
           error: 'Authentication required',
-          details: 'Please ensure the app is properly installed through Shopify'
+          details: `Please ensure the app is properly installed through Shopify. Token retrieval error: ${tokenResult.error || 'No token found'}`,
+          debugInfo: {
+            shop,
+            tokenError: tokenResult.error
+          }
         },
         { status: 401 }
       )
