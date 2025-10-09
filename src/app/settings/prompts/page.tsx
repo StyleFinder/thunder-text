@@ -82,12 +82,18 @@ function PromptsSettingsContent() {
         }
 
         const data = await response.json()
+        console.log('📦 Raw API response:', JSON.stringify(data, null, 2))
         console.log('📦 Data received:', {
           hasSystemPrompt: !!data.system_prompt,
           systemPromptName: data.system_prompt?.name,
+          systemPromptContent: data.system_prompt?.content ? `${data.system_prompt.content.substring(0, 50)}...` : 'null',
           categoryTemplatesCount: data.category_templates?.length || 0
         })
-        
+
+        if (!data.system_prompt) {
+          console.error('❌ No system_prompt in API response!')
+        }
+
         setSystemPrompt(data.system_prompt)
         setCategoryTemplates(data.category_templates || [])
         
