@@ -72,12 +72,17 @@ export async function getStoreId(shopDomain: string): Promise<string | null> {
  */
 export async function getSystemPrompt(storeId: string): Promise<SystemPrompt | null> {
   try {
+    console.log('🔍 getSystemPrompt called with storeId:', storeId)
+
     // If storeId looks like a shop domain, convert it to UUID
     let actualStoreId = storeId
     if (storeId.includes('.myshopify.com') || !storeId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      console.log('📍 Converting shop domain to UUID...')
       actualStoreId = await getStoreId(storeId) || storeId
+      console.log('✅ Converted storeId to:', actualStoreId)
     }
 
+    console.log('🔎 Querying system_prompts table with store_id:', actualStoreId)
     const { data, error } = await supabaseAdmin
       .from('system_prompts')
       .select('*')
@@ -87,13 +92,14 @@ export async function getSystemPrompt(storeId: string): Promise<SystemPrompt | n
       .single()
 
     if (error) {
-      console.error('Error fetching system prompt:', error)
+      console.error('❌ Error fetching system prompt:', error)
       return null
     }
 
+    console.log('✅ System prompt found:', data ? `${data.name} (${data.content.length} chars)` : 'null')
     return data
   } catch (error) {
-    console.error('Error in getSystemPrompt:', error)
+    console.error('❌ Error in getSystemPrompt:', error)
     return null
   }
 }
