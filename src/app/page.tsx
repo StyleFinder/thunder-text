@@ -17,7 +17,6 @@ import {
   List,
 } from '@shopify/polaris'
 import { useNavigation } from './hooks/useNavigation'
-import { useShopifyAuth } from './components/ShopifyAuthProvider'
 
 interface GenerationResult {
   title: string
@@ -40,66 +39,19 @@ export default function HomePage() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  // Get auth state from provider
-  const { isAuthenticated, isLoading, error, isEmbedded } = useShopifyAuth()
-
   // Get parameters
   const shop = searchParams?.get('shop') || ''
   const host = searchParams?.get('host') || ''
 
   useEffect(() => {
-    console.log('🏠 Home page context:', {
-      shop,
-      host,
-      isAuthenticated,
-      isLoading,
-      isEmbedded,
-      error,
-      isInIframe: typeof window !== 'undefined' && window.top !== window.self
-    })
+    console.log('🏠 Home page - checking shop parameter:', { shop, host })
 
-    // Redirect to dashboard after authentication is complete
-    if (!isLoading && isAuthenticated && !error) {
-      console.log('✅ Authenticated - redirecting to dashboard')
+    // If shop parameter exists, redirect to dashboard immediately
+    if (shop) {
+      console.log('✅ Shop parameter found - redirecting to dashboard')
       navigateTo('/dashboard')
     }
-  }, [shop, host, isAuthenticated, isLoading, isEmbedded, error, navigateTo])
-
-  // Show loading state while authenticating
-  if (isLoading) {
-    return (
-      <Page title="Thunder Text">
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingLg">Initializing Thunder Text...</Text>
-                <Text as="span" variant="bodyMd">Please wait while we connect to Shopify...</Text>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-        </Layout>
-      </Page>
-    )
-  }
-
-  // Show error state if authentication failed
-  if (error) {
-    return (
-      <Page title="Thunder Text">
-        <Layout>
-          <Layout.Section>
-            <Banner status="critical">
-              <BlockStack gap="200">
-                <Text as="h3" variant="headingSm">Authentication Error</Text>
-                <Text as="p" variant="bodyMd">{error}</Text>
-              </BlockStack>
-            </Banner>
-          </Layout.Section>
-        </Layout>
-      </Page>
-    )
-  }
+  }, [shop, host, navigateTo])
 
   return (
     <Page title="Welcome to Thunder Text" subtitle="AI-Powered Product Description Generator">
