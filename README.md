@@ -40,7 +40,7 @@ Thunder Text is an AI-powered Shopify application that generates compelling, SEO
 - **Authentication**: NextAuth.js with Shopify OAuth
 - **AI Integration**: OpenAI GPT-4 Vision API with master key management
 - **Testing**: Jest + React Testing Library
-- **Deployment**: Render (Full-stack) + Supabase (Backend)
+- **Deployment**: Render (https://thunder-text.onrender.com) + Supabase (Backend)
 
 ## Getting Started
 
@@ -80,9 +80,9 @@ cp .env.example .env.local
 npx supabase db push
 ```
 
-6. Deploy to Vercel:
+6. Deploy to Render:
 ```bash
-# Push to git (auto-deploys to Vercel)
+# Push to git (auto-deploys to Render)
 git add .
 git commit -m "Initial deployment"
 git push
@@ -156,16 +156,15 @@ The application uses Supabase PostgreSQL with the following core tables:
 
 ## Deployment
 
-### Vercel Deployment
+### Render Deployment
 
-1. Connect your GitHub repository to Vercel
-2. Configure environment variables in Vercel dashboard:
+1. Connect your GitHub repository to Render
+2. Configure environment variables in Render dashboard:
    ```bash
-   # Auto-detected by Vercel
-   Build Command: npm run build
-   Output Directory: .next
-   Install Command: npm install --legacy-peer-deps
-   
+   # Build settings
+   Build Command: npm run build:render
+   Start Command: npm start
+
    # Environment Variables
    NODE_ENV=production
    SHOPIFY_API_KEY=your_production_key
@@ -174,18 +173,18 @@ The application uses Supabase PostgreSQL with the following core tables:
    SUPABASE_SERVICE_KEY=your_production_service_key
    OPENAI_API_KEY=your_openai_master_key
    NEXTAUTH_SECRET=your_nextauth_secret
-   NEXTAUTH_URL=https://thunder-text-nine.vercel.app
-   SHOPIFY_APP_URL=https://thunder-text-nine.vercel.app
+   NEXTAUTH_URL=https://thunder-text.onrender.com
+   SHOPIFY_APP_URL=https://thunder-text.onrender.com
    ```
 3. Deploy automatically on push to main branch
-4. Custom domain: thunder-text-nine.vercel.app (already configured)
+4. Production URL: https://thunder-text.onrender.com
 
 ### Development Store Setup
 
 **Test Store**: `zunosai-staging-test-store.myshopify.com`
-**Production URL**: https://thunder-text-nine.vercel.app
+**Production URL**: https://thunder-text.onrender.com
 - Use this development store for testing OAuth flows
-- Test product generation and publishing via Vercel deployment
+- Test product generation and publishing via Render deployment
 - Validate metafield creation and SEO data
 - Test user workflows and edge cases using production URL
 
@@ -194,8 +193,8 @@ The application uses Supabase PostgreSQL with the following core tables:
 1. Complete Partner Dashboard app configuration
 2. Add required app URLs and webhooks:
    ```
-   App URL: https://thunder-text-nine.vercel.app
-   Allowed redirection URLs: https://thunder-text-nine.vercel.app/api/auth/callback/shopify
+   App URL: https://thunder-text.onrender.com
+   Allowed redirection URLs: https://thunder-text.onrender.com/api/auth/callback/shopify
    ```
 3. Submit for review following Shopify guidelines
 

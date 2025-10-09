@@ -185,17 +185,11 @@ export default function HelpPage() {
                 <List type="bullet">
                   <List.Item>
                     <strong>Email:</strong>{' '}
-                    <Link url="mailto:support@shopstylefinder.com" external>
-                      support@shopstylefinder.com
+                    <Link url="mailto:support@zunos.com" external>
+                      support@zunos.com
                     </Link>
                   </List.Item>
                   <List.Item><strong>Response Time:</strong> Within 24 hours on business days</List.Item>
-                  <List.Item>
-                    <strong>Documentation:</strong>{' '}
-                    <Link url="https://docs.shopstylefinder.com" external>
-                      docs.shopstylefinder.com
-                    </Link>
-                  </List.Item>
                 </List>
               </BlockStack>
 
@@ -203,8 +197,8 @@ export default function HelpPage() {
                 <Text as="h3" variant="headingMd">Report a Bug</Text>
                 <Text as="p" variant="bodyMd">
                   Found an issue? Please report it to{' '}
-                  <Link url="mailto:bugs@shopstylefinder.com" external>
-                    bugs@shopstylefinder.com
+                  <Link url="mailto:support@zunos.com" external>
+                    support@zunos.com
                   </Link>
                   {' '}with:
                 </Text>
@@ -220,8 +214,8 @@ export default function HelpPage() {
                 <Text as="h3" variant="headingMd">Feature Requests</Text>
                 <Text as="p" variant="bodyMd">
                   Have an idea to improve Thunder Text? We'd love to hear it!{' '}
-                  <Link url="mailto:feedback@shopstylefinder.com" external>
-                    feedback@shopstylefinder.com
+                  <Link url="mailto:support@zunos.com" external>
+                    support@zunos.com
                   </Link>
                 </Text>
               </BlockStack>
@@ -238,7 +232,7 @@ export default function HelpPage() {
               <Text as="p" variant="bodyMd">
                 Thunder Text is powered by advanced AI technology to help boutique store owners
                 create compelling product descriptions quickly and efficiently. Built with ❤️ by
-                the StyleFinder team.
+                the Zunos team.
               </Text>
               <Text as="p" variant="bodyMd" tone="subdued">
                 Version 3.0 | Last updated: October 2025

@@ -4,10 +4,10 @@
 Thunder Text is an AI-powered Shopify application that generates SEO-optimized product descriptions from images using GPT-4 Vision API. This configuration optimizes SuperClaude for efficient development across all project phases.
 
 ### Development Environment
-- **Production URL**: https://thunder-text-nine.vercel.app
+- **Production URL**: https://thunder-text.onrender.com
 - **Dev Shop**: zunosai-staging-test-store
-- **Settings URL**: https://thunder-text-nine.vercel.app/settings?shop=zunosai-staging-test-store&authenticated=true
-- **Deployment**: Vercel (production hosting), not localhost
+- **Settings URL**: https://thunder-text.onrender.com/settings?shop=zunosai-staging-test-store&authenticated=true
+- **Deployment**: Render (production hosting), not localhost
 - **Authentication**: PRODUCTION-READY - NO AUTH BYPASS
   - ⚠️ NEVER use SHOPIFY_AUTH_BYPASS in production
   - ✅ Always use proper Token Exchange with JWT verification
@@ -154,22 +154,22 @@ Thunder Text is an AI-powered Shopify application that generates SEO-optimized p
 
 ## Server Management Rules
 
-### Vercel Deployment Protocol
-**Thunder Text is deployed on Vercel, not local development servers**
+### Render Deployment Protocol
+**Thunder Text is deployed on Render, not local development servers**
 
 #### Deployment Environment Setup
-1. **Production Environment**: https://thunder-text-nine.vercel.app
-2. **Auto-deployment**: Vercel deploys automatically from git commits
-3. **No local servers needed**: All development happens in production environment
-4. **Environment Variables**: Configured in Vercel dashboard, not local .env
+1. **Production Environment**: https://thunder-text.onrender.com
+2. **Auto-deployment**: Render deploys automatically from git commits
+3. **Local development**: Use `npm run dev` on port 3050 for local testing
+4. **Environment Variables**: Configured in Render dashboard
 5. **Testing**: Use production URL with development store
 
-#### Vercel vs Local Development
-- **Current Setup**: Vercel-hosted production environment for development
-- **No localhost**: No need for local servers (npm run dev not used)
-- **Instant deployment**: Code changes deploy automatically via git
+#### Render vs Local Development
+- **Current Setup**: Render-hosted production environment
+- **Local development**: Available on localhost:3050 (turbopack enabled)
+- **Instant deployment**: Code changes deploy automatically via git to Render
 - **Environment isolation**: Production URLs with development data
-- **Solution**: Use Vercel URLs for all development and testing
+- **Solution**: Use Render URLs for production testing, localhost for rapid iteration
 
 #### Server Coordination Questions
 - "Do you have `shopify app dev` running? If not, should I start it?"
@@ -247,12 +247,12 @@ pkill -f "shopify app dev" 2>/dev/null
 
 ### Development URLs (zunosai-staging-test-store)
 ```bash
-# Main pages with authentication parameters (Vercel-hosted)
-https://thunder-text-nine.vercel.app/?shop=zunosai-staging-test-store&authenticated=true
-https://thunder-text-nine.vercel.app/dashboard?shop=zunosai-staging-test-store&authenticated=true
-https://thunder-text-nine.vercel.app/settings?shop=zunosai-staging-test-store&authenticated=true
-https://thunder-text-nine.vercel.app/create?shop=zunosai-staging-test-store&authenticated=true
-https://thunder-text-nine.vercel.app/products?shop=zunosai-staging-test-store&authenticated=true
+# Main pages with authentication parameters (Render-hosted)
+https://thunder-text.onrender.com/?shop=zunosai-staging-test-store&authenticated=true
+https://thunder-text.onrender.com/dashboard?shop=zunosai-staging-test-store&authenticated=true
+https://thunder-text.onrender.com/settings?shop=zunosai-staging-test-store&authenticated=true
+https://thunder-text.onrender.com/create?shop=zunosai-staging-test-store&authenticated=true
+https://thunder-text.onrender.com/products?shop=zunosai-staging-test-store&authenticated=true
 ```
 
 This configuration enables SuperClaude to provide optimal development support for Thunder Text across all phases, with intelligent tool selection, persistent context management, and phase-appropriate development patterns.
