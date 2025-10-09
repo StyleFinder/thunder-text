@@ -1,22 +1,30 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-// Initialize Supabase client with proper key handling
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+// Lazy-initialized Supabase client to avoid build-time initialization
+let supabase: SupabaseClient | null = null
 
-// Use service key if available (server-side), otherwise use anon key
-// Service key is needed for bypassing RLS policies
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+function getSupabaseClient() {
+  if (supabase) return supabase
 
-// Log which key we're using (without exposing the actual key)
-if (typeof window === 'undefined') {
-  console.log('🔑 Token Manager initialized with:', {
-    url: supabaseUrl,
-    keyType: process.env.SUPABASE_SERVICE_KEY ? 'service' : 'anon',
-    keyLength: supabaseKey?.length || 0
-  })
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase configuration')
+  }
+
+  // Log which key we're using (without exposing the actual key)
+  if (typeof window === 'undefined') {
+    console.log('🔑 Token Manager initialized with:', {
+      url: supabaseUrl,
+      keyType: process.env.SUPABASE_SERVICE_KEY ? 'service' : 'anon',
+      keyLength: supabaseKey?.length || 0
+    })
+  }
+
+  supabase = createClient(supabaseUrl, supabaseKey)
+  return supabase
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey)
 
 // In-memory token cache to reduce database queries
 // Tokens are cached for 23 hours (online tokens expire after 24 hours)
@@ -92,7 +100,7 @@ export async function storeShopToken(
       : `${shopDomain}.myshopify.com`
 
     // Upsert directly to the shops table
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('shops')
       .upsert({
         shop_domain: fullShopDomain,
@@ -145,11 +153,10 @@ export async function getShopToken(
     }
 
     console.log('🔑 Retrieving access token from database for shop:', shopDomain)
-    console.log('📍 Supabase URL:', supabaseUrl)
     console.log('🔍 Querying shops table for:', fullShopDomain)
 
     // Query the shops table directly
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('shops')
       .select('access_token, scope')
       .eq('shop_domain', fullShopDomain)
