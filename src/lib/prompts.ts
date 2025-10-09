@@ -48,9 +48,9 @@ export type ProductCategory = typeof PRODUCT_CATEGORIES[number]['value']
  */
 export async function getStoreId(shopDomain: string): Promise<string | null> {
   try {
-    // Always try to find the store in the database
+    // Query the shops table (not stores - that table is empty)
     const { data, error } = await supabaseAdmin
-      .from('stores')
+      .from('shops')
       .select('id')
       .eq('shop_domain', shopDomain)
       .single()
