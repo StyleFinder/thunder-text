@@ -19,39 +19,18 @@ import {
   Spinner
 } from '@shopify/polaris'
 import { useNavigation } from '../hooks/useNavigation'
-import { useShopifyAuth } from '../components/ShopifyAuthProvider'
 
 // Removed unused interfaces - they were not being used anywhere in the component
 
 function DashboardContent() {
   const searchParams = useSearchParams()
   const { navigateTo } = useNavigation()
-  const { isAuthenticated, isLoading } = useShopifyAuth()
   const shop = searchParams?.get('shop')
-  const authenticated = searchParams?.get('authenticated')
 
-  console.log('Dashboard render:', { shop, authenticated, isAuthenticated, isLoading })
+  console.log('Dashboard render:', { shop })
 
-  // Show loading while checking authentication
-  if (isLoading) {
-    return (
-      <Page title="Thunder Text Dashboard">
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400" align="center">
-                <Spinner size="small" />
-                <Text as="p">Loading dashboard...</Text>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-        </Layout>
-      </Page>
-    )
-  }
-
-  // Check authentication from context instead of just URL parameters
-  if (!isAuthenticated && !shop) {
+  // Simple check - if no shop parameter, show auth required
+  if (!shop) {
     return (
       <Page title="Thunder Text Dashboard">
         <Layout>
