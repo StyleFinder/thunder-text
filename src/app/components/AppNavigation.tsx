@@ -85,11 +85,18 @@ function NavigationContent({ children }: AppNavigationProps) {
       matchPaths: ['/settings']
     },
     {
-      url: '#',
+      url: buildUrl('/help'),
       label: 'Help',
       icon: QuestionCircleIcon,
-      disabled: true,
-      badge: 'Coming Soon'
+      onClick: () => navigateTo('/help'),
+      matches: isActive({
+        label: 'Help',
+        url: buildUrl('/help'),
+        matchPaths: ['/help'],
+        exactMatch: false
+      }),
+      exactMatch: false,
+      matchPaths: ['/help']
     }
   ]
 
@@ -119,7 +126,7 @@ function NavigationContent({ children }: AppNavigationProps) {
             {
               items: [
                 { content: 'Settings', onAction: () => navigateTo('/settings') },
-                { content: 'Help Center', disabled: true },
+                { content: 'Help Center', onAction: () => navigateTo('/help') },
                 { content: 'Documentation', disabled: true },
               ],
             },

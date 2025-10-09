@@ -15,7 +15,6 @@ import {
   BlockStack,
   Banner,
   List,
-  Spinner,
 } from '@shopify/polaris'
 import { useNavigation } from './hooks/useNavigation'
 import { useShopifyAuth } from './components/ShopifyAuthProvider'
@@ -69,10 +68,7 @@ export default function HomePage() {
             <Card>
               <BlockStack gap="400">
                 <Text as="h2" variant="headingLg">Initializing Thunder Text...</Text>
-                <InlineStack gap="300" align="center">
-                  <Spinner size="small" />
-                  <Text as="span" variant="bodyMd">Authenticating with Shopify...</Text>
-                </InlineStack>
+                <Text as="span" variant="bodyMd">Please wait while we connect to Shopify...</Text>
               </BlockStack>
             </Card>
           </Layout.Section>
@@ -105,10 +101,7 @@ export default function HomePage() {
         <Layout.Section>
           <Card>
             <BlockStack gap="400">
-              <InlineStack align="center" gap="200">
-                <Spinner size="small" />
-                <Text as="h2" variant="headingMd">Deployment Complete - Services Ready</Text>
-              </InlineStack>
+              <Text as="h2" variant="headingMd">Deployment Complete - Services Ready</Text>
               
               <Banner status="info">
                 <Text as="p" variant="bodyMd">
