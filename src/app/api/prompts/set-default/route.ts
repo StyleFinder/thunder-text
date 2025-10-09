@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { type ProductCategory } from '@/lib/prompts'
+import { type ProductCategory, getStoreId } from '@/lib/prompts'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,8 +16,21 @@ export async function POST(request: NextRequest) {
 
     const supabase = supabaseAdmin
 
+    // Convert shop domain to UUID if needed
+    let actualStoreId = store_id
+    if (store_id.includes('.myshopify.com') || !store_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      const convertedId = await getStoreId(store_id)
+      if (!convertedId) {
+        return NextResponse.json(
+          { success: false, error: 'Store not found' },
+          { status: 404 }
+        )
+      }
+      actualStoreId = convertedId
+    }
+
     // Set the store context for RLS
-    const { error: rpcError } = await supabase.rpc('set_store_context', { store_uuid: store_id })
+    const { error: rpcError } = await supabase.rpc('set_store_context', { store_uuid: actualStoreId })
 
     if (rpcError) {
       console.error('Error setting store context:', rpcError)
@@ -31,7 +44,7 @@ export async function POST(request: NextRequest) {
     const { data: existingTemplates, error: checkError } = await supabase
       .from('category_templates')
       .select('id')
-      .eq('store_id', store_id)
+      .eq('store_id', actualStoreId)
       .eq('category', category)
 
     if (checkError) {
@@ -53,7 +66,7 @@ export async function POST(request: NextRequest) {
     const { error: unsetError } = await supabase
       .from('category_templates')
       .update({ is_default: false })
-      .eq('store_id', store_id)
+      .eq('store_id', actualStoreId)
 
     if (unsetError) {
       console.error('Error unsetting defaults:', unsetError)
@@ -67,7 +80,7 @@ export async function POST(request: NextRequest) {
     const { data: updatedTemplate, error } = await supabase
       .from('category_templates')
       .update({ is_default: true })
-      .eq('store_id', store_id)
+      .eq('store_id', actualStoreId)
       .eq('category', category)
       .select()
       .single()
