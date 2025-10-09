@@ -161,13 +161,11 @@ export async function getShopToken(
     console.log('🔑 Retrieving access token from database for shop:', shopDomain)
     console.log('🔍 Querying shops table for:', fullShopDomain)
 
-    // Query the shops table directly
+    // Use RPC function to bypass PostgREST permission issues
     const { data, error } = await getSupabaseClient()
-      .from('shops')
-      .select('access_token, scope')
-      .eq('shop_domain', fullShopDomain)
-      .eq('is_active', true)
-      .limit(1)
+      .rpc('get_shop_token', {
+        p_shop_domain: fullShopDomain
+      })
       .maybeSingle()
 
     if (error) {
