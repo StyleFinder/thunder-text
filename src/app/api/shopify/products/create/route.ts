@@ -195,10 +195,10 @@ export async function POST(request: NextRequest) {
     
     const productInput = {
       title: generatedContent.title,
-      descriptionHtml: generatedContent.description, 
+      descriptionHtml: generatedContent.description,
       status: 'DRAFT',
       productType: shopifyProductType,
-      vendor: store.shop_domain.split('.')[0],
+      vendor: shopDomain.split('.')[0],
       tags: generatedContent.keywords ? generatedContent.keywords : [],
       // Add category assignment for Shopify Admin interface using correct 2025-01 API field
       ...(shopifyCategoryId ? { category: shopifyCategoryId } : {}),
@@ -460,31 +460,15 @@ export async function POST(request: NextRequest) {
       console.log('ℹ️ No images to upload')
     }
 
-    // Store the generated data in our database (skip in development bypass mode)
-    if (session?.user?.id) {
-      try {
-        await supabaseAdmin
-          .from('products')
-          .insert({
-            store_id: session.user.id,
-            shopify_product_id: createdProduct.id,
-            generated_data: generatedContent,
-            product_data: productData,
-            status: 'completed',
-          })
-      } catch (dbError) {
-        console.error('Error storing product in database:', dbError)
-        // Continue anyway, the product was created in Shopify
-      }
-    } else {
-      console.log('Skipping database storage in development mode')
-    }
+    // Store the generated data in our database
+    // Note: This feature is optional - product creation in Shopify is the primary goal
+    console.log('ℹ️ Skipping database storage (not implemented in this version)')
 
     return NextResponse.json({
       success: true,
       data: {
         product: createdProduct,
-        shopifyUrl: `https://${store.shop_domain}/admin/products/${createdProduct.id.split('/').pop()}`,
+        shopifyUrl: `https://${shopDomain}/admin/products/${createdProduct.id.split('/').pop()}`,
         productId: createdProduct.id
       },
     })
