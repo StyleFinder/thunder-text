@@ -22,7 +22,12 @@ function getSupabaseClient() {
     })
   }
 
-  supabase = createClient(supabaseUrl, supabaseKey)
+  supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    }
+  })
   return supabase
 }
 
