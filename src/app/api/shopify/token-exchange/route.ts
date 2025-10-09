@@ -177,8 +177,6 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
-
     console.log('💾 [TOKEN-EXCHANGE] Upserting token to database:', {
       shop: fullShopDomain,
       hasAccessToken: !!tokenData.access_token,
