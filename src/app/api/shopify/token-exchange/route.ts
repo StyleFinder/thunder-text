@@ -191,18 +191,22 @@ export async function POST(request: NextRequest) {
       })
 
     if (dbError) {
-      console.error('❌ [TOKEN-EXCHANGE] Error storing token in database:', {
-        error: dbError,
-        errorMessage: dbError.message,
-        errorCode: dbError.code,
-        errorDetails: dbError.details,
-        shop: fullShopDomain,
-        timestamp: new Date().toISOString()
-      })
+      console.error('❌ [TOKEN-EXCHANGE] Error storing token in database:')
+      console.error('  errorMessage:', dbError.message)
+      console.error('  errorCode:', dbError.code)
+      console.error('  errorDetails:', dbError.details)
+      console.error('  errorHint:', dbError.hint)
+      console.error('  fullError:', JSON.stringify(dbError, null, 2))
+      console.error('  shop:', fullShopDomain)
+      console.error('  supabaseUrl:', supabaseUrl)
+      console.error('  keyType:', process.env.SUPABASE_SECRET_KEY ? 'secret' : process.env.SUPABASE_SERVICE_KEY ? 'service' : 'anon')
+      console.error('  timestamp:', new Date().toISOString())
       return NextResponse.json({
         success: false,
         error: 'Failed to store access token',
-        details: dbError.message
+        details: dbError.message,
+        hint: dbError.hint,
+        code: dbError.code
       }, { status: 500, headers: corsHeaders })
     }
 
