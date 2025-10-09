@@ -99,8 +99,22 @@ export async function POST(request: NextRequest) {
     console.log('✅ Token exchange successful, received access token')
 
     // Store the access token in Supabase
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ Missing Supabase configuration:', {
+        hasUrl: !!supabaseUrl,
+        hasKey: !!supabaseKey,
+        urlValue: supabaseUrl,
+        envKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
+      })
+      return NextResponse.json({
+        success: false,
+        error: 'Supabase configuration missing - check environment variables'
+      }, { status: 500, headers: corsHeaders })
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
