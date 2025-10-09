@@ -142,15 +142,16 @@ export async function POST(request: NextRequest) {
 
     // Store the access token in Supabase
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     console.log('💾 [TOKEN-EXCHANGE] Preparing to store in Supabase:', {
       hasUrl: !!supabaseUrl,
       urlValue: supabaseUrl,
       hasSecretKey: !!process.env.SUPABASE_SECRET_KEY,
       hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
+      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
       hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      usingKey: process.env.SUPABASE_SECRET_KEY ? 'secret' : process.env.SUPABASE_SERVICE_KEY ? 'service' : 'anon',
+      usingKey: process.env.SUPABASE_SECRET_KEY ? 'secret' : process.env.SUPABASE_SERVICE_KEY ? 'service' : process.env.SUPABASE_SERVICE_ROLE_KEY ? 'service_role' : 'anon',
       allSupabaseEnvVars: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
     })
 
