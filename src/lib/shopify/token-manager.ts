@@ -7,7 +7,7 @@ function getSupabaseClient() {
   if (supabase) return supabase
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Missing Supabase configuration')
@@ -17,7 +17,7 @@ function getSupabaseClient() {
   if (typeof window === 'undefined') {
     console.log('🔑 Token Manager initialized with:', {
       url: supabaseUrl,
-      keyType: process.env.SUPABASE_SERVICE_KEY ? 'service' : 'anon',
+      keyType: process.env.SUPABASE_SECRET_KEY ? 'secret' : process.env.SUPABASE_SERVICE_KEY ? 'service' : 'anon',
       keyLength: supabaseKey?.length || 0
     })
   }
