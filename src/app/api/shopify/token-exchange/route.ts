@@ -47,7 +47,9 @@ export async function POST(request: NextRequest) {
     })
 
     // Prepare token exchange request
-    const tokenExchangeUrl = `https://${shop}/admin/oauth/access_token`
+    // Normalize shop domain to ensure .myshopify.com suffix
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+    const tokenExchangeUrl = `https://${fullShopDomain}/admin/oauth/access_token`
 
     const exchangeBody = {
       client_id: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY!,
@@ -55,7 +57,7 @@ export async function POST(request: NextRequest) {
       grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
       subject_token: sessionToken,
       subject_token_type: 'urn:ietf:params:oauth:token-type:id_token',
-      requested_token_type: 'urn:shopify:params:oauth:token-type:online-access-token'
+      requested_token_type: 'urn:shopify:params:oauth:token-type:offline-access-token'
     }
 
     console.log('📤 [TOKEN-EXCHANGE] Sending token exchange request to Shopify:', {
