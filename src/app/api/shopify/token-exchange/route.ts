@@ -168,7 +168,12 @@ export async function POST(request: NextRequest) {
       }, { status: 500, headers: corsHeaders })
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      }
+    })
 
     const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
 
