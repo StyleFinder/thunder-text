@@ -57,7 +57,13 @@ export default function HomePage() {
       error,
       isInIframe: typeof window !== 'undefined' && window.top !== window.self
     })
-  }, [shop, host, isAuthenticated, isLoading, isEmbedded, error])
+
+    // Redirect to dashboard after authentication is complete
+    if (!isLoading && isAuthenticated && !error) {
+      console.log('✅ Authenticated - redirecting to dashboard')
+      navigateTo('/dashboard')
+    }
+  }, [shop, host, isAuthenticated, isLoading, isEmbedded, error, navigateTo])
 
   // Show loading state while authenticating
   if (isLoading) {
@@ -105,8 +111,8 @@ export default function HomePage() {
               
               <Banner status="info">
                 <Text as="p" variant="bodyMd">
-                  🚀 <strong>Version:</strong> Vercel Build 9f5b58e (2025-09-21 07:30 AM) | 
-                  🌐 <strong>Source:</strong> thunder-text-nine.vercel.app | 
+                  🚀 <strong>Version:</strong> Render Build (2025-10-09) |
+                  🌐 <strong>Source:</strong> thunder-text.onrender.com |
                   ⚡ <strong>Status:</strong> Live Production
                 </Text>
               </Banner>
@@ -122,7 +128,7 @@ export default function HomePage() {
                     <List.Item>Database: Connected to Supabase</List.Item>
                     <List.Item>AI Engine: OpenAI GPT-4 Vision Ready</List.Item>
                     <List.Item>Shopify API: Authentication Configured</List.Item>
-                    <List.Item>Deployment: Live on Vercel</List.Item>
+                    <List.Item>Deployment: Live on Render</List.Item>
                   </List>
                 </BlockStack>
               </Banner>
