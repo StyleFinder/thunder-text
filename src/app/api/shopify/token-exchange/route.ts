@@ -184,16 +184,12 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     })
 
+    // Use SECURITY DEFINER function to bypass PostgREST permission issues
     const { error: dbError } = await supabase
-      .from('shops')
-      .upsert({
-        shop_domain: fullShopDomain,
-        access_token: tokenData.access_token,
-        scope: tokenData.scope || '',
-        is_active: true,
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'shop_domain'
+      .rpc('upsert_shop_token', {
+        p_shop_domain: fullShopDomain,
+        p_access_token: tokenData.access_token,
+        p_scope: tokenData.scope || ''
       })
 
     if (dbError) {
