@@ -185,8 +185,8 @@ export default function HelpPage() {
                 <List type="bullet">
                   <List.Item>
                     <strong>Email:</strong>{' '}
-                    <Link url="mailto:support@zunos.com" external>
-                      support@zunos.com
+                    <Link url="mailto:support@zunosai.com" external>
+                      support@zunosai.com
                     </Link>
                   </List.Item>
                   <List.Item><strong>Response Time:</strong> Within 24 hours on business days</List.Item>
@@ -197,8 +197,8 @@ export default function HelpPage() {
                 <Text as="h3" variant="headingMd">Report a Bug</Text>
                 <Text as="p" variant="bodyMd">
                   Found an issue? Please report it to{' '}
-                  <Link url="mailto:support@zunos.com" external>
-                    support@zunos.com
+                  <Link url="mailto:support@zunosai.com" external>
+                    support@zunosai.com
                   </Link>
                   {' '}with:
                 </Text>
@@ -214,8 +214,8 @@ export default function HelpPage() {
                 <Text as="h3" variant="headingMd">Feature Requests</Text>
                 <Text as="p" variant="bodyMd">
                   Have an idea to improve Thunder Text? We'd love to hear it!{' '}
-                  <Link url="mailto:support@zunos.com" external>
-                    support@zunos.com
+                  <Link url="mailto:support@zunosai.com" external>
+                    support@zunosai.com
                   </Link>
                 </Text>
               </BlockStack>
