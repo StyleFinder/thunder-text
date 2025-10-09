@@ -18,18 +18,40 @@ import {
   Badge,
   Spinner
 } from '@shopify/polaris'
+import { useNavigation } from '../hooks/useNavigation'
+import { useShopifyAuth } from '../components/ShopifyAuthProvider'
 
 // Removed unused interfaces - they were not being used anywhere in the component
 
 function DashboardContent() {
   const searchParams = useSearchParams()
+  const { navigateTo } = useNavigation()
+  const { isAuthenticated, isLoading } = useShopifyAuth()
   const shop = searchParams?.get('shop')
   const authenticated = searchParams?.get('authenticated')
-  
-  console.log('Dashboard render:', { shop, authenticated })
 
-  // Restore proper authentication check for security
-  if (!shop || !authenticated) {
+  console.log('Dashboard render:', { shop, authenticated, isAuthenticated, isLoading })
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <Page title="Thunder Text Dashboard">
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400" align="center">
+                <Spinner size="small" />
+                <Text as="p">Loading dashboard...</Text>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+      </Page>
+    )
+  }
+
+  // Check authentication from context instead of just URL parameters
+  if (!isAuthenticated && !shop) {
     return (
       <Page title="Thunder Text Dashboard">
         <Layout>
@@ -40,7 +62,7 @@ function DashboardContent() {
                 <Text as="p">
                   Please install Thunder Text from your Shopify admin panel to access the dashboard.
                 </Text>
-                <Button primary onClick={() => window.location.href = '/'}>
+                <Button variant="primary" onClick={() => navigateTo('/')}>
                   Back to Home
                 </Button>
               </BlockStack>
@@ -102,35 +124,20 @@ function DashboardContent() {
             <BlockStack gap="400">
               <Text as="h3" variant="headingMd">Quick Actions</Text>
               <InlineStack gap="300">
-                <Button 
+                <Button
                   variant="primary"
                   tone="success"
-                  onClick={() => {
-                    const params = new URLSearchParams()
-                    if (shop) params.append('shop', shop)
-                    if (authenticated) params.append('authenticated', authenticated)
-                    window.location.href = `/create?${params.toString()}`
-                  }}
+                  onClick={() => navigateTo('/create')}
                 >
                   Create New Product
                 </Button>
-                <Button 
-                  onClick={() => {
-                    const params = new URLSearchParams()
-                    if (shop) params.append('shop', shop)
-                    if (authenticated) params.append('authenticated', authenticated)
-                    window.location.href = `/enhance?${params.toString()}`
-                  }}
+                <Button
+                  onClick={() => navigateTo('/enhance')}
                 >
                   Enhance Product
                 </Button>
-                <Button 
-                  onClick={() => {
-                    const params = new URLSearchParams()
-                    if (shop) params.append('shop', shop)
-                    if (authenticated) params.append('authenticated', authenticated)
-                    window.location.href = `/generate?${params.toString()}`
-                  }}
+                <Button
+                  onClick={() => navigateTo('/generate')}
                 >
                   Update Existing Product
                 </Button>
