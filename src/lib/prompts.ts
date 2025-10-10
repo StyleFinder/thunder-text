@@ -30,6 +30,15 @@ export interface CombinedPrompt {
   combined: string
 }
 
+// Product categories - keeping for backward compatibility with existing components
+export const PRODUCT_CATEGORIES = [
+  { value: 'womens_clothing', label: "Women's Clothing" },
+  { value: 'jewelry_accessories', label: 'Jewelry & Accessories' },
+  { value: 'general', label: 'General Products' }
+] as const
+
+export type ProductCategory = typeof PRODUCT_CATEGORIES[number]['value']
+
 // Product categories are now user-defined via template names
 // The category field in the database is auto-generated from template names
 // and is used internally only - not exposed to users
