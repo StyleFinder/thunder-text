@@ -76,7 +76,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { store_id, type, content, name, category } = body
+    const { store_id, type, content, name, template_id } = body
 
     if (!store_id) {
       return NextResponse.json(
@@ -96,11 +96,48 @@ export async function PUT(request: NextRequest) {
 
     if (type === 'system_prompt') {
       result = await updateSystemPrompt(store_id, content, name)
-    } else if (type === 'category_template' && category) {
-      result = await updateCategoryTemplate(store_id, category, content, name)
+    } else if (type === 'category_template' && template_id) {
+      // Update template by ID instead of category
+      const { supabaseAdmin } = await import('@/lib/supabase')
+      const { getStoreId } = await import('@/lib/prompts')
+
+      // Convert shop domain to UUID if needed
+      let actualStoreId = store_id
+      if (store_id.includes('.myshopify.com') || !store_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        const convertedId = await getStoreId(store_id)
+        if (!convertedId) {
+          return NextResponse.json(
+            { error: 'Store not found' },
+            { status: 404 }
+          )
+        }
+        actualStoreId = convertedId
+      }
+
+      // Auto-generate category slug from template name if name changed
+      const categorySlug = name ? name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') : undefined
+
+      const { data, error } = await supabaseAdmin
+        .from('category_templates')
+        .update({
+          ...(name && { name, category: categorySlug }),
+          content,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', template_id)
+        .eq('store_id', actualStoreId)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error updating template:', error)
+        return null
+      }
+
+      result = data
     } else {
       return NextResponse.json(
-        { error: 'Invalid type or missing category for template update' },
+        { error: 'Invalid type or missing template_id for template update' },
         { status: 400 }
       )
     }
@@ -134,7 +171,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { store_id, type, content, name, category } = body
+    const { store_id, type, content, name } = body
 
     if (!store_id) {
       return NextResponse.json(
@@ -143,7 +180,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (type !== 'category_template' || !category || !content || !name) {
+    if (type !== 'category_template' || !content || !name) {
       return NextResponse.json(
         { error: 'Missing required fields for template creation' },
         { status: 400 }
@@ -167,12 +204,15 @@ export async function POST(request: NextRequest) {
       actualStoreId = convertedId
     }
 
+    // Auto-generate category slug from template name
+    const categorySlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
+
     // Create new template
     const { data, error } = await supabaseAdmin
       .from('category_templates')
       .insert({
         store_id: actualStoreId,
-        category,
+        category: categorySlug,
         name,
         content,
         is_default: false,

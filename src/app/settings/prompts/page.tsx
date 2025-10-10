@@ -1,9 +1,6 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-
-// Force dynamic rendering for this page
-export const dynamic = 'force-dynamic'
 import { useSearchParams } from 'next/navigation'
 import {
   Page,
@@ -18,11 +15,13 @@ import {
   Banner,
   Spinner,
   Modal,
-  Select,
   Toast,
-  Frame
+  Frame,
+  DataTable
 } from '@shopify/polaris'
-import { PRODUCT_CATEGORIES, type ProductCategory } from '@/lib/prompts'
+
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
 
 interface SystemPrompt {
   id: string
@@ -32,10 +31,9 @@ interface SystemPrompt {
   updated_at: string
 }
 
-interface CategoryTemplate {
+interface Template {
   id: string
   name: string
-  category: string
   content: string
   is_default: boolean
   updated_at: string
@@ -45,74 +43,51 @@ interface CategoryTemplate {
 function PromptsSettingsContent() {
   const searchParams = useSearchParams()
   const shop = searchParams?.get('shop') || 'test-store'
-  
-  console.log('🏪 PromptsSettingsContent initialized with shop:', shop)
-  
+
   // State
   const [systemPrompt, setSystemPrompt] = useState<SystemPrompt | null>(null)
-  const [categoryTemplates, setCategoryTemplates] = useState<CategoryTemplate[]>([])
+  const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  
+
   // Edit states
   const [editingSystemPrompt, setEditingSystemPrompt] = useState(false)
   const [systemPromptContent, setSystemPromptContent] = useState('')
-  const [editingTemplate, setEditingTemplate] = useState<string | null>(null)
-  const [templateContent, setTemplateContent] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<ProductCategory>('general')
-  
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
+  const [editingTemplateName, setEditingTemplateName] = useState('')
+  const [editingTemplateContent, setEditingTemplateContent] = useState('')
+
   // Modal states
-  const [showResetModal, setShowResetModal] = useState(false)
-  const [resetType, setResetType] = useState<'system' | 'template' | null>(null)
-  const [resetCategory, setResetCategory] = useState<ProductCategory | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [deleteCategory, setDeleteCategory] = useState<ProductCategory | null>(null)
+  const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null)
   const [newTemplateName, setNewTemplateName] = useState('')
-  const [newTemplateCategory, setNewTemplateCategory] = useState<ProductCategory>('general')
   const [newTemplateContent, setNewTemplateContent] = useState('')
 
   // Load prompts
   useEffect(() => {
     async function loadPrompts() {
       try {
-        console.log('🔄 Starting to load prompts for shop:', shop)
         setLoading(true)
         const response = await fetch(`/api/prompts?store_id=${shop}`)
-        
-        console.log('📡 API response status:', response.status)
+
         if (!response.ok) {
           throw new Error('Failed to load prompts')
         }
 
         const data = await response.json()
-        console.log('📦 Raw API response:', JSON.stringify(data, null, 2))
-        console.log('📦 Data received:', {
-          hasSystemPrompt: !!data.system_prompt,
-          systemPromptName: data.system_prompt?.name,
-          systemPromptContent: data.system_prompt?.content ? `${data.system_prompt.content.substring(0, 50)}...` : 'null',
-          categoryTemplatesCount: data.category_templates?.length || 0
-        })
-
-        if (!data.system_prompt) {
-          console.error('❌ No system_prompt in API response!')
-        }
-
         setSystemPrompt(data.system_prompt)
-        setCategoryTemplates(data.category_templates || [])
-        
+        setTemplates(data.category_templates || [])
+
         if (data.system_prompt) {
           setSystemPromptContent(data.system_prompt.content)
         }
-        
-        console.log('✅ Prompts loaded successfully, setting loading to false')
       } catch (err) {
-        console.error('❌ Error loading prompts:', err)
+        console.error('Error loading prompts:', err)
         setError('Failed to load prompts')
       } finally {
-        console.log('🏁 Setting loading to false in finally block')
         setLoading(false)
       }
     }
@@ -123,7 +98,7 @@ function PromptsSettingsContent() {
   // Save system prompt
   const handleSaveSystemPrompt = async () => {
     if (!systemPromptContent.trim()) return
-    
+
     try {
       setSaving(true)
       const response = await fetch('/api/prompts', {
@@ -145,137 +120,10 @@ function PromptsSettingsContent() {
       setSystemPrompt(result.data)
       setEditingSystemPrompt(false)
       setSuccess('System prompt saved successfully!')
-      
+
     } catch (err) {
       console.error('Error saving system prompt:', err)
       setError('Failed to save system prompt')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  // Save category template
-  const handleSaveTemplate = async (category: ProductCategory, content: string) => {
-    if (!content.trim()) return
-    
-    try {
-      setSaving(true)
-      const response = await fetch('/api/prompts', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          store_id: shop,
-          type: 'category_template',
-          category,
-          content,
-          name: `Custom ${PRODUCT_CATEGORIES.find(c => c.value === category)?.label} Template`
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to save template')
-      }
-
-      const result = await response.json()
-      
-      // Update local state
-      setCategoryTemplates(prev => 
-        prev.map(t => t.category === category ? result.data : t)
-      )
-      
-      setEditingTemplate(null)
-      setTemplateContent('')
-      setSuccess('Template saved successfully!')
-      
-    } catch (err) {
-      console.error('Error saving template:', err)
-      setError('Failed to save template')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  // Reset prompt/template
-  const handleReset = async () => {
-    if (!resetType) return
-    
-    try {
-      setSaving(true)
-      const response = await fetch('/api/prompts/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          store_id: shop,
-          type: resetType === 'system' ? 'system_prompt' : 'category_template',
-          category: resetCategory
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to reset')
-      }
-
-      const result = await response.json()
-      
-      if (resetType === 'system') {
-        setSystemPrompt(result.data)
-        setSystemPromptContent(result.data.content)
-      } else if (resetCategory) {
-        setCategoryTemplates(prev => 
-          prev.map(t => t.category === resetCategory ? result.data : t)
-        )
-      }
-      
-      setShowResetModal(false)
-      setResetType(null)
-      setResetCategory(null)
-      setSuccess('Reset to defaults successfully!')
-      
-    } catch (err) {
-      console.error('Error resetting:', err)
-      setError('Failed to reset to defaults')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  // Handle default template change
-  const handleDefaultTemplateChange = async (category: string) => {
-    if (!category) return
-
-    // Get the actual store_id from the templates (they all have the same store_id)
-    const storeId = categoryTemplates.length > 0 ? categoryTemplates[0].store_id : shop
-
-    try {
-      setSaving(true)
-      const response = await fetch('/api/prompts/set-default', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          store_id: storeId,
-          category
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to set as default')
-      }
-
-      const result = await response.json()
-
-      // Update local state - mark this template as default and others as not default
-      setCategoryTemplates(prev =>
-        prev.map(t => ({
-          ...t,
-          is_default: t.category === category
-        }))
-      )
-
-      setSuccess(`${PRODUCT_CATEGORIES.find(c => c.value === category)?.label} template set as default!`)
-
-    } catch (err) {
-      console.error('Error setting as default:', err)
-      setError('Failed to set template as default')
     } finally {
       setSaving(false)
     }
@@ -296,9 +144,8 @@ function PromptsSettingsContent() {
         body: JSON.stringify({
           store_id: shop,
           type: 'category_template',
-          category: newTemplateCategory,
-          content: newTemplateContent,
-          name: newTemplateName
+          name: newTemplateName,
+          content: newTemplateContent
         })
       })
 
@@ -307,14 +154,9 @@ function PromptsSettingsContent() {
       }
 
       const result = await response.json()
-
-      // Add to local state
-      setCategoryTemplates(prev => [...prev, result.data])
-
-      // Reset modal state
+      setTemplates(prev => [...prev, result.data])
       setShowCreateModal(false)
       setNewTemplateName('')
-      setNewTemplateCategory('general')
       setNewTemplateContent('')
       setSuccess('Template created successfully!')
 
@@ -326,12 +168,49 @@ function PromptsSettingsContent() {
     }
   }
 
+  // Save edited template
+  const handleSaveTemplate = async () => {
+    if (!editingTemplateId || !editingTemplateName.trim() || !editingTemplateContent.trim()) return
+
+    try {
+      setSaving(true)
+      const response = await fetch('/api/prompts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          store_id: shop,
+          type: 'category_template',
+          template_id: editingTemplateId,
+          name: editingTemplateName,
+          content: editingTemplateContent
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save template')
+      }
+
+      const result = await response.json()
+      setTemplates(prev =>
+        prev.map(t => t.id === editingTemplateId ? result.data : t)
+      )
+
+      setEditingTemplateId(null)
+      setEditingTemplateName('')
+      setEditingTemplateContent('')
+      setSuccess('Template saved successfully!')
+
+    } catch (err) {
+      console.error('Error saving template:', err)
+      setError('Failed to save template')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // Delete template
   const handleDeleteTemplate = async () => {
-    if (!deleteCategory) return
-
-    const template = getTemplate(deleteCategory)
-    if (!template) return
+    if (!deleteTemplateId) return
 
     try {
       setSaving(true)
@@ -340,7 +219,7 @@ function PromptsSettingsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           store_id: shop,
-          template_id: template.id
+          template_id: deleteTemplateId
         })
       })
 
@@ -348,11 +227,9 @@ function PromptsSettingsContent() {
         throw new Error('Failed to delete template')
       }
 
-      // Remove from local state
-      setCategoryTemplates(prev => prev.filter(t => t.id !== template.id))
-
+      setTemplates(prev => prev.filter(t => t.id !== deleteTemplateId))
       setShowDeleteModal(false)
-      setDeleteCategory(null)
+      setDeleteTemplateId(null)
       setSuccess('Template deleted successfully!')
 
     } catch (err) {
@@ -363,9 +240,39 @@ function PromptsSettingsContent() {
     }
   }
 
-  // Get template for category
-  const getTemplate = (category: ProductCategory) => 
-    categoryTemplates.find(t => t.category === category)
+  // Set default template
+  const handleSetDefault = async (templateId: string) => {
+    try {
+      setSaving(true)
+      const response = await fetch('/api/prompts/set-default', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          store_id: shop,
+          template_id: templateId
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to set as default')
+      }
+
+      setTemplates(prev =>
+        prev.map(t => ({
+          ...t,
+          is_default: t.id === templateId
+        }))
+      )
+
+      setSuccess('Default template updated!')
+
+    } catch (err) {
+      console.error('Error setting default:', err)
+      setError('Failed to set template as default')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -394,188 +301,12 @@ function PromptsSettingsContent() {
             <p>{error}</p>
           </Banner>
         )}
-        
+
         {success && (
           <Toast content={success} onDismiss={() => setSuccess(null)} />
         )}
-        
+
         <Layout>
-          {/* Default Template Configuration Section */}
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <InlineStack align="space-between">
-                  <Box>
-                    <Text as="h2" variant="headingMd">Default Template Settings</Text>
-                    <Text variant="bodySm" tone="subdued">
-                      Configure which template is automatically used for new products
-                    </Text>
-                  </Box>
-                </InlineStack>
-                
-                <Box
-                  padding="400"
-                  background="bg-surface-accent"
-                  borderRadius="200"
-                  borderWidth="0165"
-                  borderColor="border-accent"
-                >
-                  <BlockStack gap="300">
-                    <InlineStack align="space-between">
-                      <Text as="h3" variant="headingSm" tone="text-accent-secondary">
-                        Global Default Template
-                      </Text>
-                      <Text variant="bodySm" tone="subdued">
-                        Applied to all new products
-                      </Text>
-                    </InlineStack>
-                    
-                    <Select
-                      label=""
-                      options={[
-                        { label: 'None', value: '' },
-                        ...PRODUCT_CATEGORIES.map(cat => ({
-                          label: cat.label,
-                          value: cat.value
-                        }))
-                      ]}
-                      value={categoryTemplates.find(t => t.is_default)?.category || ''}
-                      onChange={handleDefaultTemplateChange}
-                      helpText="This template will be used automatically when creating new product descriptions"
-                    />
-                  </BlockStack>
-                </Box>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-
-          {/* Category Templates Management Section */}
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <InlineStack align="space-between">
-                  <Box>
-                    <Text as="h2" variant="headingMd">Template Editor</Text>
-                    <Text variant="bodySm" tone="subdued">
-                      Edit and customize templates for different product categories
-                    </Text>
-                  </Box>
-                  <Button
-                    variant="primary"
-                    onClick={() => setShowCreateModal(true)}
-                  >
-                    Create New Template
-                  </Button>
-                </InlineStack>
-                
-                <Select
-                  label="Select Category to Edit"
-                  options={PRODUCT_CATEGORIES.map(cat => ({
-                    label: cat.label,
-                    value: cat.value
-                  }))}
-                  value={selectedCategory}
-                  onChange={(value) => setSelectedCategory(value as ProductCategory)}
-                  helpText="Choose which category template you want to view or modify"
-                />
-                
-                {(() => {
-                  const template = getTemplate(selectedCategory)
-                  const categoryLabel = PRODUCT_CATEGORIES.find(c => c.value === selectedCategory)?.label
-                  
-                  return (
-                    <Card>
-                      <BlockStack gap="400">
-                        <InlineStack align="space-between">
-                          <Text as="h3" variant="headingSm">{categoryLabel} Template</Text>
-                          <InlineStack gap="200">
-                            {template && (
-                              <Button
-                                variant="tertiary"
-                                tone="critical"
-                                onClick={() => {
-                                  setDeleteCategory(selectedCategory)
-                                  setShowDeleteModal(true)
-                                }}
-                              >
-                                Delete
-                              </Button>
-                            )}
-                            <Button
-                              variant="tertiary"
-                              onClick={() => {
-                                setResetType('template')
-                                setResetCategory(selectedCategory)
-                                setShowResetModal(true)
-                              }}
-                              disabled={!template}
-                            >
-                              Reset to Default
-                            </Button>
-                            <Button
-                              variant="primary"
-                              onClick={() => {
-                                if (editingTemplate === selectedCategory) {
-                                  setEditingTemplate(null)
-                                  setTemplateContent('')
-                                } else {
-                                  setEditingTemplate(selectedCategory)
-                                  setTemplateContent(template?.content || '')
-                                }
-                              }}
-                              disabled={!template}
-                            >
-                              {editingTemplate === selectedCategory ? 'Cancel' : 'Edit'}
-                            </Button>
-                          </InlineStack>
-                        </InlineStack>
-
-                        {editingTemplate === selectedCategory ? (
-                          <BlockStack gap="300">
-                            <TextField
-                              label={`${categoryLabel} Template Content`}
-                              value={templateContent}
-                              onChange={setTemplateContent}
-                              multiline={8}
-                              autoComplete="off"
-                            />
-                            <InlineStack align="end" gap="200">
-                              <Button 
-                                onClick={() => {
-                                  setEditingTemplate(null)
-                                  setTemplateContent('')
-                                }}
-                              >
-                                Cancel
-                              </Button>
-                              <Button 
-                                variant="primary"
-                                onClick={() => handleSaveTemplate(selectedCategory, templateContent)}
-                                loading={saving}
-                              >
-                                Save Template
-                              </Button>
-                            </InlineStack>
-                          </BlockStack>
-                        ) : (
-                          <Box
-                            padding="300"
-                            background="bg-surface-secondary"
-                            borderRadius="200"
-                          >
-                            <Text variant="bodySm" as="pre" style={{ whiteSpace: 'pre-wrap' }}>
-                              {template?.content || `No template configured for ${categoryLabel}`}
-                            </Text>
-                          </Box>
-                        )}
-                      </BlockStack>
-                    </Card>
-                  )
-                })()}
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-
           {/* System Prompt Section */}
           <Layout.Section>
             <Card>
@@ -587,47 +318,29 @@ function PromptsSettingsContent() {
                       Universal copywriting principles applied to all product descriptions
                     </Text>
                   </Box>
-                  <InlineStack gap="200">
-                    <Button 
-                      variant="tertiary"
-                      onClick={() => {
-                        setResetType('system')
-                        setShowResetModal(true)
-                      }}
-                    >
-                      Reset to Default
-                    </Button>
-                    <Button 
-                      variant="primary"
-                      onClick={() => setEditingSystemPrompt(!editingSystemPrompt)}
-                    >
-                      {editingSystemPrompt ? 'Cancel' : 'Edit'}
-                    </Button>
-                  </InlineStack>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      if (editingSystemPrompt) {
+                        handleSaveSystemPrompt()
+                      } else {
+                        setEditingSystemPrompt(true)
+                      }
+                    }}
+                    loading={saving && editingSystemPrompt}
+                  >
+                    {editingSystemPrompt ? 'Save' : 'Edit'}
+                  </Button>
                 </InlineStack>
 
                 {editingSystemPrompt ? (
-                  <BlockStack gap="300">
-                    <TextField
-                      label="System Prompt Content"
-                      value={systemPromptContent}
-                      onChange={setSystemPromptContent}
-                      multiline={8}
-                      autoComplete="off"
-                    />
-                    <InlineStack align="end" gap="200">
-                      <Button onClick={() => setEditingSystemPrompt(false)}>
-                        Cancel
-                      </Button>
-                      <Button 
-                        variant="primary"
-                        onClick={handleSaveSystemPrompt}
-                        loading={saving}
-                      >
-                        Save Changes
-                      </Button>
-                    </InlineStack>
-                  </BlockStack>
+                  <TextField
+                    label="System Prompt Content"
+                    value={systemPromptContent}
+                    onChange={setSystemPromptContent}
+                    multiline={12}
+                    autoComplete="off"
+                  />
                 ) : (
                   <Box
                     padding="300"
@@ -642,42 +355,131 @@ function PromptsSettingsContent() {
               </BlockStack>
             </Card>
           </Layout.Section>
-        </Layout>
 
-        {/* Reset Confirmation Modal */}
-        <Modal
-          open={showResetModal}
-          onClose={() => {
-            setShowResetModal(false)
-            setResetType(null)
-            setResetCategory(null)
-          }}
-          title="Reset to Default"
-          primaryAction={{
-            content: 'Reset',
-            onAction: handleReset,
-            loading: saving,
-            destructive: true
-          }}
-          secondaryActions={[{
-            content: 'Cancel',
-            onAction: () => {
-              setShowResetModal(false)
-              setResetType(null)
-              setResetCategory(null)
-            }
-          }]}
-        >
-          <Modal.Section>
-            <Text as="p">
-              Are you sure you want to reset the{' '}
-              {resetType === 'system' ? 'master system prompt' :
-                `${PRODUCT_CATEGORIES.find(c => c.value === resetCategory)?.label || resetCategory} template`
-              }{' '}
-              to its default version? This will overwrite any custom changes you've made.
-            </Text>
-          </Modal.Section>
-        </Modal>
+          {/* Templates Section */}
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <InlineStack align="space-between">
+                  <Box>
+                    <Text as="h2" variant="headingMd">Product Description Templates</Text>
+                    <Text variant="bodySm" tone="subdued">
+                      Create and manage custom templates for different product types
+                    </Text>
+                  </Box>
+                  <Button
+                    variant="primary"
+                    onClick={() => setShowCreateModal(true)}
+                  >
+                    Create New Template
+                  </Button>
+                </InlineStack>
+
+                {templates.length === 0 ? (
+                  <Box padding="400">
+                    <Text variant="bodyMd" tone="subdued">
+                      No templates created yet. Click "Create New Template" to get started.
+                    </Text>
+                  </Box>
+                ) : (
+                  <BlockStack gap="300">
+                    {templates.map(template => (
+                      <Card key={template.id}>
+                        <BlockStack gap="300">
+                          <InlineStack align="space-between">
+                            <Box>
+                              <InlineStack gap="200">
+                                <Text as="h3" variant="headingSm">{template.name}</Text>
+                                {template.is_default && (
+                                  <Box
+                                    padding="100"
+                                    paddingInlineStart="200"
+                                    paddingInlineEnd="200"
+                                    background="bg-fill-success"
+                                    borderRadius="100"
+                                  >
+                                    <Text variant="bodySm" tone="success">Default</Text>
+                                  </Box>
+                                )}
+                              </InlineStack>
+                              <Text variant="bodySm" tone="subdued">
+                                Last updated: {new Date(template.updated_at).toLocaleDateString()}
+                              </Text>
+                            </Box>
+                            <InlineStack gap="200">
+                              {!template.is_default && (
+                                <Button
+                                  variant="tertiary"
+                                  onClick={() => handleSetDefault(template.id)}
+                                  loading={saving}
+                                >
+                                  Set as Default
+                                </Button>
+                              )}
+                              <Button
+                                variant="tertiary"
+                                onClick={() => {
+                                  if (editingTemplateId === template.id) {
+                                    handleSaveTemplate()
+                                  } else {
+                                    setEditingTemplateId(template.id)
+                                    setEditingTemplateName(template.name)
+                                    setEditingTemplateContent(template.content)
+                                  }
+                                }}
+                                loading={saving && editingTemplateId === template.id}
+                              >
+                                {editingTemplateId === template.id ? 'Save' : 'Edit'}
+                              </Button>
+                              <Button
+                                variant="tertiary"
+                                tone="critical"
+                                onClick={() => {
+                                  setDeleteTemplateId(template.id)
+                                  setShowDeleteModal(true)
+                                }}
+                              >
+                                Delete
+                              </Button>
+                            </InlineStack>
+                          </InlineStack>
+
+                          {editingTemplateId === template.id ? (
+                            <BlockStack gap="300">
+                              <TextField
+                                label="Template Name"
+                                value={editingTemplateName}
+                                onChange={setEditingTemplateName}
+                                autoComplete="off"
+                              />
+                              <TextField
+                                label="Template Content"
+                                value={editingTemplateContent}
+                                onChange={setEditingTemplateContent}
+                                multiline={8}
+                                autoComplete="off"
+                              />
+                            </BlockStack>
+                          ) : (
+                            <Box
+                              padding="300"
+                              background="bg-surface-secondary"
+                              borderRadius="200"
+                            >
+                              <Text variant="bodySm" as="pre" style={{ whiteSpace: 'pre-wrap' }}>
+                                {template.content}
+                              </Text>
+                            </Box>
+                          )}
+                        </BlockStack>
+                      </Card>
+                    ))}
+                  </BlockStack>
+                )}
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
 
         {/* Create Template Modal */}
         <Modal
@@ -685,7 +487,6 @@ function PromptsSettingsContent() {
           onClose={() => {
             setShowCreateModal(false)
             setNewTemplateName('')
-            setNewTemplateCategory('general')
             setNewTemplateContent('')
           }}
           title="Create New Template"
@@ -699,7 +500,6 @@ function PromptsSettingsContent() {
             onAction: () => {
               setShowCreateModal(false)
               setNewTemplateName('')
-              setNewTemplateCategory('general')
               setNewTemplateContent('')
             }
           }]}
@@ -711,24 +511,17 @@ function PromptsSettingsContent() {
                 value={newTemplateName}
                 onChange={setNewTemplateName}
                 autoComplete="off"
-                placeholder="e.g., My Custom Clothing Template"
-              />
-              <Select
-                label="Category"
-                options={PRODUCT_CATEGORIES.map(cat => ({
-                  label: cat.label,
-                  value: cat.value
-                }))}
-                value={newTemplateCategory}
-                onChange={(value) => setNewTemplateCategory(value as ProductCategory)}
+                placeholder="e.g., Summer Dresses, Casual Jewelry, Formal Wear"
+                helpText="Give your template a descriptive name"
               />
               <TextField
                 label="Template Content"
                 value={newTemplateContent}
                 onChange={setNewTemplateContent}
-                multiline={6}
+                multiline={8}
                 autoComplete="off"
                 placeholder="Enter your template instructions here..."
+                helpText="Define the structure and style for this type of product"
               />
             </BlockStack>
           </Modal.Section>
@@ -739,7 +532,7 @@ function PromptsSettingsContent() {
           open={showDeleteModal}
           onClose={() => {
             setShowDeleteModal(false)
-            setDeleteCategory(null)
+            setDeleteTemplateId(null)
           }}
           title="Delete Template"
           primaryAction={{
@@ -752,15 +545,13 @@ function PromptsSettingsContent() {
             content: 'Cancel',
             onAction: () => {
               setShowDeleteModal(false)
-              setDeleteCategory(null)
+              setDeleteTemplateId(null)
             }
           }]}
         >
           <Modal.Section>
             <Text as="p">
-              Are you sure you want to delete the{' '}
-              {PRODUCT_CATEGORIES.find(c => c.value === deleteCategory)?.label || deleteCategory}{' '}
-              template? This action cannot be undone.
+              Are you sure you want to delete this template? This action cannot be undone.
             </Text>
           </Modal.Section>
         </Modal>

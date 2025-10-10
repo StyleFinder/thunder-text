@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { type ProductCategory, getStoreId } from '@/lib/prompts'
+import { getStoreId } from '@/lib/prompts'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { store_id, category } = body
+    const { store_id, template_id } = body
 
-    if (!store_id || !category) {
+    if (!store_id || !template_id) {
       return NextResponse.json(
-        { success: false, error: 'store_id and category are required' },
+        { success: false, error: 'store_id and template_id are required' },
         { status: 400 }
       )
     }
@@ -40,24 +40,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if any templates exist for this category and store
-    const { data: existingTemplates, error: checkError } = await supabase
+    // Check if template exists for this store
+    const { data: existingTemplate, error: checkError } = await supabase
       .from('category_templates')
       .select('id')
+      .eq('id', template_id)
       .eq('store_id', actualStoreId)
-      .eq('category', category)
+      .single()
 
-    if (checkError) {
-      console.error('Error checking templates:', checkError)
+    if (checkError || !existingTemplate) {
+      console.error('Error checking template:', checkError)
       return NextResponse.json(
-        { success: false, error: 'Failed to check existing templates' },
-        { status: 500 }
-      )
-    }
-
-    if (!existingTemplates || existingTemplates.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'No templates found for this category' },
+        { success: false, error: 'Template not found' },
         { status: 404 }
       )
     }
@@ -76,12 +70,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Then set the current template as default (there should only be one per category)
+    // Then set the specified template as default
     const { data: updatedTemplate, error } = await supabase
       .from('category_templates')
       .update({ is_default: true })
+      .eq('id', template_id)
       .eq('store_id', actualStoreId)
-      .eq('category', category)
       .select()
       .single()
 
