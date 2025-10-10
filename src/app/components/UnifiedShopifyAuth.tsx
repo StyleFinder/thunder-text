@@ -228,6 +228,7 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       } else {
         console.log('✅ Authentication successful')
         setIsAuthenticated(true)
+        setIsLoading(false) // Set loading to false immediately after successful auth
 
         // Set up automatic token refresh every 50 seconds
         const refreshInterval = setInterval(async () => {
@@ -247,7 +248,6 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       console.error('❌ Authentication initialization error:', error)
       setError(error instanceof Error ? error.message : 'Authentication failed')
       setIsAuthenticated(false)
-    } finally {
       setIsLoading(false)
     }
   }, [searchParams, isEmbedded, refreshToken])

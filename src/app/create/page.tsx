@@ -826,6 +826,7 @@ function CreateProductContent() {
   console.log('🔍 AUTH DEBUG:', {
     shop,
     isAuthenticated,
+    authLoading,
     authBypass,
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS: process.env.NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS
@@ -833,6 +834,7 @@ function CreateProductContent() {
 
   // Show loading state while auth initializes
   if (authLoading) {
+    console.log('⏳ Showing loading state because authLoading =', authLoading)
     return (
       <Page title="Create New Product">
         <Layout>
