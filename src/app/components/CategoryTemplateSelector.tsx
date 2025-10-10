@@ -132,31 +132,6 @@ export function CategoryTemplateSelector({
         onChange={handleChange}
         helpText="Choose a template that best matches your product type for optimized descriptions"
       />
-      
-      {currentTemplate && onPreview && (
-        <Box paddingBlockStart="300">
-          <InlineStack align="space-between">
-            <Text variant="bodyMd" fontWeight="semibold">
-              Selected: {currentTemplate.name}
-            </Text>
-            <Button 
-              variant="plain" 
-              size="slim"
-              onClick={() => onPreview(currentTemplate)}
-            >
-              Preview Template
-            </Button>
-          </InlineStack>
-          
-          <Box paddingBlockStart="200">
-            <Text variant="bodySm" tone="subdued">
-              This template will structure your product description with sections optimized for {
-                PRODUCT_CATEGORIES.find(cat => cat.value === currentTemplate.category)?.label || 'this category'
-              }.
-            </Text>
-          </Box>
-        </Box>
-      )}
     </Box>
   )
 }

@@ -170,6 +170,65 @@ export default function HelpPage() {
           </Card>
         </Layout.Section>
 
+        {/* Errors, Logs, and API Health */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <Text as="h2" variant="headingLg">Errors, Logs, and API Health</Text>
+              <Divider />
+
+              <BlockStack gap="300">
+                <Text as="h3" variant="headingMd">⚠️ Some Features Unavailable</Text>
+                <Text as="p" variant="bodyMd">
+                  If you see this message, it means some custom features could not be loaded.
+                  This typically affects:
+                </Text>
+                <List type="bullet">
+                  <List.Item>Custom categories (defaults to standard categories)</List.Item>
+                  <List.Item>Custom sizing options (defaults to standard sizing ranges)</List.Item>
+                </List>
+                <Text as="p" variant="bodyMd">
+                  <strong>This doesn't affect your ability to create products.</strong> The app will
+                  use default options instead.
+                </Text>
+              </BlockStack>
+
+              <BlockStack gap="300">
+                <Text as="h3" variant="headingMd">Common Causes</Text>
+                <List type="bullet">
+                  <List.Item>Temporary API connection issues</List.Item>
+                  <List.Item>Database synchronization delays</List.Item>
+                  <List.Item>Custom settings not yet configured in Settings page</List.Item>
+                </List>
+              </BlockStack>
+
+              <BlockStack gap="300">
+                <Text as="h3" variant="headingMd">How to Resolve</Text>
+                <List type="number">
+                  <List.Item>Refresh the page and try again</List.Item>
+                  <List.Item>Check that you've configured custom categories/sizing in Settings</List.Item>
+                  <List.Item>If the issue persists for more than 5 minutes, contact support</List.Item>
+                </List>
+                <Text as="p" variant="bodyMd">
+                  In most cases, this resolves automatically within a few seconds.
+                </Text>
+              </BlockStack>
+
+              <BlockStack gap="300">
+                <Text as="h3" variant="headingMd">API Health Status</Text>
+                <Text as="p" variant="bodyMd">
+                  If you're experiencing issues with features loading:
+                </Text>
+                <List type="bullet">
+                  <List.Item>Check your internet connection</List.Item>
+                  <List.Item>Verify the Shopify admin is accessible</List.Item>
+                  <List.Item>Try logging out and back into the Thunder Text app</List.Item>
+                </List>
+              </BlockStack>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
         {/* Contact & Support */}
         <Layout.Section>
           <Card>

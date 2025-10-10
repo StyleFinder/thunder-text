@@ -903,30 +903,6 @@ function CreateProductContent() {
               </Banner>
             )}
 
-            {/* API Errors - Show users when custom features are unavailable */}
-            {(categoriesError || sizingError) && (
-              <Banner status="warning">
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingMd">⚠️ Some Features Unavailable</Text>
-                  <Text as="p">
-                    Custom categories and sizing options could not be loaded. Using default options instead.
-                  </Text>
-                  {categoriesError && (
-                    <Text as="p" tone="subdued" variant="bodySm">
-                      Categories: {categoriesError}
-                    </Text>
-                  )}
-                  {sizingError && (
-                    <Text as="p" tone="subdued" variant="bodySm">
-                      Sizing: {sizingError}
-                    </Text>
-                  )}
-                  <Text as="p" tone="subdued">
-                    This doesn't affect your ability to create products. If this persists, please contact support.
-                  </Text>
-                </BlockStack>
-              </Banner>
-            )}
 
           </BlockStack>
         </Layout.Section>
