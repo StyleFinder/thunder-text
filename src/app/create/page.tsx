@@ -825,7 +825,7 @@ function CreateProductContent() {
 
   console.log('🔍 AUTH DEBUG:', {
     shop,
-    authenticated,
+    isAuthenticated,
     authBypass,
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS: process.env.NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS
