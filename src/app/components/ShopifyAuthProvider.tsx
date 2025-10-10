@@ -192,6 +192,7 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
       } else {
         console.log('✅ Authentication successful')
         setIsAuthenticated(true)
+        setIsLoading(false) // Set loading to false immediately after successful auth
         sessionStorage.setItem('token_exchange_completed', shopParam)
 
         // Set up automatic token refresh
@@ -216,7 +217,6 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
       console.error('❌ Authentication initialization error:', error)
       setError(error instanceof Error ? error.message : 'Authentication failed')
       setIsAuthenticated(false)
-    } finally {
       setIsLoading(false)
     }
   }, [searchParams, isEmbedded])
