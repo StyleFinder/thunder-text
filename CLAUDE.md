@@ -72,6 +72,215 @@ Thunder Text is an AI-powered Shopify application that generates SEO-optimized p
 - Focus: Advanced AI features, multi-platform expansion
 - Priority: Innovation, strategic architecture, competitive advantage
 
+## Variable and Concept Consistency Protocol
+
+### The Duplication Problem
+**Core Issue**: Claude may create new variables, types, or table names without understanding that equivalent concepts already exist in the codebase, leading to confusion like the `shops` vs `stores` incident.
+
+**Impact**: Hours of debugging, authentication failures, data lookup errors, foreign key inconsistencies, and architectural confusion.
+
+### Mandatory Pre-Creation Checklist
+
+**BEFORE creating ANY new variable, type, table, function, or concept, Claude MUST:**
+
+#### 1. Search for Existing Patterns
+```bash
+# Search for similar variable names
+grep -r "shop" --include="*.ts" --include="*.tsx" --include="*.sql"
+grep -r "store" --include="*.ts" --include="*.tsx" --include="*.sql"
+
+# Search for similar type definitions
+grep -r "type.*Shop" --include="*.ts"
+grep -r "interface.*Shop" --include="*.ts"
+
+# Search database schema for similar tables
+grep -r "CREATE TABLE" supabase/migrations/
+```
+
+#### 2. Ask Clarifying Questions
+**When in doubt, ALWAYS ask:**
+- "I see you have `shops` table. Should I use that, or do you need a separate `stores` concept?"
+- "I found `ShopData` type. Should I use that or create `StoreData`?"
+- "There's a `getShopById` function. Should I create `getStoreById` or use the existing one?"
+
+#### 3. Show Comparison Before Creating
+**Present this analysis BEFORE creating anything new:**
+
+```markdown
+## Proposed New Concept Analysis
+
+**New item**: `stores` table
+**Similar existing**: `shops` table
+
+### Comparison:
+| Aspect | shops (existing) | stores (proposed) |
+|--------|------------------|-------------------|
+| Purpose | Shopify installations | [unclear - same?] |
+| Columns | id, shop_domain, token | id, name, settings |
+| Usage | OAuth, authentication | [unclear] |
+
+### Questions:
+1. Are these genuinely different concepts?
+2. Can `shops` be extended instead?
+3. What's the long-term distinction?
+
+**Recommendation**: Clarify purpose before creating to avoid duplication.
+```
+
+#### 4. Maintain Active Glossary
+**Create and UPDATE `/docs/GLOSSARY.md` for every new concept:**
+
+```markdown
+# Thunder Text Glossary
+
+## Core Concepts
+
+### shop (noun) - Table: `shops`
+**Definition**: A Shopify store installation that has installed Thunder Text
+**Database**: shops table (id, shop_domain, access_token, scope, plan, settings)
+**Code references**: getShopById(), ShopData type, shop_id foreign keys
+**Why this name**: Matches Shopify's terminology for merchant stores
+**DO NOT confuse with**: ~~stores~~ (DEPRECATED - use "shop" instead)
+
+### system_prompt (noun) - Table: `system_prompts`
+**Definition**: Master AI instructions defining ThunderText's behavior
+**Database**: system_prompts table (id, name, content, is_default, store_id)
+**Code references**: getSystemPrompt(), SystemPrompt type
+**Why this name**: Distinguishes from category-specific templates
+**DO NOT confuse with**: category_templates (category-specific guidance)
+
+### category_template (noun) - Table: `category_templates`
+**Definition**: Category-specific product description templates
+**Database**: category_templates table (id, name, category, content, is_default, store_id)
+**Code references**: getCategoryTemplate(), CategoryTemplate type
+**Why this name**: Applies to specific product categories
+**Related to**: system_prompts (used together for AI generation)
+```
+
+#### 5. Naming Convention Rules
+
+**Database Tables:**
+- ✅ Singular nouns: `shop`, `product`, `user` (not shops, products, users)
+- ✅ One concept = one table (no `shop` AND `store` for same thing)
+- ❌ Never create table if similar concept exists
+
+**TypeScript Types:**
+- ✅ Match table names: `Shop`, `Product`, `User`
+- ✅ Descriptive suffixes: `ShopData`, `ShopWithToken`, `ShopCredentials`
+- ❌ Never create `StoreData` when `ShopData` exists
+
+**Function Names:**
+- ✅ Consistent prefixes: `getShop()`, `createShop()`, `updateShop()`
+- ✅ Same root word: All shop-related functions use "shop" not "store"
+- ❌ Never mix: `getShop()` with `updateStore()`
+
+**Foreign Keys:**
+- ✅ Always `{table_name}_id`: `shop_id`, `product_id`, `user_id`
+- ✅ Consistent across all tables
+- ❌ Never mix: `shop_id` in one table, `store_id` in another
+
+### Detection and Prevention Tools
+
+#### Automated Consistency Checks
+**Add to package.json scripts:**
+```json
+{
+  "scripts": {
+    "check:consistency": "node scripts/check-naming-consistency.js",
+    "check:glossary": "node scripts/validate-glossary.js",
+    "pre-commit": "npm run check:consistency"
+  }
+}
+```
+
+#### Consistency Check Script
+**Create `/scripts/check-naming-consistency.js`:**
+```javascript
+// Detects potential naming conflicts like shops vs stores
+const concepts = {
+  'shop': ['shops', 'store', 'stores'],
+  'user': ['users', 'account', 'accounts'],
+  'product': ['products', 'item', 'items']
+}
+
+// Searches codebase for mixed usage and reports conflicts
+```
+
+#### Git Pre-Commit Hook
+**Prevent inconsistent naming from being committed:**
+```bash
+#!/bin/bash
+# .git/hooks/pre-commit
+
+# Check for glossary updates when new tables/types added
+if git diff --cached --name-only | grep -q "migrations\|types"; then
+  if ! git diff --cached --name-only | grep -q "GLOSSARY.md"; then
+    echo "⚠️  New table/type detected. Did you update GLOSSARY.md?"
+    exit 1
+  fi
+fi
+```
+
+### Real-World Example: shops vs stores
+
+**What went wrong:**
+1. Created `shops` table for Shopify OAuth credentials
+2. Later created `stores` table for billing/subscription data
+3. Code used both interchangeably
+4. Foreign keys split between both tables
+5. `getStoreId()` queried empty `stores` table
+6. Hours of debugging to consolidate back to `shops`
+
+**What should have happened:**
+1. Before creating `stores`, search for "shop"
+2. Find `shops` table exists
+3. Ask: "Should I extend `shops` or create separate `stores`?"
+4. Show comparison of both concepts
+5. User clarifies: "Just add columns to `shops`"
+6. No confusion, no debugging
+
+### Claude's Mandatory Protocol
+
+**Every time Claude considers creating something new:**
+
+```markdown
+1. 🔍 SEARCH for similar concepts (grep, database query)
+2. ❓ ASK if genuinely different from existing patterns
+3. 📊 SHOW comparison analysis before creating
+4. 📝 UPDATE GLOSSARY.md with new concept definition
+5. ✅ VERIFY naming consistency with existing codebase
+```
+
+**If Claude skips this protocol:**
+- User should immediately stop and ask for analysis
+- Review what similar concepts exist
+- Decide: extend existing vs create new
+
+### Documentation Requirements
+
+**For every new concept, create:**
+1. **Glossary entry** - Definition, purpose, database/code references
+2. **Schema documentation** - Why this table/type exists, what it stores
+3. **Comparison notes** - How it differs from similar concepts
+4. **Migration notes** - Why this change was made (in migration file)
+
+### Success Metrics
+
+✅ **Good state:**
+- All shop-related code uses "shop" consistently
+- GLOSSARY.md defines every major concept
+- No orphaned tables or unused types
+- Foreign keys follow consistent naming
+- Developers understand purpose of each table
+
+❌ **Bad state:**
+- Mixed usage of "shop" and "store" for same concept
+- Undocumented tables with unclear purpose
+- Foreign keys with inconsistent naming
+- Hours spent debugging variable confusion
+
+---
+
 ## Development Patterns
 
 ### Shopify Integration Patterns
