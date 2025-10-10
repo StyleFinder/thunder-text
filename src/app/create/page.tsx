@@ -107,6 +107,7 @@ function CreateProductContent() {
   const [parentCategories, setParentCategories] = useState<any[]>([])
   const [subCategories, setSubCategories] = useState<any[]>([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
+  const [categoriesError, setCategoriesError] = useState<string | null>(null)
   const [selectedParentCategory, setSelectedParentCategory] = useState('')
   const [selectedSubCategory, setSelectedSubCategory] = useState('')
   const [categoryDetected, setCategoryDetected] = useState(false)
@@ -115,6 +116,7 @@ function CreateProductContent() {
   // Custom sizing
   const [customSizing, setCustomSizing] = useState<any[]>([])
   const [sizingLoading, setSizingLoading] = useState(true)
+  const [sizingError, setSizingError] = useState<string | null>(null)
 
   // Default fallback categories if no custom ones exist
   const defaultCategories = [
@@ -244,15 +246,28 @@ function CreateProductContent() {
   const fetchCustomCategories = async () => {
     try {
       const response = await fetch(`/api/categories?shop=${shop}`)
+
+      // Check for HTTP errors (401, 404, 500, etc.)
+      if (!response.ok) {
+        const errorMsg = `Categories API error: ${response.status} ${response.statusText}`
+        console.error(errorMsg)
+        setCategoriesError(errorMsg)
+        return
+      }
+
       const data = await response.json()
-      
+
       if (data.success && data.data.length > 0) {
         setCustomCategories(data.data)
+        setCategoriesError(null) // Clear any previous errors
+      } else {
+        // No custom categories configured - this is OK, not an error
+        console.log('No custom categories found, using defaults')
       }
-      // If no custom categories, we'll use the default ones (already handled in categoryOptions)
     } catch (err) {
-      console.error('Error fetching custom categories:', err)
-      // Fall back to default categories on error
+      const errorMsg = `Failed to load categories: ${err instanceof Error ? err.message : 'Unknown error'}`
+      console.error(errorMsg, err)
+      setCategoriesError(errorMsg)
     } finally {
       setCategoriesLoading(false)
     }
@@ -287,15 +302,28 @@ function CreateProductContent() {
   const fetchCustomSizing = async () => {
     try {
       const response = await fetch(`/api/sizing?shop=${shop}`)
+
+      // Check for HTTP errors (401, 404, 500, etc.)
+      if (!response.ok) {
+        const errorMsg = `Sizing API error: ${response.status} ${response.statusText}`
+        console.error(errorMsg)
+        setSizingError(errorMsg)
+        return
+      }
+
       const data = await response.json()
-      
+
       if (data.success && data.data.length > 0) {
         setCustomSizing(data.data)
+        setSizingError(null) // Clear any previous errors
+      } else {
+        // No custom sizing configured - this is OK, not an error
+        console.log('No custom sizing found, using defaults')
       }
-      // If no custom sizing, we'll use the default ones (already handled in sizingOptions)
     } catch (err) {
-      console.error('Error fetching custom sizing:', err)
-      // Fall back to default sizing on error
+      const errorMsg = `Failed to load sizing options: ${err instanceof Error ? err.message : 'Unknown error'}`
+      console.error(errorMsg, err)
+      setSizingError(errorMsg)
     } finally {
       setSizingLoading(false)
     }
@@ -874,7 +902,32 @@ function CreateProductContent() {
                 </BlockStack>
               </Banner>
             )}
-            
+
+            {/* API Errors - Show users when custom features are unavailable */}
+            {(categoriesError || sizingError) && (
+              <Banner status="warning">
+                <BlockStack gap="200">
+                  <Text as="h3" variant="headingMd">⚠️ Some Features Unavailable</Text>
+                  <Text as="p">
+                    Custom categories and sizing options could not be loaded. Using default options instead.
+                  </Text>
+                  {categoriesError && (
+                    <Text as="p" tone="subdued" variant="bodySm">
+                      Categories: {categoriesError}
+                    </Text>
+                  )}
+                  {sizingError && (
+                    <Text as="p" tone="subdued" variant="bodySm">
+                      Sizing: {sizingError}
+                    </Text>
+                  )}
+                  <Text as="p" tone="subdued">
+                    This doesn't affect your ability to create products. If this persists, please contact support.
+                  </Text>
+                </BlockStack>
+              </Banner>
+            )}
+
           </BlockStack>
         </Layout.Section>
 
