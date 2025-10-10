@@ -137,7 +137,7 @@ function CreateProductContent() {
   // Generate category options from custom categories or fallback to defaults
   const categoryOptions = [
     { label: 'Select a category', value: '' },
-    ...(customCategories.length > 0 
+    ...((customCategories && customCategories.length > 0)
       ? customCategories.map(cat => ({ label: cat.name, value: cat.name }))
       : defaultCategories.map(cat => ({ label: cat, value: cat }))
     )
@@ -385,10 +385,10 @@ function CreateProductContent() {
   const sizingOptions = [
     { label: 'Select sizing range', value: '' },
     // If we have custom sizing from database, use those (includes defaults + custom)
-    ...(customSizing.length > 0 
-      ? customSizing.map(sizing => ({ 
-          label: `${sizing.name}${sizing.is_default ? '' : ' (Custom)'} (${sizing.sizes.join(', ')})`, 
-          value: sizing.sizes.join(', ') 
+    ...((customSizing && customSizing.length > 0)
+      ? customSizing.map(sizing => ({
+          label: `${sizing.name}${sizing.is_default ? '' : ' (Custom)'} (${sizing.sizes.join(', ')})`,
+          value: sizing.sizes.join(', ')
         }))
       // Otherwise fallback to hardcoded defaults (for when DB is empty/unavailable)
       : defaultSizingOptions.slice(1) // Remove the first "Select" option from defaults
@@ -1133,13 +1133,13 @@ function CreateProductContent() {
                     )}
                     
                     {/* Cascading Category Dropdowns */}
-                    {parentCategories.length > 0 ? (
+                    {(parentCategories && parentCategories.length > 0) ? (
                       <>
                         <Select
                           label="Parent Category"
                           options={[
                             { label: 'Select a parent category', value: '' },
-                            ...parentCategories.map(cat => ({ label: cat.name, value: cat.id }))
+                            ...(parentCategories || []).map(cat => ({ label: cat.name, value: cat.id }))
                           ]}
                           value={selectedParentCategory}
                           disabled={primaryPhotos.length === 0}
@@ -1157,12 +1157,12 @@ function CreateProductContent() {
                           }}
                         />
                         
-                        {selectedParentCategory && subCategories.length > 0 && (
+                        {selectedParentCategory && subCategories && subCategories.length > 0 && (
                           <Select
                             label="Sub Category"
                             options={[
                               { label: 'Select a sub-category', value: '' },
-                              ...subCategories.map(cat => ({ label: cat.name, value: cat.id }))
+                              ...(subCategories || []).map(cat => ({ label: cat.name, value: cat.id }))
                             ]}
                             value={selectedSubCategory}
                             disabled={primaryPhotos.length === 0}
