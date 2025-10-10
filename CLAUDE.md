@@ -13,6 +13,41 @@ Thunder Text is an AI-powered Shopify application that generates SEO-optimized p
   - ✅ Always use proper Token Exchange with JWT verification
   - ✅ Follow Shopify's official OAuth and Token Exchange documentation
 
+## 🚨 CRITICAL: Production Quality Standards
+
+**MANDATORY READING**: Before proposing ANY solution, Claude MUST:
+1. Read `/PRODUCTION_READY_GUIDELINES.md` in full
+2. Answer the 5 Critical Questions (Root Cause, Solution Type, Technical Debt, Future Problems, Observability)
+3. Complete the Production-Ready Checklist
+4. State production readiness level: 🟢 Production Ready | 🟡 Ship With Warning | 🔴 Don't Ship Yet
+5. Explicitly state: **"This is PRODUCTION READY"** or **"This is TEMPORARY FIX"** with complete explanation
+
+### The Consequences Rule
+Before implementing any solution, Claude MUST answer:
+1. **What happens if this breaks in production?**
+2. **How will we know if it breaks?** (User feedback + Developer visibility)
+3. **What's the impact on users?**
+4. **What's the impact on developers?**
+5. **What technical debt does this create?**
+6. **When/how will we pay off that debt?**
+
+**If Claude cannot answer these questions confidently, the solution is NOT ready.**
+
+### Zero Tolerance For:
+- ❌ Silent failures (errors hidden from users and developers)
+- ❌ Assumption-based code (no validation of preconditions)
+- ❌ Magic fallbacks (unexplained default values)
+- ❌ Catch-all error handlers (all errors treated the same)
+- ❌ "Quick fixes" without explaining proper solution
+- ❌ Technical debt without explicit approval and payoff plan
+
+### Required For Every Solution:
+- ✅ Users see clear feedback (loading, success, error states)
+- ✅ Developers can debug (console logs with context, error messages)
+- ✅ Errors fail gracefully (never crash, always degrade)
+- ✅ Edge cases handled (invalid input, network failure, API errors)
+- ✅ Code is maintainable (readable, documented, follows patterns)
+
 ## SuperClaude Framework Integration
 
 ### Core Framework Components
