@@ -5,7 +5,6 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useCallback, useEffect, Suspense, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { useShopifyAuth } from '../components/UnifiedShopifyAuth'
 import {
   Page,
   Layout,
@@ -47,7 +46,8 @@ interface ColorVariant {
 
 function CreateProductContent() {
   const searchParams = useSearchParams()
-  const { shop, isAuthenticated, authenticatedFetch: shopifyAuthFetch, isLoading: authLoading } = useShopifyAuth()
+  const shop = searchParams?.get('shop')
+  const authenticated = searchParams?.get('authenticated')
 
   // Admin extension redirect parameters
   const productId = searchParams?.get('productId')
@@ -225,13 +225,13 @@ function CreateProductContent() {
 
   // Fetch initial data on component mount
   useEffect(() => {
-    if (shop && isAuthenticated) {
+    if (shop && authenticated) {
       fetchCustomCategories()
       fetchParentCategories()
       fetchCustomSizing()
       fetchGlobalDefaultTemplate()
     }
-  }, [shop, isAuthenticated])
+  }, [shop, authenticated])
 
   // Load sub-categories when parent category is selected
   useEffect(() => {
@@ -825,35 +825,11 @@ function CreateProductContent() {
 
   console.log('🔍 AUTH DEBUG:', {
     shop,
-    isAuthenticated,
-    authLoading,
+    authenticated,
     authBypass,
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS: process.env.NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS
   })
-
-  // Show loading state while auth initializes
-  if (authLoading) {
-    console.log('⏳ Showing loading state because authLoading =', authLoading)
-    return (
-      <Page title="Create New Product">
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <Box padding="400">
-                <BlockStack gap="400" align="center">
-                  <Spinner size="large" />
-                  <Text as="p" variant="bodyMd">
-                    Initializing Shopify Authentication...
-                  </Text>
-                </BlockStack>
-              </Box>
-            </Card>
-          </Layout.Section>
-        </Layout>
-      </Page>
-    )
-  }
 
   return (
     <Page 
