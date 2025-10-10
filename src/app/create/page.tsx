@@ -1039,7 +1039,7 @@ function CreateProductContent() {
                       <Spinner size="small" />
                       <Text as="p" tone="subdued">Detecting colors from your primary photos...</Text>
                     </BlockStack>
-                  ) : (
+                  ) : detectedVariants && detectedVariants.length > 0 ? (
                     <BlockStack gap="300">
                       {detectedVariants.map((variant, index) => (
                         <Card key={variant.standardizedColor} background="bg-surface-secondary">
@@ -1065,6 +1065,8 @@ function CreateProductContent() {
                         </Card>
                       ))}
                     </BlockStack>
+                  ) : (
+                    <Text as="p" tone="subdued">No color variants detected yet. Upload primary photos to detect colors.</Text>
                   )}
                 </BlockStack>
               </Card>
