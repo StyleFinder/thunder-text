@@ -258,7 +258,7 @@ function CreateProductContent() {
 
       const data = await response.json()
 
-      if (data.success && data.data && data.data.length > 0) {
+      if (data.success && data.data && Array.isArray(data.data) && data.data.length > 0) {
         setCustomCategories(data.data)
         setCategoriesError(null) // Clear any previous errors
       } else {
@@ -281,7 +281,7 @@ function CreateProductContent() {
       const response = await fetch(`/api/categories/children?shop=${shop}&parentId=null`)
       const data = await response.json()
 
-      if (data.success && data.data) {
+      if (data.success && data.data && Array.isArray(data.data)) {
         setParentCategories(data.data)
       } else {
         setParentCategories([])
@@ -297,7 +297,7 @@ function CreateProductContent() {
       const response = await fetch(`/api/categories/children?shop=${shop}&parentId=${parentId}`)
       const data = await response.json()
 
-      if (data.success && data.data) {
+      if (data.success && data.data && Array.isArray(data.data)) {
         setSubCategories(data.data)
       } else {
         setSubCategories([])
@@ -323,7 +323,7 @@ function CreateProductContent() {
 
       const data = await response.json()
 
-      if (data.success && data.data && data.data.length > 0) {
+      if (data.success && data.data && Array.isArray(data.data) && data.data.length > 0) {
         setCustomSizing(data.data)
         setSizingError(null) // Clear any previous errors
       } else {
