@@ -139,7 +139,7 @@ function CreateProductContent() {
   // Generate category options from custom categories or fallback to defaults
   const categoryOptions = [
     { label: 'Select a category', value: '' },
-    ...((customCategories && customCategories.length > 0)
+    ...((Array.isArray(customCategories) && customCategories.length > 0)
       ? customCategories.map(cat => ({ label: cat.name, value: cat.name }))
       : defaultCategories.map(cat => ({ label: cat, value: cat }))
     )
@@ -425,7 +425,7 @@ function CreateProductContent() {
   const sizingOptions = [
     { label: 'Select sizing range', value: '' },
     // If we have custom sizing from database, use those (includes defaults + custom)
-    ...((customSizing && customSizing.length > 0)
+    ...((Array.isArray(customSizing) && customSizing.length > 0)
       ? customSizing.map(sizing => ({
           label: `${sizing.name}${sizing.is_default ? '' : ' (Custom)'} (${sizing.sizes.join(', ')})`,
           value: sizing.sizes.join(', ')
