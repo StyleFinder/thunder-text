@@ -274,19 +274,25 @@ export async function getCombinedPrompt(
  * Update system prompt
  */
 export async function updateSystemPrompt(
-  storeId: string, 
-  content: string, 
+  storeId: string,
+  content: string,
   name?: string
 ): Promise<SystemPrompt | null> {
   try {
+    // If storeId looks like a shop domain, convert it to UUID
+    let actualStoreId = storeId
+    if (storeId.includes('.myshopify.com') || !storeId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      actualStoreId = await getStoreId(storeId) || storeId
+    }
+
     const { data, error } = await supabaseAdmin
       .from('system_prompts')
-      .update({ 
-        content, 
+      .update({
+        content,
         name: name || 'Custom System Prompt',
         updated_at: new Date().toISOString()
       })
-      .eq('store_id', storeId)
+      .eq('store_id', actualStoreId)
       .eq('is_default', true)
       .select()
       .single()
