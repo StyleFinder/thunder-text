@@ -831,6 +831,17 @@ function CreateProductContent() {
     NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS: process.env.NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS
   })
 
+  console.log('🔍 ARRAY DEBUG:', {
+    customCategories: customCategories,
+    parentCategories: parentCategories,
+    subCategories: subCategories,
+    customSizing: customSizing,
+    primaryPhotos: primaryPhotos,
+    secondaryPhotos: secondaryPhotos,
+    detectedVariants: detectedVariants,
+    uploadedFiles: uploadedFiles
+  })
+
   return (
     <Page 
       title="Create New Product" 
