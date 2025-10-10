@@ -322,6 +322,36 @@ function PromptsSettingsContent() {
     )
   }
 
+  const handleResetSystemPrompt = async () => {
+    try {
+      setSaving(true)
+      const response = await fetch('/api/prompts/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          store_id: shop,
+          type: 'system_prompt'
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to reset system prompt')
+      }
+
+      const result = await response.json()
+      setSystemPrompt(result.data)
+      setSystemPromptContent(result.data.content)
+      setEditingSystemPrompt(false)
+      setSuccess('System prompt reset to default!')
+
+    } catch (err) {
+      console.error('Error resetting system prompt:', err)
+      setError('Failed to reset system prompt')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <Frame>
       <Page title="Prompt Settings">
@@ -336,56 +366,7 @@ function PromptsSettingsContent() {
         )}
 
         <Layout>
-          {/* System Prompt Section */}
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <InlineStack align="space-between">
-                  <Box>
-                    <Text as="h2" variant="headingMd">Master System Prompt</Text>
-                    <Text variant="bodySm" tone="subdued">
-                      Universal copywriting principles applied to all product descriptions
-                    </Text>
-                  </Box>
-                  <Button
-                    variant="primary"
-                    onClick={() => {
-                      if (editingSystemPrompt) {
-                        handleSaveSystemPrompt()
-                      } else {
-                        setEditingSystemPrompt(true)
-                      }
-                    }}
-                    loading={saving && editingSystemPrompt}
-                  >
-                    {editingSystemPrompt ? 'Save' : 'Edit'}
-                  </Button>
-                </InlineStack>
-
-                <TextField
-                  label=""
-                  value={systemPromptContent}
-                  onChange={setSystemPromptContent}
-                  multiline={10}
-                  autoComplete="off"
-                  disabled={!editingSystemPrompt}
-                />
-
-                {editingSystemPrompt && (
-                  <InlineStack align="end">
-                    <Button onClick={() => {
-                      setEditingSystemPrompt(false)
-                      setSystemPromptContent(systemPrompt?.content || '')
-                    }}>
-                      Cancel
-                    </Button>
-                  </InlineStack>
-                )}
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-
-          {/* Templates Section */}
+          {/* Templates Section - MOVED TO TOP */}
           <Layout.Section>
             <Card>
               <BlockStack gap="400">
@@ -399,6 +380,7 @@ function PromptsSettingsContent() {
                   <Button
                     variant="primary"
                     onClick={() => setShowCreateModal(true)}
+                    size="large"
                   >
                     Create New Template
                   </Button>
@@ -495,6 +477,65 @@ function PromptsSettingsContent() {
                       </BlockStack>
                     )}
                   </BlockStack>
+                )}
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+
+          {/* System Prompt Section - MOVED TO BOTTOM */}
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <InlineStack align="space-between">
+                  <Box>
+                    <Text as="h2" variant="headingMd">Master System Prompt</Text>
+                    <Text variant="bodySm" tone="subdued">
+                      Universal copywriting principles applied to all product descriptions
+                    </Text>
+                  </Box>
+                  <InlineStack gap="200">
+                    {editingSystemPrompt && (
+                      <Button
+                        onClick={handleResetSystemPrompt}
+                        loading={saving}
+                      >
+                        Restore to Default
+                      </Button>
+                    )}
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        if (editingSystemPrompt) {
+                          handleSaveSystemPrompt()
+                        } else {
+                          setEditingSystemPrompt(true)
+                        }
+                      }}
+                      loading={saving && editingSystemPrompt}
+                    >
+                      {editingSystemPrompt ? 'Save' : 'Edit'}
+                    </Button>
+                  </InlineStack>
+                </InlineStack>
+
+                <TextField
+                  label=""
+                  value={systemPromptContent}
+                  onChange={setSystemPromptContent}
+                  multiline={10}
+                  autoComplete="off"
+                  disabled={!editingSystemPrompt}
+                />
+
+                {editingSystemPrompt && (
+                  <InlineStack align="end">
+                    <Button onClick={() => {
+                      setEditingSystemPrompt(false)
+                      setSystemPromptContent(systemPrompt?.content || '')
+                    }}>
+                      Cancel
+                    </Button>
+                  </InlineStack>
                 )}
               </BlockStack>
             </Card>
