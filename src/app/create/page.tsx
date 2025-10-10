@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useCallback, useEffect, Suspense, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { useShopifyAuth } from '../components/ShopifyAuthProvider'
+import { useShopifyAuth } from '../components/UnifiedShopifyAuth'
 import {
   Page,
   Layout,

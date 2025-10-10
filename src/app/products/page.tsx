@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useShopifyAuth } from '../components/ShopifyAuthProvider'
+import { useShopifyAuth } from '../components/UnifiedShopifyAuth'
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic'
