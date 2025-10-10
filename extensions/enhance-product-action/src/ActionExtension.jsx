@@ -17,9 +17,9 @@ function App() {
     }
 
     // Build the URL to the enhancement workspace
-    const baseUrl = process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3000' 
-      : 'https://thunder-text-nine.vercel.app';
+    const baseUrl = process.env.NODE_ENV === 'development'
+      ? 'http://localhost:3050'
+      : 'https://thunder-text.onrender.com';
       
     const enhanceUrl = `${baseUrl}/enhance?shop=${shopDomain}&authenticated=true&productId=${productId.replace('gid://shopify/Product/', '')}&source=admin`;
 

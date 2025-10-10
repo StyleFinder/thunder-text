@@ -15,12 +15,12 @@ The metafield display cards are shown in YOUR APP's product detail pages, not in
 
 ### Direct URL format:
 ```
-https://thunder-text-nine.vercel.app/product/{product-id}?shop=coach-ellie-test-store.myshopify.com&embedded=1
+https://thunder-text.onrender.com/product/{product-id}?shop=coach-ellie-test-store.myshopify.com&embedded=1
 ```
 
 Example for your product:
 ```
-https://thunder-text-nine.vercel.app/product/09f87608-725c-4f7d-bf5f-f6544ba25572?shop=coach-ellie-test-store.myshopify.com&embedded=1
+https://thunder-text.onrender.com/product/09f87608-725c-4f7d-bf5f-f6544ba25572?shop=coach-ellie-test-store.myshopify.com&embedded=1
 ```
 
 ## 2. In Shopify Admin

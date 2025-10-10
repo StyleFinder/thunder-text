@@ -8,13 +8,13 @@ export function getAppUrl(): string {
     return process.env.SHOPIFY_APP_URL
   }
 
-  // In Vercel, use the auto-generated URL
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`
+  // In Render, use the RENDER_EXTERNAL_URL environment variable
+  if (process.env.RENDER_EXTERNAL_URL) {
+    return process.env.RENDER_EXTERNAL_URL
   }
 
   // Fallback to production URL
-  return 'https://thunder-text-nine.vercel.app'
+  return 'https://thunder-text.onrender.com'
 }
 
 /**

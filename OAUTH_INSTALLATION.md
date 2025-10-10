@@ -10,7 +10,7 @@ To install Thunder Text in your development store using OAuth:
    ```
    SHOPIFY_API_KEY=fa85f3902882734b800968440c27447d
    SHOPIFY_API_SECRET=c7fa2886986c1295ecc1bfffe34bd415
-   SHOPIFY_APP_URL=https://thunder-text-nine.vercel.app
+   SHOPIFY_APP_URL=https://thunder-text.onrender.com
    ```
    - Click "Save" and redeploy
 
@@ -18,7 +18,7 @@ To install Thunder Text in your development store using OAuth:
 
    Visit this URL to start the OAuth flow:
    ```
-   https://thunder-text-nine.vercel.app/api/auth?shop=zunosai-staging-test-store
+   https://thunder-text.onrender.com/api/auth?shop=zunosai-staging-test-store
    ```
 
    This will:
@@ -69,10 +69,10 @@ const { accessToken } = await getShopToken(shop)
 ### Option 2: Manual Testing
 ```bash
 # Test if OAuth token exists
-curl https://thunder-text-nine.vercel.app/api/debug/token-status?shop=zunosai-staging-test-store
+curl https://thunder-text.onrender.com/api/debug/token-status?shop=zunosai-staging-test-store
 
 # If no token, initiate OAuth
-open https://thunder-text-nine.vercel.app/api/auth?shop=zunosai-staging-test-store
+open https://thunder-text.onrender.com/api/auth?shop=zunosai-staging-test-store
 ```
 
 ## Verify Installation
@@ -85,7 +85,7 @@ After OAuth installation, verify:
    - Should see entry for `zunosai-staging-test-store.myshopify.com`
 
 2. **Test the App**:
-   - Visit: https://thunder-text-nine.vercel.app/enhance?shop=zunosai-staging-test-store&authenticated=true
+   - Visit: https://thunder-text.onrender.com/enhance?shop=zunosai-staging-test-store&authenticated=true
    - Should work without any token errors
 
 ## Benefits of OAuth
@@ -103,7 +103,7 @@ After OAuth installation, verify:
 - Redeploy after updating environment variables
 
 ### "OAuth error: invalid_request"
-- Check that redirect URI matches: https://thunder-text-nine.vercel.app/api/auth/callback/shopify
+- Check that redirect URI matches: https://thunder-text.onrender.com/api/auth/callback/shopify
 - Ensure shop domain includes .myshopify.com
 
 ### "No token found"

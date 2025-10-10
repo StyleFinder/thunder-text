@@ -12,11 +12,11 @@
 **App Configuration:**
 ```bash
 # Required App Settings in Partner Dashboard:
-App URL: https://thunder-text-nine.vercel.app
+App URL: https://thunder-text.onrender.com
 Allowed redirection URLs: 
-  - https://thunder-text-nine.vercel.app/api/auth/callback/shopify
-  - https://thunder-text-nine.vercel.app/dashboard
-Webhooks endpoint: https://thunder-text-nine.vercel.app/api/webhooks
+  - https://thunder-text.onrender.com/api/auth/callback/shopify
+  - https://thunder-text.onrender.com/dashboard
+Webhooks endpoint: https://thunder-text.onrender.com/api/webhooks
 App scopes: read_products,write_products,read_product_listings,write_product_listings
 ```
 
@@ -53,7 +53,7 @@ NODE_ENV=production
 SHOPIFY_API_KEY=your_production_shopify_key
 SHOPIFY_API_SECRET=your_production_shopify_secret
 SHOPIFY_SCOPES=read_products,write_products,read_product_listings,write_product_listings
-SHOPIFY_APP_URL=https://thunder-text-nine.vercel.app
+SHOPIFY_APP_URL=https://thunder-text.onrender.com
 SHOPIFY_TEST_STORE=zunosai-staging-test-store
 
 # Supabase Production
@@ -66,7 +66,7 @@ OPENAI_API_KEY=your_openai_production_key
 
 # NextAuth Security
 NEXTAUTH_SECRET=your_32_character_random_string
-NEXTAUTH_URL=https://thunder-text-nine.vercel.app
+NEXTAUTH_URL=https://thunder-text.onrender.com
 ```
 
 **Custom Domain Setup (Optional):**
@@ -101,7 +101,7 @@ NEXTAUTH_URL=https://thunder-text-nine.vercel.app
 ```bash
 # Test build and deployment process
 git push origin main  # Triggers auto-deploy
-curl https://thunder-text-nine.vercel.app/api/health
+curl https://thunder-text.onrender.com/api/health
 ```
 
 **Performance Testing on Render:**
@@ -143,16 +143,16 @@ curl https://thunder-text-nine.vercel.app/api/health
 **Required App Configuration:**
 ```bash
 # Shopify Partner Dashboard Settings
-App URL: https://thunder-text-nine.vercel.app
-Allowed redirection URL: https://thunder-text-nine.vercel.app/api/auth/callback/shopify
-Privacy Policy URL: https://thunder-text-nine.vercel.app/privacy
-Terms of Service URL: https://thunder-text-nine.vercel.app/terms
-Support URL: https://thunder-text-nine.vercel.app/support
+App URL: https://thunder-text.onrender.com
+Allowed redirection URL: https://thunder-text.onrender.com/api/auth/callback/shopify
+Privacy Policy URL: https://thunder-text.onrender.com/privacy
+Terms of Service URL: https://thunder-text.onrender.com/terms
+Support URL: https://thunder-text.onrender.com/support
 
 # GDPR Compliance (if targeting EU)
-Customer data request: https://thunder-text-nine.vercel.app/api/webhooks/gdpr/customers/data_request
-Customer redact: https://thunder-text-nine.vercel.app/api/webhooks/gdpr/customers/redact
-Shop redact: https://thunder-text-nine.vercel.app/api/webhooks/gdpr/shop/redact
+Customer data request: https://thunder-text.onrender.com/api/webhooks/gdpr/customers/data_request
+Customer redact: https://thunder-text.onrender.com/api/webhooks/gdpr/customers/redact
+Shop redact: https://thunder-text.onrender.com/api/webhooks/gdpr/shop/redact
 ```
 
 **App Store Assets:**

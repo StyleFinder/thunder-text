@@ -1028,7 +1028,7 @@ npm run cache:clear
 SHOPIFY_API_KEY=your_client_id
 SHOPIFY_API_SECRET=your_client_secret
 SHOPIFY_WEBHOOK_SECRET=your_webhook_secret
-SHOPIFY_APP_URL=https://thunder-text-nine.vercel.app
+SHOPIFY_APP_URL=https://thunder-text.onrender.com
 
 # Token management
 TOKEN_CACHE_DURATION=82800000  # 23 hours in ms

@@ -8,7 +8,7 @@ Thunder Text uses a unified authentication system that handles both embedded Sho
 
 ### 1. Direct URL Access (Non-Embedded)
 When accessing the app directly via URL (not through Shopify admin):
-- **URL Pattern**: `https://thunder-text-nine.vercel.app/enhance?shop=SHOP_NAME&authenticated=true`
+- **URL Pattern**: `https://thunder-text.onrender.com/enhance?shop=SHOP_NAME&authenticated=true`
 - **Authentication**: Relies on the `authenticated=true` parameter
 - **Use Case**: Development, testing, and direct access scenarios
 
@@ -85,7 +85,7 @@ SUPABASE_SERVICE_KEY=your_service_key
 ### Test Direct Access
 ```bash
 # Visit this URL directly in browser
-https://thunder-text-nine.vercel.app/enhance?shop=zunosai-staging-test-store&authenticated=true
+https://thunder-text.onrender.com/enhance?shop=zunosai-staging-test-store&authenticated=true
 ```
 
 ### Test Embedded Access

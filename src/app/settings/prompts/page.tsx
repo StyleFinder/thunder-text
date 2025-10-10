@@ -67,6 +67,12 @@ function PromptsSettingsContent() {
   const [showResetModal, setShowResetModal] = useState(false)
   const [resetType, setResetType] = useState<'system' | 'template' | null>(null)
   const [resetCategory, setResetCategory] = useState<ProductCategory | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteCategory, setDeleteCategory] = useState<ProductCategory | null>(null)
+  const [newTemplateName, setNewTemplateName] = useState('')
+  const [newTemplateCategory, setNewTemplateCategory] = useState<ProductCategory>('general')
+  const [newTemplateContent, setNewTemplateContent] = useState('')
 
   // Load prompts
   useEffect(() => {
@@ -236,10 +242,10 @@ function PromptsSettingsContent() {
   // Handle default template change
   const handleDefaultTemplateChange = async (category: string) => {
     if (!category) return
-    
+
     // Get the actual store_id from the templates (they all have the same store_id)
     const storeId = categoryTemplates.length > 0 ? categoryTemplates[0].store_id : shop
-    
+
     try {
       setSaving(true)
       const response = await fetch('/api/prompts/set-default', {
@@ -256,20 +262,102 @@ function PromptsSettingsContent() {
       }
 
       const result = await response.json()
-      
+
       // Update local state - mark this template as default and others as not default
-      setCategoryTemplates(prev => 
-        prev.map(t => ({ 
-          ...t, 
-          is_default: t.category === category 
+      setCategoryTemplates(prev =>
+        prev.map(t => ({
+          ...t,
+          is_default: t.category === category
         }))
       )
-      
+
       setSuccess(`${PRODUCT_CATEGORIES.find(c => c.value === category)?.label} template set as default!`)
-      
+
     } catch (err) {
       console.error('Error setting as default:', err)
       setError('Failed to set template as default')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Create new template
+  const handleCreateTemplate = async () => {
+    if (!newTemplateName.trim() || !newTemplateContent.trim()) {
+      setError('Please provide both a name and content for the template')
+      return
+    }
+
+    try {
+      setSaving(true)
+      const response = await fetch('/api/prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          store_id: shop,
+          type: 'category_template',
+          category: newTemplateCategory,
+          content: newTemplateContent,
+          name: newTemplateName
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create template')
+      }
+
+      const result = await response.json()
+
+      // Add to local state
+      setCategoryTemplates(prev => [...prev, result.data])
+
+      // Reset modal state
+      setShowCreateModal(false)
+      setNewTemplateName('')
+      setNewTemplateCategory('general')
+      setNewTemplateContent('')
+      setSuccess('Template created successfully!')
+
+    } catch (err) {
+      console.error('Error creating template:', err)
+      setError('Failed to create template')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Delete template
+  const handleDeleteTemplate = async () => {
+    if (!deleteCategory) return
+
+    const template = getTemplate(deleteCategory)
+    if (!template) return
+
+    try {
+      setSaving(true)
+      const response = await fetch('/api/prompts/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          store_id: shop,
+          template_id: template.id
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete template')
+      }
+
+      // Remove from local state
+      setCategoryTemplates(prev => prev.filter(t => t.id !== template.id))
+
+      setShowDeleteModal(false)
+      setDeleteCategory(null)
+      setSuccess('Template deleted successfully!')
+
+    } catch (err) {
+      console.error('Error deleting template:', err)
+      setError('Failed to delete template')
     } finally {
       setSaving(false)
     }
@@ -365,10 +453,20 @@ function PromptsSettingsContent() {
           <Layout.Section>
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">Template Editor</Text>
-                <Text variant="bodySm" tone="subdued">
-                  Edit and customize templates for different product categories
-                </Text>
+                <InlineStack align="space-between">
+                  <Box>
+                    <Text as="h2" variant="headingMd">Template Editor</Text>
+                    <Text variant="bodySm" tone="subdued">
+                      Edit and customize templates for different product categories
+                    </Text>
+                  </Box>
+                  <Button
+                    variant="primary"
+                    onClick={() => setShowCreateModal(true)}
+                  >
+                    Create New Template
+                  </Button>
+                </InlineStack>
                 
                 <Select
                   label="Select Category to Edit"
@@ -391,17 +489,30 @@ function PromptsSettingsContent() {
                         <InlineStack align="space-between">
                           <Text as="h3" variant="headingSm">{categoryLabel} Template</Text>
                           <InlineStack gap="200">
-                            <Button 
+                            {template && (
+                              <Button
+                                variant="tertiary"
+                                tone="critical"
+                                onClick={() => {
+                                  setDeleteCategory(selectedCategory)
+                                  setShowDeleteModal(true)
+                                }}
+                              >
+                                Delete
+                              </Button>
+                            )}
+                            <Button
                               variant="tertiary"
                               onClick={() => {
                                 setResetType('template')
                                 setResetCategory(selectedCategory)
                                 setShowResetModal(true)
                               }}
+                              disabled={!template}
                             >
                               Reset to Default
                             </Button>
-                            <Button 
+                            <Button
                               variant="primary"
                               onClick={() => {
                                 if (editingTemplate === selectedCategory) {
@@ -412,6 +523,7 @@ function PromptsSettingsContent() {
                                   setTemplateContent(template?.content || '')
                                 }
                               }}
+                              disabled={!template}
                             >
                               {editingTemplate === selectedCategory ? 'Cancel' : 'Edit'}
                             </Button>
@@ -559,10 +671,96 @@ function PromptsSettingsContent() {
           <Modal.Section>
             <Text as="p">
               Are you sure you want to reset the{' '}
-              {resetType === 'system' ? 'master system prompt' : 
+              {resetType === 'system' ? 'master system prompt' :
                 `${PRODUCT_CATEGORIES.find(c => c.value === resetCategory)?.label || resetCategory} template`
               }{' '}
               to its default version? This will overwrite any custom changes you've made.
+            </Text>
+          </Modal.Section>
+        </Modal>
+
+        {/* Create Template Modal */}
+        <Modal
+          open={showCreateModal}
+          onClose={() => {
+            setShowCreateModal(false)
+            setNewTemplateName('')
+            setNewTemplateCategory('general')
+            setNewTemplateContent('')
+          }}
+          title="Create New Template"
+          primaryAction={{
+            content: 'Create Template',
+            onAction: handleCreateTemplate,
+            loading: saving
+          }}
+          secondaryActions={[{
+            content: 'Cancel',
+            onAction: () => {
+              setShowCreateModal(false)
+              setNewTemplateName('')
+              setNewTemplateCategory('general')
+              setNewTemplateContent('')
+            }
+          }]}
+        >
+          <Modal.Section>
+            <BlockStack gap="400">
+              <TextField
+                label="Template Name"
+                value={newTemplateName}
+                onChange={setNewTemplateName}
+                autoComplete="off"
+                placeholder="e.g., My Custom Clothing Template"
+              />
+              <Select
+                label="Category"
+                options={PRODUCT_CATEGORIES.map(cat => ({
+                  label: cat.label,
+                  value: cat.value
+                }))}
+                value={newTemplateCategory}
+                onChange={(value) => setNewTemplateCategory(value as ProductCategory)}
+              />
+              <TextField
+                label="Template Content"
+                value={newTemplateContent}
+                onChange={setNewTemplateContent}
+                multiline={6}
+                autoComplete="off"
+                placeholder="Enter your template instructions here..."
+              />
+            </BlockStack>
+          </Modal.Section>
+        </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          open={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false)
+            setDeleteCategory(null)
+          }}
+          title="Delete Template"
+          primaryAction={{
+            content: 'Delete',
+            onAction: handleDeleteTemplate,
+            loading: saving,
+            destructive: true
+          }}
+          secondaryActions={[{
+            content: 'Cancel',
+            onAction: () => {
+              setShowDeleteModal(false)
+              setDeleteCategory(null)
+            }
+          }]}
+        >
+          <Modal.Section>
+            <Text as="p">
+              Are you sure you want to delete the{' '}
+              {PRODUCT_CATEGORIES.find(c => c.value === deleteCategory)?.label || deleteCategory}{' '}
+              template? This action cannot be undone.
             </Text>
           </Modal.Section>
         </Modal>

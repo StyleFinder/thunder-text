@@ -9,9 +9,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: SHOPIFY_APP_URL
-        value: https://thunder-text-nine.vercel.app
+        value: https://thunder-text.onrender.com
       - key: NEXTAUTH_URL
-        value: https://thunder-text-nine.vercel.app
+        value: https://thunder-text.onrender.com
       - key: SHOPIFY_API_KEY
         sync: false
       - key: SHOPIFY_API_SECRET
@@ -30,7 +30,7 @@ services:
         sync: false
     healthCheckPath: /api/health
     domains:
-      - thunder-text-nine.vercel.app
+      - thunder-text.onrender.com
     scaling:
       minInstances: 1
       maxInstances: 10

@@ -74,7 +74,7 @@ OPENAI_API_KEY=your_openai_api_key
    - Should see entry with access_token for your shop
 
 3. **Test Product Loading**
-   - Visit: https://thunder-text-nine.vercel.app/products?shop=zunosai-staging-test-store
+   - Visit: https://thunder-text.onrender.com/products?shop=zunosai-staging-test-store
    - Products should load from Shopify API
 
 4. **Test Enhancement Flow**

@@ -54,7 +54,7 @@ NODE_ENV=production
 SHOPIFY_API_KEY=your_shopify_api_key
 SHOPIFY_API_SECRET=your_shopify_api_secret
 SHOPIFY_SCOPES=read_products,write_products,read_product_listings,write_product_listings
-SHOPIFY_APP_URL=https://thunder-text-nine.vercel.app
+SHOPIFY_APP_URL=https://thunder-text.onrender.com
 SHOPIFY_TEST_STORE=zunosai-staging-test-store
 
 # Supabase Configuration
@@ -67,7 +67,7 @@ OPENAI_API_KEY=your_openai_api_key
 
 # NextAuth Configuration
 NEXTAUTH_SECRET=your_32_character_random_string
-NEXTAUTH_URL=https://thunder-text-nine.vercel.app
+NEXTAUTH_URL=https://thunder-text.onrender.com
 ```
 
 ### 4. Advanced Settings
@@ -100,7 +100,7 @@ Node Version: 18.x (specify in package.json engines field)
 ### 1. Health Check Verification
 
 ```bash
-curl https://thunder-text-nine.vercel.app/api/health
+curl https://thunder-text.onrender.com/api/health
 
 # Expected response:
 {
@@ -131,18 +131,18 @@ curl https://thunder-text-nine.vercel.app/api/health
 Update your Shopify Partner app settings with Render URLs:
 
 ```
-App URL: https://thunder-text-nine.vercel.app
+App URL: https://thunder-text.onrender.com
 Allowed redirection URLs: 
-  - https://thunder-text-nine.vercel.app/api/auth/callback/shopify  
-  - https://thunder-text-nine.vercel.app/dashboard
+  - https://thunder-text.onrender.com/api/auth/callback/shopify  
+  - https://thunder-text.onrender.com/dashboard
 
 Webhooks (if applicable):
-  - https://thunder-text-nine.vercel.app/api/webhooks
+  - https://thunder-text.onrender.com/api/webhooks
 
 GDPR Webhooks:
-  - Customer data request: https://thunder-text-nine.vercel.app/api/webhooks/gdpr/customers/data_request
-  - Customer redact: https://thunder-text-nine.vercel.app/api/webhooks/gdpr/customers/redact  
-  - Shop redact: https://thunder-text-nine.vercel.app/api/webhooks/gdpr/shop/redact
+  - Customer data request: https://thunder-text.onrender.com/api/webhooks/gdpr/customers/data_request
+  - Customer redact: https://thunder-text.onrender.com/api/webhooks/gdpr/customers/redact  
+  - Shop redact: https://thunder-text.onrender.com/api/webhooks/gdpr/shop/redact
 ```
 
 ## Monitoring & Maintenance

@@ -36,7 +36,7 @@ SHOPIFY_API_SECRET=your-shopify-api-secret
 2. The OAuth flow will automatically store the token
 
 #### Option B: Manual OAuth Flow
-1. Visit: `https://thunder-text-nine.vercel.app/api/auth?shop=your-shop-name`
+1. Visit: `https://thunder-text.onrender.com/api/auth?shop=your-shop-name`
 2. Authorize the app
 3. Token will be automatically stored in database
 
@@ -72,13 +72,13 @@ When making API calls:
 ### Test Token Storage
 ```bash
 # After OAuth, test the products API
-curl "https://thunder-text-nine.vercel.app/api/shopify/products?shop=your-shop-name&page=1&limit=5"
+curl "https://thunder-text.onrender.com/api/shopify/products?shop=your-shop-name&page=1&limit=5"
 
 # Should return real products from your Shopify store
 ```
 
 ### Test Enhancement Feature
-1. Visit: `https://thunder-text-nine.vercel.app/enhance?shop=your-shop-name&authenticated=true`
+1. Visit: `https://thunder-text.onrender.com/enhance?shop=your-shop-name&authenticated=true`
 2. Should display real products from your store
 3. Select a product to enhance its description
 

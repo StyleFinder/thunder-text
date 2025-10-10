@@ -7,7 +7,7 @@ Create a dedicated development app for testing cosmetic updates on the `cosmetic
 
 | Environment | Branch | Shopify App | Vercel URL |
 |-------------|--------|-------------|------------|
-| **Production** | main | Thunder Text | https://thunder-text-nine.vercel.app |
+| **Production** | main | Thunder Text | https://thunder-text.onrender.com |
 | **Development** | cosmetic-updates | Thunder Text Dev | https://thunder-text-git-cosmetic-updates-zeus-ai.vercel.app |
 
 ## 🔧 Step-by-Step Setup
