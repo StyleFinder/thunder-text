@@ -1,0 +1,25 @@
+{
+  "recommendations": [
+    // Essential for TypeScript/React development
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+
+    // Tailwind CSS IntelliSense
+    "bradlc.vscode-tailwindcss",
+
+    // Git integration
+    "eamodio.gitlens",
+
+    // Error highlighting and better diagnostics
+    "usernamehw.errorlens",
+
+    // Path autocomplete
+    "christian-kohler.path-intellisense",
+
+    // Import cost (shows size of imports)
+    "wix.vscode-import-cost",
+
+    // Better Comments
+    "aaron-bond.better-comments"
+  ]
+}
