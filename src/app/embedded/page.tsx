@@ -14,7 +14,7 @@ import {
   Banner
 } from '@shopify/polaris'
 import { useRouter } from 'next/navigation'
-import { useShopifyAuth } from '../components/ShopifyAuthProvider'
+import { useShopifyAuth } from '../components/UnifiedShopifyAuth'
 
 export default function EmbeddedApp() {
   const searchParams = useSearchParams()
