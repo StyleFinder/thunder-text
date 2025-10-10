@@ -244,6 +244,13 @@ function CreateProductContent() {
   }, [selectedParentCategory])
 
   const fetchCustomCategories = async () => {
+    if (!shop) {
+      console.warn('Cannot fetch categories: shop parameter is missing')
+      setCustomCategories([])
+      setCategoriesLoading(false)
+      return
+    }
+
     try {
       const response = await fetch(`/api/categories?shop=${shop}`)
 
@@ -252,54 +259,82 @@ function CreateProductContent() {
         const errorMsg = `Categories API error: ${response.status} ${response.statusText}`
         console.error(errorMsg)
         setCategoriesError(errorMsg)
+        setCustomCategories([])
         return
       }
 
       const data = await response.json()
 
-      if (data.success && data.data.length > 0) {
+      if (data.success && data.data && data.data.length > 0) {
         setCustomCategories(data.data)
         setCategoriesError(null) // Clear any previous errors
       } else {
         // No custom categories configured - this is OK, not an error
         console.log('No custom categories found, using defaults')
+        setCustomCategories([])
       }
     } catch (err) {
       const errorMsg = `Failed to load categories: ${err instanceof Error ? err.message : 'Unknown error'}`
       console.error(errorMsg, err)
       setCategoriesError(errorMsg)
+      setCustomCategories([])
     } finally {
       setCategoriesLoading(false)
     }
   }
 
   const fetchParentCategories = async () => {
+    if (!shop) {
+      console.warn('Cannot fetch parent categories: shop parameter is missing')
+      setParentCategories([])
+      return
+    }
+
     try {
       const response = await fetch(`/api/categories/children?shop=${shop}&parentId=null`)
       const data = await response.json()
-      
-      if (data.success) {
+
+      if (data.success && data.data) {
         setParentCategories(data.data)
+      } else {
+        setParentCategories([])
       }
     } catch (err) {
       console.error('Error fetching parent categories:', err)
+      setParentCategories([])
     }
   }
 
   const fetchSubCategories = async (parentId: string) => {
+    if (!shop) {
+      console.warn('Cannot fetch sub-categories: shop parameter is missing')
+      setSubCategories([])
+      return
+    }
+
     try {
       const response = await fetch(`/api/categories/children?shop=${shop}&parentId=${parentId}`)
       const data = await response.json()
-      
-      if (data.success) {
+
+      if (data.success && data.data) {
         setSubCategories(data.data)
+      } else {
+        setSubCategories([])
       }
     } catch (err) {
       console.error('Error fetching sub-categories:', err)
+      setSubCategories([])
     }
   }
 
   const fetchCustomSizing = async () => {
+    if (!shop) {
+      console.warn('Cannot fetch sizing: shop parameter is missing')
+      setCustomSizing([])
+      setSizingLoading(false)
+      return
+    }
+
     try {
       const response = await fetch(`/api/sizing?shop=${shop}`)
 
@@ -308,22 +343,25 @@ function CreateProductContent() {
         const errorMsg = `Sizing API error: ${response.status} ${response.statusText}`
         console.error(errorMsg)
         setSizingError(errorMsg)
+        setCustomSizing([])
         return
       }
 
       const data = await response.json()
 
-      if (data.success && data.data.length > 0) {
+      if (data.success && data.data && data.data.length > 0) {
         setCustomSizing(data.data)
         setSizingError(null) // Clear any previous errors
       } else {
         // No custom sizing configured - this is OK, not an error
         console.log('No custom sizing found, using defaults')
+        setCustomSizing([])
       }
     } catch (err) {
       const errorMsg = `Failed to load sizing options: ${err instanceof Error ? err.message : 'Unknown error'}`
       console.error(errorMsg, err)
       setSizingError(errorMsg)
+      setCustomSizing([])
     } finally {
       setSizingLoading(false)
     }
@@ -810,7 +848,7 @@ function CreateProductContent() {
 
   // Check if auth bypass is enabled in development
   const authBypass = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS === 'true'
-  
+
   console.log('🔍 AUTH DEBUG:', {
     shop,
     authenticated,
@@ -818,19 +856,34 @@ function CreateProductContent() {
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS: process.env.NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS
   })
-  
-  // Temporarily disable auth check for development
-  if (false) { // if (!shop || (!authenticated && !authBypass)) {
+
+  // Show error if shop parameter is missing (prevents crashes from undefined state)
+  if (!shop && !authBypass) {
     return (
       <Page title="Create New Product">
         <Layout>
           <Layout.Section>
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingLg">Authentication Required</Text>
-                <Text as="p">
-                  Please install Thunder Text from your Shopify admin panel to access this page.
-                </Text>
+                <Banner status="critical">
+                  <BlockStack gap="300">
+                    <Text as="h2" variant="headingLg">❌ Missing Shop Parameter</Text>
+                    <Text as="p">
+                      This page must be accessed through the Shopify Admin. Direct URL access is not supported.
+                    </Text>
+                    <Text as="p" variant="bodyMd" fontWeight="semibold">
+                      How to access Thunder Text correctly:
+                    </Text>
+                    <BlockStack gap="100">
+                      <Text as="p">1. Log in to your Shopify Admin</Text>
+                      <Text as="p">2. Navigate to: Apps → Thunder Text</Text>
+                      <Text as="p">3. Or use: admin.shopify.com/store/[your-store]/apps/thunder-text</Text>
+                    </BlockStack>
+                    <Text as="p" tone="subdued" variant="bodySm">
+                      If you're seeing this error after installing the app, please contact support.
+                    </Text>
+                  </BlockStack>
+                </Banner>
                 <Button primary onClick={() => window.location.href = '/'}>
                   Back to Home
                 </Button>
