@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useCallback, useEffect, Suspense, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useShopifyAuth } from '../components/ShopifyAuthProvider'
 import {
   Page,
   Layout,
@@ -46,9 +47,8 @@ interface ColorVariant {
 
 function CreateProductContent() {
   const searchParams = useSearchParams()
-  const shop = searchParams?.get('shop')
-  const authenticated = searchParams?.get('authenticated')
-  
+  const { shop, isAuthenticated, authenticatedFetch: shopifyAuthFetch, isLoading: authLoading } = useShopifyAuth()
+
   // Admin extension redirect parameters
   const productId = searchParams?.get('productId')
   const productTitle = searchParams?.get('productTitle')
@@ -225,13 +225,13 @@ function CreateProductContent() {
 
   // Fetch initial data on component mount
   useEffect(() => {
-    if (shop && authenticated) {
+    if (shop && isAuthenticated) {
       fetchCustomCategories()
       fetchParentCategories()
       fetchCustomSizing()
       fetchGlobalDefaultTemplate()
     }
-  }, [shop, authenticated])
+  }, [shop, isAuthenticated])
 
   // Load sub-categories when parent category is selected
   useEffect(() => {
@@ -244,13 +244,6 @@ function CreateProductContent() {
   }, [selectedParentCategory])
 
   const fetchCustomCategories = async () => {
-    if (!shop) {
-      console.warn('Cannot fetch categories: shop parameter is missing')
-      setCustomCategories([])
-      setCategoriesLoading(false)
-      return
-    }
-
     try {
       const response = await fetch(`/api/categories?shop=${shop}`)
 
@@ -284,12 +277,6 @@ function CreateProductContent() {
   }
 
   const fetchParentCategories = async () => {
-    if (!shop) {
-      console.warn('Cannot fetch parent categories: shop parameter is missing')
-      setParentCategories([])
-      return
-    }
-
     try {
       const response = await fetch(`/api/categories/children?shop=${shop}&parentId=null`)
       const data = await response.json()
@@ -306,12 +293,6 @@ function CreateProductContent() {
   }
 
   const fetchSubCategories = async (parentId: string) => {
-    if (!shop) {
-      console.warn('Cannot fetch sub-categories: shop parameter is missing')
-      setSubCategories([])
-      return
-    }
-
     try {
       const response = await fetch(`/api/categories/children?shop=${shop}&parentId=${parentId}`)
       const data = await response.json()
@@ -328,13 +309,6 @@ function CreateProductContent() {
   }
 
   const fetchCustomSizing = async () => {
-    if (!shop) {
-      console.warn('Cannot fetch sizing: shop parameter is missing')
-      setCustomSizing([])
-      setSizingLoading(false)
-      return
-    }
-
     try {
       const response = await fetch(`/api/sizing?shop=${shop}`)
 
@@ -857,37 +831,21 @@ function CreateProductContent() {
     NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS: process.env.NEXT_PUBLIC_SHOPIFY_AUTH_BYPASS
   })
 
-  // Show error if shop parameter is missing (prevents crashes from undefined state)
-  if (!shop && !authBypass) {
+  // Show loading state while auth initializes
+  if (authLoading) {
     return (
       <Page title="Create New Product">
         <Layout>
           <Layout.Section>
             <Card>
-              <BlockStack gap="400">
-                <Banner status="critical">
-                  <BlockStack gap="300">
-                    <Text as="h2" variant="headingLg">❌ Missing Shop Parameter</Text>
-                    <Text as="p">
-                      This page must be accessed through the Shopify Admin. Direct URL access is not supported.
-                    </Text>
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      How to access Thunder Text correctly:
-                    </Text>
-                    <BlockStack gap="100">
-                      <Text as="p">1. Log in to your Shopify Admin</Text>
-                      <Text as="p">2. Navigate to: Apps → Thunder Text</Text>
-                      <Text as="p">3. Or use: admin.shopify.com/store/[your-store]/apps/thunder-text</Text>
-                    </BlockStack>
-                    <Text as="p" tone="subdued" variant="bodySm">
-                      If you're seeing this error after installing the app, please contact support.
-                    </Text>
-                  </BlockStack>
-                </Banner>
-                <Button primary onClick={() => window.location.href = '/'}>
-                  Back to Home
-                </Button>
-              </BlockStack>
+              <Box padding="400">
+                <BlockStack gap="400" align="center">
+                  <Spinner size="large" />
+                  <Text as="p" variant="bodyMd">
+                    Initializing Shopify Authentication...
+                  </Text>
+                </BlockStack>
+              </Box>
             </Card>
           </Layout.Section>
         </Layout>
