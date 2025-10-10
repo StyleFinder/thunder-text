@@ -52,7 +52,7 @@ Even though the app is installed, you can still do the OAuth flow once to get a 
 
 1. Visit this URL in your browser:
    ```
-   https://thunder-text-nine.vercel.app/api/auth?shop=zunosai-staging-test-store
+   https://thunder-text.onrender.com/api/auth?shop=zunosai-staging-test-store
    ```
 
 2. Authorize the app when prompted
@@ -92,12 +92,12 @@ After setting up the token, test it:
 
 1. **Visit the test page:**
    ```
-   https://thunder-text-nine.vercel.app/test-session?shop=zunosai-staging-test-store&authenticated=true
+   https://thunder-text.onrender.com/test-session?shop=zunosai-staging-test-store&authenticated=true
    ```
 
 2. **Check the enhance feature:**
    ```
-   https://thunder-text-nine.vercel.app/enhance?shop=zunosai-staging-test-store&authenticated=true
+   https://thunder-text.onrender.com/enhance?shop=zunosai-staging-test-store&authenticated=true
    ```
 
 ## How It Works Now

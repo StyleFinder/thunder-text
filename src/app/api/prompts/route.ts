@@ -123,7 +123,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// POST /api/prompts/reset - Reset prompts to defaults
+// POST /api/prompts - Create new template
 export async function POST(request: NextRequest) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co') {
     return NextResponse.json(
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { store_id, type, category } = body
+    const { store_id, type, content, name, category } = body
 
     if (!store_id) {
       return NextResponse.json(
@@ -143,32 +143,58 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let result = null
-
-    if (type === 'system_prompt') {
-      result = await resetSystemPrompt(store_id)
-    } else if (type === 'category_template' && category) {
-      result = await resetCategoryTemplate(store_id, category)
-    } else {
+    if (type !== 'category_template' || !category || !content || !name) {
       return NextResponse.json(
-        { error: 'Invalid type or missing category for template reset' },
+        { error: 'Missing required fields for template creation' },
         { status: 400 }
       )
     }
 
-    if (!result) {
+    // Import here to avoid circular dependencies
+    const { supabaseAdmin } = await import('@/lib/supabase')
+    const { getStoreId } = await import('@/lib/prompts')
+
+    // Convert shop domain to UUID if needed
+    let actualStoreId = store_id
+    if (store_id.includes('.myshopify.com') || !store_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      const convertedId = await getStoreId(store_id)
+      if (!convertedId) {
+        return NextResponse.json(
+          { error: 'Store not found' },
+          { status: 404 }
+        )
+      }
+      actualStoreId = convertedId
+    }
+
+    // Create new template
+    const { data, error } = await supabaseAdmin
+      .from('category_templates')
+      .insert({
+        store_id: actualStoreId,
+        category,
+        name,
+        content,
+        is_default: false,
+        is_active: true
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating template:', error)
       return NextResponse.json(
-        { error: 'Failed to reset prompt' },
+        { error: 'Failed to create template' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ success: true, data: result })
+    return NextResponse.json({ success: true, data })
 
   } catch (error) {
-    console.error('Error in POST /api/prompts/reset:', error)
+    console.error('Error in POST /api/prompts:', error)
     return NextResponse.json(
-      { error: 'Failed to reset prompt' },
+      { error: 'Failed to create template' },
       { status: 500 }
     )
   }

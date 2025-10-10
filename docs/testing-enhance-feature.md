@@ -4,14 +4,14 @@
 
 ### 1. Product Selection Page (No Product ID)
 ```
-https://thunder-text-nine.vercel.app/enhance?shop=zunosai-staging-test-store&authenticated=true
+https://thunder-text.onrender.com/enhance?shop=zunosai-staging-test-store&authenticated=true
 ```
 - Should show product grid with mock products
 - Click "Enhance Description" on any product
 
 ### 2. Direct Product Enhancement (With Mock Product ID)
 ```
-https://thunder-text-nine.vercel.app/enhance?shop=zunosai-staging-test-store&authenticated=true&productId=8123456789
+https://thunder-text.onrender.com/enhance?shop=zunosai-staging-test-store&authenticated=true&productId=8123456789
 ```
 - Should load product data directly
 - Should show enhancement workflow
@@ -19,10 +19,10 @@ https://thunder-text-nine.vercel.app/enhance?shop=zunosai-staging-test-store&aut
 ### 3. Alternative Mock Product IDs
 ```
 # Product 1
-https://thunder-text-nine.vercel.app/enhance?shop=zunosai-staging-test-store&authenticated=true&productId=8123456790
+https://thunder-text.onrender.com/enhance?shop=zunosai-staging-test-store&authenticated=true&productId=8123456790
 
 # Product 2
-https://thunder-text-nine.vercel.app/enhance?shop=zunosai-staging-test-store&authenticated=true&productId=8123456791
+https://thunder-text.onrender.com/enhance?shop=zunosai-staging-test-store&authenticated=true&productId=8123456791
 ```
 
 ## Expected Behavior

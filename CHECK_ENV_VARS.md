@@ -50,7 +50,7 @@ This means `SHOPIFY_API_KEY` and/or `SHOPIFY_API_SECRET` are not set in Vercel.
 After adding the environment variables:
 1. Trigger a new deployment (push any small change)
 2. Wait for deployment to complete
-3. Test at: https://thunder-text-nine.vercel.app/products?shop=zunosai-staging-test-store
+3. Test at: https://thunder-text.onrender.com/products?shop=zunosai-staging-test-store
 
 ## Alternative: Use Existing Token
 

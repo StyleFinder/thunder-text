@@ -3,7 +3,7 @@
 ## Environment Setup
 
 ### URLs
-- **Production**: https://thunder-text-nine.vercel.app (main branch)
+- **Production**: https://thunder-text.onrender.com (main branch)
 - **Staging**: https://thunder-text-staging.vercel.app (staging branch)
 - **Development**: https://thunder-text-dev.vercel.app (feature branches)
 
@@ -51,7 +51,7 @@ git push origin feature/your-feature-name
    git merge staging
    git push origin main
    ```
-   - URL: https://thunder-text-nine.vercel.app
+   - URL: https://thunder-text.onrender.com
    - Live for all customers
 
 ## Quick Test URLs

@@ -13,12 +13,10 @@ export function createCorsHeaders(request: Request): HeadersInit {
     /^https:\/\/admin\.shopify\.com$/,
     /^https:\/\/[a-zA-Z0-9][a-zA-Z0-9-]*\.spin\.dev$/,  // Shopify development stores
     /^https:\/\/[a-zA-Z0-9][a-zA-Z0-9-]*\.shopifypreview\.com$/,  // Shopify preview stores
-    // Our app domains (various Vercel deployments)
-    /^https:\/\/thunder-text.*\.vercel\.app$/,
-    'https://thunder-text-nine.vercel.app',
-    'https://thunder-text.vercel.app',
-    process.env.NEXT_PUBLIC_VERCEL_URL
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+    // Our app domains (Render deployment)
+    'https://thunder-text.onrender.com',
+    process.env.RENDER_EXTERNAL_URL
+      ? process.env.RENDER_EXTERNAL_URL
       : null,
     // Development
     process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null

@@ -91,8 +91,8 @@ SUPABASE_SERVICE_KEY=<your_service_key>
 ## Vercel Configuration Checklist
 
 1. **App URLs in Shopify Partner Dashboard**:
-   - App URL: `https://thunder-text-nine.vercel.app`
-   - Allowed redirect URL: `https://thunder-text-nine.vercel.app/api/auth/callback`
+   - App URL: `https://thunder-text.onrender.com`
+   - Allowed redirect URL: `https://thunder-text.onrender.com/api/auth/callback`
 
 2. **Environment Variables Match**:
    - `NEXT_PUBLIC_SHOPIFY_API_KEY` = Client ID from Shopify
@@ -116,7 +116,7 @@ SUPABASE_SERVICE_KEY=<your_service_key>
 
 ### 2. Test Direct URL (Development Only)
 ```
-1. Visit: https://thunder-text-nine.vercel.app?shop=zunosai-staging-test-store.myshopify.com
+1. Visit: https://thunder-text.onrender.com?shop=zunosai-staging-test-store.myshopify.com
 2. Should work for test store only
 3. Production stores should show error requiring embedded access
 ```
