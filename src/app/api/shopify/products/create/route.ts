@@ -118,9 +118,11 @@ export async function POST(request: NextRequest) {
     console.log('🎯 About to map category:', finalCategory)
     const shopifyCategoryId = mapToShopifyCategory(finalCategory)
     
-    // Extract sub-category from the full category path for Shopify productType
-    let shopifyProductType = 'General'
-    if (finalCategory) {
+    // Use productType from productData if provided, otherwise extract from category
+    let shopifyProductType = productData?.productType || 'General'
+
+    // If no productType provided, extract sub-category from the full category path
+    if (!productData?.productType && finalCategory) {
       // If category contains " > ", extract the part after it (sub-category)
       // Example: "Clothing > Tops" becomes "Tops"
       if (finalCategory.includes(' > ')) {
