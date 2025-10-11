@@ -7,6 +7,7 @@ interface CreateProductRequest {
   category: string
   sizing: string
   template: string
+  productType?: string
   fabricMaterial: string
   occasionUse: string
   targetAudience: string
@@ -32,16 +33,17 @@ export async function POST(request: NextRequest) {
 
     const body: CreateProductRequest = await request.json()
     
-    const { 
-      images, 
-      category, 
-      sizing, 
+    const {
+      images,
+      category,
+      sizing,
       template,
-      fabricMaterial, 
-      occasionUse, 
-      targetAudience, 
-      keyFeatures, 
-      additionalNotes 
+      productType,
+      fabricMaterial,
+      occasionUse,
+      targetAudience,
+      keyFeatures,
+      additionalNotes
     } = body
 
     console.log('🔍 FRONTEND DATA RECEIVED:', {
@@ -99,6 +101,7 @@ Analyze the provided product images and generate compelling content based on the
 
 PRODUCT DETAILS:
 - Category: ${category}
+${productType ? `- Product Type: ${productType}` : ''}
 - Available Sizing: ${sizing || 'Not specified'}
 - Template Style: ${template}
 ${fabricMaterial ? `- Materials: ${fabricMaterial}` : ''}
@@ -143,6 +146,7 @@ REQUIREMENTS:
 
 PRODUCT DETAILS:
 - Category: ${category}
+${productType ? `- Product Type: ${productType}` : ''}
 - Available Sizing: ${sizing || 'Not specified'}
 - Template Style: ${template}
 ${fabricMaterial ? `- Materials: ${fabricMaterial}` : ''}

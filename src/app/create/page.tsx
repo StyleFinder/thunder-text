@@ -25,6 +25,7 @@ import {
   ProgressBar
 } from '@shopify/polaris'
 import { CategoryTemplateSelector } from '@/app/components/CategoryTemplateSelector'
+import { ProductTypeSelector } from '@/app/components/ProductTypeSelector'
 import { type ProductCategory } from '@/lib/prompts'
 import { fetchProductDataForPrePopulation, formatKeyFeatures, formatSizingData, type PrePopulatedProductData } from '@/lib/shopify/product-prepopulation'
 import { authenticatedFetch } from '@/lib/shopify/api-client'
@@ -52,7 +53,7 @@ function CreateProductContent() {
   // Admin extension redirect parameters
   const productId = searchParams?.get('productId')
   const productTitle = searchParams?.get('productTitle')
-  const productType = searchParams?.get('productType')
+  const productTypeParam = searchParams?.get('productType')
   const vendor = searchParams?.get('vendor')
   const description = searchParams?.get('description')
   const tagsParam = searchParams?.get('tags')
@@ -72,6 +73,7 @@ function CreateProductContent() {
   const [detectedVariants, setDetectedVariants] = useState<ColorVariant[]>([])
   const [colorDetectionLoading, setColorDetectionLoading] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<ProductCategory>('general')
+  const [productType, setProductType] = useState('')
   const [availableSizing, setAvailableSizing] = useState('')
   const [templatePreview, setTemplatePreview] = useState<any>(null)
   const [fabricMaterial, setFabricMaterial] = useState('')
@@ -170,7 +172,12 @@ function CreateProductContent() {
             // Auto-populate form fields
             setSelectedTemplate(data.category.primary as ProductCategory || 'general')
             setCategoryDetected(true)
-            
+
+            // Set product type from Shopify data
+            if (data.productType) {
+              setProductType(data.productType)
+            }
+
             if (data.vendor) {
               setTargetAudience(data.vendor)
             }
@@ -206,8 +213,10 @@ function CreateProductContent() {
           
           // Fallback to basic admin extension data if comprehensive fetch fails
           console.log('🔄 Falling back to basic admin extension data')
-          if (productType) {
-            setSelectedTemplate(productType as ProductCategory)
+          if (productTypeParam) {
+            // Set both the Shopify product type and the template
+            setProductType(productTypeParam)
+            setSelectedTemplate(productTypeParam as ProductCategory)
             setCategoryDetected(true)
           }
           if (vendor) {
@@ -660,6 +669,7 @@ function CreateProductContent() {
           category: selectedTemplate,
           sizing: availableSizing,
           template: selectedTemplate,
+          productType,
           fabricMaterial,
           occasionUse,
           targetAudience,
@@ -769,6 +779,7 @@ function CreateProductContent() {
           generatedContent,
           productData: {
             category: finalCategory,
+            productType,
             sizing: availableSizing,
             template: selectedTemplate,
             fabricMaterial,
@@ -1169,6 +1180,12 @@ function CreateProductContent() {
                       onChange={setAvailableSizing}
                     />
                     
+                    <ProductTypeSelector
+                      value={productType}
+                      onChange={setProductType}
+                      shopDomain={shop || undefined}
+                    />
+
                     <CategoryTemplateSelector
                       value={selectedTemplate}
                       onChange={(category, categoryType) => {
