@@ -23,27 +23,39 @@ export function ProductTypeSelector({ value, onChange, shopDomain }: ProductType
         setLoading(true)
         setError(null)
 
+        console.log('🔍 ProductTypeSelector: Fetching product types for shop:', shopDomain)
+
         const params = new URLSearchParams()
         if (shopDomain) {
           params.append('shop', shopDomain)
         }
 
-        const response = await authenticatedFetch(`/api/shopify/product-types?${params.toString()}`)
+        const url = `/api/shopify/product-types?${params.toString()}`
+        console.log('🔍 ProductTypeSelector: Calling URL:', url)
+
+        const response = await authenticatedFetch(url)
+
+        console.log('📥 ProductTypeSelector: Response status:', response.status)
 
         if (!response.ok) {
-          throw new Error('Failed to fetch product types')
+          const errorData = await response.json()
+          console.error('❌ ProductTypeSelector: API error:', errorData)
+          throw new Error(errorData.error || 'Failed to fetch product types')
         }
 
         const data = await response.json()
+        console.log('✅ ProductTypeSelector: Data received:', data)
 
         if (data.success && data.data?.productTypes) {
           setProductTypes(data.data.productTypes)
+          console.log(`✅ ProductTypeSelector: Loaded ${data.data.productTypes.length} product types`)
         } else {
           setProductTypes([])
+          console.log('⚠️ ProductTypeSelector: No product types found, showing dropdown anyway')
         }
       } catch (err) {
-        console.error('Error fetching product types:', err)
-        setError('Unable to load product types')
+        console.error('❌ ProductTypeSelector: Error:', err)
+        setError(`Unable to load product types: ${err instanceof Error ? err.message : 'Unknown error'}`)
         setProductTypes([])
       } finally {
         setLoading(false)
@@ -96,8 +108,9 @@ export function ProductTypeSelector({ value, onChange, shopDomain }: ProductType
           label="Product Type"
           value={value}
           onChange={onChange}
-          helpText="Enter a product type to organize this product"
+          helpText={`Error loading types: ${error}. Enter manually instead.`}
           autoComplete="off"
+          error={error}
         />
       </Box>
     )
