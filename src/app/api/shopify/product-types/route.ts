@@ -38,23 +38,27 @@ export async function GET(request: NextRequest) {
         access_token: process.env.SHOPIFY_ACCESS_TOKEN || 'dev-token'
       }
     } else {
-      // Production authentication
-      session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders })
+      // Production authentication - use shop domain from query param
+      if (!shop) {
+        return NextResponse.json(
+          { error: 'Shop parameter required' },
+          { status: 400, headers: corsHeaders }
+        )
       }
-      
-      // Get store information
+
+      // Get store information using shop domain
+      const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
       const { data: dbStore, error: storeError } = await supabaseAdmin
         .from('stores')
         .select('shop_domain, access_token')
-        .eq('id', session.user.id)
+        .eq('shop_domain', fullShopDomain)
         .single()
 
       if (storeError || !dbStore) {
+        console.error('Store lookup error:', storeError)
         return NextResponse.json(
           { error: 'Store not found' },
-          { status: 404 }
+          { status: 404, headers: corsHeaders }
         )
       }
       store = dbStore
