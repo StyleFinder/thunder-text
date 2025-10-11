@@ -18,8 +18,6 @@ export async function GET(request: NextRequest) {
 
   try {
     // Dynamic imports to avoid loading during build
-    const { auth } = await import('@/lib/auth')
-    const { ShopifyAPI } = await import('@/lib/shopify')
     const { supabaseAdmin } = await import('@/lib/supabase')
     
     // Check for development bypass or proper session
@@ -71,27 +69,40 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const shopify = new ShopifyAPI(store.shop_domain, store.access_token)
-    
-    // Get all products to extract unique product types
-    const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '250') // Get more products to find all types
-    
-    const products = await shopify.getProducts(limit)
-    
-    // Extract unique product types from existing products
-    const productTypes = new Set<string>()
-    
-    if (products?.products?.edges) {
-      products.products.edges.forEach((edge: any) => {
-        if (edge.node.productType && edge.node.productType.trim()) {
-          productTypes.add(edge.node.productType.trim())
+    // Use Shopify GraphQL Admin API's productTypes query directly
+    const query = `
+      query GetProductTypes {
+        productTypes(first: 250) {
+          edges {
+            node
+          }
         }
-      })
+      }
+    `
+
+    const shopifyApiUrl = `https://${store.shop_domain}/admin/api/2024-01/graphql.json`
+    console.log('🔍 Calling Shopify GraphQL API:', shopifyApiUrl)
+
+    const shopifyResponse = await fetch(shopifyApiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': store.access_token,
+      },
+      body: JSON.stringify({ query }),
+    })
+
+    if (!shopifyResponse.ok) {
+      console.error('❌ Shopify API error:', shopifyResponse.status, shopifyResponse.statusText)
+      throw new Error(`Shopify API error: ${shopifyResponse.statusText}`)
     }
 
-    // Convert to array and sort
-    const uniqueTypes = Array.from(productTypes).sort()
+    const shopifyData = await shopifyResponse.json()
+    console.log('✅ Shopify productTypes response:', shopifyData)
+
+    // Extract product types from response
+    const uniqueTypes = shopifyData.data?.productTypes?.edges?.map((edge: any) => edge.node) || []
+    console.log('✅ Found product types:', uniqueTypes)
 
     return NextResponse.json({
       success: true,
