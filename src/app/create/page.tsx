@@ -71,7 +71,6 @@ function CreateProductContent() {
   const [secondaryPhotos, setSecondaryPhotos] = useState<UploadedFile[]>([])
   const [detectedVariants, setDetectedVariants] = useState<ColorVariant[]>([])
   const [colorDetectionLoading, setColorDetectionLoading] = useState(false)
-  const [productCategory, setProductCategory] = useState<ProductCategory>('general')
   const [selectedTemplate, setSelectedTemplate] = useState<ProductCategory>('general')
   const [availableSizing, setAvailableSizing] = useState('')
   const [templatePreview, setTemplatePreview] = useState<any>(null)
@@ -167,9 +166,9 @@ function CreateProductContent() {
             })
             
             setPrePopulatedData(data)
-            
+
             // Auto-populate form fields
-            setProductCategory(data.category.primary || 'general')
+            setSelectedTemplate(data.category.primary as ProductCategory || 'general')
             setCategoryDetected(true)
             
             if (data.vendor) {
@@ -208,7 +207,7 @@ function CreateProductContent() {
           // Fallback to basic admin extension data if comprehensive fetch fails
           console.log('🔄 Falling back to basic admin extension data')
           if (productType) {
-            setProductCategory(productType)
+            setSelectedTemplate(productType as ProductCategory)
             setCategoryDetected(true)
           }
           if (vendor) {
@@ -368,24 +367,24 @@ function CreateProductContent() {
         // Store the suggestion for display
         setSuggestedCategory({ category, confidence })
         
-        // Auto-assign if confidence is high enough 
+        // Auto-assign if confidence is high enough
         if (shouldAutoAssign && confidence >= 0.6) {
-          console.log('🎯 Auto-assigning category:', category, 'from current:', productCategory)
-          
+          console.log('🎯 Auto-assigning category:', category, 'from current:', selectedTemplate)
+
           // If no category is selected, auto-assign
-          if (!productCategory) {
-            setProductCategory(category)
+          if (!selectedTemplate || selectedTemplate === 'general') {
+            setSelectedTemplate(category)
             setCategoryDetected(true)
             console.log('🎯 Category auto-assigned (no previous selection):', category)
           }
           // If category is different and confidence is very high, suggest replacement
-          else if (productCategory !== category && confidence >= 0.8) {
-            console.log('🎯 Suggesting category replacement:', productCategory, '→', category)
+          else if (selectedTemplate !== category && confidence >= 0.8) {
+            console.log('🎯 Suggesting category replacement:', selectedTemplate, '→', category)
             // For now, just log - could add UI notification later
             // Future: show user a suggestion to replace category
           }
           // If same category, confirm it's correct
-          else if (productCategory === category) {
+          else if (selectedTemplate === category) {
             console.log('🎯 Category confirmed correct:', category)
           }
         }
@@ -457,10 +456,10 @@ function CreateProductContent() {
       if (result.success && result.data) {
         const { subCategory, confidence } = result.data
         console.log('🎯 AI detected category:', subCategory, 'confidence:', confidence)
-        
+
         // Auto-assign category if confidence is high and no category is selected
-        if (confidence === 'high' && (!productCategory || productCategory === 'general')) {
-          setProductCategory(subCategory.toLowerCase() as ProductCategory)
+        if (confidence === 'high' && (!selectedTemplate || selectedTemplate === 'general')) {
+          setSelectedTemplate(subCategory.toLowerCase() as ProductCategory)
           setCategoryDetected(true)
           console.log('🎯 Category auto-assigned from image:', subCategory)
         }
@@ -469,7 +468,7 @@ function CreateProductContent() {
       console.error('Error detecting category from image:', error)
       // Don't show error to user - this is a background enhancement
     }
-  }, [productCategory])
+  }, [selectedTemplate])
 
   const detectColorsFromPrimaryPhotos = useCallback(async (photos: UploadedFile[]) => {
     if (photos.length === 0) {
@@ -618,8 +617,8 @@ function CreateProductContent() {
       return
     }
 
-    if (!productCategory) {
-      setError('Please select a product category')
+    if (!selectedTemplate) {
+      setError('Please select a product category template')
       return
     }
 
@@ -658,7 +657,7 @@ function CreateProductContent() {
         method: 'POST',
         body: JSON.stringify({
           images: imageData,
-          category: productCategory,
+          category: selectedTemplate,
           sizing: availableSizing,
           template: selectedTemplate,
           fabricMaterial,
@@ -688,7 +687,7 @@ function CreateProductContent() {
       // Auto-suggest category based on generated content
       if (data.data.generatedContent) {
         console.log('🎯 Starting category suggestion for:', data.data.generatedContent.title)
-        console.log('🎯 Current category before suggestion:', productCategory)
+        console.log('🎯 Current category before suggestion:', selectedTemplate)
         try {
           await suggestCategoryFromContent(data.data.generatedContent)
           console.log('🎯 Category suggestion completed successfully')
@@ -749,12 +748,12 @@ function CreateProductContent() {
       })
 
       // Determine which category to use
-      const finalCategory = suggestedCategory && suggestedCategory.confidence >= 0.6 
-        ? suggestedCategory.category 
-        : productCategory
-      
+      const finalCategory = suggestedCategory && suggestedCategory.confidence >= 0.6
+        ? suggestedCategory.category
+        : selectedTemplate
+
       console.log('🎯 Category selection for Shopify:', {
-        manualCategory: productCategory,
+        manualCategory: selectedTemplate,
         suggestedCategory: suggestedCategory?.category,
         confidence: suggestedCategory?.confidence,
         finalCategory,
@@ -1150,7 +1149,7 @@ function CreateProductContent() {
                             <Button
                               size="micro"
                               onClick={() => {
-                                setProductCategory(suggestedCategory.category)
+                                setSelectedTemplate(suggestedCategory.category as ProductCategory)
                                 setCategoryDetected(true)
                               }}
                             >
@@ -1159,75 +1158,6 @@ function CreateProductContent() {
                           )}
                         </BlockStack>
                       </Banner>
-                    )}
-                    
-                    {/* Cascading Category Dropdowns */}
-                    {(parentCategories && parentCategories.length > 0) ? (
-                      <>
-                        <Select
-                          label="Parent Category"
-                          options={[
-                            { label: 'Select a parent category', value: '' },
-                            ...(parentCategories || []).map(cat => ({ label: cat.name, value: cat.id }))
-                          ]}
-                          value={selectedParentCategory}
-                          disabled={primaryPhotos.length === 0}
-                          onChange={(value) => {
-                            setSelectedParentCategory(value)
-                            // Update the productCategory with parent name if selected
-                            if (value) {
-                              const selectedParent = parentCategories.find(cat => cat.id === value)
-                              if (selectedParent) {
-                                setProductCategory(selectedParent.name)
-                              }
-                            } else {
-                              setProductCategory('')
-                            }
-                          }}
-                        />
-                        
-                        {selectedParentCategory && subCategories && subCategories.length > 0 && (
-                          <Select
-                            label="Sub Category"
-                            options={[
-                              { label: 'Select a sub-category', value: '' },
-                              ...(subCategories || []).map(cat => ({ label: cat.name, value: cat.id }))
-                            ]}
-                            value={selectedSubCategory}
-                            disabled={primaryPhotos.length === 0}
-                            onChange={(value) => {
-                              setSelectedSubCategory(value)
-                              // Update the productCategory with sub-category name if selected
-                              if (value) {
-                                const selectedSub = subCategories.find(cat => cat.id === value)
-                                const selectedParent = parentCategories.find(cat => cat.id === selectedParentCategory)
-                                if (selectedSub && selectedParent) {
-                                  setProductCategory(`${selectedParent.name} > ${selectedSub.name}`)
-                                }
-                              } else if (selectedParentCategory) {
-                                const selectedParent = parentCategories.find(cat => cat.id === selectedParentCategory)
-                                if (selectedParent) {
-                                  setProductCategory(selectedParent.name)
-                                }
-                              }
-                            }}
-                          />
-                        )}
-                        
-                        {selectedParentCategory && subCategories.length === 0 && (
-                          <Text as="p" color="subdued" variant="bodyMd" fontStyle="italic">
-                            No sub-categories available for this parent category.
-                          </Text>
-                        )}
-                      </>
-                    ) : (
-                      <Select
-                        label="Product Category"
-                        options={categoryOptions}
-                        value={productCategory}
-                        disabled={primaryPhotos.length === 0}
-                        onChange={setProductCategory}
-                      />
                     )}
                     
                     <Select
@@ -1329,7 +1259,7 @@ function CreateProductContent() {
                   primary
                   loading={generating}
                   onClick={handleGenerateDescription}
-                  disabled={primaryPhotos.length === 0 || !productCategory}
+                  disabled={primaryPhotos.length === 0 || !selectedTemplate}
                 >
                   {generating ? 'Generating...' : 'Generate Description'}
                 </Button>
@@ -1474,7 +1404,6 @@ function CreateProductContent() {
                 setProductCreated(null)
                 // Reset form
                 setUploadedFiles([])
-                setProductCategory('')
                 setSelectedTemplate('general')
                 setSelectedParentCategory('')
                 setSelectedSubCategory('')
