@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Select, Box, InlineStack, TextField } from '@shopify/polaris'
+import { authenticatedFetch } from '@/lib/shopify/api-client'
 
 interface ProductTypeSelectorProps {
   value: string
@@ -27,7 +28,7 @@ export function ProductTypeSelector({ value, onChange, shopDomain }: ProductType
           params.append('shop', shopDomain)
         }
 
-        const response = await fetch(`/api/shopify/product-types?${params.toString()}`)
+        const response = await authenticatedFetch(`/api/shopify/product-types?${params.toString()}`)
 
         if (!response.ok) {
           throw new Error('Failed to fetch product types')
