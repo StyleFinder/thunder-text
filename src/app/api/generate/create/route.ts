@@ -31,8 +31,34 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Session token present for generate/create API')
 
+    // Decode session token to get shop domain
+    let shopDomain: string | null = null
+    try {
+      const parts = sessionToken.split('.')
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString())
+        const shopMatch = payload.dest?.match(/https:\/\/([^\/]+)/)
+        shopDomain = shopMatch ? shopMatch[1] : null
+        console.log('🔍 Decoded shop from session token:', shopDomain)
+      }
+    } catch (error) {
+      console.error('❌ Failed to decode session token:', error)
+      return NextResponse.json(
+        { success: false, error: 'Invalid session token' },
+        { status: 401 }
+      )
+    }
+
+    if (!shopDomain) {
+      console.error('❌ No shop domain found in session token')
+      return NextResponse.json(
+        { success: false, error: 'Invalid session token - no shop domain' },
+        { status: 401 }
+      )
+    }
+
     const body: CreateProductRequest = await request.json()
-    
+
     const {
       images,
       category,
@@ -66,8 +92,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Use configurable development store ID
-    const storeId = process.env.DEVELOPMENT_STORE_ID || '550e8400-e29b-41d4-a716-446655440000'
+    // Get store ID from shop domain
+    const storeId = shopDomain
     
     // Frontend already sends the correct backend category key (e.g. 'womens_clothing')
     // No mapping needed - use the template value directly
