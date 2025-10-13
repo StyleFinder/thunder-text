@@ -51,12 +51,15 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ Shop found:', store.shop_domain)
 
-    // Use Shopify GraphQL Admin API's productTypes query directly
+    // Query all products and extract unique product types
+    // Note: Shopify doesn't have a direct productTypes query, we need to get them from products
     const query = `
       query GetProductTypes {
-        productTypes(first: 250) {
+        products(first: 250) {
           edges {
-            node
+            node {
+              productType
+            }
           }
         }
       }
@@ -80,11 +83,12 @@ export async function GET(request: NextRequest) {
     }
 
     const shopifyData = await shopifyResponse.json()
-    console.log('✅ Shopify productTypes response:', shopifyData)
+    console.log('✅ Shopify products response:', shopifyData)
 
-    // Extract product types from response
-    const uniqueTypes = shopifyData.data?.productTypes?.edges?.map((edge: any) => edge.node) || []
-    console.log('✅ Found product types:', uniqueTypes)
+    // Extract unique product types from all products
+    const productTypes = shopifyData.data?.products?.edges?.map((edge: any) => edge.node.productType).filter(Boolean) || []
+    const uniqueTypes = Array.from(new Set(productTypes)).sort()
+    console.log('✅ Found unique product types:', uniqueTypes)
 
     return NextResponse.json({
       success: true,
