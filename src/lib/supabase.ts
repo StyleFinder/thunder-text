@@ -19,36 +19,29 @@ export const supabaseAdmin = createClient(
   }
 )
 
-// Database schema types
-export interface Store {
+// Database schema types for Thunder Text (Shopify app)
+// Note: Thunder Text uses 'shops' table for Shopify OAuth tokens
+// Do not confuse with 'stores' table from Zeus AI Dashboard
+
+export interface Shop {
   id: string
   shop_domain: string
   access_token: string
-  plan: string
-  settings: Record<string, any>
-  usage_limits: number
-  current_usage: number
+  scope: string
+  is_active: boolean
+  installed_at: string
+  last_used_at: string
+  metadata: Record<string, any>
   created_at: string
   updated_at: string
 }
 
-export interface Product {
+export interface DescriptionGeneration {
   id: string
-  store_id: string
-  shopify_product_id: string
-  generated_data: Record<string, any>
+  shop_id: string
+  product_id: string
+  generated_content: Record<string, any>
   status: 'pending' | 'completed' | 'error'
-  created_at: string
-  updated_at: string
-}
-
-export interface GenerationJob {
-  id: string
-  store_id: string
-  product_ids: string[]
-  status: 'pending' | 'processing' | 'completed' | 'error'
-  results: Record<string, any>
-  ai_cost: number
   created_at: string
   updated_at: string
 }
