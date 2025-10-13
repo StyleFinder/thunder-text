@@ -18,21 +18,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get store ID from shop domain
-    const { data: store, error: storeError } = await supabaseAdmin
-      .from('stores')
+    // Get shop ID from shop domain (shops table stores OAuth tokens and shop info)
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`;
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from('shops')
       .select('id')
-      .eq('shop_domain', shop)
+      .eq('shop_domain', fullShopDomain)
       .single();
 
-    if (storeError || !store) {
+    if (shopError || !shopData) {
       return NextResponse.json(
-        { error: 'Store not found' },
+        { error: 'Shop not found' },
         { status: 404, headers: corsHeaders }
       );
     }
 
-    // Get templates for this store (both custom and default)
+    // Get templates for this shop (both custom and default)
     const { data: templates, error: templatesError } = await supabaseAdmin
       .from('category_templates')
       .select(`
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
         is_default,
         created_at
       `)
-      .or(`store_id.eq.${store.id},is_default.eq.true`)
+      .or(`store_id.eq.${shopData.id},is_default.eq.true`)
       .eq('is_active', true)
       .order('is_default', { ascending: false })
       .order('name');
