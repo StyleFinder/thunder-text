@@ -186,11 +186,12 @@ export async function POST(request: NextRequest) {
     })
 
     // Use SECURITY DEFINER function to bypass PostgREST permission issues
+    // Function signature: upsert_shop_token(p_access_token, p_scope, p_shop_domain)
     const { error: dbError } = await supabase
       .rpc('upsert_shop_token', {
-        p_shop_domain: fullShopDomain,
         p_access_token: tokenData.access_token,
-        p_scope: tokenData.scope || ''
+        p_scope: tokenData.scope || '',
+        p_shop_domain: fullShopDomain
       })
 
     if (dbError) {
