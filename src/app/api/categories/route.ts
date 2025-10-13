@@ -11,36 +11,40 @@ export async function GET(request: NextRequest) {
 
   try {
     // Dynamic imports to avoid loading during build
-    const { auth } = await import('@/lib/auth')
     const { supabaseAdmin } = await import('@/lib/supabase')
-    
-    // Check for development bypass or proper session
+
+    // Thunder Text uses Shopify OAuth authentication
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-    
-    let session = null
-    let storeId = null
-    
-    if (authBypass && shop) {
-      // Development mode bypass - use static UUID for consistency
-      console.log('Using auth bypass for development - categories')
-      // Use static development UUID that matches the one in our database
-      storeId = '550e8400-e29b-41d4-a716-446655440000'
-    } else {
-      // Production authentication
-      session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      storeId = session.user.id
+
+    if (!shop) {
+      return NextResponse.json(
+        { error: 'Missing shop parameter' },
+        { status: 400 }
+      )
     }
 
-    // Get custom categories for this store with hierarchical structure
+    // Get shop ID from shops table using shop_domain
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from('shops')
+      .select('id')
+      .eq('shop_domain', fullShopDomain)
+      .single()
+
+    if (shopError || !shopData) {
+      console.error('Shop lookup error:', shopError)
+      return NextResponse.json(
+        { error: 'Shop not found. Please ensure the app is installed.' },
+        { status: 404 }
+      )
+    }
+
+    // Get custom categories for this shop with hierarchical structure
     const { data: categories, error: categoriesError } = await supabaseAdmin
       .from('custom_categories')
       .select('*')
-      .eq('store_id', storeId)
+      .eq('store_id', shopData.id)
       .order('sort_order, name')
 
     if (categoriesError) {
@@ -76,29 +80,33 @@ export async function POST(request: NextRequest) {
 
   try {
     // Dynamic imports to avoid loading during build
-    const { auth } = await import('@/lib/auth')
     const { supabaseAdmin } = await import('@/lib/supabase')
-    
-    // Check for development bypass or proper session
+
+    // Thunder Text uses Shopify OAuth authentication
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-    
-    let session = null
-    let storeId = null
-    
-    if (authBypass && shop) {
-      // Development mode bypass - use static UUID for consistency
-      console.log('Using auth bypass for development - categories POST')
-      // Use static development UUID that matches the one in our database
-      storeId = '550e8400-e29b-41d4-a716-446655440000'
-    } else {
-      // Production authentication
-      session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      storeId = session.user.id
+
+    if (!shop) {
+      return NextResponse.json(
+        { error: 'Missing shop parameter' },
+        { status: 400 }
+      )
+    }
+
+    // Get shop ID from shops table using shop_domain
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from('shops')
+      .select('id')
+      .eq('shop_domain', fullShopDomain)
+      .single()
+
+    if (shopError || !shopData) {
+      console.error('Shop lookup error:', shopError)
+      return NextResponse.json(
+        { error: 'Shop not found. Please ensure the app is installed.' },
+        { status: 404 }
+      )
     }
 
     const body = await request.json()
@@ -111,11 +119,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if category already exists for this store and parent
+    // Check if category already exists for this shop and parent
     const { data: existingCategory } = await supabaseAdmin
       .from('custom_categories')
       .select('id')
-      .eq('store_id', storeId)
+      .eq('store_id', shopData.id)
       .eq('name', name.trim())
       .eq('parent_id', parentId)
       .single()
@@ -131,7 +139,7 @@ export async function POST(request: NextRequest) {
     const { data: category, error: createError } = await supabaseAdmin
       .from('custom_categories')
       .insert({
-        store_id: storeId,
+        store_id: shopData.id,
         name: name.trim(),
         description: description?.trim() || null,
         is_default: isDefault,
@@ -177,29 +185,33 @@ export async function PUT(request: NextRequest) {
 
   try {
     // Dynamic imports to avoid loading during build
-    const { auth } = await import('@/lib/auth')
     const { supabaseAdmin } = await import('@/lib/supabase')
-    
-    // Check for development bypass or proper session
+
+    // Thunder Text uses Shopify OAuth authentication
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-    
-    let session = null
-    let storeId = null
-    
-    if (authBypass && shop) {
-      // Development mode bypass - use static UUID for consistency
-      console.log('Using auth bypass for development - categories PUT')
-      // Use static development UUID that matches the one in our database
-      storeId = '550e8400-e29b-41d4-a716-446655440000'
-    } else {
-      // Production authentication
-      session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      storeId = session.user.id
+
+    if (!shop) {
+      return NextResponse.json(
+        { error: 'Missing shop parameter' },
+        { status: 400 }
+      )
+    }
+
+    // Get shop ID from shops table using shop_domain
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from('shops')
+      .select('id')
+      .eq('shop_domain', fullShopDomain)
+      .single()
+
+    if (shopError || !shopData) {
+      console.error('Shop lookup error:', shopError)
+      return NextResponse.json(
+        { error: 'Shop not found. Please ensure the app is installed.' },
+        { status: 404 }
+      )
     }
 
     const body = await request.json()
@@ -212,12 +224,12 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Check if category exists and belongs to this store
+    // Check if category exists and belongs to this shop
     const { data: existingCategory } = await supabaseAdmin
       .from('custom_categories')
       .select('id')
       .eq('id', id)
-      .eq('store_id', storeId)
+      .eq('store_id', shopData.id)
       .single()
 
     if (!existingCategory) {
@@ -231,7 +243,7 @@ export async function PUT(request: NextRequest) {
     const { data: duplicateCategory } = await supabaseAdmin
       .from('custom_categories')
       .select('id')
-      .eq('store_id', storeId)
+      .eq('store_id', shopData.id)
       .eq('name', name.trim())
       .neq('id', id)
       .single()
@@ -253,7 +265,7 @@ export async function PUT(request: NextRequest) {
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
-      .eq('store_id', storeId)
+      .eq('store_id', shopData.id)
       .select()
       .single()
 
@@ -290,29 +302,33 @@ export async function DELETE(request: NextRequest) {
 
   try {
     // Dynamic imports to avoid loading during build
-    const { auth } = await import('@/lib/auth')
     const { supabaseAdmin } = await import('@/lib/supabase')
-    
-    // Check for development bypass or proper session
+
+    // Thunder Text uses Shopify OAuth authentication
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-    
-    let session = null
-    let storeId = null
-    
-    if (authBypass && shop) {
-      // Development mode bypass - use static UUID for consistency
-      console.log('Using auth bypass for development - categories DELETE')
-      // Use static development UUID that matches the one in our database
-      storeId = '550e8400-e29b-41d4-a716-446655440000'
-    } else {
-      // Production authentication
-      session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      storeId = session.user.id
+
+    if (!shop) {
+      return NextResponse.json(
+        { error: 'Missing shop parameter' },
+        { status: 400 }
+      )
+    }
+
+    // Get shop ID from shops table using shop_domain
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from('shops')
+      .select('id')
+      .eq('shop_domain', fullShopDomain)
+      .single()
+
+    if (shopError || !shopData) {
+      console.error('Shop lookup error:', shopError)
+      return NextResponse.json(
+        { error: 'Shop not found. Please ensure the app is installed.' },
+        { status: 404 }
+      )
     }
 
     const { searchParams } = new URL(request.url)
@@ -325,12 +341,12 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Check if category exists and belongs to this store
+    // Check if category exists and belongs to this shop
     const { data: existingCategory } = await supabaseAdmin
       .from('custom_categories')
       .select('id, name')
       .eq('id', categoryId)
-      .eq('store_id', storeId)
+      .eq('store_id', shopData.id)
       .single()
 
     if (!existingCategory) {
@@ -345,7 +361,7 @@ export async function DELETE(request: NextRequest) {
       .from('custom_categories')
       .delete()
       .eq('id', categoryId)
-      .eq('store_id', storeId)
+      .eq('store_id', shopData.id)
 
     if (deleteError) {
       console.error('Category deletion error:', deleteError)

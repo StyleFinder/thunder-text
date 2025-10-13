@@ -11,33 +11,40 @@ export async function GET(request: NextRequest) {
 
   try {
     // Dynamic imports to avoid loading during build
-    const { auth } = await import('@/lib/auth')
     const { supabaseAdmin } = await import('@/lib/supabase')
-    
-    // Check for development bypass or proper session
+
+    // Thunder Text uses Shopify OAuth authentication
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-    
-    let storeId = null
-    
-    if (authBypass && shop) {
-      // Development mode bypass - use static UUID
-      storeId = '550e8400-e29b-41d4-a716-446655440000'
-    } else {
-      // Production authentication
-      const session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      storeId = session.user.id
+
+    if (!shop) {
+      return NextResponse.json(
+        { error: 'Missing shop parameter' },
+        { status: 400 }
+      )
     }
 
-    // Fetch sizing options for the store (both default and custom)
+    // Get shop ID from shops table using shop_domain
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from('shops')
+      .select('id')
+      .eq('shop_domain', fullShopDomain)
+      .single()
+
+    if (shopError || !shopData) {
+      console.error('Shop lookup error:', shopError)
+      return NextResponse.json(
+        { error: 'Shop not found. Please ensure the app is installed.' },
+        { status: 404 }
+      )
+    }
+
+    // Fetch sizing options for the shop (both default and custom)
     const { data: sizingOptions, error } = await supabaseAdmin
       .from('custom_sizing')
       .select('*')
-      .eq('store_id', storeId)
+      .eq('store_id', shopData.id)
       .order('is_default', { ascending: false }) // Show defaults first, then custom
       .order('created_at', { ascending: true })
 
@@ -74,26 +81,33 @@ export async function POST(request: NextRequest) {
 
   try {
     // Dynamic imports to avoid loading during build
-    const { auth } = await import('@/lib/auth')
     const { supabaseAdmin } = await import('@/lib/supabase')
-    
-    // Check for development bypass or proper session
+
+    // Thunder Text uses Shopify OAuth authentication
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-    
-    let storeId = null
-    
-    if (authBypass && shop) {
-      // Development mode bypass - use static UUID
-      storeId = '550e8400-e29b-41d4-a716-446655440000'
-    } else {
-      // Production authentication
-      const session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      storeId = session.user.id
+
+    if (!shop) {
+      return NextResponse.json(
+        { error: 'Missing shop parameter' },
+        { status: 400 }
+      )
+    }
+
+    // Get shop ID from shops table using shop_domain
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from('shops')
+      .select('id')
+      .eq('shop_domain', fullShopDomain)
+      .single()
+
+    if (shopError || !shopData) {
+      console.error('Shop lookup error:', shopError)
+      return NextResponse.json(
+        { error: 'Shop not found. Please ensure the app is installed.' },
+        { status: 404 }
+      )
     }
 
     const body = await request.json()
@@ -110,9 +124,9 @@ export async function POST(request: NextRequest) {
     const { data: newSizing, error } = await supabaseAdmin
       .from('custom_sizing')
       .insert({
-        store_id: storeId,
+        store_id: shopData.id,
         name: name.trim(),
-        sizes: sizes.map(size => size.trim().toUpperCase()),
+        sizes: sizes.map((size: string) => size.trim().toUpperCase()),
         is_default: is_default
       })
       .select()
@@ -151,26 +165,33 @@ export async function PUT(request: NextRequest) {
 
   try {
     // Dynamic imports to avoid loading during build
-    const { auth } = await import('@/lib/auth')
     const { supabaseAdmin } = await import('@/lib/supabase')
-    
-    // Check for development bypass or proper session
+
+    // Thunder Text uses Shopify OAuth authentication
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-    
-    let storeId = null
-    
-    if (authBypass && shop) {
-      // Development mode bypass - use static UUID
-      storeId = '550e8400-e29b-41d4-a716-446655440000'
-    } else {
-      // Production authentication
-      const session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      storeId = session.user.id
+
+    if (!shop) {
+      return NextResponse.json(
+        { error: 'Missing shop parameter' },
+        { status: 400 }
+      )
+    }
+
+    // Get shop ID from shops table using shop_domain
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from('shops')
+      .select('id')
+      .eq('shop_domain', fullShopDomain)
+      .single()
+
+    if (shopError || !shopData) {
+      console.error('Shop lookup error:', shopError)
+      return NextResponse.json(
+        { error: 'Shop not found. Please ensure the app is installed.' },
+        { status: 404 }
+      )
     }
 
     const body = await request.json()
@@ -184,11 +205,11 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update existing sizing option
-    const updateData = {
+    const updateData: any = {
       name: name.trim(),
-      sizes: sizes.map(size => size.trim().toUpperCase())
+      sizes: sizes.map((size: string) => size.trim().toUpperCase())
     }
-    
+
     // Only update is_default if it's provided (to allow updating defaults)
     if (typeof is_default === 'boolean') {
       updateData.is_default = is_default
@@ -198,7 +219,7 @@ export async function PUT(request: NextRequest) {
       .from('custom_sizing')
       .update(updateData)
       .eq('id', id)
-      .eq('store_id', storeId) // Ensure user can only update their own sizing options
+      .eq('store_id', shopData.id) // Ensure user can only update their own sizing options
       .select()
       .single()
 
@@ -242,27 +263,34 @@ export async function DELETE(request: NextRequest) {
 
   try {
     // Dynamic imports to avoid loading during build
-    const { auth } = await import('@/lib/auth')
     const { supabaseAdmin } = await import('@/lib/supabase')
-    
-    // Check for development bypass or proper session
+
+    // Thunder Text uses Shopify OAuth authentication
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
     const sizingId = url.searchParams.get('id')
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-    
-    let storeId = null
-    
-    if (authBypass && shop) {
-      // Development mode bypass - use static UUID
-      storeId = '550e8400-e29b-41d4-a716-446655440000'
-    } else {
-      // Production authentication
-      const session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      storeId = session.user.id
+
+    if (!shop) {
+      return NextResponse.json(
+        { error: 'Missing shop parameter' },
+        { status: 400 }
+      )
+    }
+
+    // Get shop ID from shops table using shop_domain
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from('shops')
+      .select('id')
+      .eq('shop_domain', fullShopDomain)
+      .single()
+
+    if (shopError || !shopData) {
+      console.error('Shop lookup error:', shopError)
+      return NextResponse.json(
+        { error: 'Shop not found. Please ensure the app is installed.' },
+        { status: 404 }
+      )
     }
 
     if (!sizingId) {
@@ -277,7 +305,7 @@ export async function DELETE(request: NextRequest) {
       .from('custom_sizing')
       .delete()
       .eq('id', sizingId)
-      .eq('store_id', storeId) // Ensure user can only delete their own sizing options
+      .eq('store_id', shopData.id) // Ensure user can only delete their own sizing options
       .select()
       .single()
 
