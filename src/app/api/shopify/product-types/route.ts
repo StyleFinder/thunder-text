@@ -19,55 +19,37 @@ export async function GET(request: NextRequest) {
   try {
     // Dynamic imports to avoid loading during build
     const { supabaseAdmin } = await import('@/lib/supabase')
-    
-    // Check for development bypass or proper session
+
+    // Get shop domain from query param
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-    
-    let session = null
-    let store = null
-    
-    if (authBypass && shop) {
-      // Development mode bypass
-      console.log('Using auth bypass for development - product-types')
-      store = {
-        shop_domain: shop,
-        access_token: process.env.SHOPIFY_ACCESS_TOKEN || 'dev-token'
-      }
-    } else {
-      // Production authentication - use shop domain from query param
-      if (!shop) {
-        return NextResponse.json(
-          { error: 'Shop parameter required' },
-          { status: 400, headers: corsHeaders }
-        )
-      }
 
-      // Get store information using shop domain
-      const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
-      const { data: dbStore, error: storeError } = await supabaseAdmin
-        .from('stores')
-        .select('shop_domain, access_token')
-        .eq('shop_domain', fullShopDomain)
-        .single()
-
-      if (storeError || !dbStore) {
-        console.error('Store lookup error:', storeError)
-        return NextResponse.json(
-          { error: 'Store not found' },
-          { status: 404, headers: corsHeaders }
-        )
-      }
-      store = dbStore
+    if (!shop) {
+      return NextResponse.json(
+        { error: 'Shop parameter required' },
+        { status: 400, headers: corsHeaders }
+      )
     }
 
-    if (!store) {
+    // Get store information using shop domain
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+    console.log('🔍 Looking up store:', fullShopDomain)
+
+    const { data: store, error: storeError } = await supabaseAdmin
+      .from('stores')
+      .select('shop_domain, access_token')
+      .eq('shop_domain', fullShopDomain)
+      .single()
+
+    if (storeError || !store) {
+      console.error('❌ Store lookup error:', storeError)
       return NextResponse.json(
-        { error: 'Store configuration not found' },
+        { error: 'Store not found' },
         { status: 404, headers: corsHeaders }
       )
     }
+
+    console.log('✅ Store found:', store.shop_domain)
 
     // Use Shopify GraphQL Admin API's productTypes query directly
     const query = `
