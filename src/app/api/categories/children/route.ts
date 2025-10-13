@@ -11,36 +11,41 @@ export async function GET(request: NextRequest) {
 
   try {
     // Dynamic imports to avoid loading during build
-    const { auth } = await import('@/lib/auth')
     const { supabaseAdmin } = await import('@/lib/supabase')
-    
-    // Check for development bypass or proper session
+
+    // Thunder Text uses Shopify OAuth authentication
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
     const parentId = url.searchParams.get('parentId')
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-    
-    let session = null
-    let storeId = null
-    
-    if (authBypass && shop) {
-      // Development mode bypass - use static UUID for consistency
-      console.log('Using auth bypass for development - categories children')
-      storeId = '550e8400-e29b-41d4-a716-446655440000'
-    } else {
-      // Production authentication
-      session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      storeId = session.user.id
+
+    if (!shop) {
+      return NextResponse.json(
+        { error: 'Missing shop parameter' },
+        { status: 400 }
+      )
+    }
+
+    // Get shop ID from shops table using shop_domain
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from('shops')
+      .select('id')
+      .eq('shop_domain', fullShopDomain)
+      .single()
+
+    if (shopError || !shopData) {
+      console.error('Shop lookup error:', shopError)
+      return NextResponse.json(
+        { error: 'Shop not found. Please ensure the app is installed.' },
+        { status: 404 }
+      )
     }
 
     // Get sub-categories for the specified parent
     let query = supabaseAdmin
       .from('custom_categories')
       .select('*')
-      .eq('store_id', storeId)
+      .eq('store_id', shopData.id)
       .order('sort_order, name')
 
     if (parentId && parentId !== 'null') {
