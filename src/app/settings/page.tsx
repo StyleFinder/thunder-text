@@ -37,20 +37,12 @@ import {
 } from '@shopify/polaris-icons'
 import { useNavigation } from '../hooks/useNavigation'
 
-interface StoreInfo {
+// Thunder Text shop info (not Zeus store info)
+interface ShopInfo {
   id: string
   shop_domain: string
-  plan: string
-  current_usage: number
-  usage_limits: number
   created_at: string
   updated_at: string
-}
-
-interface UsageMetric {
-  period: string
-  generations_count: number
-  ai_tokens_used: number
 }
 
 interface CustomCategory {
@@ -85,8 +77,7 @@ function SettingsContent() {
   const shop = searchParams?.get('shop')
   const authenticated = searchParams?.get('authenticated')
   
-  const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null)
-  const [usageMetrics, setUsageMetrics] = useState<UsageMetric[]>([])
+  const [shopInfo, setShopInfo] = useState<ShopInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
@@ -151,26 +142,14 @@ function SettingsContent() {
 
   const fetchSettings = async () => {
     try {
-      // In a real implementation, you'd have a settings API endpoint
-      // For now, we'll simulate some data
-      setStoreInfo({
+      // Thunder Text doesn't track usage limits like Zeus
+      // This just shows basic shop info
+      setShopInfo({
         id: '1',
         shop_domain: shop || '',
-        plan: 'Pro',
-        current_usage: 47,
-        usage_limits: 500,
-        created_at: '2024-01-15T10:00:00Z',
-        updated_at: '2024-01-20T15:30:00Z'
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
-
-      setUsageMetrics([
-        { period: '2024-01-20', generations_count: 12, ai_tokens_used: 8750 },
-        { period: '2024-01-19', generations_count: 8, ai_tokens_used: 5200 },
-        { period: '2024-01-18', generations_count: 15, ai_tokens_used: 11300 },
-        { period: '2024-01-17', generations_count: 6, ai_tokens_used: 3900 },
-        { period: '2024-01-16', generations_count: 6, ai_tokens_used: 4100 }
-      ])
-
 
       setError(null)
     } catch (err) {
@@ -558,17 +537,6 @@ function SettingsContent() {
     })
   }
 
-  const calculateUsagePercentage = () => {
-    if (!storeInfo) return 0
-    return Math.round((storeInfo.current_usage / storeInfo.usage_limits) * 100)
-  }
-
-  const getUsageColor = (percentage: number) => {
-    if (percentage >= 90) return '#dc2626' // Red
-    if (percentage >= 75) return '#f59e0b' // Amber
-    return '#10b981' // Green
-  }
-
   // Temporarily disable auth check for development
   if (false) { // if (!shop || !authenticated) {
     return (
@@ -654,9 +622,6 @@ function SettingsContent() {
     )
   }
 
-  const usagePercentage = calculateUsagePercentage()
-  const usageColor = getUsageColor(usagePercentage)
-
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
       {/* Header */}
@@ -702,58 +667,40 @@ function SettingsContent() {
               </h2>
             </div>
             
-            {storeInfo && (
+            {shopInfo && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    color: '#6b7280', 
-                    fontSize: '0.9rem', 
-                    marginBottom: '0.25rem' 
+                  <label style={{
+                    display: 'block',
+                    color: '#6b7280',
+                    fontSize: '0.9rem',
+                    marginBottom: '0.25rem'
                   }}>
-                    Store
+                    Shop
                   </label>
-                  <div style={{ 
-                    color: '#1f2937', 
+                  <div style={{
+                    color: '#1f2937',
                     fontSize: '1rem',
                     fontWeight: '500'
                   }}>
-                    {storeInfo.shop_domain}
+                    {shopInfo.shop_domain}
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    color: '#6b7280', 
-                    fontSize: '0.9rem', 
-                    marginBottom: '0.25rem' 
+                  <label style={{
+                    display: 'block',
+                    color: '#6b7280',
+                    fontSize: '0.9rem',
+                    marginBottom: '0.25rem'
                   }}>
-                    Current Plan
+                    Installed Since
                   </label>
-                  <div style={{ 
-                    color: '#1f2937', 
-                    fontSize: '1rem',
-                    fontWeight: '500'
-                  }}>
-                    {storeInfo.plan}
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    color: '#6b7280', 
-                    fontSize: '0.9rem', 
-                    marginBottom: '0.25rem' 
-                  }}>
-                    Member Since
-                  </label>
-                  <div style={{ 
-                    color: '#1f2937', 
+                  <div style={{
+                    color: '#1f2937',
                     fontSize: '1rem'
                   }}>
-                    {formatDate(storeInfo.created_at)}
+                    {formatDate(shopInfo.created_at)}
                   </div>
                 </div>
               </div>
@@ -831,90 +778,6 @@ function SettingsContent() {
             </div>
           </div>
 
-          {/* Usage Overview */}
-          <div style={{ 
-            backgroundColor: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px',
-            padding: '1.5rem'
-          }}>
-            <h2 style={{ color: '#1f2937', fontSize: '1.3rem', marginBottom: '1rem' }}>
-              Usage Overview
-            </h2>
-            
-            {storeInfo && (
-              <div>
-                <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ color: '#6b7280', fontSize: '0.9rem' }}>
-                      Generations Used
-                    </span>
-                    <span style={{ color: '#1f2937', fontSize: '1rem', fontWeight: '500' }}>
-                      {storeInfo.current_usage} / {storeInfo.usage_limits}
-                    </span>
-                  </div>
-                  
-                  <div style={{ 
-                    backgroundColor: '#f3f4f6',
-                    borderRadius: '8px',
-                    height: '12px',
-                    overflow: 'hidden'
-                  }}>
-                    <div style={{
-                      backgroundColor: usageColor,
-                      height: '100%',
-                      width: `${usagePercentage}%`,
-                      transition: 'width 0.3s ease'
-                    }}></div>
-                  </div>
-                  
-                  <div style={{ 
-                    textAlign: 'center', 
-                    marginTop: '0.5rem',
-                    color: usageColor,
-                    fontSize: '0.9rem',
-                    fontWeight: '500'
-                  }}>
-                    {usagePercentage}% used
-                  </div>
-                </div>
-
-                <div style={{ 
-                  backgroundColor: '#f9fafb',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  padding: '1rem'
-                }}>
-                  <h3 style={{ color: '#1f2937', fontSize: '1rem', marginBottom: '0.5rem' }}>
-                    Recent Usage (Last 5 Days)
-                  </h3>
-                  
-                  {usageMetrics.map((metric, index) => (
-                    <div key={metric.period} style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center',
-                      paddingBottom: index < usageMetrics.length - 1 ? '0.5rem' : '0',
-                      marginBottom: index < usageMetrics.length - 1 ? '0.5rem' : '0',
-                      borderBottom: index < usageMetrics.length - 1 ? '1px solid #e5e7eb' : 'none'
-                    }}>
-                      <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>
-                        {formatDate(metric.period)}
-                      </span>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ color: '#1f2937', fontSize: '0.85rem', fontWeight: '500' }}>
-                          {metric.generations_count} generations
-                        </div>
-                        <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                          {metric.ai_tokens_used.toLocaleString()} tokens
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Right Column - Preferences */}
