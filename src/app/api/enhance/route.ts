@@ -18,9 +18,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // Dynamic imports to avoid loading during build
-    const { auth } = await import('@/lib/auth')
     const { aiGenerator } = await import('@/lib/openai')
-    const { supabaseAdmin } = await import('@/lib/supabase')
 
     // Check for session token in Authorization header
     const authHeader = request.headers.get('authorization')
@@ -39,62 +37,24 @@ export async function POST(request: NextRequest) {
     const isShopifyRequest = userAgent.includes('Shopify') || referer.includes('.myshopify.com') || referer.includes('thunder-text')
 
     let storeId = null
-    let store = null
 
     // For development/testing with authenticated=true flag
     const url = new URL(request.url)
     const isAuthenticatedDev = url.searchParams.get('authenticated') === 'true' ||
                               referer.includes('authenticated=true')
 
-    if ((isShopifyRequest || referer.includes('vercel.app') || isAuthenticatedDev) && (sessionToken || isAuthenticatedDev)) {
-      // For Shopify embedded app requests or authenticated development
-      console.log('✅ Processing enhancement request (Shopify/Dev mode)')
-      store = {
-        id: 'shopify-embedded-app',
-        current_usage: 0,
-        usage_limits: 1000,
-        plan: 'shopify'
-      }
-      storeId = store.id
-    } else if (!sessionToken && !isAuthenticatedDev) {
-      // No authentication provided
-      console.error('❌ Authentication required - no token and not in dev mode')
+    // Thunder Text uses Shopify OAuth authentication, not session-based auth
+    // Authentication is handled via shop parameter and access token from database
+    if (!isShopifyRequest && !referer.includes('vercel.app') && !isAuthenticatedDev) {
+      console.error('❌ Authentication required - not a Shopify request')
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401, headers: corsHeaders }
       )
-    } else {
-      // Regular authenticated request
-      const session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders })
-      }
-
-      // Get store information
-      const { data: storeData, error: storeError } = await supabaseAdmin
-        .from('stores')
-        .select('id, current_usage, usage_limits, plan')
-        .eq('id', session.user.id)
-        .single()
-
-      if (storeError || !storeData) {
-        return NextResponse.json(
-          { error: 'Store not found' },
-          { status: 404, headers: corsHeaders }
-        )
-      }
-
-      store = storeData
-      storeId = store.id
-
-      // Check usage limits for authenticated users
-      if (store.current_usage >= store.usage_limits) {
-        return NextResponse.json(
-          { error: 'Usage limit exceeded. Please upgrade your plan.' },
-          { status: 429, headers: corsHeaders }
-        )
-      }
     }
+
+    console.log('✅ Processing enhancement request (Shopify/Embedded mode)')
+    storeId = 'shopify-embedded-app'
 
     // Parse FormData (since we're using FormData for image uploads)
     const formData = await request.formData()
@@ -188,38 +148,9 @@ export async function POST(request: NextRequest) {
       processingTime: enhancedContent.processingTime
     }
 
-    // Update usage count for non-Shopify requests
-    if (!isShopifyRequest) {
-      await supabaseAdmin
-        .from('stores')
-        .update({
-          current_usage: store.current_usage + 1,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', store.id)
-
-      // Track usage metrics
-      const today = new Date().toISOString().split('T')[0]
-      await supabaseAdmin
-        .from('usage_metrics')
-        .upsert({
-          store_id: store.id,
-          period: today,
-          generations_count: 1,
-          ai_tokens_used: formattedContent.tokenUsage?.total || 0,
-        }, {
-          onConflict: 'store_id,period',
-        })
-    }
-
     return NextResponse.json({
       success: true,
       data: formattedContent,
-      usage: {
-        current: isShopifyRequest ? 0 : store.current_usage + 1,
-        limit: store.usage_limits,
-        remaining: isShopifyRequest ? 1000 : store.usage_limits - (store.current_usage + 1),
-      },
     }, { headers: corsHeaders })
 
   } catch (error) {
