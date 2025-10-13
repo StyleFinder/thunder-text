@@ -59,7 +59,6 @@ export async function GET(request: NextRequest) {
       .from('custom_sizing')
       .select('*')
       .eq('store_id', storeId)
-      .eq('is_active', true)
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: true })
 
@@ -71,9 +70,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Filter active sizing options (client-side filter to avoid schema cache issues)
+    const activeSizingOptions = (sizingOptions || []).filter((opt: any) => opt.is_active !== false)
+
     return NextResponse.json({
       success: true,
-      data: sizingOptions || []
+      data: activeSizingOptions
     })
 
   } catch (error) {
@@ -143,8 +145,7 @@ export async function POST(request: NextRequest) {
         store_id,
         name: name.trim(),
         sizes: capitalizedSizes,
-        is_default: is_default || false,
-        is_active: true
+        is_default: is_default || false
       })
       .select()
       .single()
@@ -299,10 +300,10 @@ export async function DELETE(request: NextRequest) {
       storeId = convertedId
     }
 
-    // Delete sizing option (soft delete by setting is_active to false)
-    const { data: deletedSizing, error } = await supabaseAdmin
+    // Delete sizing option (hard delete to avoid schema cache issues)
+    const { data: deletedSizing, error} = await supabaseAdmin
       .from('custom_sizing')
-      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .delete()
       .eq('id', sizingId)
       .eq('store_id', storeId)
       .select()
