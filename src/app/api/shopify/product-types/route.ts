@@ -31,25 +31,25 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get store information using shop domain
+    // Get shop information using shop domain from shops table (OAuth tokens)
     const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
-    console.log('🔍 Looking up store:', fullShopDomain)
+    console.log('🔍 Looking up shop:', fullShopDomain)
 
     const { data: store, error: storeError } = await supabaseAdmin
-      .from('stores')
+      .from('shops')
       .select('shop_domain, access_token')
       .eq('shop_domain', fullShopDomain)
       .single()
 
     if (storeError || !store) {
-      console.error('❌ Store lookup error:', storeError)
+      console.error('❌ Shop lookup error:', storeError)
       return NextResponse.json(
-        { error: 'Store not found' },
+        { error: 'Shop not found' },
         { status: 404, headers: corsHeaders }
       )
     }
 
-    console.log('✅ Store found:', store.shop_domain)
+    console.log('✅ Shop found:', store.shop_domain)
 
     // Use Shopify GraphQL Admin API's productTypes query directly
     const query = `
