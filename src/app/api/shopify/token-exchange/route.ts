@@ -187,12 +187,26 @@ export async function POST(request: NextRequest) {
 
     // Use SECURITY DEFINER function to bypass PostgREST permission issues
     // Function signature: upsert_shop_token(p_access_token, p_scope, p_shop_domain)
-    const { error: dbError } = await supabase
+    console.log('🔧 [TOKEN-EXCHANGE] Calling upsert_shop_token with:', {
+      p_access_token_length: tokenData.access_token?.length,
+      p_scope: tokenData.scope || '',
+      p_shop_domain: fullShopDomain
+    })
+
+    const { data: rpcData, error: dbError } = await supabase
       .rpc('upsert_shop_token', {
         p_access_token: tokenData.access_token,
         p_scope: tokenData.scope || '',
         p_shop_domain: fullShopDomain
       })
+
+    console.log('📊 [TOKEN-EXCHANGE] RPC response:', {
+      hasError: !!dbError,
+      hasData: !!rpcData,
+      dataLength: Array.isArray(rpcData) ? rpcData.length : 0,
+      data: rpcData,
+      error: dbError
+    })
 
     if (dbError) {
       console.error('❌ [TOKEN-EXCHANGE] Error storing token in database:')
@@ -203,7 +217,7 @@ export async function POST(request: NextRequest) {
       console.error('  fullError:', JSON.stringify(dbError, null, 2))
       console.error('  shop:', fullShopDomain)
       console.error('  supabaseUrl:', supabaseUrl)
-      console.error('  keyType:', process.env.SUPABASE_SECRET_KEY ? 'secret' : process.env.SUPABASE_SERVICE_KEY ? 'service' : 'anon')
+      console.error('  keyType:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'service_role' : process.env.SUPABASE_SECRET_KEY ? 'secret' : process.env.SUPABASE_SERVICE_KEY ? 'service' : 'anon')
       console.error('  timestamp:', new Date().toISOString())
       return NextResponse.json({
         success: false,
@@ -214,9 +228,18 @@ export async function POST(request: NextRequest) {
       }, { status: 500, headers: corsHeaders })
     }
 
+    if (!rpcData || (Array.isArray(rpcData) && rpcData.length === 0)) {
+      console.error('❌ [TOKEN-EXCHANGE] RPC function returned no data - token may not have been stored')
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to store access token - function returned no data'
+      }, { status: 500, headers: corsHeaders })
+    }
+
     console.log('✅ [TOKEN-EXCHANGE] Access token stored successfully:', {
       shop: fullShopDomain,
       scope: tokenData.scope,
+      rpcResult: rpcData,
       timestamp: new Date().toISOString()
     })
 
