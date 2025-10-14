@@ -301,7 +301,7 @@ function CreateProductContent() {
         const options = [
           { label: 'Select sizing range', value: '' },
           ...data.data.map((size: any) => ({
-            label: size.name + (size.is_default ? ' (Default)' : ''),
+            label: `${size.name}${size.is_default ? ' (Default)' : ''}: ${size.sizes.join(', ')}`,
             value: size.sizes.join(', ')
           }))
         ]
