@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react'
 
 interface ShopSize {
   id: string
-  store_id: string
+  store_id: string | null
   name: string
   sizes: string[]
   is_default: boolean
   is_active: boolean
-  created_at: string
-  updated_at: string
+  created_at: string | null
+  updated_at: string | null
+  source?: 'fallback' | 'database'
 }
 
 interface ShopSizesProps {
@@ -29,6 +30,33 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
   const [formSizes, setFormSizes] = useState('')
   const [formIsDefault, setFormIsDefault] = useState(false)
 
+  const normalizeSize = (raw: any): ShopSize => {
+    const id = raw?.id ? String(raw.id) : ''
+    const storeId = raw?.store_id ?? null
+    const isFallback =
+      raw?.source === 'fallback' ||
+      !storeId ||
+      (typeof id === 'string' && id.startsWith('fallback-'))
+
+    return {
+      id,
+      store_id: storeId,
+      name: raw?.name ?? '',
+      sizes: Array.isArray(raw?.sizes) ? raw.sizes : [],
+      is_default: Boolean(raw?.is_default),
+      is_active: raw?.is_active ?? true,
+      created_at: raw?.created_at ?? null,
+      updated_at: raw?.updated_at ?? null,
+      source: isFallback ? 'fallback' : 'database'
+    }
+  }
+
+  const resetFormState = () => {
+    setFormName('')
+    setFormSizes('')
+    setFormIsDefault(false)
+  }
+
   useEffect(() => {
     fetchSizes()
   }, [shop])
@@ -40,7 +68,10 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
       const data = await response.json()
 
       if (data.success) {
-        setSizes(data.data)
+        const normalizedSizes = Array.isArray(data.data)
+          ? data.data.map((size: any) => normalizeSize(size))
+          : []
+        setSizes(normalizedSizes)
       } else {
         onToast('Failed to load sizing sets', true)
       }
@@ -52,84 +83,103 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
     }
   }
 
-  const handleCreate = async () => {
+  const submitSize = async ({
+    method,
+    id,
+    successMessage,
+    errorMessage
+  }: {
+    method: 'POST' | 'PUT'
+    id?: string
+    successMessage: string
+    errorMessage: string
+  }) => {
     if (!formName.trim() || !formSizes.trim()) {
       onToast('Please fill in all fields', true)
-      return
+      return false
     }
 
     try {
-      const sizesArray = formSizes.split(',').map(s => s.trim()).filter(s => s)
+      const sizesArray = formSizes
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0)
+
+      if (sizesArray.length === 0) {
+        onToast('Please provide at least one size', true)
+        return false
+      }
+
+      const payload: Record<string, any> = {
+        shop,
+        name: formName,
+        sizes: sizesArray,
+        is_default: formIsDefault
+      }
+
+      if (method === 'PUT') {
+        if (!id) {
+          onToast(errorMessage, true)
+          return false
+        }
+        payload.id = id
+      }
 
       const response = await fetch('/api/shop-sizes', {
-        method: 'POST',
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shop,
-          name: formName,
-          sizes: sizesArray,
-          is_default: formIsDefault
-        })
+        body: JSON.stringify(payload)
       })
 
       const data = await response.json()
 
       if (data.success) {
-        onToast('Sizing set created successfully')
-        setFormName('')
-        setFormSizes('')
-        setFormIsDefault(false)
+        onToast(successMessage)
+        resetFormState()
+        setEditingId(null)
         setIsCreating(false)
-        fetchSizes()
-      } else {
-        onToast(data.error || 'Failed to create sizing set', true)
+        await fetchSizes()
+        return true
       }
+
+      onToast(data.error || errorMessage, true)
+      return false
     } catch (error) {
-      console.error('Error creating size:', error)
-      onToast('Failed to create sizing set', true)
+      console.error(errorMessage, error)
+      onToast(errorMessage, true)
+      return false
     }
+  }
+
+  const handleCreate = async () => {
+    await submitSize({
+      method: 'POST',
+      successMessage: 'Sizing set created successfully',
+      errorMessage: 'Failed to create sizing set'
+    })
   }
 
   const handleUpdate = async (id: string) => {
-    if (!formName.trim() || !formSizes.trim()) {
-      onToast('Please fill in all fields', true)
-      return
-    }
+    const targetSize = sizes.find((size) => size.id === id)
+    const isFallback = targetSize?.source === 'fallback' || !targetSize?.store_id
 
-    try {
-      const sizesArray = formSizes.split(',').map(s => s.trim()).filter(s => s)
-
-      const response = await fetch('/api/shop-sizes', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shop,
-          id,
-          name: formName,
-          sizes: sizesArray,
-          is_default: formIsDefault
-        })
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        onToast('Sizing set updated successfully')
-        setEditingId(null)
-        setFormName('')
-        setFormSizes('')
-        setFormIsDefault(false)
-        fetchSizes()
-      } else {
-        onToast(data.error || 'Failed to update sizing set', true)
-      }
-    } catch (error) {
-      console.error('Error updating size:', error)
-      onToast('Failed to update sizing set', true)
-    }
+    await submitSize({
+      method: isFallback ? 'POST' : 'PUT',
+      id: isFallback ? undefined : id,
+      successMessage: 'Sizing set updated successfully',
+      errorMessage: 'Failed to update sizing set'
+    })
   }
 
   const handleDelete = async (id: string) => {
+    const targetSize = sizes.find((size) => size.id === id)
+    const isFallback = targetSize?.source === 'fallback' || !targetSize?.store_id
+
+    if (isFallback) {
+      onToast('Default sizing templates cannot be deleted. Create a custom sizing set instead.', true)
+      return
+    }
+
     if (!confirm('Are you sure you want to delete this sizing set?')) {
       return
     }
@@ -143,7 +193,7 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
 
       if (data.success) {
         onToast('Sizing set deleted successfully')
-        fetchSizes()
+        await fetchSizes()
       } else {
         onToast(data.error || 'Failed to delete sizing set', true)
       }
@@ -164,17 +214,13 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
   const cancelEditing = () => {
     setEditingId(null)
     setIsCreating(false)
-    setFormName('')
-    setFormSizes('')
-    setFormIsDefault(false)
+    resetFormState()
   }
 
   const startCreating = () => {
     setIsCreating(true)
     setEditingId(null)
-    setFormName('')
-    setFormSizes('')
-    setFormIsDefault(false)
+    resetFormState()
   }
 
   if (loading) {
@@ -346,189 +392,215 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
             </p>
           </div>
         ) : (
-          sizes.map((size) => (
-            <div
-              key={size.id}
-              style={{
-                backgroundColor: 'white',
-                border: `2px solid ${size.is_default ? '#3b82f6' : '#e5e7eb'}`,
-                borderRadius: '8px',
-                padding: '1.25rem'
-              }}
-            >
-              {editingId === size.id ? (
-                // Edit Form
-                <div>
-                  <h3 style={{ color: '#1f2937', fontSize: '1.1rem', marginTop: 0, marginBottom: '1rem' }}>
-                    Edit Sizing Set
-                  </h3>
+          sizes.map((size) => {
+            const isEditing = editingId === size.id
+            const isFallback = size.source === 'fallback' || !size.store_id
 
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', color: '#374151', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>
-                      Set Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '0.95rem'
-                      }}
-                    />
-                  </div>
+            return (
+              <div
+                key={size.id}
+                style={{
+                  backgroundColor: 'white',
+                  border: `2px solid ${size.is_default ? '#3b82f6' : '#e5e7eb'}`,
+                  borderRadius: '8px',
+                  padding: '1.25rem'
+                }}
+              >
+                {isEditing ? (
+                  // Edit Form
+                  <div>
+                    <h3 style={{ color: '#1f2937', fontSize: '1.1rem', marginTop: 0, marginBottom: '1rem' }}>
+                      Edit Sizing Set
+                    </h3>
 
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', color: '#374151', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>
-                      Sizes (comma-separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={formSizes}
-                      onChange={(e) => setFormSizes(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '0.95rem'
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={{ display: 'block', color: '#374151', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>
+                        Set Name
+                      </label>
                       <input
-                        type="checkbox"
-                        checked={formIsDefault}
-                        onChange={(e) => setFormIsDefault(e.target.checked)}
-                        style={{ marginRight: '0.5rem', width: '18px', height: '18px', cursor: 'pointer' }}
+                        type="text"
+                        value={formName}
+                        onChange={(e) => setFormName(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '0.95rem'
+                        }}
                       />
-                      <span style={{ color: '#374151', fontSize: '0.9rem' }}>
-                        Set as default sizing set
-                      </span>
-                    </label>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      onClick={() => handleUpdate(size.id)}
-                      style={{
-                        backgroundColor: '#059669',
-                        color: 'white',
-                        border: 'none',
-                        padding: '10px 20px',
-                        borderRadius: '6px',
-                        fontSize: '0.9rem',
-                        fontWeight: '500',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Save Changes
-                    </button>
-                    <button
-                      onClick={cancelEditing}
-                      style={{
-                        backgroundColor: '#6b7280',
-                        color: 'white',
-                        border: 'none',
-                        padding: '10px 20px',
-                        borderRadius: '6px',
-                        fontSize: '0.9rem',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                // Display Mode
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                        <h3 style={{ color: '#1f2937', fontSize: '1.1rem', fontWeight: '600', margin: 0 }}>
-                          {size.name}
-                        </h3>
-                        {size.is_default && (
-                          <span style={{
-                            backgroundColor: '#dbeafe',
-                            color: '#1e40af',
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            fontWeight: '600'
-                          }}>
-                            DEFAULT
-                          </span>
-                        )}
-                      </div>
-                      <div style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '0.5rem',
-                        marginTop: '0.75rem'
-                      }}>
-                        {size.sizes.map((s, idx) => (
-                          <span
-                            key={idx}
-                            style={{
-                              backgroundColor: '#f3f4f6',
-                              color: '#374151',
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              fontSize: '0.85rem',
-                              fontWeight: '500',
-                              border: '1px solid #e5e7eb'
-                            }}
-                          >
-                            {s}
-                          </span>
-                        ))}
-                      </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={{ display: 'block', color: '#374151', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>
+                        Sizes (comma-separated)
+                      </label>
+                      <input
+                        type="text"
+                        value={formSizes}
+                        onChange={(e) => setFormSizes(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '0.95rem'
+                        }}
+                      />
                     </div>
+
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={formIsDefault}
+                          onChange={(e) => setFormIsDefault(e.target.checked)}
+                          style={{ marginRight: '0.5rem', width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <span style={{ color: '#374151', fontSize: '0.9rem' }}>
+                          Set as default sizing set
+                        </span>
+                      </label>
+                    </div>
+
+                    {isFallback && (
+                      <p style={{ color: '#6b7280', fontSize: '0.85rem', marginTop: 0, marginBottom: '1rem' }}>
+                        Saving creates a custom copy for your shop so you can edit the built-in template.
+                      </p>
+                    )}
 
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button
-                        onClick={() => startEditing(size)}
+                        onClick={() => handleUpdate(size.id)}
                         style={{
-                          backgroundColor: '#f3f4f6',
-                          color: '#374151',
-                          border: '1px solid #d1d5db',
-                          padding: '8px 16px',
+                          backgroundColor: '#059669',
+                          color: 'white',
+                          border: 'none',
+                          padding: '10px 20px',
                           borderRadius: '6px',
-                          fontSize: '0.85rem',
-                          cursor: 'pointer',
-                          fontWeight: '500'
+                          fontSize: '0.9rem',
+                          fontWeight: '500',
+                          cursor: 'pointer'
                         }}
                       >
-                        Edit
+                        Save Changes
                       </button>
                       <button
-                        onClick={() => handleDelete(size.id)}
+                        onClick={cancelEditing}
                         style={{
-                          backgroundColor: '#fef2f2',
-                          color: '#dc2626',
-                          border: '1px solid #fecaca',
-                          padding: '8px 16px',
+                          backgroundColor: '#6b7280',
+                          color: 'white',
+                          border: 'none',
+                          padding: '10px 20px',
                           borderRadius: '6px',
-                          fontSize: '0.85rem',
-                          cursor: 'pointer',
-                          fontWeight: '500'
+                          fontSize: '0.9rem',
+                          cursor: 'pointer'
                         }}
                       >
-                        Delete
+                        Cancel
                       </button>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))
+                ) : (
+                  // Display Mode
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                          <h3 style={{ color: '#1f2937', fontSize: '1.1rem', fontWeight: '600', margin: 0 }}>
+                            {size.name}
+                          </h3>
+                          {size.is_default && (
+                            <span style={{
+                              backgroundColor: '#dbeafe',
+                              color: '#1e40af',
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600'
+                            }}>
+                              DEFAULT
+                            </span>
+                          )}
+                          {isFallback && (
+                            <span style={{
+                              backgroundColor: '#f3f4f6',
+                              color: '#4b5563',
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              border: '1px solid #e5e7eb'
+                            }}>
+                              TEMPLATE
+                            </span>
+                          )}
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: '0.5rem',
+                          marginTop: '0.75rem'
+                        }}>
+                          {size.sizes.map((s, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                backgroundColor: '#f3f4f6',
+                                color: '#374151',
+                                padding: '6px 12px',
+                                borderRadius: '6px',
+                                fontSize: '0.85rem',
+                                fontWeight: '500',
+                                border: '1px solid #e5e7eb'
+                              }}
+                            >
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => startEditing(size)}
+                          style={{
+                            backgroundColor: '#f3f4f6',
+                            color: '#374151',
+                            border: '1px solid #d1d5db',
+                            padding: '8px 16px',
+                            borderRadius: '6px',
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            fontWeight: '500'
+                          }}
+                        >
+                          Edit
+                        </button>
+                        {!isFallback && (
+                          <button
+                            onClick={() => handleDelete(size.id)}
+                            style={{
+                              backgroundColor: '#fef2f2',
+                              color: '#dc2626',
+                              border: '1px solid #fecaca',
+                              padding: '8px 16px',
+                              borderRadius: '6px',
+                              fontSize: '0.85rem',
+                              cursor: 'pointer',
+                              fontWeight: '500'
+                            }}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })
         )}
       </div>
     </div>
