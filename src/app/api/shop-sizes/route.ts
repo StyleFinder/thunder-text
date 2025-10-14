@@ -11,6 +11,7 @@ type ShopSizeRecord = {
   is_active: boolean
   created_at: string | null
   updated_at: string | null
+  source?: 'fallback' | 'database'
 }
 
 const FALLBACK_SHOP_SIZES: ShopSizeRecord[] = [
@@ -22,7 +23,8 @@ const FALLBACK_SHOP_SIZES: ShopSizeRecord[] = [
     is_default: true,
     is_active: true,
     created_at: null,
-    updated_at: null
+    updated_at: null,
+    source: 'fallback'
   },
   {
     id: 'fallback-plus',
@@ -32,7 +34,8 @@ const FALLBACK_SHOP_SIZES: ShopSizeRecord[] = [
     is_default: false,
     is_active: true,
     created_at: null,
-    updated_at: null
+    updated_at: null,
+    source: 'fallback'
   },
   {
     id: 'fallback-numeric',
@@ -42,7 +45,8 @@ const FALLBACK_SHOP_SIZES: ShopSizeRecord[] = [
     is_default: false,
     is_active: true,
     created_at: null,
-    updated_at: null
+    updated_at: null,
+    source: 'fallback'
   },
   {
     id: 'fallback-shoes',
@@ -52,7 +56,8 @@ const FALLBACK_SHOP_SIZES: ShopSizeRecord[] = [
     is_default: false,
     is_active: true,
     created_at: null,
-    updated_at: null
+    updated_at: null,
+    source: 'fallback'
   },
   {
     id: 'fallback-extended',
@@ -62,9 +67,27 @@ const FALLBACK_SHOP_SIZES: ShopSizeRecord[] = [
     is_default: false,
     is_active: true,
     created_at: null,
-    updated_at: null
+    updated_at: null,
+    source: 'fallback'
   }
 ];
+
+const annotateShopSizeSource = (records: ShopSizeRecord[]): ShopSizeRecord[] => {
+  return records.map((record) => {
+    const isFallback =
+      record.source === 'fallback' ||
+      !record.store_id ||
+      (typeof record.id === 'string' && record.id.startsWith('fallback-'));
+
+    return {
+      ...record,
+      source: isFallback ? 'fallback' : 'database'
+    };
+  });
+};
+
+const isFallbackId = (value: string | null | undefined): boolean =>
+  typeof value === 'string' && value.startsWith('fallback-');
 
 export async function GET(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request);
@@ -167,7 +190,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           success: true,
-          data: FALLBACK_SHOP_SIZES,
+          data: annotateShopSizeSource(FALLBACK_SHOP_SIZES),
           debug: {
             requestId,
             step: 'shop_sizes_query',
@@ -184,21 +207,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const responseData = (shopSizes?.length ?? 0) > 0 ? shopSizes! : FALLBACK_SHOP_SIZES;
+    const responseData =
+      (shopSizes?.length ?? 0) > 0 ? shopSizes! : FALLBACK_SHOP_SIZES;
+    const annotatedData = annotateShopSizeSource(responseData);
+
     if (!shopSizes?.length) {
       console.warn(`[${requestId}] No shop-specific sizes found. Using fallback defaults.`);
     }
 
-    console.log(`[${requestId}] Step 4 SUCCESS - Retrieved ${responseData.length} sizes`);
+    console.log(`[${requestId}] Step 4 SUCCESS - Retrieved ${annotatedData.length} sizes`);
     console.log(`[${requestId}] === SHOP SIZES API SUCCESS ===`);
 
     return NextResponse.json({
       success: true,
-      data: responseData,
+      data: annotatedData,
       debug: {
         requestId,
         shopId: shopData.id,
-        resultCount: responseData.length,
+        resultCount: annotatedData.length,
         fallback: !shopSizes?.length
       }
     }, { headers: corsHeaders });
@@ -309,6 +335,13 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    if (isFallbackId(id)) {
+      return NextResponse.json(
+        { error: 'Default sizing templates cannot be updated directly. Save changes as a new sizing set instead.' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
     const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`;
     const { data: shopData, error: shopError } = await supabaseAdmin
       .from('shops')
@@ -379,6 +412,13 @@ export async function DELETE(request: NextRequest) {
     if (!shop || !id) {
       return NextResponse.json(
         { error: 'Missing required parameters: shop, id' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    if (isFallbackId(id)) {
+      return NextResponse.json(
+        { error: 'Default sizing templates cannot be deleted. Create a custom sizing set instead.' },
         { status: 400, headers: corsHeaders }
       );
     }
