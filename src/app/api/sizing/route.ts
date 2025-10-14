@@ -54,13 +54,10 @@ export async function GET(request: NextRequest) {
       storeId = convertedId
     }
 
-    // Fetch all sizing options for the store
+    // Fetch all sizing options for the store using RPC function
+    // This bypasses PostgREST table access issues
     const { data: sizingOptions, error } = await supabaseAdmin
-      .from('custom_sizing')
-      .select('*')
-      .eq('store_id', storeId)
-      .order('is_default', { ascending: false })
-      .order('created_at', { ascending: true })
+      .rpc('get_sizing_options', { p_store_id: storeId })
 
     if (error) {
       console.error('Database error fetching sizing options:', error)
@@ -129,25 +126,14 @@ export async function POST(request: NextRequest) {
     // Auto-capitalize sizes
     const capitalizedSizes = sizes.map((size: string) => size.trim().toUpperCase())
 
-    // If this is being set as default, unset any existing defaults
-    if (is_default) {
-      await supabaseAdmin
-        .from('custom_sizing')
-        .update({ is_default: false })
-        .eq('store_id', store_id)
-        .eq('is_default', true)
-    }
-
-    // Create new sizing option
+    // Create new sizing option using RPC function
     const { data: newSizing, error } = await supabaseAdmin
-      .from('custom_sizing')
-      .insert({
-        store_id,
-        name: name.trim(),
-        sizes: capitalizedSizes,
-        is_default: is_default || false
+      .rpc('create_sizing_option', {
+        p_store_id: store_id,
+        p_name: name.trim(),
+        p_sizes: capitalizedSizes,
+        p_is_default: is_default || false
       })
-      .select()
       .single()
 
     if (error) {
@@ -214,28 +200,15 @@ export async function PUT(request: NextRequest) {
     // Auto-capitalize sizes
     const capitalizedSizes = sizes.map((size: string) => size.trim().toUpperCase())
 
-    // If this is being set as default, unset any existing defaults
-    if (is_default) {
-      await supabaseAdmin
-        .from('custom_sizing')
-        .update({ is_default: false })
-        .eq('store_id', store_id)
-        .eq('is_default', true)
-        .neq('id', sizing_id) // Don't unset the one we're updating
-    }
-
-    // Update sizing option
+    // Update sizing option using RPC function
     const { data: updatedSizing, error } = await supabaseAdmin
-      .from('custom_sizing')
-      .update({
-        name: name.trim(),
-        sizes: capitalizedSizes,
-        is_default: is_default !== undefined ? is_default : false,
-        updated_at: new Date().toISOString()
+      .rpc('update_sizing_option', {
+        p_store_id: store_id,
+        p_sizing_id: sizing_id,
+        p_name: name.trim(),
+        p_sizes: capitalizedSizes,
+        p_is_default: is_default !== undefined ? is_default : false
       })
-      .eq('id', sizing_id)
-      .eq('store_id', store_id)
-      .select()
       .single()
 
     if (error) {
@@ -300,13 +273,12 @@ export async function DELETE(request: NextRequest) {
       storeId = convertedId
     }
 
-    // Delete sizing option (hard delete to avoid schema cache issues)
+    // Delete sizing option using RPC function
     const { data: deletedSizing, error} = await supabaseAdmin
-      .from('custom_sizing')
-      .delete()
-      .eq('id', sizingId)
-      .eq('store_id', storeId)
-      .select()
+      .rpc('delete_sizing_option', {
+        p_store_id: storeId,
+        p_sizing_id: sizingId
+      })
       .single()
 
     if (error) {
