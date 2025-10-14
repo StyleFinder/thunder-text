@@ -1,6 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import {
+  BlockStack,
+  InlineStack,
+  Text,
+  Button,
+  TextField,
+  Checkbox,
+  Badge,
+  Box,
+  Spinner
+} from '@shopify/polaris'
 
 interface ShopSize {
   id: string
@@ -246,384 +257,179 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '2rem' }}>
-        <div style={{
-          display: 'inline-block',
-          width: '40px',
-          height: '40px',
-          border: '4px solid #e5e7eb',
-          borderTop: '4px solid #3b82f6',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }}></div>
-        <p style={{ color: '#6b7280', marginTop: '1rem' }}>Loading sizing sets...</p>
-      </div>
+      <Box padding="800">
+        <InlineStack align="center" blockAlign="center" gap="400">
+          <Spinner size="small" />
+          <Text as="p" tone="subdued">Loading sizing sets...</Text>
+        </InlineStack>
+      </Box>
     )
   }
 
   return (
-    <div>
-      <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h2 style={{ color: '#1f2937', fontSize: '1.3rem', margin: 0, marginBottom: '0.5rem' }}>
-            Sizing Sets
-          </h2>
-          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>
+    <BlockStack gap="400">
+      <InlineStack align="space-between" blockAlign="center">
+        <BlockStack gap="200">
+          <Text as="h2" variant="headingMd">Sizing Sets</Text>
+          <Text as="p" variant="bodySm" tone="subdued">
             Create custom sizing options for your products (e.g., XS-XXL, numeric, shoe sizes)
-          </p>
-        </div>
+          </Text>
+        </BlockStack>
 
         {!isCreating && !editingId && (
-          <button
-            onClick={startCreating}
-            style={{
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              padding: '10px 20px',
-              borderRadius: '6px',
-              fontSize: '0.9rem',
-              fontWeight: '500',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-          >
-            <span>+</span>
+          <Button variant="primary" onClick={startCreating}>
             Add New Set
-          </button>
+          </Button>
         )}
-      </div>
+      </InlineStack>
 
       {/* Create Form */}
       {isCreating && (
-        <div style={{
-          backgroundColor: '#f8fafc',
-          border: '1px solid #e2e8f0',
-          borderRadius: '8px',
-          padding: '1.5rem',
-          marginBottom: '1rem'
-        }}>
-          <h3 style={{ color: '#1f2937', fontSize: '1.1rem', marginTop: 0, marginBottom: '1rem' }}>
-            Create New Sizing Set
-          </h3>
+        <Box background="bg-surface-secondary" padding="400" borderRadius="200">
+          <BlockStack gap="400">
+            <Text as="h3" variant="headingMd">Create New Sizing Set</Text>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', color: '#374151', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>
-              Set Name
-            </label>
-            <input
-              type="text"
+            <TextField
+              label="Set Name"
               value={formName}
-              onChange={(e) => setFormName(e.target.value)}
+              onChange={setFormName}
               placeholder="e.g., Women's Standard Sizes"
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: '0.95rem'
-              }}
+              autoComplete="off"
             />
-          </div>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', color: '#374151', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>
-              Sizes (comma-separated)
-            </label>
-            <input
-              type="text"
+            <TextField
+              label="Sizes (comma-separated)"
               value={formSizes}
-              onChange={(e) => setFormSizes(e.target.value)}
+              onChange={setFormSizes}
               placeholder="e.g., XS, S, M, L, XL, XXL"
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: '0.95rem'
-              }}
+              autoComplete="off"
+              helpText="Supports letter sizes (XS-XXL), numeric (0-20), shoe sizes (5-11), or custom text"
             />
-            <p style={{ color: '#6b7280', fontSize: '0.85rem', marginTop: '0.5rem', marginBottom: 0 }}>
-              Supports letter sizes (XS-XXL), numeric (0-20), shoe sizes (5-11), or custom text
-            </p>
-          </div>
 
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={formIsDefault}
-                onChange={(e) => setFormIsDefault(e.target.checked)}
-                style={{ marginRight: '0.5rem', width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-              <span style={{ color: '#374151', fontSize: '0.9rem' }}>
-                Set as default sizing set
-              </span>
-            </label>
-          </div>
+            <Checkbox
+              label="Set as default sizing set"
+              checked={formIsDefault}
+              onChange={setFormIsDefault}
+            />
 
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
-              onClick={handleCreate}
-              style={{
-                backgroundColor: '#059669',
-                color: 'white',
-                border: 'none',
-                padding: '10px 20px',
-                borderRadius: '6px',
-                fontSize: '0.9rem',
-                fontWeight: '500',
-                cursor: 'pointer'
-              }}
-            >
-              Create Set
-            </button>
-            <button
-              onClick={cancelEditing}
-              style={{
-                backgroundColor: '#6b7280',
-                color: 'white',
-                border: 'none',
-                padding: '10px 20px',
-                borderRadius: '6px',
-                fontSize: '0.9rem',
-                cursor: 'pointer'
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+            <InlineStack gap="300">
+              <Button variant="primary" tone="success" onClick={handleCreate}>
+                Create Set
+              </Button>
+              <Button onClick={cancelEditing}>
+                Cancel
+              </Button>
+            </InlineStack>
+          </BlockStack>
+        </Box>
       )}
 
       {/* Sizing Sets List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <BlockStack gap="400">
         {sizes.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '3rem',
-            backgroundColor: '#f9fafb',
-            borderRadius: '8px',
-            border: '1px dashed #d1d5db'
-          }}>
-            <p style={{ color: '#6b7280', fontSize: '0.95rem', margin: 0 }}>
-              No sizing sets yet. Click "Add New Set" to create your first one.
-            </p>
-          </div>
+          <Box background="bg-surface-secondary" padding="800" borderRadius="200">
+            <InlineStack align="center">
+              <Text as="p" tone="subdued" alignment="center">
+                No sizing sets yet. Click "Add New Set" to create your first one.
+              </Text>
+            </InlineStack>
+          </Box>
         ) : (
           sizes.map((size) => {
             const isEditing = editingId === size.id
             const isFallback = size.source === 'fallback' || !size.store_id
 
             return (
-              <div
+              <Box
                 key={size.id}
-                style={{
-                  backgroundColor: 'white',
-                  border: `2px solid ${size.is_default ? '#3b82f6' : '#e5e7eb'}`,
-                  borderRadius: '8px',
-                  padding: '1.25rem'
-                }}
+                background="bg-surface"
+                padding="400"
+                borderRadius="200"
+                borderColor={size.is_default ? "border-info" : "border"}
+                borderWidth="025"
               >
                 {isEditing ? (
                   // Edit Form
-                  <div>
-                    <h3 style={{ color: '#1f2937', fontSize: '1.1rem', marginTop: 0, marginBottom: '1rem' }}>
-                      Edit Sizing Set
-                    </h3>
+                  <BlockStack gap="400">
+                    <Text as="h3" variant="headingMd">Edit Sizing Set</Text>
 
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', color: '#374151', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>
-                        Set Name
-                      </label>
-                      <input
-                        type="text"
-                        value={formName}
-                        onChange={(e) => setFormName(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          fontSize: '0.95rem'
-                        }}
-                      />
-                  </div>
+                    <TextField
+                      label="Set Name"
+                      value={formName}
+                      onChange={setFormName}
+                      autoComplete="off"
+                    />
 
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', color: '#374151', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>
-                        Sizes (comma-separated)
-                      </label>
-                      <input
-                        type="text"
-                        value={formSizes}
-                        onChange={(e) => setFormSizes(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          fontSize: '0.95rem'
-                        }}
-                      />
-                    </div>
+                    <TextField
+                      label="Sizes (comma-separated)"
+                      value={formSizes}
+                      onChange={setFormSizes}
+                      autoComplete="off"
+                    />
 
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={formIsDefault}
-                          onChange={(e) => setFormIsDefault(e.target.checked)}
-                          style={{ marginRight: '0.5rem', width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <span style={{ color: '#374151', fontSize: '0.9rem' }}>
-                          Set as default sizing set
-                        </span>
-                      </label>
-                    </div>
+                    <Checkbox
+                      label="Set as default sizing set"
+                      checked={formIsDefault}
+                      onChange={setFormIsDefault}
+                    />
 
                     {isFallback && (
-                      <p style={{ color: '#6b7280', fontSize: '0.85rem', marginTop: 0, marginBottom: '1rem' }}>
+                      <Text as="p" variant="bodySm" tone="subdued">
                         Saving creates a custom copy for your shop so you can edit the built-in template.
-                      </p>
+                      </Text>
                     )}
 
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button
-                        onClick={() => handleUpdate(size.id)}
-                        style={{
-                          backgroundColor: '#059669',
-                          color: 'white',
-                          border: 'none',
-                          padding: '10px 20px',
-                          borderRadius: '6px',
-                          fontSize: '0.9rem',
-                          fontWeight: '500',
-                          cursor: 'pointer'
-                        }}
-                      >
+                    <InlineStack gap="300">
+                      <Button variant="primary" tone="success" onClick={() => handleUpdate(size.id)}>
                         Save Changes
-                      </button>
-                      <button
-                        onClick={cancelEditing}
-                        style={{
-                          backgroundColor: '#6b7280',
-                          color: 'white',
-                          border: 'none',
-                          padding: '10px 20px',
-                          borderRadius: '6px',
-                          fontSize: '0.9rem',
-                          cursor: 'pointer'
-                        }}
-                      >
+                      </Button>
+                      <Button onClick={cancelEditing}>
                         Cancel
-                      </button>
-                    </div>
-                  </div>
+                      </Button>
+                    </InlineStack>
+                  </BlockStack>
                 ) : (
                   // Display Mode
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                          <h3 style={{ color: '#1f2937', fontSize: '1.1rem', fontWeight: '600', margin: 0 }}>
-                            {size.name}
-                          </h3>
+                  <BlockStack gap="400">
+                    <InlineStack align="space-between" blockAlign="start">
+                      <BlockStack gap="300">
+                        <InlineStack gap="200" blockAlign="center">
+                          <Text as="h3" variant="headingMd">{size.name}</Text>
                           {size.is_default && (
-                            <span style={{
-                              backgroundColor: '#dbeafe',
-                              color: '#1e40af',
-                              padding: '4px 10px',
-                              borderRadius: '4px',
-                              fontSize: '0.75rem',
-                              fontWeight: '600'
-                            }}>
-                              DEFAULT
-                            </span>
+                            <Badge tone="info">DEFAULT</Badge>
                           )}
                           {isFallback && (
-                            <span style={{
-                              backgroundColor: '#f3f4f6',
-                              color: '#4b5563',
-                              padding: '4px 10px',
-                              borderRadius: '4px',
-                              fontSize: '0.75rem',
-                              fontWeight: '500',
-                              border: '1px solid #e5e7eb'
-                            }}>
-                              TEMPLATE
-                            </span>
+                            <Badge>TEMPLATE</Badge>
                           )}
-                        </div>
-                        <div style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          gap: '0.5rem',
-                          marginTop: '0.75rem'
-                        }}>
+                        </InlineStack>
+                        <InlineStack gap="200" wrap>
                           {size.sizes.map((s, idx) => (
-                            <span
-                              key={idx}
-                              style={{
-                                backgroundColor: '#f3f4f6',
-                                color: '#374151',
-                                padding: '6px 12px',
-                                borderRadius: '6px',
-                                fontSize: '0.85rem',
-                                fontWeight: '500',
-                                border: '1px solid #e5e7eb'
-                              }}
-                            >
-                              {s}
-                            </span>
+                            <Badge key={idx} tone="subdued">{s}</Badge>
                           ))}
-                        </div>
-                      </div>
+                        </InlineStack>
+                      </BlockStack>
 
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button
-                          onClick={() => startEditing(size)}
-                          style={{
-                            backgroundColor: '#f3f4f6',
-                            color: '#374151',
-                            border: '1px solid #d1d5db',
-                            padding: '8px 16px',
-                            borderRadius: '6px',
-                            fontSize: '0.85rem',
-                            cursor: 'pointer',
-                            fontWeight: '500'
-                          }}
-                        >
+                      <InlineStack gap="200">
+                        <Button onClick={() => startEditing(size)}>
                           Edit
-                        </button>
+                        </Button>
                         {!isFallback && (
-                          <button
+                          <Button
+                            tone={isTemplateOverride(size) ? "caution" : "critical"}
                             onClick={() => handleDelete(size.id, isTemplateOverride(size))}
-                            style={{
-                              backgroundColor: isTemplateOverride(size) ? '#fef3c7' : '#fef2f2',
-                              color: isTemplateOverride(size) ? '#92400e' : '#dc2626',
-                              border: `1px solid ${isTemplateOverride(size) ? '#fde68a' : '#fecaca'}`,
-                              padding: '8px 16px',
-                              borderRadius: '6px',
-                              fontSize: '0.85rem',
-                              cursor: 'pointer',
-                              fontWeight: '500'
-                            }}
                           >
                             {isTemplateOverride(size) ? 'Restore Default' : 'Delete'}
-                          </button>
+                          </Button>
                         )}
-                      </div>
-                    </div>
-                  </div>
+                      </InlineStack>
+                    </InlineStack>
+                  </BlockStack>
                 )}
-              </div>
+              </Box>
             )
           })
         )}
-      </div>
-    </div>
+      </BlockStack>
+    </BlockStack>
   )
 }
