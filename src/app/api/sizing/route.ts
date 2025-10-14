@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch all sizing options for the store
     const { data: sizingOptions, error } = await supabaseAdmin
-      .from('size_options')
+      .from('custom_sizing')
       .select('*')
       .eq('store_id', storeId)
       .order('is_default', { ascending: false })
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     // If this is being set as default, unset any existing defaults
     if (is_default) {
       await supabaseAdmin
-        .from('size_options')
+        .from('custom_sizing')
         .update({ is_default: false })
         .eq('store_id', store_id)
         .eq('is_default', true)
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
 
     // Create new sizing option
     const { data: newSizing, error } = await supabaseAdmin
-      .from('size_options')
+      .from('custom_sizing')
       .insert({
         store_id,
         name: name.trim(),
@@ -217,7 +217,7 @@ export async function PUT(request: NextRequest) {
     // If this is being set as default, unset any existing defaults
     if (is_default) {
       await supabaseAdmin
-        .from('size_options')
+        .from('custom_sizing')
         .update({ is_default: false })
         .eq('store_id', store_id)
         .eq('is_default', true)
@@ -226,7 +226,7 @@ export async function PUT(request: NextRequest) {
 
     // Update sizing option
     const { data: updatedSizing, error } = await supabaseAdmin
-      .from('size_options')
+      .from('custom_sizing')
       .update({
         name: name.trim(),
         sizes: capitalizedSizes,
@@ -302,7 +302,7 @@ export async function DELETE(request: NextRequest) {
 
     // Delete sizing option (hard delete to avoid schema cache issues)
     const { data: deletedSizing, error} = await supabaseAdmin
-      .from('size_options')
+      .from('custom_sizing')
       .delete()
       .eq('id', sizingId)
       .eq('store_id', storeId)
