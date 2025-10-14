@@ -29,33 +29,33 @@ export function CategoryTemplateSelector({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Load category templates
+  // Load category templates only once on mount or when storeId changes
   useEffect(() => {
     async function loadTemplates() {
       try {
         setLoading(true)
         const response = await fetch(`/api/prompts?store_id=${storeId}`)
-        
+
         if (!response.ok) {
           throw new Error('Failed to load templates')
         }
 
         const data = await response.json()
         setTemplates(data.category_templates || [])
-        
+
         // Set default if none selected - prioritize templates marked as default
         if (!value && data.category_templates?.length > 0) {
           // First, look for any template marked as default
-          const defaultTemplate = data.category_templates.find((t: CategoryTemplate) => 
+          const defaultTemplate = data.category_templates.find((t: CategoryTemplate) =>
             t.is_default === true
-          ) 
+          )
           // If no default found, fall back to general category
-          || data.category_templates.find((t: CategoryTemplate) => 
+          || data.category_templates.find((t: CategoryTemplate) =>
             t.category === 'general'
-          ) 
+          )
           // Finally, just use the first available template
           || data.category_templates[0]
-          
+
           onChange(defaultTemplate.category, defaultTemplate.category as ProductCategory)
         }
       } catch (err) {
@@ -69,7 +69,8 @@ export function CategoryTemplateSelector({
     if (storeId) {
       loadTemplates()
     }
-  }, [storeId, value, onChange])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeId])
 
   // Get current template for preview
   const currentTemplate = templates.find(t => t.category === value)
