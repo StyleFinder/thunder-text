@@ -31,9 +31,30 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Use RPC function to bypass PostgREST table permission cache issue
+    // BYPASS PostgREST ENTIRELY - Use Supabase's sql query builder
+    // PostgREST cache won't reload after shop_sizes table creation
+    const query = `
+      SELECT
+        id::text,
+        store_id::text,
+        name,
+        sizes,
+        is_default,
+        is_active,
+        created_at,
+        updated_at
+      FROM shop_sizes
+      WHERE is_active = true
+        AND (store_id = $1 OR store_id IS NULL)
+      ORDER BY is_default DESC, name ASC
+    `;
+
+    // Use raw SQL query that bypasses PostgREST
     const { data: shopSizes, error: sizesError } = await supabaseAdmin
-      .rpc('get_shop_sizes_for_api', { shop_id_param: shopData.id });
+      .rpc('exec_sql_query', {
+        sql_query: query,
+        params: [shopData.id]
+      });
 
     if (sizesError) {
       console.error('Shop sizes query error:', sizesError);
