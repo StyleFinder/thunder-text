@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
       .from('shop_sizes')
       .select(`
         id,
+        store_id,
         name,
         sizes,
         is_default,
