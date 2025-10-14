@@ -33,12 +33,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Use RPC function to bypass PostgREST table access issues
+    // Get shop sizes for this shop (both custom and default) - matches templates pattern exactly
     const { data: shopSizes, error: sizesError } = await supabaseAdmin
-      .rpc('get_shop_sizes', { shop_id_param: shopData.id });
+      .from('shop_sizes')
+      .select(`
+        id,
+        store_id,
+        name,
+        sizes,
+        is_default,
+        is_active,
+        created_at,
+        updated_at
+      `)
+      .or(`store_id.eq.${shopData.id},store_id.eq.default`)
+      .eq('is_active', true)
+      .order('is_default', { ascending: false })
+      .order('name');
 
     if (sizesError) {
-      console.error('Shop sizes RPC error:', sizesError);
+      console.error('Shop sizes query error:', sizesError);
       throw sizesError;
     }
 

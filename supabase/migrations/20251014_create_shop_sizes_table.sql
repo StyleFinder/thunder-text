@@ -21,8 +21,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_shop_sizes_unique_default
 CREATE INDEX IF NOT EXISTS idx_shop_sizes_store_id ON public.shop_sizes(store_id);
 CREATE INDEX IF NOT EXISTS idx_shop_sizes_is_default ON public.shop_sizes(store_id, is_default) WHERE is_default = true;
 
--- Grant table-level permissions (required before RLS policies)
-GRANT ALL ON public.shop_sizes TO postgres, anon, authenticated, service_role;
+-- Grant table-level permissions (must match category_templates exactly)
+GRANT ALL PRIVILEGES ON public.shop_sizes TO postgres, anon, authenticated, service_role;
 
 -- Enable Row Level Security
 ALTER TABLE public.shop_sizes ENABLE ROW LEVEL SECURITY;
