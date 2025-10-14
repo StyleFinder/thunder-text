@@ -57,6 +57,20 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
     setFormIsDefault(false)
   }
 
+  // Default template names that come from the database
+  const DEFAULT_TEMPLATE_NAMES = [
+    'Standard Sizes',
+    'Plus Sizes',
+    'Numeric Sizes',
+    'Shoe Sizes',
+    'Extended Sizes'
+  ]
+
+  const isTemplateOverride = (size: ShopSize) => {
+    // It's an override if it has a store_id (custom) AND matches a default template name
+    return !!size.store_id && DEFAULT_TEMPLATE_NAMES.includes(size.name)
+  }
+
   useEffect(() => {
     fetchSizes()
   }, [shop])
@@ -171,7 +185,7 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
     })
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, isTemplateOverride: boolean = false) => {
     const targetSize = sizes.find((size) => size.id === id)
     const isFallback = targetSize?.source === 'fallback' || !targetSize?.store_id
 
@@ -180,7 +194,11 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
       return
     }
 
-    if (!confirm('Are you sure you want to delete this sizing set?')) {
+    const confirmMessage = isTemplateOverride
+      ? 'Are you sure you want to restore the default template? Your custom changes will be lost.'
+      : 'Are you sure you want to delete this sizing set?'
+
+    if (!confirm(confirmMessage)) {
       return
     }
 
@@ -192,7 +210,10 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
       const data = await response.json()
 
       if (data.success) {
-        onToast('Sizing set deleted successfully')
+        const successMessage = isTemplateOverride
+          ? 'Default template restored successfully'
+          : 'Sizing set deleted successfully'
+        onToast(successMessage)
         await fetchSizes()
       } else {
         onToast(data.error || 'Failed to delete sizing set', true)
@@ -579,11 +600,11 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
                         </button>
                         {!isFallback && (
                           <button
-                            onClick={() => handleDelete(size.id)}
+                            onClick={() => handleDelete(size.id, isTemplateOverride(size))}
                             style={{
-                              backgroundColor: '#fef2f2',
-                              color: '#dc2626',
-                              border: '1px solid #fecaca',
+                              backgroundColor: isTemplateOverride(size) ? '#fef3c7' : '#fef2f2',
+                              color: isTemplateOverride(size) ? '#92400e' : '#dc2626',
+                              border: `1px solid ${isTemplateOverride(size) ? '#fde68a' : '#fecaca'}`,
                               padding: '8px 16px',
                               borderRadius: '6px',
                               fontSize: '0.85rem',
@@ -591,7 +612,7 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
                               fontWeight: '500'
                             }}
                           >
-                            Delete
+                            {isTemplateOverride(size) ? 'Restore Default' : 'Delete'}
                           </button>
                         )}
                       </div>
