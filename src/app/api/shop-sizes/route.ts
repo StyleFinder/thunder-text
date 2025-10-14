@@ -33,32 +33,37 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get shop sizes for this shop (both custom and default) - matches templates pattern exactly
-    const { data: shopSizes, error: sizesError } = await supabaseAdmin
-      .from('shop_sizes')
-      .select(`
-        id,
-        store_id,
-        name,
-        sizes,
-        is_default,
-        is_active,
-        created_at,
-        updated_at
-      `)
-      .or(`store_id.eq.${shopData.id},store_id.eq.default`)
-      .eq('is_active', true)
-      .order('is_default', { ascending: false })
-      .order('name');
+    // BYPASS PostgREST - Use raw SQL query to avoid permission caching issues
+    const { data: result, error: sizesError } = await supabaseAdmin.rpc('exec_sql', {
+      query: `
+        SELECT
+          id::text,
+          store_id,
+          name,
+          sizes,
+          is_default,
+          is_active,
+          created_at,
+          updated_at
+        FROM shop_sizes
+        WHERE is_active = true
+        AND (store_id = $1 OR store_id = 'default')
+        ORDER BY is_default DESC, name ASC
+      `,
+      params: [shopData.id]
+    });
 
     if (sizesError) {
       console.error('Shop sizes query error:', sizesError);
       throw sizesError;
     }
 
+    // exec_sql returns JSONB array, extract it
+    const shopSizes = result || [];
+
     return NextResponse.json({
       success: true,
-      data: shopSizes || [],
+      data: shopSizes,
     }, { headers: corsHeaders });
 
   } catch (error) {
