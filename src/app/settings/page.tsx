@@ -36,6 +36,7 @@ import {
   ImportIcon,
 } from '@shopify/polaris-icons'
 import { useNavigation } from '../hooks/useNavigation'
+import ShopSizes from '@/components/ShopSizes'
 
 // Thunder Text shop info (not Zeus store info)
 interface ShopInfo {
@@ -337,9 +338,26 @@ function SettingsContent() {
 
         </div>
 
-        {/* Right Column - Preferences */}
+        {/* Right Column - Sizing Sets */}
         <div>
-          {/* Placeholder for future settings */}
+          {/* Shop Sizes Management */}
+          <div style={{
+            backgroundColor: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            padding: '1.5rem',
+            marginBottom: '2rem'
+          }}>
+            {shop && (
+              <ShopSizes
+                shop={shop}
+                onToast={(message: string, error?: boolean) => {
+                  setToast({ content: message, error })
+                  setTimeout(() => setToast(null), 5000)
+                }}
+              />
+            )}
+          </div>
         </div>
       </div>
 

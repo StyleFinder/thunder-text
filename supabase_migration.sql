@@ -32,17 +32,6 @@ CREATE TABLE IF NOT EXISTS category_templates (
   CONSTRAINT unique_default_per_category_shop UNIQUE (shop_id, category, is_default) WHERE is_default = true
 );
 
--- Custom sizing options
-CREATE TABLE IF NOT EXISTS custom_sizing (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  store_id VARCHAR(100) NOT NULL,
-  name VARCHAR(100) NOT NULL,
-  sizes TEXT[] NOT NULL,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
 -- Custom categories (already exists but ensure schema)
 CREATE TABLE IF NOT EXISTS custom_categories (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -195,5 +184,4 @@ ON CONFLICT (shop_id, category, is_default) WHERE is_default = true DO UPDATE SE
 CREATE INDEX IF NOT EXISTS idx_system_prompts_shop_id ON system_prompts(shop_id);
 CREATE INDEX IF NOT EXISTS idx_category_templates_shop_id ON category_templates(shop_id);
 CREATE INDEX IF NOT EXISTS idx_category_templates_category ON category_templates(category);
-CREATE INDEX IF NOT EXISTS idx_custom_sizing_store_id ON custom_sizing(store_id);
 CREATE INDEX IF NOT EXISTS idx_custom_categories_store_id ON custom_categories(store_id);
