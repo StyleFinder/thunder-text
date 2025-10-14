@@ -114,10 +114,6 @@ function CreateProductContent() {
   const [categoryDetected, setCategoryDetected] = useState(false)
   const [suggestedCategory, setSuggestedCategory] = useState<{category: string, confidence: number} | null>(null)
 
-  // Custom sizing
-  const [customSizing, setCustomSizing] = useState<any[]>([])
-  const [sizingLoading, setSizingLoading] = useState(true)
-  const [sizingError, setSizingError] = useState<string | null>(null)
 
   // Default fallback categories if no custom ones exist
   const defaultCategories = [
@@ -236,7 +232,6 @@ function CreateProductContent() {
     if (shop && authenticated) {
       fetchCustomCategories()
       fetchParentCategories()
-      fetchCustomSizing()
       fetchGlobalDefaultTemplate()
     }
   }, [shop, authenticated])
@@ -307,35 +302,6 @@ function CreateProductContent() {
     }
   }
 
-  const fetchCustomSizing = async () => {
-    try {
-      const response = await fetch(`/api/sizing?shop=${shop}`)
-
-      // Check for HTTP errors (401, 404, 500, etc.)
-      if (!response.ok) {
-        const errorMsg = `Sizing API error: ${response.status} ${response.statusText}`
-        console.error(errorMsg)
-        setSizingError(errorMsg)
-        return
-      }
-
-      const data = await response.json()
-
-      if (data.success && data.data.length > 0) {
-        setCustomSizing(data.data)
-        setSizingError(null) // Clear any previous errors
-      } else {
-        // No custom sizing configured - this is OK, not an error
-        console.log('No custom sizing found, using defaults')
-      }
-    } catch (err) {
-      const errorMsg = `Failed to load sizing options: ${err instanceof Error ? err.message : 'Unknown error'}`
-      console.error(errorMsg, err)
-      setSizingError(errorMsg)
-    } finally {
-      setSizingLoading(false)
-    }
-  }
 
   const fetchGlobalDefaultTemplate = async () => {
     try {
@@ -417,19 +383,8 @@ function CreateProductContent() {
     { label: 'Children (2T-14)', value: 'Children (2T-14)' }
   ]
 
-  // Generate sizing options - show both defaults and custom sizing
-  const sizingOptions = [
-    { label: 'Select sizing range', value: '' },
-    // If we have custom sizing from database, use those (includes defaults + custom)
-    ...((customSizing && customSizing.length > 0)
-      ? customSizing.map(sizing => ({
-          label: `${sizing.name}${sizing.is_default ? '' : ' (Custom)'} (${sizing.sizes.join(', ')})`,
-          value: sizing.sizes.join(', ')
-        }))
-      // Otherwise fallback to hardcoded defaults (for when DB is empty/unavailable)
-      : defaultSizingOptions.slice(1) // Remove the first "Select" option from defaults
-    )
-  ]
+  // Generate sizing options - use hardcoded defaults
+  const sizingOptions = defaultSizingOptions
 
   // Description template options
   const templateOptions = [

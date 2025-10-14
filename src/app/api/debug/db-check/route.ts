@@ -5,29 +5,14 @@ export async function GET() {
   try {
     // Check multiple things about the database connection
 
-    // 1. Check if shops table exists and has data
+    // Check if shops table exists and has data
     const { data: shopsData, error: shopsError } = await supabaseAdmin
       .from('shops')
       .select('id, shop_domain')
       .limit(5)
 
-    // 2. Check if custom_sizing table exists
-    const { data: sizingData, error: sizingError } = await supabaseAdmin
-      .from('custom_sizing')
-      .select('*')
-      .limit(5)
-
     return NextResponse.json({
-      success: !sizingError,
-
-      // Custom sizing check
-      custom_sizing: {
-        exists: !sizingError,
-        error_message: sizingError?.message || null,
-        error_code: sizingError?.code || null,
-        row_count: sizingData?.length || 0,
-        sample_data: sizingData || null
-      },
+      success: !shopsError,
 
       // Shops table check (to verify database connection)
       shops: {

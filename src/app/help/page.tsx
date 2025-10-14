@@ -119,15 +119,6 @@ export default function HelpPage() {
                 </Text>
               </BlockStack>
 
-              <BlockStack gap="300">
-                <Text as="h3" variant="headingMd">How do I set up default sizing options?</Text>
-                <List type="number">
-                  <List.Item>Go to Settings → Sizing</List.Item>
-                  <List.Item>Configure your standard size ranges (XS-XXL, numeric, etc.)</List.Item>
-                  <List.Item>Set defaults for different product categories</List.Item>
-                  <List.Item>These will auto-populate when creating new products</List.Item>
-                </List>
-              </BlockStack>
             </BlockStack>
           </Card>
         </Layout.Section>
@@ -185,7 +176,6 @@ export default function HelpPage() {
                 </Text>
                 <List type="bullet">
                   <List.Item>Custom categories (defaults to standard categories)</List.Item>
-                  <List.Item>Custom sizing options (defaults to standard sizing ranges)</List.Item>
                 </List>
                 <Text as="p" variant="bodyMd">
                   <strong>This doesn't affect your ability to create products.</strong> The app will
@@ -206,7 +196,7 @@ export default function HelpPage() {
                 <Text as="h3" variant="headingMd">How to Resolve</Text>
                 <List type="number">
                   <List.Item>Refresh the page and try again</List.Item>
-                  <List.Item>Check that you've configured custom categories/sizing in Settings</List.Item>
+                  <List.Item>Check that you've configured custom categories in Settings</List.Item>
                   <List.Item>If the issue persists for more than 5 minutes, contact support</List.Item>
                 </List>
                 <Text as="p" variant="bodyMd">
