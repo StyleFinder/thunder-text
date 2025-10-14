@@ -77,6 +77,17 @@ This glossary maintains a single source of truth for all naming conventions, pre
 
 ---
 
+### shop_size (noun) - Table: `shop_sizes`
+**Definition**: User-generated sizing sets that shop owners create for their specific products
+**Database**: `shop_sizes` table (id, store_id, name, sizes, is_default, is_active, created_at, updated_at)
+**Code references**: `fetchShopSizes()`, `ShopSize` type, `/api/shop-sizes` endpoint
+**Foreign keys**: `store_id` → `shops.id`
+**Why this name**: Represents customizable sizing options per shop (e.g., "Women's Standard", "Plus Sizes", "Numeric Sizes")
+**Usage**: Shop owners create custom sizing sets in Settings page, which appear as dropdown options during product generation
+**Default sizes**: Standard Sizes (XS-XXL), Plus Sizes (1X-5X), Numeric (0-20), Shoe Sizes (5-11), Extended Sizes (XXS-XXXL)
+
+---
+
 ## Naming Conventions
 
 ### Database Tables
@@ -154,6 +165,7 @@ This glossary maintains a single source of truth for all naming conventions, pre
 |------|------------------------|--------|
 | 2025-01-15 | Initial glossary creation | Document current state after shops/stores consolidation |
 | 2025-01-15 | Deprecated `stores` table | Consolidated into `shops` in migration 012 |
+| 2025-10-14 | Added `shop_sizes` table | User-generated sizing sets feature for customizable product sizing options |
 
 ---
 

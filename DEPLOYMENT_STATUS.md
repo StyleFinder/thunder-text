@@ -42,7 +42,6 @@ Render should automatically deploy when it detects the new commit on `main` bran
 - Product creation in Shopify
 
 ❌ **Known Issues (Non-Critical):**
-- Sizing API returns 401 (custom_sizing table doesn't exist - optional feature)
 - Template dropdown may be empty (prompts table may need seeding)
 
 ### Testing Checklist

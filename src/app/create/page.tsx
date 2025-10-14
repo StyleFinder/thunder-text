@@ -75,6 +75,7 @@ function CreateProductContent() {
   const [selectedTemplate, setSelectedTemplate] = useState<ProductCategory>('general')
   const [productType, setProductType] = useState('')
   const [availableSizing, setAvailableSizing] = useState('')
+  const [sizingOptions, setSizingOptions] = useState<{ label: string; value: string }[]>([])
   const [templatePreview, setTemplatePreview] = useState<any>(null)
   const [fabricMaterial, setFabricMaterial] = useState('')
   const [occasionUse, setOccasionUse] = useState('')
@@ -232,6 +233,7 @@ function CreateProductContent() {
     if (shop && authenticated) {
       fetchCustomCategories()
       fetchParentCategories()
+      fetchShopSizes()
       fetchGlobalDefaultTemplate()
     }
   }, [shop, authenticated])
@@ -280,12 +282,62 @@ function CreateProductContent() {
     try {
       const response = await fetch(`/api/categories/children?shop=${shop}&parentId=null`)
       const data = await response.json()
-      
+
       if (data.success) {
         setParentCategories(data.data)
       }
     } catch (err) {
       console.error('Error fetching parent categories:', err)
+    }
+  }
+
+  const fetchShopSizes = async () => {
+    try {
+      const response = await fetch(`/api/shop-sizes?shop=${shop}`)
+      const data = await response.json()
+
+      if (data.success && data.data.length > 0) {
+        // Convert shop sizes to dropdown options
+        const options = [
+          { label: 'Select sizing range', value: '' },
+          ...data.data.map((size: any) => ({
+            label: size.name + (size.is_default ? ' (Default)' : ''),
+            value: size.sizes.join(', ')
+          }))
+        ]
+        setSizingOptions(options)
+
+        // Set default sizing if available
+        const defaultSize = data.data.find((size: any) => size.is_default)
+        if (defaultSize && !availableSizing) {
+          setAvailableSizing(defaultSize.sizes.join(', '))
+        }
+      } else {
+        // Fallback to hardcoded defaults if no shop sizes exist
+        setSizingOptions([
+          { label: 'Select sizing range', value: '' },
+          { label: 'One Size', value: 'One Size' },
+          { label: 'XS - XL', value: 'XS - XL' },
+          { label: 'XS - XXL', value: 'XS - XXL' },
+          { label: 'XS - XXXL', value: 'XS - XXXL' },
+          { label: 'Numeric (6-16)', value: 'Numeric (6-16)' },
+          { label: 'Numeric (28-44)', value: 'Numeric (28-44)' },
+          { label: 'Children (2T-14)', value: 'Children (2T-14)' }
+        ])
+      }
+    } catch (err) {
+      console.error('Error fetching shop sizes:', err)
+      // Fallback to hardcoded defaults on error
+      setSizingOptions([
+        { label: 'Select sizing range', value: '' },
+        { label: 'One Size', value: 'One Size' },
+        { label: 'XS - XL', value: 'XS - XL' },
+        { label: 'XS - XXL', value: 'XS - XXL' },
+        { label: 'XS - XXXL', value: 'XS - XXXL' },
+        { label: 'Numeric (6-16)', value: 'Numeric (6-16)' },
+        { label: 'Numeric (28-44)', value: 'Numeric (28-44)' },
+        { label: 'Children (2T-14)', value: 'Children (2T-14)' }
+      ])
     }
   }
 
@@ -371,20 +423,7 @@ function CreateProductContent() {
   }
 
 
-  // Default fallback sizing options
-  const defaultSizingOptions = [
-    { label: 'Select sizing range', value: '' },
-    { label: 'One Size', value: 'One Size' },
-    { label: 'XS - XL', value: 'XS - XL' },
-    { label: 'XS - XXL', value: 'XS - XXL' },
-    { label: 'XS - XXXL', value: 'XS - XXXL' },
-    { label: 'Numeric (6-16)', value: 'Numeric (6-16)' },
-    { label: 'Numeric (28-44)', value: 'Numeric (28-44)' },
-    { label: 'Children (2T-14)', value: 'Children (2T-14)' }
-  ]
-
-  // Generate sizing options - use hardcoded defaults
-  const sizingOptions = defaultSizingOptions
+  // Sizing options are now dynamically loaded from shop_sizes API via fetchShopSizes()
 
   // Description template options
   const templateOptions = [
