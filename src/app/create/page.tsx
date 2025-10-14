@@ -112,6 +112,11 @@ function CreateProductContent() {
   const [categoriesError, setCategoriesError] = useState<string | null>(null)
   const [selectedParentCategory, setSelectedParentCategory] = useState('')
   const [selectedSubCategory, setSelectedSubCategory] = useState('')
+
+  // Memoized callback for template changes to prevent re-renders
+  const handleTemplateChange = useCallback((category: string, categoryType?: ProductCategory) => {
+    setSelectedTemplate(categoryType || 'general')
+  }, [])
   const [categoryDetected, setCategoryDetected] = useState(false)
   const [suggestedCategory, setSuggestedCategory] = useState<{category: string, confidence: number} | null>(null)
 
@@ -1182,9 +1187,7 @@ function CreateProductContent() {
 
                     <CategoryTemplateSelector
                       value={selectedTemplate}
-                      onChange={(category, categoryType) => {
-                        setSelectedTemplate(categoryType || 'general')
-                      }}
+                      onChange={handleTemplateChange}
                       storeId={shop || 'test-store'}
                       onPreview={setTemplatePreview}
                     />
