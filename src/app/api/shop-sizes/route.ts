@@ -2,6 +2,70 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors';
 
+type ShopSizeRecord = {
+  id: string | null
+  store_id: string | null
+  name: string
+  sizes: string[]
+  is_default: boolean
+  is_active: boolean
+  created_at: string | null
+  updated_at: string | null
+}
+
+const FALLBACK_SHOP_SIZES: ShopSizeRecord[] = [
+  {
+    id: 'fallback-standard',
+    store_id: null,
+    name: 'Standard Sizes',
+    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    is_default: true,
+    is_active: true,
+    created_at: null,
+    updated_at: null
+  },
+  {
+    id: 'fallback-plus',
+    store_id: null,
+    name: 'Plus Sizes',
+    sizes: ['1X', '2X', '3X', '4X', '5X'],
+    is_default: false,
+    is_active: true,
+    created_at: null,
+    updated_at: null
+  },
+  {
+    id: 'fallback-numeric',
+    store_id: null,
+    name: 'Numeric Sizes',
+    sizes: ['0', '2', '4', '6', '8', '10', '12', '14', '16', '18', '20'],
+    is_default: false,
+    is_active: true,
+    created_at: null,
+    updated_at: null
+  },
+  {
+    id: 'fallback-shoes',
+    store_id: null,
+    name: 'Shoe Sizes',
+    sizes: ['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11'],
+    is_default: false,
+    is_active: true,
+    created_at: null,
+    updated_at: null
+  },
+  {
+    id: 'fallback-extended',
+    store_id: null,
+    name: 'Extended Sizes',
+    sizes: ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
+    is_default: false,
+    is_active: true,
+    created_at: null,
+    updated_at: null
+  }
+];
+
 export async function GET(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request);
   const requestId = Math.random().toString(36).substring(7);
@@ -62,8 +126,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`[${requestId}] Step 2 SUCCESS - Shop ID:`, shopData.id);
 
-    // Step 3: Build and log the exact query
-    const queryFilter = `store_id.eq.${shopData.id},is_default.eq.true`;
+    const queryFilter = `store_id.eq.${shopData.id},store_id.is.null`;
     console.log(`[${requestId}] Step 3 - Query filter:`, queryFilter);
     console.log(`[${requestId}] Step 3 - Query details:`, {
       table: 'shop_sizes',
@@ -87,6 +150,7 @@ export async function GET(request: NextRequest) {
       `)
       .or(queryFilter)
       .eq('is_active', true)
+      .order('store_id', { ascending: false, nullsFirst: false })
       .order('is_default', { ascending: false })
       .order('name');
 
@@ -99,11 +163,15 @@ export async function GET(request: NextRequest) {
         queryFilter: queryFilter,
         shopId: shopData.id
       });
+      console.warn(`[${requestId}] Returning fallback shop sizes due to query failure`);
       return NextResponse.json(
         {
-          error: 'Query failed',
+          success: true,
+          data: FALLBACK_SHOP_SIZES,
           debug: {
+            requestId,
             step: 'shop_sizes_query',
+            fallback: true,
             message: sizesError.message,
             code: sizesError.code,
             details: sizesError.details,
@@ -112,20 +180,26 @@ export async function GET(request: NextRequest) {
             shopId: shopData.id
           }
         },
-        { status: 500, headers: corsHeaders }
+        { status: 200, headers: corsHeaders }
       );
     }
 
-    console.log(`[${requestId}] Step 4 SUCCESS - Retrieved ${shopSizes?.length || 0} sizes`);
+    const responseData = (shopSizes?.length ?? 0) > 0 ? shopSizes! : FALLBACK_SHOP_SIZES;
+    if (!shopSizes?.length) {
+      console.warn(`[${requestId}] No shop-specific sizes found. Using fallback defaults.`);
+    }
+
+    console.log(`[${requestId}] Step 4 SUCCESS - Retrieved ${responseData.length} sizes`);
     console.log(`[${requestId}] === SHOP SIZES API SUCCESS ===`);
 
     return NextResponse.json({
       success: true,
-      data: shopSizes || [],
+      data: responseData,
       debug: {
         requestId,
         shopId: shopData.id,
-        resultCount: shopSizes?.length || 0
+        resultCount: responseData.length,
+        fallback: !shopSizes?.length
       }
     }, { headers: corsHeaders });
 
