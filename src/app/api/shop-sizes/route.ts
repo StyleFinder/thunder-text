@@ -3,37 +3,76 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors';
 
 export async function GET(request: NextRequest) {
-  // Use secure CORS headers that restrict to Shopify domains
   const corsHeaders = createCorsHeaders(request);
+  const requestId = Math.random().toString(36).substring(7);
 
   try {
-    // Extract shop domain from query parameters
+    console.log(`[${requestId}] === SHOP SIZES API START ===`);
+
+    // Step 1: Extract shop parameter
     const searchParams = request.nextUrl.searchParams;
     const shop = searchParams.get('shop');
+    console.log(`[${requestId}] Step 1 - Shop parameter:`, shop);
 
     if (!shop) {
+      console.error(`[${requestId}] ERROR: Missing shop parameter`);
       return NextResponse.json(
         { error: 'Missing shop parameter' },
         { status: 400, headers: corsHeaders }
       );
     }
 
-    // Get shop ID from shop domain (shops table stores OAuth tokens and shop info)
+    // Step 2: Get shop ID from database
     const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`;
+    console.log(`[${requestId}] Step 2 - Looking up shop domain:`, fullShopDomain);
+
     const { data: shopData, error: shopError } = await supabaseAdmin
       .from('shops')
       .select('id')
       .eq('shop_domain', fullShopDomain)
       .single();
 
-    if (shopError || !shopData) {
+    if (shopError) {
+      console.error(`[${requestId}] ERROR: Shop lookup failed:`, {
+        message: shopError.message,
+        code: shopError.code,
+        details: shopError.details,
+        hint: shopError.hint
+      });
       return NextResponse.json(
-        { error: 'Shop not found' },
+        {
+          error: 'Shop lookup failed',
+          debug: {
+            message: shopError.message,
+            code: shopError.code,
+            domain: fullShopDomain
+          }
+        },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
+    if (!shopData) {
+      console.error(`[${requestId}] ERROR: Shop not found for domain:`, fullShopDomain);
+      return NextResponse.json(
+        { error: 'Shop not found', domain: fullShopDomain },
         { status: 404, headers: corsHeaders }
       );
     }
 
-    // Get shop sizes for this shop (both custom and default) - EXACT match to templates pattern
+    console.log(`[${requestId}] Step 2 SUCCESS - Shop ID:`, shopData.id);
+
+    // Step 3: Build and log the exact query
+    const queryFilter = `store_id.eq.${shopData.id},is_default.eq.true`;
+    console.log(`[${requestId}] Step 3 - Query filter:`, queryFilter);
+    console.log(`[${requestId}] Step 3 - Query details:`, {
+      table: 'shop_sizes',
+      shopId: shopData.id,
+      shopIdType: typeof shopData.id,
+      filter: queryFilter
+    });
+
+    // Step 4: Execute query
     const { data: shopSizes, error: sizesError } = await supabaseAdmin
       .from('shop_sizes')
       .select(`
@@ -46,25 +85,69 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at
       `)
-      .or(`store_id.eq.${shopData.id},is_default.eq.true`)
+      .or(queryFilter)
       .eq('is_active', true)
       .order('is_default', { ascending: false })
       .order('name');
 
     if (sizesError) {
-      console.error('Shop sizes query error:', sizesError);
-      throw sizesError;
+      console.error(`[${requestId}] ERROR: Shop sizes query failed:`, {
+        message: sizesError.message,
+        code: sizesError.code,
+        details: sizesError.details,
+        hint: sizesError.hint,
+        queryFilter: queryFilter,
+        shopId: shopData.id
+      });
+      return NextResponse.json(
+        {
+          error: 'Query failed',
+          debug: {
+            step: 'shop_sizes_query',
+            message: sizesError.message,
+            code: sizesError.code,
+            details: sizesError.details,
+            hint: sizesError.hint,
+            queryFilter: queryFilter,
+            shopId: shopData.id
+          }
+        },
+        { status: 500, headers: corsHeaders }
+      );
     }
+
+    console.log(`[${requestId}] Step 4 SUCCESS - Retrieved ${shopSizes?.length || 0} sizes`);
+    console.log(`[${requestId}] === SHOP SIZES API SUCCESS ===`);
 
     return NextResponse.json({
       success: true,
-      data: shopSizes,
+      data: shopSizes || [],
+      debug: {
+        requestId,
+        shopId: shopData.id,
+        resultCount: shopSizes?.length || 0
+      }
     }, { headers: corsHeaders });
 
-  } catch (error) {
-    console.error('Shop sizes API error:', error);
+  } catch (error: any) {
+    console.error(`[${requestId}] === UNCAUGHT ERROR ===`, {
+      name: error?.name,
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+      fullError: JSON.stringify(error, null, 2)
+    });
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: 'Internal server error',
+        debug: {
+          requestId,
+          errorName: error?.name,
+          errorMessage: error?.message,
+          errorCode: error?.code
+        }
+      },
       { status: 500, headers: corsHeaders }
     );
   }
