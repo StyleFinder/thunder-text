@@ -33,7 +33,8 @@ export async function GET(request: NextRequest) {
 
     // Get shop sizes for this shop (both custom and default)
     // Note: PostgREST cache was reloaded with NOTIFY pgrst, 'reload schema'
-    const { data: shopSizes, error: sizesError } = await supabaseAdmin
+    // Strategy: Fetch all, then filter to show custom overrides instead of templates
+    const { data: allSizes, error: sizesError } = await supabaseAdmin
       .from('shop_sizes')
       .select(`
         id,
@@ -63,6 +64,20 @@ export async function GET(request: NextRequest) {
         { status: 500, headers: corsHeaders }
       );
     }
+
+    // Filter: If a custom set exists with same name as template, hide the template
+    const nameMap = new Map<string, any>();
+
+    for (const size of (allSizes || [])) {
+      const existing = nameMap.get(size.name);
+
+      // Prioritize custom sets (with store_id) over templates (null store_id)
+      if (!existing || (size.store_id && !existing.store_id)) {
+        nameMap.set(size.name, size);
+      }
+    }
+
+    const shopSizes = Array.from(nameMap.values());
 
     return NextResponse.json({
       success: true,
