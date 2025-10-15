@@ -275,8 +275,15 @@ export async function GET(request: NextRequest) {
     console.log('Facebook integration stored successfully for shop:', shop_domain)
 
     // Redirect to Facebook Ads page with success message
+    // Restore host and embedded params to maintain Shopify embedded app context
     const redirectUrl = new URL('/facebook-ads', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
     redirectUrl.searchParams.set('shop', shop_domain)
+    if (stateData.host) {
+      redirectUrl.searchParams.set('host', stateData.host)
+    }
+    if (stateData.embedded) {
+      redirectUrl.searchParams.set('embedded', stateData.embedded)
+    }
     redirectUrl.searchParams.set('authenticated', 'true')
     redirectUrl.searchParams.set('facebook_connected', 'true')
     redirectUrl.searchParams.set('message', 'Facebook account connected successfully')
@@ -287,8 +294,15 @@ export async function GET(request: NextRequest) {
     console.error('Error in Facebook OAuth callback:', error)
 
     // Redirect to Facebook Ads page with error message
+    // Restore host and embedded params to maintain Shopify embedded app context
     const redirectUrl = new URL('/facebook-ads', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
     redirectUrl.searchParams.set('shop', stateData?.shop_domain || '')
+    if (stateData?.host) {
+      redirectUrl.searchParams.set('host', stateData.host)
+    }
+    if (stateData?.embedded) {
+      redirectUrl.searchParams.set('embedded', stateData.embedded)
+    }
     redirectUrl.searchParams.set('authenticated', 'true')
     redirectUrl.searchParams.set('facebook_error', 'true')
     redirectUrl.searchParams.set('message', 'Failed to connect Facebook account. Please try again.')
