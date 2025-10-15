@@ -308,11 +308,15 @@ export default function CreateFacebookAdFlow({
 
       const submitData = await submitResponse.json()
 
+      console.log('📤 Submit response:', submitData)
+
       if (!submitData.success) {
+        console.error('❌ Submit error:', submitData)
         throw new Error(submitData.error || 'Failed to submit ad to Facebook')
       }
 
       // Success!
+      console.log('✅ Ad created successfully:', submitData.data)
       alert('Ad successfully created in Facebook Ads Manager (PAUSED status). You can review and activate it in Facebook.')
       onClose()
       resetFlow()
