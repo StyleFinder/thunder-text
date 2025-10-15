@@ -61,10 +61,13 @@ export async function GET(request: NextRequest) {
 
     // Generate state parameter with shop context for callback
     // State is used to prevent CSRF attacks and maintain context
+    // Include host and embedded params to restore Shopify embedded app context after OAuth
     const state = Buffer.from(
       JSON.stringify({
         shop_id: shopData.id,
         shop_domain: shopData.shop_domain,
+        host: searchParams.get('host'),
+        embedded: searchParams.get('embedded'),
         timestamp: Date.now(),
       })
     ).toString('base64url')
