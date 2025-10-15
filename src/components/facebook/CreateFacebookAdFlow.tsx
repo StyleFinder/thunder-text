@@ -107,12 +107,18 @@ export default function CreateFacebookAdFlow({
       setLoadingProducts(true)
       setError(null)
 
+      console.log('🔍 Fetching products for shop:', shop)
+
       const response = await authenticatedFetch(`/api/shopify/products?shop=${shop}`)
       const data = await response.json()
+
+      console.log('📦 Products API response:', data)
 
       if (data.success) {
         // API returns 'products' not 'data'
         const productList = data.products || []
+
+        console.log('✅ Received products:', productList.length)
 
         // Transform to match our interface
         const transformedProducts: ShopifyProduct[] = productList.map((p: any) => ({
@@ -126,12 +132,16 @@ export default function CreateFacebookAdFlow({
           handle: p.handle
         }))
 
+        console.log('🔄 Transformed products:', transformedProducts.length)
+        console.log('📋 First product:', transformedProducts[0])
+
         setProducts(transformedProducts)
       } else {
+        console.error('❌ Products API error:', data.error)
         setError(data.error || 'Failed to load products from Shopify')
       }
     } catch (err) {
-      console.error('Error fetching products:', err)
+      console.error('❌ Error fetching products:', err)
       setError(err instanceof Error ? err.message : 'Failed to load products')
     } finally {
       setLoadingProducts(false)
