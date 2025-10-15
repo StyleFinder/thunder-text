@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { Card, Frame, Modal, Button, FormLayout, TextField, Select, RadioButton, Stack, Thumbnail, Badge, Banner, Spinner, Layout, Page, Icon } from '@shopify/polaris'
-import { CloseIcon, ImageIcon, EditIcon, CheckIcon, MarketingIcon } from '@shopify/polaris-icons'
+import { CloseIcon, ImageIcon, EditIcon, CheckIcon } from '@shopify/polaris-icons'
 import { useSearchParams } from 'next/navigation'
-import CreateAdModal from '@/components/facebook/CreateAdModal'
 
 interface ProductImage {
   id: string
@@ -95,7 +94,6 @@ export default function ProductDescriptionOverlay({
   const [editableContent, setEditableContent] = useState<GeneratedContent | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [applying, setApplying] = useState(false)
-  const [createAdModalOpen, setCreateAdModalOpen] = useState(false)
 
   // Initialize with first image selected by default
   useEffect(() => {
@@ -641,22 +639,13 @@ export default function ProductDescriptionOverlay({
           <Button onClick={() => setCurrentStep(4)}>
             Regenerate
           </Button>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <Button
-              icon={MarketingIcon}
-              onClick={() => setCreateAdModalOpen(true)}
-              disabled={!editableContent}
-            >
-              Create Facebook Ad
-            </Button>
-            <Button
-              primary
-              loading={applying}
-              onClick={handleApplyContent}
-            >
-              {applying ? 'Applying...' : 'Apply to Product'}
-            </Button>
-          </div>
+          <Button
+            primary
+            loading={applying}
+            onClick={handleApplyContent}
+          >
+            {applying ? 'Applying...' : 'Apply to Product'}
+          </Button>
         </div>
       </div>
     </Card>
@@ -686,19 +675,6 @@ export default function ProductDescriptionOverlay({
           </div>
         </Modal.Section>
       </Modal>
-
-      {/* Facebook Ad Creation Modal */}
-      {editableContent && (
-        <CreateAdModal
-          open={createAdModalOpen}
-          onClose={() => setCreateAdModalOpen(false)}
-          shop={shop}
-          shopifyProductId={productData.id}
-          initialTitle={editableContent.title}
-          initialCopy={editableContent.description.substring(0, 125)} // Truncate to 125 chars
-          imageUrls={selectedImages.length > 0 ? selectedImages : productData.images.map(img => img.url)}
-        />
-      )}
     </>
   )
 }

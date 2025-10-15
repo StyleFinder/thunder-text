@@ -24,6 +24,7 @@ import {
 } from '@shopify/polaris'
 import { MarketingIcon } from '@shopify/polaris-icons'
 import CampaignSelector from '@/components/facebook/CampaignSelector'
+import CreateFacebookAdFlow from '@/components/facebook/CreateFacebookAdFlow'
 
 interface IntegrationInfo {
   connected: boolean
@@ -42,6 +43,8 @@ function FacebookAdsContent() {
   const [loading, setLoading] = useState(true)
   const [selectedAdAccountId, setSelectedAdAccountId] = useState('')
   const [selectedCampaignId, setSelectedCampaignId] = useState('')
+  const [selectedCampaignName, setSelectedCampaignName] = useState('')
+  const [createAdModalOpen, setCreateAdModalOpen] = useState(false)
 
   useEffect(() => {
     if (shop) {
@@ -90,9 +93,10 @@ function FacebookAdsContent() {
     window.location.href = authorizeUrl
   }
 
-  const handleCampaignSelect = (adAccountId: string, campaignId: string) => {
+  const handleCampaignSelect = (adAccountId: string, campaignId: string, campaignName: string) => {
     setSelectedAdAccountId(adAccountId)
     setSelectedCampaignId(campaignId)
+    setSelectedCampaignName(campaignName)
   }
 
   if (loading) {
@@ -200,25 +204,19 @@ function FacebookAdsContent() {
               {selectedCampaignId ? (
                 <BlockStack gap="300">
                   <Text as="p" tone="success">
-                    ✓ Campaign selected
+                    ✓ Campaign selected: {selectedCampaignName}
                   </Text>
                   <Text as="p" variant="bodySm" tone="subdued">
-                    Next: Go to Create Description or Enhance Product to generate content,
-                    then use the "Create Facebook Ad" button to create an ad draft.
+                    Click the button below to create a new Facebook ad for this campaign.
+                    You'll be able to select a product, generate ad content with AI, and choose images.
                   </Text>
-                  <InlineStack gap="200">
-                    <Button
-                      variant="primary"
-                      onClick={() => router.push(`/create?${searchParams?.toString() || ''}`)}
-                    >
-                      Create Description
-                    </Button>
-                    <Button
-                      onClick={() => router.push(`/enhance?${searchParams?.toString() || ''}`)}
-                    >
-                      Enhance Product
-                    </Button>
-                  </InlineStack>
+                  <Button
+                    variant="primary"
+                    icon={MarketingIcon}
+                    onClick={() => setCreateAdModalOpen(true)}
+                  >
+                    Create Facebook Ad
+                  </Button>
                 </BlockStack>
               ) : (
                 <Text as="p" tone="subdued">
@@ -251,6 +249,16 @@ function FacebookAdsContent() {
           </Card>
         </Layout.Section>
       </Layout>
+
+      {/* Create Facebook Ad Flow Modal */}
+      <CreateFacebookAdFlow
+        open={createAdModalOpen}
+        onClose={() => setCreateAdModalOpen(false)}
+        shop={shop || ''}
+        campaignId={selectedCampaignId}
+        campaignName={selectedCampaignName}
+        adAccountId={selectedAdAccountId}
+      />
     </Page>
   )
 }
