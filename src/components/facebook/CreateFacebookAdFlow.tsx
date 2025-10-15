@@ -67,6 +67,7 @@ export default function CreateFacebookAdFlow({
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [showProductList, setShowProductList] = useState(false)
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null)
+  const searchFieldRef = useRef<HTMLInputElement>(null)
 
   // Step 2: AI Generated Content
   const [generatingContent, setGeneratingContent] = useState(false)
@@ -191,7 +192,12 @@ export default function CreateFacebookAdFlow({
     }
   }
 
-  const handleProductSelect = (product: ShopifyProduct) => {
+  const handleProductSelect = (product: ShopifyProduct, event?: React.MouseEvent) => {
+    // Prevent the click from removing focus
+    if (event) {
+      event.preventDefault()
+    }
+
     setSelectedProductId(product.id)
     setSelectedProduct(product)
     setSearchQuery(product.title)
@@ -345,10 +351,6 @@ export default function CreateFacebookAdFlow({
             />
 
             {/* Product search results dropdown */}
-            {(() => {
-              console.log('🎨 Render check:', { showProductList, productsLength: products.length, shouldShow: showProductList && products.length > 0 })
-              return null
-            })()}
             {showProductList && products.length > 0 && (
               <div
                 style={{
@@ -365,11 +367,15 @@ export default function CreateFacebookAdFlow({
                   zIndex: 10000,
                   boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                 }}
+                onMouseDown={(e) => {
+                  // Prevent the dropdown from stealing focus from the text field
+                  e.preventDefault()
+                }}
               >
                 {products.map((product) => (
                   <div
                     key={product.id}
-                    onClick={() => handleProductSelect(product)}
+                    onClick={(e) => handleProductSelect(product, e)}
                     style={{
                       padding: '12px',
                       cursor: 'pointer',
