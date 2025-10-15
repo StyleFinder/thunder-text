@@ -108,6 +108,33 @@ async function getAdAccounts(accessToken: string, userId: string): Promise<{
   return response.json()
 }
 
+/**
+ * Get user's Facebook Pages
+ * https://developers.facebook.com/docs/graph-api/reference/user/accounts
+ */
+async function getFacebookPages(accessToken: string, userId: string): Promise<{
+  data: Array<{
+    id: string
+    name: string
+    access_token: string
+  }>
+}> {
+  const pagesUrl = new URL(`https://graph.facebook.com/v21.0/${userId}/accounts`)
+  pagesUrl.searchParams.set('fields', 'id,name,access_token')
+  pagesUrl.searchParams.set('access_token', accessToken)
+
+  const response = await fetch(pagesUrl.toString())
+
+  if (!response.ok) {
+    const error = await response.text()
+    console.error('Facebook pages fetch failed:', error)
+    // Don't throw - user might not have pages yet
+    return { data: [] }
+  }
+
+  return response.json()
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -187,6 +214,11 @@ export async function GET(request: NextRequest) {
     // Find first active ad account
     const activeAdAccount = adAccounts.find(acc => acc.account_status === 1) || adAccounts[0]
 
+    // Get user's Facebook Pages (required for creating ad creatives)
+    const pagesData = await getFacebookPages(access_token, userInfo.id)
+    const pages = pagesData.data || []
+    const primaryPage = pages[0] // Use first page as primary
+
     // Encrypt access token before storage
     const encryptedAccessToken = await encryptToken(access_token)
 
@@ -206,6 +238,7 @@ export async function GET(request: NextRequest) {
           token_expires_at: tokenExpiresAt.toISOString(),
           provider_account_id: userInfo.id,
           provider_account_name: userInfo.name,
+          facebook_page_id: primaryPage?.id || null,
           is_active: true,
           additional_metadata: {
             email: userInfo.email,
@@ -217,6 +250,12 @@ export async function GET(request: NextRequest) {
             })),
             primary_ad_account_id: activeAdAccount?.id,
             primary_ad_account_name: activeAdAccount?.name,
+            facebook_pages: pages.map(page => ({
+              id: page.id,
+              name: page.name
+            })),
+            primary_page_id: primaryPage?.id,
+            primary_page_name: primaryPage?.name,
             connected_at: new Date().toISOString()
           },
           updated_at: new Date().toISOString()

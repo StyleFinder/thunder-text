@@ -286,7 +286,11 @@ export default function CreateFacebookAdFlow({
           selected_image_url: selectedImageUrls[0],
           facebook_campaign_id: campaignId,
           facebook_campaign_name: campaignName,
-          facebook_ad_account_id: adAccountId
+          facebook_ad_account_id: adAccountId,
+          additional_metadata: {
+            product_handle: selectedProduct?.handle,
+            product_title: selectedProduct?.title
+          }
         })
       })
 

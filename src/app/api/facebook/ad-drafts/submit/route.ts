@@ -18,12 +18,15 @@ const FACEBOOK_API_VERSION = 'v21.0'
 const FACEBOOK_GRAPH_URL = `https://graph.facebook.com/${FACEBOOK_API_VERSION}`
 
 /**
- * Get access token for shop
+ * Get access token and page ID for shop
  */
-async function getAccessToken(shopId: string): Promise<string> {
+async function getAccessTokenAndPageId(shopId: string): Promise<{
+  accessToken: string
+  pageId: string | null
+}> {
   const { data: integration, error } = await supabase
     .from('integrations')
-    .select('encrypted_access_token')
+    .select('encrypted_access_token, facebook_page_id')
     .eq('shop_id', shopId)
     .eq('provider', 'facebook')
     .eq('is_active', true)
@@ -33,7 +36,12 @@ async function getAccessToken(shopId: string): Promise<string> {
     throw new FacebookAPIError('Facebook account not connected', 404, 'NOT_CONNECTED')
   }
 
-  return await decryptToken(integration.encrypted_access_token)
+  const accessToken = await decryptToken(integration.encrypted_access_token)
+
+  return {
+    accessToken,
+    pageId: integration.facebook_page_id
+  }
 }
 
 /**
@@ -45,7 +53,8 @@ async function createAdCreative(
   title: string,
   body: string,
   imageUrl: string,
-  pageId?: string
+  productUrl: string,
+  pageId: string
 ): Promise<{ id: string }> {
   const url = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/adcreatives`)
   url.searchParams.set('access_token', accessToken)
@@ -53,10 +62,10 @@ async function createAdCreative(
   const creativeData: any = {
     name: title,
     object_story_spec: {
-      page_id: pageId || null, // Optional: Facebook page to post from
+      page_id: pageId, // Required: Facebook page to post from
       link_data: {
         image_url: imageUrl,
-        link: imageUrl, // Temporary - should be product URL
+        link: productUrl, // Link to Shopify product page
         message: body,
         name: title
       }
@@ -239,8 +248,34 @@ export async function POST(request: NextRequest) {
       .eq('id', draft_id)
 
     try {
-      // Get access token
-      const accessToken = await getAccessToken(shopData.id)
+      // Get access token and page ID
+      const { accessToken, pageId } = await getAccessTokenAndPageId(shopData.id)
+
+      if (!pageId) {
+        throw new FacebookAPIError(
+          'No Facebook Page connected. Please reconnect your Facebook account to link a Page.',
+          400,
+          'NO_PAGE_ID'
+        )
+      }
+
+      // Construct product URL from shop domain and product handle
+      // Product handle is stored in additional_metadata or we can fetch it
+      let productUrl = `https://${shop}`
+
+      if (draft.shopify_product_id) {
+        // Get product handle from Shopify product ID
+        // Format: gid://shopify/Product/123456 -> extract 123456 as handle fallback
+        const productHandle = draft.additional_metadata?.product_handle ||
+                            draft.shopify_product_id.split('/').pop()
+        productUrl = `https://${shop}/products/${productHandle}`
+      }
+
+      console.log('📦 Creating ad creative with:', {
+        pageId,
+        productUrl,
+        imageUrl: draft.selected_image_url || draft.image_urls[0]
+      })
 
       // Create ad creative
       const creative = await createAdCreative(
@@ -248,7 +283,9 @@ export async function POST(request: NextRequest) {
         draft.facebook_ad_account_id,
         draft.ad_title,
         draft.ad_copy,
-        draft.selected_image_url || draft.image_urls[0]
+        draft.selected_image_url || draft.image_urls[0],
+        productUrl,
+        pageId
       )
 
       // Create ad in campaign
