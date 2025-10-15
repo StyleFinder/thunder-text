@@ -137,11 +137,15 @@ async function getFacebookPages(accessToken: string, userId: string): Promise<{
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔵 Facebook OAuth callback received:', request.url)
+
     const { searchParams } = new URL(request.url)
     const code = searchParams.get('code')
     const state = searchParams.get('state')
     const error = searchParams.get('error')
     const errorDescription = searchParams.get('error_description')
+
+    console.log('🔵 Callback parameters:', { hasCode: !!code, hasState: !!state, error, errorDescription })
 
     // Handle user denial or errors from Facebook
     if (error) {
@@ -204,10 +208,13 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('Processing Facebook OAuth callback for shop:', shop_domain)
+    console.log('🔵 Processing Facebook OAuth callback for shop:', shop_domain)
+    console.log('🔵 State data:', { shop_id, shop_domain, hasHost: !!stateData.host, hasEmbedded: !!stateData.embedded })
 
     // Exchange authorization code for access token
+    console.log('🔵 Starting token exchange...')
     const tokenData = await exchangeCodeForToken(code)
+    console.log('🔵 Token exchange successful')
     const { access_token, expires_in } = tokenData
 
     // Get user's Facebook information
@@ -300,7 +307,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectUrl.toString())
 
   } catch (error) {
-    console.error('Error in Facebook OAuth callback:', error)
+    console.error('🔴 Error in Facebook OAuth callback:', error)
+    console.error('🔴 Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+    console.error('🔴 Error message:', error instanceof Error ? error.message : String(error))
 
     // Redirect to Facebook Ads page with error message
     // Restore host and embedded params to maintain Shopify embedded app context (if they exist)
