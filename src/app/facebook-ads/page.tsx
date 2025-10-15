@@ -23,7 +23,6 @@ import {
   Badge,
 } from '@shopify/polaris'
 import { MarketingIcon } from '@shopify/polaris-icons'
-import { Redirect } from '@shopify/app-bridge/actions'
 import CampaignSelector from '@/components/facebook/CampaignSelector'
 import CreateFacebookAdFlow from '@/components/facebook/CreateFacebookAdFlow'
 import { useShopifyAuth } from '@/app/components/UnifiedShopifyAuth'
@@ -38,7 +37,7 @@ interface IntegrationInfo {
 function FacebookAdsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { app, isEmbedded } = useShopifyAuth()
+  const { isEmbedded } = useShopifyAuth()
   const shop = searchParams?.get('shop')
   const authenticated = searchParams?.get('authenticated')
   const facebookConnected = searchParams?.get('facebook_connected')
@@ -108,17 +107,15 @@ function FacebookAdsContent() {
   const handleConnectFacebook = () => {
     const authorizeUrl = `/api/facebook/oauth/authorize?shop=${shop}`
 
-    // Use App Bridge Redirect to maintain embedded context
-    if (app && isEmbedded) {
-      console.log('🔀 Using App Bridge Redirect for OAuth flow')
-      const redirect = Redirect.create(app)
-      redirect.dispatch(
-        Redirect.Action.REMOTE,
-        authorizeUrl
-      )
+    // For embedded apps in Shopify Admin, use window.open with _top target
+    // This is the recommended approach for App Bridge v3+ (replaces Redirect.Action.REMOTE)
+    // See: https://shopify.dev/docs/api/app-bridge-library/reference
+    if (isEmbedded) {
+      console.log('🔀 Using window.open(_top) for OAuth flow (embedded context)')
+      window.open(authorizeUrl, '_top')
     } else {
-      // Fallback for non-embedded context (direct browser access)
-      console.log('🔀 Using direct window.location for OAuth flow (non-embedded)')
+      // For non-embedded context (direct browser access)
+      console.log('🔀 Using window.location for OAuth flow (non-embedded)')
       window.location.href = authorizeUrl
     }
   }
