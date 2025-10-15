@@ -14,6 +14,7 @@ import {
   PlusCircleIcon,
   QuestionCircleIcon,
   EditIcon,
+  MarketingIcon,
 } from '@shopify/polaris-icons'
 import { useNavigation } from '../hooks/useNavigation'
 
@@ -61,25 +62,39 @@ function NavigationContent({ children }: AppNavigationProps) {
       label: 'Enhance Product',
       icon: EditIcon,
       onClick: () => navigateTo('/enhance'),
-      matches: isActive({ 
-        label: 'Enhance Product', 
-        url: buildUrl('/enhance'), 
+      matches: isActive({
+        label: 'Enhance Product',
+        url: buildUrl('/enhance'),
         matchPaths: ['/enhance'],
-        exactMatch: false 
+        exactMatch: false
       }),
       exactMatch: false,
       matchPaths: ['/enhance']
+    },
+    {
+      url: buildUrl('/facebook-ads'),
+      label: 'Facebook Ads',
+      icon: MarketingIcon,
+      onClick: () => navigateTo('/facebook-ads'),
+      matches: isActive({
+        label: 'Facebook Ads',
+        url: buildUrl('/facebook-ads'),
+        matchPaths: ['/facebook-ads', '/test-campaigns'],
+        exactMatch: false
+      }),
+      exactMatch: false,
+      matchPaths: ['/facebook-ads', '/test-campaigns']
     },
     {
       url: buildUrl('/settings'),
       label: 'Settings',
       icon: SettingsIcon,
       onClick: () => navigateTo('/settings'),
-      matches: isActive({ 
-        label: 'Settings', 
-        url: buildUrl('/settings'), 
+      matches: isActive({
+        label: 'Settings',
+        url: buildUrl('/settings'),
         matchPaths: ['/settings'],
-        exactMatch: false 
+        exactMatch: false
       }),
       exactMatch: false,
       matchPaths: ['/settings']
