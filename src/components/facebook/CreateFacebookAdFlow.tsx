@@ -63,6 +63,9 @@ export default function CreateFacebookAdFlow({
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [selectedProductId, setSelectedProductId] = useState('')
   const [selectedProduct, setSelectedProduct] = useState<ShopifyProduct | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filteredProducts, setFilteredProducts] = useState<ShopifyProduct[]>([])
+  const [showProductList, setShowProductList] = useState(false)
 
   // Step 2: AI Generated Content
   const [generatingContent, setGeneratingContent] = useState(false)
@@ -90,6 +93,9 @@ export default function CreateFacebookAdFlow({
     setStep('select-product')
     setSelectedProductId('')
     setSelectedProduct(null)
+    setSearchQuery('')
+    setFilteredProducts([])
+    setShowProductList(false)
     setAdTitle('')
     setAdCopy('')
     setSelectedImageUrls([])
@@ -132,10 +138,30 @@ export default function CreateFacebookAdFlow({
     }
   }
 
-  const handleProductSelect = (productId: string) => {
-    setSelectedProductId(productId)
-    const product = products.find(p => p.id === productId)
-    setSelectedProduct(product || null)
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    setShowProductList(true)
+
+    if (value.trim() === '') {
+      setFilteredProducts([])
+      return
+    }
+
+    // Filter products by search query (case insensitive)
+    const query = value.toLowerCase()
+    const filtered = products.filter(p =>
+      p.title.toLowerCase().includes(query) ||
+      p.handle.toLowerCase().includes(query)
+    )
+    setFilteredProducts(filtered)
+  }
+
+  const handleProductSelect = (product: ShopifyProduct) => {
+    setSelectedProductId(product.id)
+    setSelectedProduct(product)
+    setSearchQuery(product.title)
+    setShowProductList(false)
+    setFilteredProducts([])
   }
 
   const handleNextFromProductSelection = async () => {
@@ -274,35 +300,124 @@ export default function CreateFacebookAdFlow({
         </Banner>
       ) : (
         <>
-          <Select
-            label="Product"
-            options={[
-              { label: 'Select a product...', value: '' },
-              ...products.map(product => ({
-                label: product.title,
-                value: product.id
-              }))
-            ]}
-            value={selectedProductId}
-            onChange={handleProductSelect}
-          />
+          <div style={{ position: 'relative' }}>
+            <TextField
+              label="Search for a product"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              placeholder="Type to search products..."
+              autoComplete="off"
+              onFocus={() => setShowProductList(true)}
+            />
 
+            {/* Product search results dropdown */}
+            {showProductList && filteredProducts.length > 0 && (
+              <Card>
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    maxHeight: '300px',
+                    overflowY: 'auto',
+                    backgroundColor: 'white',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    marginTop: '4px',
+                    zIndex: 1000,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  {filteredProducts.map((product) => (
+                    <div
+                      key={product.id}
+                      onClick={() => handleProductSelect(product)}
+                      style={{
+                        padding: '12px',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid #f0f0f0',
+                        display: 'flex',
+                        gap: '12px',
+                        alignItems: 'center'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f7f7f7'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'white'
+                      }}
+                    >
+                      {product.images.length > 0 && (
+                        <Thumbnail
+                          source={product.images[0].url}
+                          alt={product.title}
+                          size="small"
+                        />
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <Text as="p" variant="bodyMd" fontWeight="medium">
+                          {product.title}
+                        </Text>
+                        {product.images.length > 0 && (
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {product.images.length} image(s)
+                          </Text>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* No results message */}
+            {showProductList && searchQuery && filteredProducts.length === 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  padding: '12px',
+                  backgroundColor: 'white',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '4px',
+                  zIndex: 1000
+                }}
+              >
+                <Text as="p" tone="subdued" alignment="center">
+                  No products found matching "{searchQuery}"
+                </Text>
+              </div>
+            )}
+          </div>
+
+          {/* Selected product preview */}
           {selectedProduct && (
             <Card>
               <BlockStack gap="300">
                 <Text as="p" variant="bodyMd" fontWeight="semibold">
-                  {selectedProduct.title}
+                  Selected Product:
                 </Text>
-                {selectedProduct.images.length > 0 && (
-                  <Thumbnail
-                    source={selectedProduct.images[0].url}
-                    alt={selectedProduct.title}
-                    size="large"
-                  />
-                )}
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {selectedProduct.images.length} image(s) available
-                </Text>
+                <InlineStack gap="300" blockAlign="center">
+                  {selectedProduct.images.length > 0 && (
+                    <Thumbnail
+                      source={selectedProduct.images[0].url}
+                      alt={selectedProduct.title}
+                      size="large"
+                    />
+                  )}
+                  <BlockStack gap="200">
+                    <Text as="p" variant="bodyMd" fontWeight="medium">
+                      {selectedProduct.title}
+                    </Text>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {selectedProduct.images.length} image(s) available
+                    </Text>
+                  </BlockStack>
+                </InlineStack>
               </BlockStack>
             </Card>
           )}
