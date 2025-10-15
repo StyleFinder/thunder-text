@@ -97,6 +97,17 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error in Facebook OAuth authorize:', error)
+
+    // Redirect to Facebook Ads page with error if shop is known
+    if (shop) {
+      const redirectUrl = new URL('/facebook-ads', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+      redirectUrl.searchParams.set('shop', shop)
+      redirectUrl.searchParams.set('authenticated', 'true')
+      redirectUrl.searchParams.set('facebook_error', 'true')
+      redirectUrl.searchParams.set('message', 'Failed to initiate Facebook authorization. Please try again.')
+      return NextResponse.redirect(redirectUrl.toString())
+    }
+
     return NextResponse.json(
       { error: 'Failed to initiate Facebook authorization' },
       { status: 500 }

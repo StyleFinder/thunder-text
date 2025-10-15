@@ -274,8 +274,8 @@ export async function GET(request: NextRequest) {
 
     console.log('Facebook integration stored successfully for shop:', shop_domain)
 
-    // Redirect to settings page with success message
-    const redirectUrl = new URL('/settings', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+    // Redirect to Facebook Ads page with success message
+    const redirectUrl = new URL('/facebook-ads', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
     redirectUrl.searchParams.set('shop', shop_domain)
     redirectUrl.searchParams.set('authenticated', 'true')
     redirectUrl.searchParams.set('facebook_connected', 'true')
@@ -286,9 +286,9 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error in Facebook OAuth callback:', error)
 
-    // Redirect to settings with error message
-    const redirectUrl = new URL('/settings', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
-    redirectUrl.searchParams.set('shop', state.shop_domain)
+    // Redirect to Facebook Ads page with error message
+    const redirectUrl = new URL('/facebook-ads', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+    redirectUrl.searchParams.set('shop', stateData?.shop_domain || '')
     redirectUrl.searchParams.set('authenticated', 'true')
     redirectUrl.searchParams.set('facebook_error', 'true')
     redirectUrl.searchParams.set('message', 'Failed to connect Facebook account. Please try again.')
