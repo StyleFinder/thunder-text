@@ -10,7 +10,7 @@
  * 4. Preview & submit to Facebook
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Modal,
   BlockStack,
@@ -64,8 +64,9 @@ export default function CreateFacebookAdFlow({
   const [selectedProductId, setSelectedProductId] = useState('')
   const [selectedProduct, setSelectedProduct] = useState<ShopifyProduct | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [filteredProducts, setFilteredProducts] = useState<ShopifyProduct[]>([])
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [showProductList, setShowProductList] = useState(false)
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null)
 
   // Step 2: AI Generated Content
   const [generatingContent, setGeneratingContent] = useState(false)
@@ -79,43 +80,33 @@ export default function CreateFacebookAdFlow({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Load products when modal opens
-  useEffect(() => {
-    if (open) {
-      fetchProducts()
-    } else {
-      // Reset state when modal closes
-      resetFlow()
-    }
-  }, [open])
-
-  const resetFlow = () => {
-    setStep('select-product')
-    setSelectedProductId('')
-    setSelectedProduct(null)
-    setSearchQuery('')
-    setFilteredProducts([])
-    setShowProductList(false)
-    setAdTitle('')
-    setAdCopy('')
-    setSelectedImageUrls([])
-    setError(null)
-  }
-
-  const fetchProducts = async () => {
+  // Fetch products with debounced search (server-side filtering)
+  const fetchProducts = useCallback(async () => {
     try {
       setLoadingProducts(true)
       setError(null)
 
-      console.log('🔍 Fetching products for shop:', shop)
+      const params = new URLSearchParams({
+        shop: shop || 'zunosai-staging-test-store',
+        limit: '50' // Get more products for better search results
+      })
 
-      const response = await authenticatedFetch(`/api/shopify/products?shop=${shop}`)
+      // Add search query if exists
+      if (debouncedSearchQuery) {
+        params.append('query', debouncedSearchQuery)
+      }
+
+      console.log('🔍 Fetching products with params:', {
+        shop,
+        query: debouncedSearchQuery || 'none'
+      })
+
+      const response = await authenticatedFetch(`/api/shopify/products?${params}`)
       const data = await response.json()
 
       console.log('📦 Products API response:', data)
 
       if (data.success) {
-        // API returns 'products' not 'data'
         const productList = data.products || []
 
         console.log('✅ Received products:', productList.length)
@@ -133,7 +124,9 @@ export default function CreateFacebookAdFlow({
         }))
 
         console.log('🔄 Transformed products:', transformedProducts.length)
-        console.log('📋 First product:', transformedProducts[0])
+        if (transformedProducts.length > 0) {
+          console.log('📋 First product:', transformedProducts[0])
+        }
 
         setProducts(transformedProducts)
       } else {
@@ -146,29 +139,57 @@ export default function CreateFacebookAdFlow({
     } finally {
       setLoadingProducts(false)
     }
+  }, [shop, debouncedSearchQuery])
+
+  // Fetch products when modal opens or debounced search changes
+  useEffect(() => {
+    if (open) {
+      fetchProducts()
+    }
+  }, [open, fetchProducts])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current)
+      }
+    }
+  }, [])
+
+  const resetFlow = () => {
+    setStep('select-product')
+    setSelectedProductId('')
+    setSelectedProduct(null)
+    setSearchQuery('')
+    setDebouncedSearchQuery('')
+    setShowProductList(false)
+    setAdTitle('')
+    setAdCopy('')
+    setSelectedImageUrls([])
+    setError(null)
   }
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value)
     setShowProductList(true)
 
-    if (value.trim() === '') {
-      setFilteredProducts([])
-      return
+    // Clear any existing timeout
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current)
     }
 
-    // Filter products by search query (case insensitive)
-    const query = value.toLowerCase()
-    const filtered = products.filter(p =>
-      p.title.toLowerCase().includes(query) ||
-      p.handle.toLowerCase().includes(query)
-    )
-
-    console.log('Search query:', query)
-    console.log('Total products:', products.length)
-    console.log('Filtered products:', filtered.length)
-
-    setFilteredProducts(filtered)
+    // If the search is cleared, update immediately
+    if (value === '') {
+      console.log('🔍 Clearing search query')
+      setDebouncedSearchQuery('')
+    } else {
+      // Otherwise, debounce the search query (triggers server-side search)
+      debounceTimeout.current = setTimeout(() => {
+        console.log('🔍 Setting debounced search query:', value)
+        setDebouncedSearchQuery(value)
+      }, 500) // 500ms delay
+    }
   }
 
   const handleProductSelect = (product: ShopifyProduct) => {
@@ -176,7 +197,6 @@ export default function CreateFacebookAdFlow({
     setSelectedProduct(product)
     setSearchQuery(product.title)
     setShowProductList(false)
-    setFilteredProducts([])
   }
 
   const handleNextFromProductSelection = async () => {
@@ -326,7 +346,7 @@ export default function CreateFacebookAdFlow({
             />
 
             {/* Product search results dropdown */}
-            {showProductList && filteredProducts.length > 0 && (
+            {showProductList && products.length > 0 && (
               <div
                 style={{
                   position: 'absolute',
@@ -343,7 +363,7 @@ export default function CreateFacebookAdFlow({
                   boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                 }}
               >
-                {filteredProducts.map((product) => (
+                {products.map((product) => (
                   <div
                     key={product.id}
                     onClick={() => handleProductSelect(product)}
@@ -386,7 +406,7 @@ export default function CreateFacebookAdFlow({
             )}
 
             {/* No results message */}
-            {showProductList && searchQuery && filteredProducts.length === 0 && products.length > 0 && (
+            {showProductList && debouncedSearchQuery && products.length === 0 && !loadingProducts && (
               <div
                 style={{
                   position: 'absolute',
@@ -403,7 +423,7 @@ export default function CreateFacebookAdFlow({
                 }}
               >
                 <Text as="p" tone="subdued" alignment="center">
-                  No products found matching "{searchQuery}"
+                  No products found matching "{debouncedSearchQuery}"
                 </Text>
               </div>
             )}
