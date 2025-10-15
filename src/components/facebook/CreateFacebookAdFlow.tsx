@@ -345,6 +345,10 @@ export default function CreateFacebookAdFlow({
             />
 
             {/* Product search results dropdown */}
+            {(() => {
+              console.log('🎨 Render check:', { showProductList, productsLength: products.length, shouldShow: showProductList && products.length > 0 })
+              return null
+            })()}
             {showProductList && products.length > 0 && (
               <div
                 style={{
