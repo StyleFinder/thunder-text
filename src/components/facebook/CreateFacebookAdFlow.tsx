@@ -107,7 +107,7 @@ export default function CreateFacebookAdFlow({
       console.log('📦 Products API response:', data)
 
       if (data.success) {
-        const productList = data.products || []
+        const productList = data.data?.products || data.products || []
 
         console.log('✅ Received products:', productList.length)
         console.log('📦 Raw products from API:', productList)
