@@ -29,7 +29,6 @@ import { ProductTypeSelector } from '@/app/components/ProductTypeSelector'
 import { type ProductCategory } from '@/lib/prompts'
 import { fetchProductDataForPrePopulation, formatKeyFeatures, formatSizingData, type PrePopulatedProductData } from '@/lib/shopify/product-prepopulation'
 import { authenticatedFetch } from '@/lib/shopify/api-client'
-import CreateAdModal from '@/components/facebook/CreateAdModal'
 
 interface UploadedFile {
   file: File
@@ -91,7 +90,6 @@ function CreateProductContent() {
   const [generatedContent, setGeneratedContent] = useState<any>(null)
   const [creatingProduct, setCreatingProduct] = useState(false)
   const [productCreated, setProductCreated] = useState<any>(null)
-  const [createAdModalOpen, setCreateAdModalOpen] = useState(false)
   const [progress, setProgress] = useState(0)
   
   // Progress timer ref
@@ -1333,10 +1331,6 @@ function CreateProductContent() {
           }}
           secondaryActions={[
             {
-              content: 'Create Facebook Ad',
-              onAction: () => setCreateAdModalOpen(true)
-            },
-            {
               content: 'Generate Again',
               onAction: () => {
                 setGeneratedContent(null)
@@ -1483,18 +1477,6 @@ function CreateProductContent() {
             </BlockStack>
           </Modal.Section>
         </Modal>
-      )}
-
-      {/* Facebook Ad Creation Modal */}
-      {generatedContent && (
-        <CreateAdModal
-          open={createAdModalOpen}
-          onClose={() => setCreateAdModalOpen(false)}
-          shop={shop || ''}
-          initialTitle={generatedContent.title || ''}
-          initialCopy={(generatedContent.description || '').substring(0, 125)} // Truncate to 125 chars
-          imageUrls={uploadedFiles.map(f => f.preview)}
-        />
       )}
     </Page>
   )

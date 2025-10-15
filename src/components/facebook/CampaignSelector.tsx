@@ -39,7 +39,7 @@ interface Campaign {
 
 interface CampaignSelectorProps {
   shop: string
-  onSelect: (adAccountId: string, campaignId: string) => void
+  onSelect: (adAccountId: string, campaignId: string, campaignName: string) => void
   selectedAdAccountId?: string
   selectedCampaignId?: string
 }
@@ -76,9 +76,12 @@ export default function CampaignSelector({
   // Notify parent when selection changes
   useEffect(() => {
     if (currentAdAccountId && currentCampaignId) {
-      onSelect(currentAdAccountId, currentCampaignId)
+      const campaign = campaigns.find(c => c.id === currentCampaignId)
+      if (campaign) {
+        onSelect(currentAdAccountId, currentCampaignId, campaign.name)
+      }
     }
-  }, [currentAdAccountId, currentCampaignId])
+  }, [currentAdAccountId, currentCampaignId, campaigns])
 
   const fetchAdAccounts = async () => {
     try {
