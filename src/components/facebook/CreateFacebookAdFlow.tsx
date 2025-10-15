@@ -153,6 +153,11 @@ export default function CreateFacebookAdFlow({
       p.title.toLowerCase().includes(query) ||
       p.handle.toLowerCase().includes(query)
     )
+
+    console.log('Search query:', query)
+    console.log('Total products:', products.length)
+    console.log('Filtered products:', filtered.length)
+
     setFilteredProducts(filtered)
   }
 
@@ -312,67 +317,66 @@ export default function CreateFacebookAdFlow({
 
             {/* Product search results dropdown */}
             {showProductList && filteredProducts.length > 0 && (
-              <Card>
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    maxHeight: '300px',
-                    overflowY: 'auto',
-                    backgroundColor: 'white',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    marginTop: '4px',
-                    zIndex: 1000,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                  }}
-                >
-                  {filteredProducts.map((product) => (
-                    <div
-                      key={product.id}
-                      onClick={() => handleProductSelect(product)}
-                      style={{
-                        padding: '12px',
-                        cursor: 'pointer',
-                        borderBottom: '1px solid #f0f0f0',
-                        display: 'flex',
-                        gap: '12px',
-                        alignItems: 'center'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f7f7f7'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'white'
-                      }}
-                    >
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  backgroundColor: 'white',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  marginTop: '4px',
+                  zIndex: 10000,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                }}
+              >
+                {filteredProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    onClick={() => handleProductSelect(product)}
+                    style={{
+                      padding: '12px',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #f0f0f0',
+                      display: 'flex',
+                      gap: '12px',
+                      alignItems: 'center',
+                      transition: 'background-color 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f7f7f7'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'white'
+                    }}
+                  >
+                    {product.images.length > 0 && (
+                      <Thumbnail
+                        source={product.images[0].url}
+                        alt={product.title}
+                        size="small"
+                      />
+                    )}
+                    <div style={{ flex: 1 }}>
+                      <Text as="p" variant="bodyMd" fontWeight="medium">
+                        {product.title}
+                      </Text>
                       {product.images.length > 0 && (
-                        <Thumbnail
-                          source={product.images[0].url}
-                          alt={product.title}
-                          size="small"
-                        />
-                      )}
-                      <div style={{ flex: 1 }}>
-                        <Text as="p" variant="bodyMd" fontWeight="medium">
-                          {product.title}
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          {product.images.length} image(s)
                         </Text>
-                        {product.images.length > 0 && (
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            {product.images.length} image(s)
-                          </Text>
-                        )}
-                      </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </Card>
+                  </div>
+                ))}
+              </div>
             )}
 
             {/* No results message */}
-            {showProductList && searchQuery && filteredProducts.length === 0 && (
+            {showProductList && searchQuery && filteredProducts.length === 0 && products.length > 0 && (
               <div
                 style={{
                   position: 'absolute',
@@ -382,9 +386,10 @@ export default function CreateFacebookAdFlow({
                   padding: '12px',
                   backgroundColor: 'white',
                   border: '1px solid #ddd',
-                  borderRadius: '4px',
+                  borderRadius: '8px',
                   marginTop: '4px',
-                  zIndex: 1000
+                  zIndex: 10000,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                 }}
               >
                 <Text as="p" tone="subdued" alignment="center">
