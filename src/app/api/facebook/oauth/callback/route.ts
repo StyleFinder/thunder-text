@@ -176,7 +176,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Decode state to get shop context
-    let stateData: { shop_id: string; shop_domain: string; timestamp: number }
+    let stateData: {
+      shop_id: string
+      shop_domain: string
+      host?: string | null
+      embedded?: string | null
+      timestamp: number
+    }
     try {
       stateData = JSON.parse(Buffer.from(state, 'base64url').toString('utf-8'))
     } catch (e) {
@@ -275,15 +281,18 @@ export async function GET(request: NextRequest) {
     console.log('Facebook integration stored successfully for shop:', shop_domain)
 
     // Redirect to Facebook Ads page with success message
-    // Restore host and embedded params to maintain Shopify embedded app context
+    // Restore host and embedded params to maintain Shopify embedded app context (if they exist)
     const redirectUrl = new URL('/facebook-ads', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
     redirectUrl.searchParams.set('shop', shop_domain)
-    if (stateData.host) {
+
+    // Only add host and embedded if they have valid (non-null) values
+    if (stateData.host && stateData.host !== 'null') {
       redirectUrl.searchParams.set('host', stateData.host)
     }
-    if (stateData.embedded) {
+    if (stateData.embedded && stateData.embedded !== 'null') {
       redirectUrl.searchParams.set('embedded', stateData.embedded)
     }
+
     redirectUrl.searchParams.set('authenticated', 'true')
     redirectUrl.searchParams.set('facebook_connected', 'true')
     redirectUrl.searchParams.set('message', 'Facebook account connected successfully')
@@ -294,15 +303,18 @@ export async function GET(request: NextRequest) {
     console.error('Error in Facebook OAuth callback:', error)
 
     // Redirect to Facebook Ads page with error message
-    // Restore host and embedded params to maintain Shopify embedded app context
+    // Restore host and embedded params to maintain Shopify embedded app context (if they exist)
     const redirectUrl = new URL('/facebook-ads', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
     redirectUrl.searchParams.set('shop', stateData?.shop_domain || '')
-    if (stateData?.host) {
+
+    // Only add host and embedded if they have valid (non-null) values
+    if (stateData?.host && stateData.host !== 'null') {
       redirectUrl.searchParams.set('host', stateData.host)
     }
-    if (stateData?.embedded) {
+    if (stateData?.embedded && stateData.embedded !== 'null') {
       redirectUrl.searchParams.set('embedded', stateData.embedded)
     }
+
     redirectUrl.searchParams.set('authenticated', 'true')
     redirectUrl.searchParams.set('facebook_error', 'true')
     redirectUrl.searchParams.set('message', 'Failed to connect Facebook account. Please try again.')
