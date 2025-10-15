@@ -27,6 +27,7 @@ import {
 } from '@shopify/polaris'
 import { ImageIcon } from '@shopify/polaris-icons'
 import AdPreview from './AdPreview'
+import { authenticatedFetch } from '@/lib/shopify/api-client'
 
 interface ShopifyProduct {
   id: string
@@ -98,17 +99,34 @@ export default function CreateFacebookAdFlow({
   const fetchProducts = async () => {
     try {
       setLoadingProducts(true)
-      const response = await fetch(`/api/shopify/products?shop=${shop}`)
+      setError(null)
+
+      const response = await authenticatedFetch(`/api/shopify/products?shop=${shop}`)
       const data = await response.json()
 
       if (data.success) {
-        setProducts(data.data || [])
+        // API returns 'products' not 'data'
+        const productList = data.products || []
+
+        // Transform to match our interface
+        const transformedProducts: ShopifyProduct[] = productList.map((p: any) => ({
+          id: p.id,
+          title: p.title,
+          description: p.bodyHtml || p.description || '',
+          images: (p.images || []).map((img: any) => ({
+            url: img.url || img.src,
+            altText: img.altText || img.alt
+          })),
+          handle: p.handle
+        }))
+
+        setProducts(transformedProducts)
       } else {
-        setError('Failed to load products from Shopify')
+        setError(data.error || 'Failed to load products from Shopify')
       }
     } catch (err) {
       console.error('Error fetching products:', err)
-      setError('Failed to load products')
+      setError(err instanceof Error ? err.message : 'Failed to load products')
     } finally {
       setLoadingProducts(false)
     }
