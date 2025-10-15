@@ -73,7 +73,14 @@ async function createAdCreative(
 
   const data = await response.json()
 
+  console.log('📸 Facebook API createAdCreative response:', {
+    status: response.status,
+    ok: response.ok,
+    data
+  })
+
   if (!response.ok || data.error) {
+    console.error('❌ Facebook API createAdCreative error:', data.error)
     throw new FacebookAPIError(
       data.error?.message || 'Failed to create ad creative',
       response.status,
@@ -155,7 +162,14 @@ async function createAd(
 
   const adResult = await adResponse.json()
 
+  console.log('📢 Facebook API createAd response:', {
+    status: adResponse.status,
+    ok: adResponse.ok,
+    adResult
+  })
+
   if (!adResponse.ok || adResult.error) {
+    console.error('❌ Facebook API createAd error:', adResult.error)
     throw new FacebookAPIError(
       adResult.error?.message || 'Failed to create ad',
       adResponse.status,
