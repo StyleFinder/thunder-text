@@ -217,7 +217,8 @@ export async function getAdAccounts(shopId: string): Promise<AdAccount[]> {
 }
 
 /**
- * Get active campaigns for a specific ad account
+ * Get campaigns for a specific ad account
+ * Note: Facebook API doesn't support status filtering, so we filter client-side
  */
 export async function getCampaigns(
   shopId: string,
@@ -228,19 +229,21 @@ export async function getCampaigns(
   } = {}
 ): Promise<Campaign[]> {
   try {
-    const { status = 'ACTIVE', limit = 100 } = options
+    const { status, limit = 100 } = options
 
     const fields = 'id,name,status,objective,daily_budget,lifetime_budget,created_time,updated_time'
-    const filtering = status ? `[{"field":"status","operator":"EQUAL","value":"${status}"}]` : ''
-
-    let endpoint = `/${adAccountId}/campaigns?fields=${fields}&limit=${limit}`
-    if (filtering) {
-      endpoint += `&filtering=${encodeURIComponent(filtering)}`
-    }
+    const endpoint = `/${adAccountId}/campaigns?fields=${fields}&limit=${limit}`
 
     const data = await makeRequest<{ data: Campaign[] }>(shopId, endpoint)
 
-    return data.data || []
+    let campaigns = data.data || []
+
+    // Filter by status client-side if specified
+    if (status) {
+      campaigns = campaigns.filter(campaign => campaign.status === status)
+    }
+
+    return campaigns
   } catch (error) {
     console.error('Error fetching campaigns:', error)
     throw error
