@@ -38,6 +38,9 @@ function FacebookAdsContent() {
   const router = useRouter()
   const shop = searchParams?.get('shop')
   const authenticated = searchParams?.get('authenticated')
+  const facebookConnected = searchParams?.get('facebook_connected')
+  const facebookError = searchParams?.get('facebook_error')
+  const message = searchParams?.get('message')
 
   const [integrationInfo, setIntegrationInfo] = useState<IntegrationInfo | null>(null)
   const [loading, setLoading] = useState(true)
@@ -45,12 +48,23 @@ function FacebookAdsContent() {
   const [selectedCampaignId, setSelectedCampaignId] = useState('')
   const [selectedCampaignName, setSelectedCampaignName] = useState('')
   const [createAdModalOpen, setCreateAdModalOpen] = useState(false)
+  const [showBanner, setShowBanner] = useState(false)
 
   useEffect(() => {
     if (shop) {
       checkFacebookConnection()
     }
   }, [shop])
+
+  // Show success/error banner when redirected from OAuth
+  useEffect(() => {
+    if (facebookConnected || facebookError) {
+      setShowBanner(true)
+      // Auto-hide after 5 seconds
+      const timer = setTimeout(() => setShowBanner(false), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [facebookConnected, facebookError])
 
   const checkFacebookConnection = async () => {
     try {
@@ -124,6 +138,19 @@ function FacebookAdsContent() {
         subtitle="Create and manage Facebook ads from your product descriptions"
       >
         <Layout>
+          {/* Show OAuth callback banner */}
+          {showBanner && message && (
+            <Layout.Section>
+              <Banner
+                title={facebookConnected ? 'Success' : 'Error'}
+                tone={facebookConnected ? 'success' : 'critical'}
+                onDismiss={() => setShowBanner(false)}
+              >
+                <p>{message}</p>
+              </Banner>
+            </Layout.Section>
+          )}
+
           <Layout.Section>
             <Card>
               <EmptyState
@@ -172,6 +199,19 @@ function FacebookAdsContent() {
       }}
     >
       <Layout>
+        {/* Show OAuth callback banner */}
+        {showBanner && message && (
+          <Layout.Section>
+            <Banner
+              title={facebookConnected ? 'Success' : 'Error'}
+              tone={facebookConnected ? 'success' : 'critical'}
+              onDismiss={() => setShowBanner(false)}
+            >
+              <p>{message}</p>
+            </Banner>
+          </Layout.Section>
+        )}
+
         <Layout.Section>
           <Banner
             tone="success"
