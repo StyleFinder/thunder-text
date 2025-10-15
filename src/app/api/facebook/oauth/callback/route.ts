@@ -238,6 +238,7 @@ export async function GET(request: NextRequest) {
     // Redirect to settings page with success message
     const redirectUrl = new URL('/settings', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
     redirectUrl.searchParams.set('shop', shop_domain)
+    redirectUrl.searchParams.set('authenticated', 'true')
     redirectUrl.searchParams.set('facebook_connected', 'true')
     redirectUrl.searchParams.set('message', 'Facebook account connected successfully')
 
@@ -248,6 +249,8 @@ export async function GET(request: NextRequest) {
 
     // Redirect to settings with error message
     const redirectUrl = new URL('/settings', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+    redirectUrl.searchParams.set('shop', state.shop_domain)
+    redirectUrl.searchParams.set('authenticated', 'true')
     redirectUrl.searchParams.set('facebook_error', 'true')
     redirectUrl.searchParams.set('message', 'Failed to connect Facebook account. Please try again.')
 
