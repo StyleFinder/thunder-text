@@ -45,12 +45,17 @@ async function exchangeCodeForToken(code: string): Promise<{
   tokenUrl.searchParams.set('redirect_uri', redirectUri)
   tokenUrl.searchParams.set('code', code)
 
+  console.log('🔵 Token exchange URL:', tokenUrl.toString().replace(appSecret, '***SECRET***'))
+
   const response = await fetch(tokenUrl.toString())
 
   if (!response.ok) {
     const error = await response.text()
-    console.error('Facebook token exchange failed:', error)
-    throw new Error('Failed to exchange code for token')
+    console.error('🔴 Facebook token exchange failed!')
+    console.error('🔴 Response status:', response.status, response.statusText)
+    console.error('🔴 Response body:', error)
+    console.error('🔴 Redirect URI used:', redirectUri)
+    throw new Error(`Failed to exchange code for token: ${error}`)
   }
 
   return response.json()
