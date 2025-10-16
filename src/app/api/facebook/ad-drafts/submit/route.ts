@@ -195,13 +195,13 @@ async function createAd(
     daily_budget: 1000, // $10.00 in cents - user can adjust in Ads Manager
     billing_event: 'IMPRESSIONS',
     optimization_goal: 'REACH',
-    bid_amount: 100, // $1.00 in cents
     status: 'PAUSED', // Start paused so user can review
     targeting: {
       geo_locations: {
         countries: ['US'] // Default targeting - user can adjust
       }
     }
+    // Note: bid_amount removed - Facebook will optimize automatically using LOWEST_COST_WITHOUT_CAP strategy
   }
 
   console.log('📊 [ADSET DEBUG] Creating adSet with data:', JSON.stringify(adSetData, null, 2))
