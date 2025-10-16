@@ -33,64 +33,66 @@ export interface AuthResult {
 }
 
 /**
- * Extract and verify JWT token from Authorization header
+ * Extract and verify shop domain from request
+ * For Shopify apps, we use the shop domain as authentication
  *
  * @param request - Next.js request object
- * @returns Authentication result with user ID if successful
+ * @returns Authentication result with shop domain as user ID if successful
  */
 export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
   try {
-    // Get Authorization header
+    // Try to get shop from various sources
+    let shop: string | null = null
+
+    // 1. Check Authorization header (for API calls from frontend)
     const authHeader = request.headers.get('authorization')
+    if (authHeader?.startsWith('Bearer ')) {
+      shop = authHeader.replace('Bearer ', '')
+    }
 
-    if (!authHeader) {
+    // 2. Check X-Shopify-Shop-Domain header
+    if (!shop) {
+      shop = request.headers.get('x-shopify-shop-domain')
+    }
+
+    // 3. Check query parameter
+    if (!shop) {
+      const url = new URL(request.url)
+      shop = url.searchParams.get('shop')
+    }
+
+    if (!shop) {
       return {
         authenticated: false,
-        error: 'Missing Authorization header'
+        error: 'Missing shop domain. Please provide shop via Authorization header, X-Shopify-Shop-Domain header, or shop query parameter.'
       }
     }
 
-    // Check Bearer token format
-    if (!authHeader.startsWith('Bearer ')) {
-      return {
-        authenticated: false,
-        error: 'Invalid Authorization header format. Expected: Bearer <token>'
-      }
+    // Ensure shop has .myshopify.com suffix
+    if (!shop.includes('.myshopify.com')) {
+      shop = `${shop}.myshopify.com`
     }
 
-    // Extract token
-    const token = authHeader.replace('Bearer ', '')
-
-    if (!token || token.trim() === '') {
-      return {
-        authenticated: false,
-        error: 'Empty token provided'
-      }
-    }
-
-    // Verify token with Supabase
+    // Verify shop exists in database
     const supabase = getSupabaseAdmin()
-    const { data: { user }, error } = await supabase.auth.getUser(token)
+    const { data: shopData, error } = await supabase
+      .from('shops')
+      .select('id, shop_domain')
+      .eq('shop_domain', shop)
+      .single()
 
-    if (error) {
-      console.error('Token verification failed:', error.message)
+    if (error || !shopData) {
+      console.error('Shop not found in database:', shop)
       return {
         authenticated: false,
-        error: 'Invalid or expired token'
+        error: 'Shop not found. Please install the app first.'
       }
     }
 
-    if (!user) {
-      return {
-        authenticated: false,
-        error: 'User not found'
-      }
-    }
-
-    // Successfully authenticated
+    // Successfully authenticated - use shop_id as userId
     return {
       authenticated: true,
-      userId: user.id
+      userId: shopData.id
     }
 
   } catch (error) {
