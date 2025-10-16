@@ -245,53 +245,115 @@ export async function GET(request: NextRequest) {
       ? new Date(Date.now() + expires_in * 1000)
       : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) // Default: 60 days
 
+    // Verify shop exists before attempting upsert
+    console.log('🔍 [DEBUG] Verifying shop exists:', { shop_id, shop_domain })
+    const { data: shopExists, error: shopCheckError } = await supabaseAdmin
+      .from('shops')
+      .select('id, shop_domain')
+      .eq('id', shop_id)
+      .single()
+
+    if (shopCheckError || !shopExists) {
+      console.error('❌ [DEBUG] Shop does not exist:', { shop_id, shop_domain, error: shopCheckError })
+      throw new Error(`Shop not found: ${shop_domain}`)
+    }
+    console.log('✅ [DEBUG] Shop exists:', shopExists)
+
+    // Prepare upsert data
+    const upsertData = {
+      shop_id,
+      provider: 'facebook',
+      encrypted_access_token: encryptedAccessToken,
+      token_expires_at: tokenExpiresAt.toISOString(),
+      provider_account_id: userInfo.id,
+      provider_account_name: userInfo.name,
+      // facebook_page_id: primaryPage?.id || null, // TEMP: Commented out due to schema cache issue
+      is_active: true,
+      additional_metadata: {
+        email: userInfo.email,
+        facebook_page_id: primaryPage?.id || null, // Stored in metadata until schema cache refreshes
+        ad_accounts: adAccounts.map(acc => ({
+          id: acc.id,
+          account_id: acc.account_id,
+          name: acc.name,
+          status: acc.account_status
+        })),
+        primary_ad_account_id: activeAdAccount?.id,
+        primary_ad_account_name: activeAdAccount?.name,
+        facebook_pages: pages.map(page => ({
+          id: page.id,
+          name: page.name
+        })),
+        primary_page_id: primaryPage?.id,
+        primary_page_name: primaryPage?.name,
+        connected_at: new Date().toISOString()
+      },
+      updated_at: new Date().toISOString()
+    }
+
+    console.log('🔍 [DEBUG] About to upsert integration:', {
+      shop_id: upsertData.shop_id,
+      provider: upsertData.provider,
+      has_encrypted_token: !!upsertData.encrypted_access_token,
+      token_length: upsertData.encrypted_access_token.length,
+      account_id: upsertData.provider_account_id,
+      account_name: upsertData.provider_account_name,
+      expires_at: upsertData.token_expires_at,
+      metadata_keys: Object.keys(upsertData.additional_metadata)
+    })
+
     // Store integration in database
-    const { data: integration, error: dbError} = await supabaseAdmin
+    const { data: integration, error: dbError, status, statusText } = await supabaseAdmin
       .from('integrations')
-      .upsert(
-        {
-          shop_id,
-          provider: 'facebook',
-          encrypted_access_token: encryptedAccessToken,
-          token_expires_at: tokenExpiresAt.toISOString(),
-          provider_account_id: userInfo.id,
-          provider_account_name: userInfo.name,
-          // facebook_page_id: primaryPage?.id || null, // TEMP: Commented out due to schema cache issue
-          is_active: true,
-          additional_metadata: {
-            email: userInfo.email,
-            facebook_page_id: primaryPage?.id || null, // Stored in metadata until schema cache refreshes
-            ad_accounts: adAccounts.map(acc => ({
-              id: acc.id,
-              account_id: acc.account_id,
-              name: acc.name,
-              status: acc.account_status
-            })),
-            primary_ad_account_id: activeAdAccount?.id,
-            primary_ad_account_name: activeAdAccount?.name,
-            facebook_pages: pages.map(page => ({
-              id: page.id,
-              name: page.name
-            })),
-            primary_page_id: primaryPage?.id,
-            primary_page_name: primaryPage?.name,
-            connected_at: new Date().toISOString()
-          },
-          updated_at: new Date().toISOString()
-        },
-        {
-          onConflict: 'shop_id,provider'
-        }
-      )
+      .upsert(upsertData, { onConflict: 'shop_id,provider' })
       .select()
       .single()
 
+    console.log('📊 [DEBUG] Upsert response:', {
+      hasData: !!integration,
+      dataId: integration?.id,
+      hasError: !!dbError,
+      error: dbError,
+      status,
+      statusText
+    })
+
     if (dbError) {
-      console.error('Failed to store Facebook integration:', dbError)
+      console.error('❌ [DEBUG] Failed to store Facebook integration:', {
+        error: dbError,
+        code: (dbError as any)?.code,
+        message: dbError.message,
+        details: (dbError as any)?.details,
+        hint: (dbError as any)?.hint
+      })
       throw dbError
     }
 
-    console.log('Facebook integration stored successfully for shop:', shop_domain)
+    if (!integration) {
+      console.error('❌ [DEBUG] No integration data returned from upsert')
+      throw new Error('Failed to store integration - no data returned')
+    }
+
+    console.log('✅ [DEBUG] Facebook integration stored successfully:', {
+      id: integration.id,
+      shop_domain,
+      provider_account_id: integration.provider_account_id,
+      is_active: integration.is_active
+    })
+
+    // Verify the record was actually inserted by reading it back
+    const { data: verifyIntegration, error: verifyError } = await supabaseAdmin
+      .from('integrations')
+      .select('id, shop_id, provider, is_active')
+      .eq('shop_id', shop_id)
+      .eq('provider', 'facebook')
+      .single()
+
+    console.log('🔍 [DEBUG] Verification query result:', {
+      found: !!verifyIntegration,
+      data: verifyIntegration,
+      error: verifyError
+    })
 
     // Redirect to Facebook Ads page with success message
     // Restore host and embedded params to maintain Shopify embedded app context (if they exist)
