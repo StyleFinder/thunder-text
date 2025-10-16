@@ -26,8 +26,8 @@ import { ContentType, CTAType } from '@/types/content-center'
 import {
   WORD_COUNT_RANGES,
   PARAMETER_PRESETS,
-  formatToneIntensityLabel,
-  formatCTATypeLabel,
+  getToneIntensityLabel,
+  getCTATypeLabel,
   estimateGenerationTime
 } from '@/lib/services/parameter-handler'
 
@@ -199,7 +199,7 @@ export function GenerationControls({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Label>Tone Intensity</Label>
-                <Badge variant="secondary">{formatToneIntensityLabel(toneIntensity)}</Badge>
+                <Badge variant="secondary">{getToneIntensityLabel(toneIntensity)}</Badge>
               </div>
               <TooltipProvider>
                 <Tooltip>
