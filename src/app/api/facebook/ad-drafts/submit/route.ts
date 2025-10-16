@@ -73,9 +73,9 @@ async function uploadAdImage(
   const url = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/adimages`)
   url.searchParams.set('access_token', accessToken)
 
-  // Use copy_from parameter to let Facebook fetch the image from URL
+  // Use copy_from parameter with JSON object containing url
   const formData = new FormData()
-  formData.append('copy_from', imageUrl)
+  formData.append('copy_from', JSON.stringify({ url: imageUrl }))
 
   const response = await fetch(url.toString(), {
     method: 'POST',
