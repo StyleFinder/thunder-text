@@ -12,7 +12,7 @@ import { decryptToken } from '@/lib/services/encryption'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
 const FACEBOOK_API_VERSION = 'v21.0'
 const FACEBOOK_GRAPH_URL = `https://graph.facebook.com/${FACEBOOK_API_VERSION}`
@@ -24,7 +24,7 @@ async function getAccessTokenAndPageId(shopId: string): Promise<{
   accessToken: string
   pageId: string | null
 }> {
-  const { data: integration, error } = await supabase
+  const { data: integration, error } = await supabaseAdmin
     .from('integrations')
     .select('encrypted_access_token, facebook_page_id')
     .eq('shop_id', shopId)
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get shop_id
-    const { data: shopData, error: shopError } = await supabase
+    const { data: shopData, error: shopError } = await supabaseAdmin
       .from('shops')
       .select('id')
       .eq('shop_domain', shop)
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get ad draft
-    const { data: draft, error: draftError } = await supabase
+    const { data: draft, error: draftError } = await supabaseAdmin
       .from('facebook_ad_drafts')
       .select('*')
       .eq('id', draft_id)
@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update status to submitting
-    await supabase
+    await supabaseAdmin
       .from('facebook_ad_drafts')
       .update({ status: 'submitting' })
       .eq('id', draft_id)
@@ -298,7 +298,7 @@ export async function POST(request: NextRequest) {
       )
 
       // Update draft with success
-      const { data: updatedDraft, error: updateError } = await supabase
+      const { data: updatedDraft, error: updateError } = await supabaseAdmin
         .from('facebook_ad_drafts')
         .update({
           status: 'submitted',
@@ -331,7 +331,7 @@ export async function POST(request: NextRequest) {
       const errorMessage = submitError instanceof Error ? submitError.message : 'Unknown error'
       const errorCode = submitError instanceof FacebookAPIError ? submitError.errorCode : undefined
 
-      await supabase
+      await supabaseAdmin
         .from('facebook_ad_drafts')
         .update({
           status: 'failed',
