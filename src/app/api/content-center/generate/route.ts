@@ -7,13 +7,13 @@ import {
 } from '@/types/content-center'
 import { getUserId, getSupabaseAdmin } from '@/lib/auth/content-center-auth'
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
+import { generateContent } from '@/lib/services/content-generator'
+import { postProcessContent } from '@/lib/services/content-post-processor'
+import { validateWordCountForType } from '@/lib/services/parameter-handler'
 
 /**
  * POST /api/content-center/generate
  * Generate content using user's brand voice profile
- *
- * Note: OpenAI integration will be implemented in Task Group 1.7
- * For now, this is a placeholder that creates mock content
  */
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<GenerateContentResponse>>> {
   const startTime = Date.now()
@@ -42,9 +42,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       )
     }
 
-    if (body.word_count < 500 || body.word_count > 2000) {
+    // Validate word count for content type
+    const wordCountValidation = validateWordCountForType(body.content_type, body.word_count)
+    if (!wordCountValidation.valid) {
       return NextResponse.json(
-        { success: false, error: 'Word count must be between 500 and 2000' },
+        { success: false, error: wordCountValidation.message },
         { status: 400 }
       )
     }
@@ -70,28 +72,31 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       throw new VoiceProfileNotFoundError()
     }
 
-    // TODO: Task Group 1.7 - Implement OpenAI content generation
-    // For now, create placeholder content
-    const mockContent = `[PLACEHOLDER CONTENT - OpenAI integration coming in Task Group 1.7]
+    // Generate content using OpenAI
+    const generationResult = await generateContent(profile, {
+      contentType: body.content_type,
+      topic: body.topic,
+      wordCount: body.word_count,
+      toneIntensity: body.tone_intensity,
+      ctaType: body.cta_type,
+      customCTA: body.custom_cta,
+      platform: body.platform,
+      additionalContext: body.additional_context
+    })
 
-Content Type: ${body.content_type}
-Topic: ${body.topic}
-Target Word Count: ${body.word_count}
-Tone Intensity: ${body.tone_intensity}/5
-CTA: ${body.cta_type}
+    // Post-process content
+    const postProcessed = postProcessContent(
+      generationResult.content,
+      body.content_type,
+      {
+        removeAIArtifacts: true,
+        formatMarkdown: true,
+        addMetadata: true
+      }
+    )
 
-This is a placeholder for AI-generated content. The actual implementation will:
-1. Load the user's brand voice profile from database
-2. Construct a generation prompt with the voice profile and parameters
-3. Call OpenAI API to generate content matching the user's voice
-4. Post-process the output for formatting and validation
-5. Return professionally crafted content in the user's authentic voice
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-
-[Additional content would be generated to meet the ${body.word_count} word target...]`
-
-    const wordCount = mockContent.trim().split(/\s+/).filter(w => w.length > 0).length
+    const finalContent = postProcessed.content
+    const wordCount = postProcessed.finalWordCount
 
     // Store generated content
     const { data: generatedContent, error: contentError } = await supabase
@@ -101,13 +106,19 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor i
         content_type: body.content_type,
         platform: body.platform || null,
         topic: body.topic,
-        generated_text: mockContent,
+        generated_text: finalContent,
         word_count: wordCount,
         generation_params: {
           word_count: body.word_count,
           tone_intensity: body.tone_intensity,
           cta_type: body.cta_type,
           custom_cta: body.custom_cta
+        },
+        generation_metadata: {
+          tokensUsed: generationResult.tokensUsed,
+          generationTimeMs: generationResult.generationTimeMs,
+          voiceProfileVersion: generationResult.metadata.voiceProfileVersion,
+          postProcessing: postProcessed.modifications
         },
         product_images: body.product_images || null,
         is_saved: body.save || false
@@ -125,12 +136,17 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor i
 
     const generationTime = Date.now() - startTime
 
+    // Calculate cost estimate (GPT-4 pricing: $0.03/1K input, $0.06/1K output)
+    const inputCost = (generationResult.tokensUsed * 0.5 / 1000) * 0.03
+    const outputCost = (generationResult.tokensUsed * 0.5 / 1000) * 0.06
+    const costEstimate = inputCost + outputCost
+
     return NextResponse.json({
       success: true,
       data: {
         content: generatedContent,
         generation_time_ms: generationTime,
-        cost_estimate: 0.055 // Placeholder cost estimate
+        cost_estimate: costEstimate
       }
     }, { status: 201 })
 
