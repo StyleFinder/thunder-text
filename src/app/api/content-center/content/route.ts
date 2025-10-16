@@ -1,43 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import {
   ApiResponse,
   ListContentResponse,
   GeneratedContent,
   ContentFilterParams
 } from '@/types/content-center'
-
-// Server-side Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
-
-function getSupabaseClient() {
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  })
-}
-
-// Helper function to get user ID from request
-async function getUserId(request: NextRequest): Promise<string | null> {
-  const supabase = getSupabaseClient()
-  const authHeader = request.headers.get('authorization')
-
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-  const { data: { user }, error } = await supabase.auth.getUser(token)
-
-  if (error || !user) {
-    return null
-  }
-
-  return user.id
-}
+import { getUserId, getSupabaseAdmin } from '@/lib/auth/content-center-auth'
+import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
 
 /**
  * GET /api/content-center/content
@@ -54,6 +23,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       )
     }
 
+    // Rate limiting for read operations
+    const rateLimitCheck = await withRateLimit(RATE_LIMITS.READ)(request, userId)
+    if (rateLimitCheck) return rateLimitCheck
+
     const { searchParams } = new URL(request.url)
 
     // Parse query parameters
@@ -66,7 +39,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const dateTo = searchParams.get('date_to')
     const search = searchParams.get('search')
 
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseAdmin()
 
     // Build query
     let query = supabase
