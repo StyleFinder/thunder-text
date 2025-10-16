@@ -24,19 +24,32 @@ async function getAccessTokenAndPageId(shopId: string): Promise<{
   accessToken: string
   pageId: string | null
 }> {
+  console.log('🔍 [SUBMIT DEBUG] Querying integration for shop_id:', shopId)
+
   const { data: integration, error } = await supabaseAdmin
     .from('integrations')
-    .select('encrypted_access_token, facebook_page_id')
+    .select('encrypted_access_token, facebook_page_id, id, provider, is_active')
     .eq('shop_id', shopId)
     .eq('provider', 'facebook')
     .eq('is_active', true)
     .single()
 
+  console.log('📊 [SUBMIT DEBUG] Query result:', {
+    found: !!integration,
+    error: error?.message,
+    errorCode: error?.code,
+    integrationId: integration?.id,
+    hasToken: !!integration?.encrypted_access_token,
+    tokenLength: integration?.encrypted_access_token?.length
+  })
+
   if (error || !integration) {
+    console.error('❌ [SUBMIT DEBUG] Integration not found - throwing error')
     throw new FacebookAPIError('Facebook account not connected', 404, 'NOT_CONNECTED')
   }
 
   const accessToken = await decryptToken(integration.encrypted_access_token)
+  console.log('✅ [SUBMIT DEBUG] Token decrypted successfully')
 
   return {
     accessToken,
@@ -198,6 +211,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { shop, draft_id } = body
 
+    console.log('🚀 [SUBMIT DEBUG] Ad submission started:', { shop, draft_id })
+
     if (!shop || !draft_id) {
       return NextResponse.json(
         { success: false, error: 'Shop and draft_id are required' },
@@ -206,13 +221,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Get shop_id
+    console.log('🔍 [SUBMIT DEBUG] Looking up shop:', shop)
     const { data: shopData, error: shopError } = await supabaseAdmin
       .from('shops')
-      .select('id')
+      .select('id, shop_domain')
       .eq('shop_domain', shop)
       .single()
 
+    console.log('📊 [SUBMIT DEBUG] Shop lookup result:', {
+      found: !!shopData,
+      shopId: shopData?.id,
+      shopDomain: shopData?.shop_domain,
+      error: shopError?.message
+    })
+
     if (shopError || !shopData) {
+      console.error('❌ [SUBMIT DEBUG] Shop not found')
       return NextResponse.json(
         { success: false, error: 'Shop not found' },
         { status: 404 }
