@@ -25,7 +25,6 @@ import {
 import { ContentType, CTAType } from '@/types/content-center'
 import {
   WORD_COUNT_RANGES,
-  PARAMETER_PRESETS,
   getToneIntensityLabel,
   getCTATypeLabel,
   estimateGenerationTime
@@ -72,15 +71,6 @@ export function GenerationControls({
   const [customCTA, setCustomCTA] = useState('')
   const [additionalContext, setAdditionalContext] = useState('')
 
-  const handleApplyPreset = (presetKey: string) => {
-    const preset = PARAMETER_PRESETS[presetKey]
-    if (preset.contentType === contentType) {
-      setWordCount(preset.wordCount)
-      setToneIntensity(preset.toneIntensity)
-      setCtaType(preset.ctaType)
-    }
-  }
-
   const handleGenerate = () => {
     if (!topic.trim()) return
 
@@ -94,10 +84,6 @@ export function GenerationControls({
     })
   }
 
-  const relevantPresets = Object.entries(PARAMETER_PRESETS)
-    .filter(([_, preset]) => preset.contentType === contentType)
-    .slice(0, 3)
-
   const estimatedTime = estimateGenerationTime(contentType, wordCount)
   const canGenerate = topic.trim().length > 0 && !isGenerating
 
@@ -109,31 +95,6 @@ export function GenerationControls({
           Configure your content parameters. All content will match your brand voice profile.
         </p>
       </div>
-
-      {/* Presets */}
-      {relevantPresets.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Quick Presets</CardTitle>
-            <CardDescription>Start with optimized settings for common use cases</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {relevantPresets.map(([key, preset]) => (
-                <Button
-                  key={key}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleApplyPreset(key)}
-                  disabled={isGenerating}
-                >
-                  {preset.name}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Main Parameters */}
       <Card>
@@ -179,18 +140,20 @@ export function GenerationControls({
                 Range: {wordCountRange.min}-{wordCountRange.max}
               </span>
             </div>
-            <Slider
-              value={[wordCount]}
-              onValueChange={([value]) => setWordCount(value)}
-              min={wordCountRange.min}
-              max={wordCountRange.max}
-              step={50}
-              disabled={isGenerating}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Shorter</span>
-              <span>Longer</span>
+            <div className="max-w-md">
+              <Slider
+                value={[wordCount]}
+                onValueChange={([value]) => setWordCount(value)}
+                min={wordCountRange.min}
+                max={wordCountRange.max}
+                step={50}
+                disabled={isGenerating}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                <span>Shorter</span>
+                <span>Longer</span>
+              </div>
             </div>
           </div>
 
@@ -215,19 +178,21 @@ export function GenerationControls({
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <Slider
-              value={[toneIntensity]}
-              onValueChange={([value]) => setToneIntensity(value)}
-              min={1}
-              max={5}
-              step={1}
-              disabled={isGenerating}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Subtle</span>
-              <span>Moderate</span>
-              <span>Strong</span>
+            <div className="max-w-md">
+              <Slider
+                value={[toneIntensity]}
+                onValueChange={([value]) => setToneIntensity(value)}
+                min={1}
+                max={5}
+                step={1}
+                disabled={isGenerating}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                <span>Subtle</span>
+                <span>Moderate</span>
+                <span>Strong</span>
+              </div>
             </div>
           </div>
 

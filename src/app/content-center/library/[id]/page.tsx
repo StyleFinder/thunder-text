@@ -23,6 +23,7 @@ import {
   Share2
 } from 'lucide-react'
 import { GeneratedContent, ContentType } from '@/types/content-center'
+import { supabase } from '@/lib/supabase'
 
 const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
   blog: 'Blog Post',
@@ -44,16 +45,24 @@ export default function ContentDetailPage() {
   const [editedText, setEditedText] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
+  const [authToken, setAuthToken] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchContent()
+    const getAuthToken = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        setAuthToken(session.access_token)
+        fetchContent(session.access_token)
+      }
+    }
+    getAuthToken()
   }, [contentId])
 
-  const fetchContent = async () => {
+  const fetchContent = async (token: string) => {
     try {
       const response = await fetch(`/api/content-center/content/${contentId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+          'Authorization': `Bearer ${token}`
         }
       })
 
@@ -73,7 +82,7 @@ export default function ContentDetailPage() {
   }
 
   const handleSave = async () => {
-    if (!content) return
+    if (!content || !authToken) return
 
     setIsSaving(true)
     try {
@@ -81,7 +90,7 @@ export default function ContentDetailPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+          'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify({
           generated_text: editedText,
@@ -106,6 +115,8 @@ export default function ContentDetailPage() {
   }
 
   const handleDelete = async () => {
+    if (!authToken) return
+
     if (!confirm('Are you sure you want to delete this content? This action cannot be undone.')) {
       return
     }
@@ -114,7 +125,7 @@ export default function ContentDetailPage() {
       const response = await fetch(`/api/content-center/content/${contentId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+          'Authorization': `Bearer ${authToken}`
         }
       })
 
@@ -137,12 +148,14 @@ export default function ContentDetailPage() {
   }
 
   const handleExport = async (format: 'txt' | 'html' | 'md') => {
+    if (!authToken) return
+
     try {
       const response = await fetch(
         `/api/content-center/export/${contentId}?format=${format}`,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+            'Authorization': `Bearer ${authToken}`
           }
         }
       )

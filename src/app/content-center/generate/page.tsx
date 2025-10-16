@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ContentTypeSelector } from '@/components/content-center/ContentTypeSelector'
 import { GenerationControls, GenerationParams } from '@/components/content-center/GenerationControls'
 import { GenerationResultView } from '@/components/content-center/GenerationResultView'
@@ -8,6 +8,7 @@ import { ContentLoader } from '@/components/ui/loading/ContentLoader'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Sparkles } from 'lucide-react'
 import { ContentType, GeneratedContent } from '@/types/content-center'
+import { supabase } from '@/lib/supabase'
 
 type GenerationStep = 'select-type' | 'configure' | 'result'
 
@@ -20,6 +21,18 @@ export default function GeneratePage() {
     generationTimeMs: number
     costEstimate: number
   } | null>(null)
+  const [authToken, setAuthToken] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Get the auth token from Supabase session
+    const getAuthToken = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        setAuthToken(session.access_token)
+      }
+    }
+    getAuthToken()
+  }, [])
 
   const handleSelectType = (type: ContentType) => {
     setSelectedType(type)
@@ -29,6 +42,11 @@ export default function GeneratePage() {
   const handleGenerate = async (params: GenerationParams) => {
     if (!selectedType) return
 
+    if (!authToken) {
+      alert('You must be logged in to generate content. Please log in and try again.')
+      return
+    }
+
     setIsGenerating(true)
 
     try {
@@ -36,7 +54,7 @@ export default function GeneratePage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+          'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify({
           content_type: selectedType,
@@ -51,7 +69,8 @@ export default function GeneratePage() {
       })
 
       if (!response.ok) {
-        throw new Error('Generation failed')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Generation failed')
       }
 
       const data = await response.json()
@@ -68,19 +87,24 @@ export default function GeneratePage() {
       }
     } catch (error) {
       console.error('Error generating content:', error)
-      alert('Failed to generate content. Please try again.')
+      alert(`Failed to generate content: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsGenerating(false)
     }
   }
 
   const handleSave = async (content: GeneratedContent) => {
+    if (!authToken) {
+      alert('You must be logged in to save content.')
+      return
+    }
+
     try {
       const response = await fetch(`/api/content-center/content/${content.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+          'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify({
           generated_text: content.generated_text,
