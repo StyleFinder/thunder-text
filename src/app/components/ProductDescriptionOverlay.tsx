@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Card, Frame, Modal, Button, FormLayout, TextField, Select, RadioButton, Stack, Thumbnail, Badge, Banner, Spinner, Layout, Page, Icon } from '@shopify/polaris'
 import { CloseIcon, ImageIcon, EditIcon, CheckIcon } from '@shopify/polaris-icons'
+import { useSearchParams } from 'next/navigation'
 
 interface ProductImage {
   id: string
@@ -73,12 +74,15 @@ const FOCUS_AREAS = [
   'Sustainability'
 ]
 
-export default function ProductDescriptionOverlay({ 
-  isOpen, 
-  onClose, 
-  productData, 
-  onApply 
+export default function ProductDescriptionOverlay({
+  isOpen,
+  onClose,
+  productData,
+  onApply
 }: ProductDescriptionOverlayProps) {
+  const searchParams = useSearchParams()
+  const shop = searchParams?.get('shop') || ''
+
   const [currentStep, setCurrentStep] = useState(1)
   const [selectedImages, setSelectedImages] = useState<string[]>([])
   const [brandVoice, setBrandVoice] = useState('professional')
@@ -635,8 +639,8 @@ export default function ProductDescriptionOverlay({
           <Button onClick={() => setCurrentStep(4)}>
             Regenerate
           </Button>
-          <Button 
-            primary 
+          <Button
+            primary
             loading={applying}
             onClick={handleApplyContent}
           >
@@ -648,27 +652,29 @@ export default function ProductDescriptionOverlay({
   )
 
   return (
-    <Modal
-      open={isOpen}
-      onClose={onClose}
-      title="Generate Product Description"
-      large
-      primaryAction={{
-        content: 'Close',
-        onAction: onClose,
-      }}
-    >
-      <Modal.Section>
-        <div style={{ minHeight: '600px' }}>
-          {renderStepIndicator()}
-          
-          {currentStep === 1 && renderDataReview()}
-          {currentStep === 2 && renderImageSelection()}
-          {currentStep === 3 && renderGenerationSettings()}
-          {currentStep === 4 && renderGenerationPreview()}
-          {currentStep === 5 && renderResults()}
-        </div>
-      </Modal.Section>
-    </Modal>
+    <>
+      <Modal
+        open={isOpen}
+        onClose={onClose}
+        title="Generate Product Description"
+        large
+        primaryAction={{
+          content: 'Close',
+          onAction: onClose,
+        }}
+      >
+        <Modal.Section>
+          <div style={{ minHeight: '600px' }}>
+            {renderStepIndicator()}
+
+            {currentStep === 1 && renderDataReview()}
+            {currentStep === 2 && renderImageSelection()}
+            {currentStep === 3 && renderGenerationSettings()}
+            {currentStep === 4 && renderGenerationPreview()}
+            {currentStep === 5 && renderResults()}
+          </div>
+        </Modal.Section>
+      </Modal>
+    </>
   )
 }

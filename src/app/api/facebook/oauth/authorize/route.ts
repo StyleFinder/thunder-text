@@ -61,10 +61,13 @@ export async function GET(request: NextRequest) {
 
     // Generate state parameter with shop context for callback
     // State is used to prevent CSRF attacks and maintain context
+    // Include host and embedded params to restore Shopify embedded app context after OAuth
     const state = Buffer.from(
       JSON.stringify({
         shop_id: shopData.id,
         shop_domain: shopData.shop_domain,
+        host: searchParams.get('host'),
+        embedded: searchParams.get('embedded'),
         timestamp: Date.now(),
       })
     ).toString('base64url')
@@ -97,6 +100,17 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error in Facebook OAuth authorize:', error)
+
+    // Redirect to Facebook Ads page with error if shop is known
+    if (shop) {
+      const redirectUrl = new URL('/facebook-ads', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+      redirectUrl.searchParams.set('shop', shop)
+      redirectUrl.searchParams.set('authenticated', 'true')
+      redirectUrl.searchParams.set('facebook_error', 'true')
+      redirectUrl.searchParams.set('message', 'Failed to initiate Facebook authorization. Please try again.')
+      return NextResponse.redirect(redirectUrl.toString())
+    }
+
     return NextResponse.json(
       { error: 'Failed to initiate Facebook authorization' },
       { status: 500 }
