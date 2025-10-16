@@ -2,17 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   ApiResponse,
   GenerateVoiceProfileResponse,
-  InsufficientSamplesError
+  InsufficientSamplesError,
+  ContentSample
 } from '@/types/content-center'
 import { getUserId, getSupabaseAdmin } from '@/lib/auth/content-center-auth'
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
+import { generateVoiceProfile, validateVoiceProfile } from '@/lib/services/voice-profile-generator'
 
 /**
  * POST /api/content-center/voice/generate
- * Generate a brand voice profile from active samples
- *
- * Note: OpenAI integration will be implemented in Task Group 1.5
- * For now, this is a placeholder that creates a mock profile
+ * Generate a brand voice profile from active samples using OpenAI
  */
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<GenerateVoiceProfileResponse>>> {
   const startTime = Date.now()
@@ -53,39 +52,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       throw new InsufficientSamplesError(samples?.length || 0, 3)
     }
 
-    // TODO: Task Group 1.5 - Implement OpenAI voice profile generation
-    // For now, create a placeholder profile
-    const mockProfile = `Brand Voice Profile (Generated from ${samples.length} samples):
+    // Generate voice profile using OpenAI
+    const { profileText, tokensUsed, generationTimeMs } = await generateVoiceProfile(
+      samples as ContentSample[]
+    )
 
-TONE CHARACTERISTICS:
-- Primary: [AI will analyze tone from samples]
-- Secondary: [AI will analyze secondary tone]
-- Emotional Quality: [AI will analyze emotional quality]
-
-WRITING STYLE:
-- Sentence Length: [AI will analyze sentence patterns]
-- Paragraph Structure: [AI will analyze paragraph structure]
-- Punctuation: [AI will analyze punctuation usage]
-- Contractions: [AI will analyze contraction frequency]
-
-VOCABULARY PATTERNS:
-- Preferred Terms: [AI will identify preferred vocabulary]
-- Avoided Terms: [AI will identify avoided terms]
-- Signature Phrases: [AI will extract signature phrases]
-- Descriptive Style: [AI will analyze descriptive approach]
-
-BRAND PERSONALITY:
-- Voice Type: [AI will categorize voice type]
-- Perspective: [AI will identify narrative perspective]
-- Humor Level: [AI will assess humor usage]
-- Authority: [AI will gauge authority tone]
-
-FORMATTING PREFERENCES:
-- Lists: [AI will analyze list usage]
-- Headers: [AI will analyze header style]
-- Emphasis: [AI will identify emphasis patterns]
-
-NOTE: This is a placeholder profile. OpenAI integration coming in Task Group 1.5.`
+    // Validate profile quality
+    const validation = validateVoiceProfile(profileText)
+    if (!validation.valid) {
+      console.error('Generated profile failed quality validation:', validation.issues)
+      // Still save the profile but log the issues
+    }
 
     // Get current version number
     const { data: existingProfiles } = await supabase
@@ -108,7 +85,7 @@ NOTE: This is a placeholder profile. OpenAI integration coming in Task Group 1.5
       .from('brand_voice_profiles')
       .insert({
         user_id: userId,
-        profile_text: mockProfile,
+        profile_text: profileText,
         profile_version: nextVersion,
         is_current: true,
         user_edited: false,
@@ -125,13 +102,13 @@ NOTE: This is a placeholder profile. OpenAI integration coming in Task Group 1.5
       )
     }
 
-    const generationTime = Date.now() - startTime
-
     return NextResponse.json({
       success: true,
       data: {
         profile: newProfile,
-        generation_time_ms: generationTime
+        generation_time_ms: generationTimeMs,
+        tokens_used: tokensUsed,
+        samples_analyzed: samples.length
       }
     }, { status: 201 })
 
