@@ -40,9 +40,9 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/content-center/voice',
-    label: 'Voice Profile',
+    label: 'Brand Voice',
     icon: User,
-    description: 'Manage brand voice'
+    description: 'Define your brand messaging'
   },
   {
     href: '/content-center/samples',
