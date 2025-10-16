@@ -62,6 +62,61 @@ async function getAccessTokenAndPageId(shopId: string): Promise<{
 }
 
 /**
+ * Upload image to Facebook Ad Account
+ */
+async function uploadAdImage(
+  accessToken: string,
+  adAccountId: string,
+  imageUrl: string
+): Promise<{ hash: string }> {
+  const url = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/adimages`)
+  url.searchParams.set('access_token', accessToken)
+
+  // Fetch the image from the URL
+  const imageResponse = await fetch(imageUrl)
+  if (!imageResponse.ok) {
+    throw new FacebookAPIError(
+      `Failed to fetch image from ${imageUrl}`,
+      imageResponse.status,
+      'IMAGE_FETCH_ERROR'
+    )
+  }
+
+  const imageBuffer = await imageResponse.arrayBuffer()
+  const imageBlob = new Blob([imageBuffer])
+
+  // Create form data with the image
+  const formData = new FormData()
+  formData.append('bytes', imageBlob)
+
+  const response = await fetch(url.toString(), {
+    method: 'POST',
+    body: formData
+  })
+
+  const data = await response.json()
+
+  console.log('🖼️ Facebook API uploadAdImage response:', {
+    status: response.status,
+    ok: response.ok,
+    data
+  })
+
+  if (!response.ok || data.error) {
+    console.error('❌ Facebook API uploadAdImage error:', data.error)
+    throw new FacebookAPIError(
+      data.error?.message || 'Failed to upload image',
+      response.status,
+      data.error?.code,
+      data.error?.type
+    )
+  }
+
+  // Response format: { images: { bytes: { hash: "abc123" } } }
+  return { hash: data.images?.bytes?.hash }
+}
+
+/**
  * Create ad creative on Facebook
  */
 async function createAdCreative(
@@ -69,7 +124,7 @@ async function createAdCreative(
   adAccountId: string,
   title: string,
   body: string,
-  imageUrl: string,
+  imageHash: string,
   productUrl: string,
   pageId: string
 ): Promise<{ id: string }> {
@@ -81,7 +136,7 @@ async function createAdCreative(
     object_story_spec: {
       page_id: pageId, // Required: Facebook page to post from
       link_data: {
-        image_url: imageUrl,
+        image_hash: imageHash, // Use image hash instead of image_url
         link: productUrl, // Link to Shopify product page
         message: body,
         name: title
@@ -299,19 +354,30 @@ export async function POST(request: NextRequest) {
         productUrl = `https://${shop}/products/${productHandle}`
       }
 
-      console.log('📦 Creating ad creative with:', {
+      const imageUrl = draft.selected_image_url || draft.image_urls[0]
+
+      console.log('📦 Creating ad with:', {
         pageId,
         productUrl,
-        imageUrl: draft.selected_image_url || draft.image_urls[0]
+        imageUrl
       })
 
-      // Create ad creative
+      // Upload image to Facebook first
+      console.log('🖼️ Uploading image to Facebook...')
+      const { hash: imageHash } = await uploadAdImage(
+        accessToken,
+        draft.facebook_ad_account_id,
+        imageUrl
+      )
+      console.log('✅ Image uploaded with hash:', imageHash)
+
+      // Create ad creative with image hash
       const creative = await createAdCreative(
         accessToken,
         draft.facebook_ad_account_id,
         draft.ad_title,
         draft.ad_copy,
-        draft.selected_image_url || draft.image_urls[0],
+        imageHash,
         productUrl,
         pageId
       )
