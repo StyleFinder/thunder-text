@@ -8,7 +8,6 @@ import { ContentLoader } from '@/components/ui/loading/ContentLoader'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Sparkles } from 'lucide-react'
 import { ContentType, GeneratedContent } from '@/types/content-center'
-import { supabase } from '@/lib/supabase'
 
 type GenerationStep = 'select-type' | 'configure' | 'result'
 
@@ -21,17 +20,25 @@ export default function GeneratePage() {
     generationTimeMs: number
     costEstimate: number
   } | null>(null)
-  const [authToken, setAuthToken] = useState<string | null>(null)
+  const [shopDomain, setShopDomain] = useState<string | null>(null)
 
   useEffect(() => {
-    // Get the auth token from Supabase session
-    const getAuthToken = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.access_token) {
-        setAuthToken(session.access_token)
+    // Get shop domain from URL parameters or localStorage
+    const getShopDomain = () => {
+      const params = new URLSearchParams(window.location.search)
+      let shop = params.get('shop')
+
+      if (!shop) {
+        // Try to get from localStorage (set during Shopify OAuth)
+        shop = localStorage.getItem('shop_domain')
+      }
+
+      if (shop) {
+        setShopDomain(shop)
+        localStorage.setItem('shop_domain', shop)
       }
     }
-    getAuthToken()
+    getShopDomain()
   }, [])
 
   const handleSelectType = (type: ContentType) => {
@@ -42,8 +49,8 @@ export default function GeneratePage() {
   const handleGenerate = async (params: GenerationParams) => {
     if (!selectedType) return
 
-    if (!authToken) {
-      alert('You must be logged in to generate content. Please log in and try again.')
+    if (!shopDomain) {
+      alert('Shop authentication required. Please access this page from your Shopify admin.')
       return
     }
 
@@ -54,7 +61,7 @@ export default function GeneratePage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
+          'Authorization': `Bearer ${shopDomain}`
         },
         body: JSON.stringify({
           content_type: selectedType,
@@ -94,8 +101,8 @@ export default function GeneratePage() {
   }
 
   const handleSave = async (content: GeneratedContent) => {
-    if (!authToken) {
-      alert('You must be logged in to save content.')
+    if (!shopDomain) {
+      alert('Shop authentication required.')
       return
     }
 
@@ -104,7 +111,7 @@ export default function GeneratePage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
+          'Authorization': `Bearer ${shopDomain}`
         },
         body: JSON.stringify({
           generated_text: content.generated_text,
