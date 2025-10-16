@@ -63,19 +63,32 @@ async function getAccessTokenAndPageId(shopId: string): Promise<{
 
 /**
  * Upload image to Facebook Ad Account by URL
- * Let Facebook fetch the image directly from the URL
+ * Since copy_from doesn't work for external URLs, we'll use bytes upload
  */
 async function uploadAdImage(
   accessToken: string,
   adAccountId: string,
   imageUrl: string
 ): Promise<{ hash: string }> {
+  // Fetch image from Shopify CDN
+  const imageResponse = await fetch(imageUrl)
+  if (!imageResponse.ok) {
+    throw new FacebookAPIError(
+      `Failed to fetch image from ${imageUrl}`,
+      imageResponse.status,
+      'IMAGE_FETCH_ERROR'
+    )
+  }
+
+  const imageBuffer = await imageResponse.arrayBuffer()
+  const base64Image = Buffer.from(imageBuffer).toString('base64')
+
+  // Upload using bytes parameter (base64-encoded image)
   const url = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/adimages`)
   url.searchParams.set('access_token', accessToken)
 
-  // Use copy_from parameter with JSON object containing url
   const formData = new FormData()
-  formData.append('copy_from', JSON.stringify({ url: imageUrl }))
+  formData.append('bytes', base64Image)
 
   const response = await fetch(url.toString(), {
     method: 'POST',
@@ -100,10 +113,8 @@ async function uploadAdImage(
     )
   }
 
-  // Response format: { images: { <url>: { hash: "abc123" } } }
-  // The key is the URL we provided
-  const imageData = data.images?.[imageUrl] || data.images?.bytes
-  return { hash: imageData?.hash }
+  // Response format: { images: { bytes: { hash: "abc123" } } }
+  return { hash: data.images?.bytes?.hash }
 }
 
 /**
