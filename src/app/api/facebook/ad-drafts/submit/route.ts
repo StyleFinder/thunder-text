@@ -83,11 +83,18 @@ async function uploadAdImage(
   }
 
   const imageBuffer = await imageResponse.arrayBuffer()
-  const imageBlob = new Blob([imageBuffer])
+
+  // Determine file extension from URL or content-type
+  const contentType = imageResponse.headers.get('content-type') || 'image/png'
+  const extension = imageUrl.match(/\.(jpg|jpeg|png|gif)(\?|$)/i)?.[1] || 'png'
+  const filename = `ad-image.${extension}`
+
+  // Create blob with proper content type
+  const imageBlob = new Blob([imageBuffer], { type: contentType })
 
   // Create form data with the image
   const formData = new FormData()
-  formData.append('bytes', imageBlob)
+  formData.append('bytes', imageBlob, filename)
 
   const response = await fetch(url.toString(), {
     method: 'POST',
