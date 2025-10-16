@@ -164,17 +164,19 @@ export default function ContentCenterDashboard() {
           <CardContent className="p-0">
             <div className="divide-y">
               {recentContent.map((content) => (
-                <Link
+                <div
                   key={content.id}
-                  href={`/content-center/library/${content.id}`}
-                  className="block p-4 hover:bg-muted/50 transition-colors"
+                  className="block p-4 bg-muted/30"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium">{content.title}</h3>
+                        <h3 className="font-medium text-muted-foreground">{content.title}</h3>
                         <Badge variant="secondary" className="text-xs">
                           {content.type.replace('_', ' ')}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          Sample
                         </Badge>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -183,10 +185,14 @@ export default function ContentCenterDashboard() {
                         <span>{content.createdAt}</span>
                       </div>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground mt-1" />
                   </div>
-                </Link>
+                </div>
               ))}
+              <div className="p-4 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Your generated content will appear here
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
