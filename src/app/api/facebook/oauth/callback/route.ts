@@ -256,10 +256,11 @@ export async function GET(request: NextRequest) {
           token_expires_at: tokenExpiresAt.toISOString(),
           provider_account_id: userInfo.id,
           provider_account_name: userInfo.name,
-          facebook_page_id: primaryPage?.id || null,
+          // facebook_page_id: primaryPage?.id || null, // TEMP: Commented out due to schema cache issue
           is_active: true,
           additional_metadata: {
             email: userInfo.email,
+            facebook_page_id: primaryPage?.id || null, // Stored in metadata until schema cache refreshes
             ad_accounts: adAccounts.map(acc => ({
               id: acc.id,
               account_id: acc.account_id,
