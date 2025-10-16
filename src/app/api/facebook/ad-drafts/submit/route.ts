@@ -62,7 +62,8 @@ async function getAccessTokenAndPageId(shopId: string): Promise<{
 }
 
 /**
- * Upload image to Facebook Ad Account
+ * Upload image to Facebook Ad Account by URL
+ * Let Facebook fetch the image directly from the URL
  */
 async function uploadAdImage(
   accessToken: string,
@@ -72,29 +73,9 @@ async function uploadAdImage(
   const url = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/adimages`)
   url.searchParams.set('access_token', accessToken)
 
-  // Fetch the image from the URL
-  const imageResponse = await fetch(imageUrl)
-  if (!imageResponse.ok) {
-    throw new FacebookAPIError(
-      `Failed to fetch image from ${imageUrl}`,
-      imageResponse.status,
-      'IMAGE_FETCH_ERROR'
-    )
-  }
-
-  const imageBuffer = await imageResponse.arrayBuffer()
-
-  // Determine file extension from URL or content-type
-  const contentType = imageResponse.headers.get('content-type') || 'image/png'
-  const extension = imageUrl.match(/\.(jpg|jpeg|png|gif)(\?|$)/i)?.[1] || 'png'
-  const filename = `ad-image.${extension}`
-
-  // Create blob with proper content type
-  const imageBlob = new Blob([imageBuffer], { type: contentType })
-
-  // Create form data with the image
+  // Use copy_from parameter to let Facebook fetch the image from URL
   const formData = new FormData()
-  formData.append('bytes', imageBlob, filename)
+  formData.append('copy_from', imageUrl)
 
   const response = await fetch(url.toString(), {
     method: 'POST',
@@ -119,8 +100,10 @@ async function uploadAdImage(
     )
   }
 
-  // Response format: { images: { bytes: { hash: "abc123" } } }
-  return { hash: data.images?.bytes?.hash }
+  // Response format: { images: { <url>: { hash: "abc123" } } }
+  // The key is the URL we provided
+  const imageData = data.images?.[imageUrl] || data.images?.bytes
+  return { hash: imageData?.hash }
 }
 
 /**
