@@ -175,37 +175,69 @@ async function createAdCreative(
 }
 
 /**
- * Create ad in campaign
+ * Get or create ad set for campaign
+ * Fetches existing ad sets from campaign and uses the first active one
+ * This ensures we inherit campaign's bid strategy and optimization settings
  */
-async function createAd(
+async function getOrCreateAdSet(
   accessToken: string,
   adAccountId: string,
   campaignId: string,
-  creativeId: string,
   adName: string
-): Promise<{ id: string }> {
-  // First, we need to get or create an ad set
-  // For simplicity, we'll create a basic ad set
+): Promise<string> {
+  // First, fetch existing ad sets from the campaign
+  const campaignAdSetsUrl = new URL(`${FACEBOOK_GRAPH_URL}/${campaignId}/adsets`)
+  campaignAdSetsUrl.searchParams.set('access_token', accessToken)
+  campaignAdSetsUrl.searchParams.set('fields', 'id,name,status,effective_status')
+  campaignAdSetsUrl.searchParams.set('limit', '25')
+
+  console.log('📊 [ADSET FETCH] Fetching existing ad sets from campaign:', campaignId)
+
+  const fetchResponse = await fetch(campaignAdSetsUrl.toString())
+  const fetchResult = await fetchResponse.json()
+
+  console.log('📊 [ADSET FETCH] Campaign ad sets response:', {
+    status: fetchResponse.status,
+    ok: fetchResponse.ok,
+    adSetsCount: fetchResult.data?.length || 0,
+    hasError: !!fetchResult.error
+  })
+
+  if (fetchResponse.ok && fetchResult.data && fetchResult.data.length > 0) {
+    // Use the first ad set (preferably active)
+    const activeAdSet = fetchResult.data.find((as: any) =>
+      as.status === 'ACTIVE' || as.effective_status === 'ACTIVE'
+    ) || fetchResult.data[0]
+
+    console.log('✅ [ADSET FETCH] Using existing ad set:', {
+      id: activeAdSet.id,
+      name: activeAdSet.name,
+      status: activeAdSet.status
+    })
+
+    return activeAdSet.id
+  }
+
+  // If no ad sets exist, create a minimal one that inherits campaign settings
+  console.log('⚠️ [ADSET FETCH] No existing ad sets found, creating new one')
+
   const adSetUrl = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/adsets`)
   adSetUrl.searchParams.set('access_token', accessToken)
 
+  // Minimal ad set - only required fields, no bid strategy overrides
   const adSetData = {
     name: `Ad Set for ${adName}`,
     campaign_id: campaignId,
-    daily_budget: 1000, // $10.00 in cents - user can adjust in Ads Manager
-    billing_event: 'IMPRESSIONS',
-    optimization_goal: 'REACH',
     status: 'PAUSED', // Start paused so user can review
     targeting: {
       geo_locations: {
-        countries: ['US'] // Default targeting - user can adjust
+        countries: ['US'] // Minimal default targeting
       }
     }
-    // Note: bid_amount removed - Facebook will optimize automatically using LOWEST_COST_WITHOUT_CAP strategy
+    // NO bid_amount, billing_event, optimization_goal - these are inherited from campaign
   }
 
-  console.log('📊 [ADSET DEBUG] Creating adSet with data:', JSON.stringify(adSetData, null, 2))
-  console.log('📊 [ADSET DEBUG] URL:', adSetUrl.toString().replace(/access_token=[^&]+/, 'access_token=REDACTED'))
+  console.log('📊 [ADSET CREATE] Creating minimal adSet:', JSON.stringify(adSetData, null, 2))
 
   const adSetResponse = await fetch(adSetUrl.toString(), {
     method: 'POST',
@@ -217,7 +249,7 @@ async function createAd(
 
   const adSetResult = await adSetResponse.json()
 
-  console.log('📊 [ADSET DEBUG] AdSet creation response:', {
+  console.log('📊 [ADSET CREATE] AdSet creation response:', {
     status: adSetResponse.status,
     ok: adSetResponse.ok,
     result: adSetResult,
@@ -225,12 +257,11 @@ async function createAd(
   })
 
   if (!adSetResponse.ok || adSetResult.error) {
-    console.error('❌ [ADSET DEBUG] AdSet creation failed:', {
+    console.error('❌ [ADSET CREATE] AdSet creation failed:', {
       error: adSetResult.error,
       errorMessage: adSetResult.error?.error_user_msg,
       errorSubcode: adSetResult.error?.error_subcode,
       errorUserTitle: adSetResult.error?.error_user_title,
-      errorData: adSetResult.error?.error_data,
       fullError: JSON.stringify(adSetResult.error, null, 2)
     })
     throw new FacebookAPIError(
@@ -241,15 +272,30 @@ async function createAd(
     )
   }
 
-  console.log('✅ [ADSET DEBUG] AdSet created successfully:', adSetResult.id)
+  console.log('✅ [ADSET CREATE] AdSet created successfully:', adSetResult.id)
+  return adSetResult.id
+}
 
-  // Now create the ad
+/**
+ * Create ad in campaign using existing ad set
+ */
+async function createAd(
+  accessToken: string,
+  adAccountId: string,
+  campaignId: string,
+  creativeId: string,
+  adName: string
+): Promise<{ id: string }> {
+  // Get or create ad set (preferring existing ones)
+  const adSetId = await getOrCreateAdSet(accessToken, adAccountId, campaignId, adName)
+
+  // Now create the ad - only needs creative, name, and status
   const adUrl = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/ads`)
   adUrl.searchParams.set('access_token', accessToken)
 
   const adData = {
     name: adName,
-    adset_id: adSetResult.id,
+    adset_id: adSetId,
     creative: { creative_id: creativeId },
     status: 'PAUSED' // Start paused so user can review
   }
@@ -295,7 +341,7 @@ async function createAd(
 
   return {
     id: adResult.id,
-    adset_id: adSetResult.id
+    adset_id: adSetId
   }
 }
 
