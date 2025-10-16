@@ -15,6 +15,7 @@ import {
   QuestionCircleIcon,
   EditIcon,
   MarketingIcon,
+  TextIcon,
 } from '@shopify/polaris-icons'
 import { useNavigation } from '../hooks/useNavigation'
 
@@ -84,6 +85,20 @@ function NavigationContent({ children }: AppNavigationProps) {
       }),
       exactMatch: false,
       matchPaths: ['/facebook-ads', '/test-campaigns']
+    },
+    {
+      url: buildUrl('/content-center'),
+      label: 'Content Center',
+      icon: TextIcon,
+      onClick: () => navigateTo('/content-center'),
+      matches: isActive({
+        label: 'Content Center',
+        url: buildUrl('/content-center'),
+        matchPaths: ['/content-center'],
+        exactMatch: false
+      }),
+      exactMatch: false,
+      matchPaths: ['/content-center']
     },
     {
       url: buildUrl('/settings'),
