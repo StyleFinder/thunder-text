@@ -148,34 +148,6 @@ export default function ContentCenterDashboard() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map((action, idx) => {
-            const Icon = action.icon
-            return (
-              <Link key={idx} href={action.href}>
-                <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="bg-primary/10 p-3 rounded-lg">
-                        <Icon className="h-6 w-6 text-primary" />
-                      </div>
-                      <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <CardTitle className="text-base mb-1">{action.title}</CardTitle>
-                    <CardDescription>{action.description}</CardDescription>
-                  </CardContent>
-                </Card>
-              </Link>
-            )
-          })}
-        </div>
-      </div>
-
       {/* Recent Content */}
       <div>
         <div className="flex items-center justify-between mb-4">

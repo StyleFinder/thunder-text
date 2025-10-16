@@ -24,7 +24,7 @@ const NAV_ITEMS: NavItem[] = [
     href: '/content-center',
     label: 'Dashboard',
     icon: Home,
-    description: 'Overview and quick actions'
+    description: 'Overview and stats'
   },
   {
     href: '/content-center/generate',
@@ -42,13 +42,7 @@ const NAV_ITEMS: NavItem[] = [
     href: '/content-center/voice',
     label: 'Brand Voice',
     icon: User,
-    description: 'Define your brand messaging'
-  },
-  {
-    href: '/content-center/samples',
-    label: 'Samples',
-    icon: Upload,
-    description: 'Upload writing samples'
+    description: 'Voice settings & samples'
   }
 ]
 
@@ -83,11 +77,6 @@ export default function ContentCenterLayout({
                 </p>
               </div>
             </div>
-
-            <Button variant="ghost" size="sm" className="text-gray-700 hover:text-gray-900 hover:bg-gray-100">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Button>
           </div>
 
           {/* Navigation Tabs */}
