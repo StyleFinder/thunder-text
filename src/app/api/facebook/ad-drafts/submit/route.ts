@@ -204,6 +204,9 @@ async function createAd(
     }
   }
 
+  console.log('📊 [ADSET DEBUG] Creating adSet with data:', JSON.stringify(adSetData, null, 2))
+  console.log('📊 [ADSET DEBUG] URL:', adSetUrl.toString().replace(/access_token=[^&]+/, 'access_token=REDACTED'))
+
   const adSetResponse = await fetch(adSetUrl.toString(), {
     method: 'POST',
     headers: {
@@ -214,7 +217,22 @@ async function createAd(
 
   const adSetResult = await adSetResponse.json()
 
+  console.log('📊 [ADSET DEBUG] AdSet creation response:', {
+    status: adSetResponse.status,
+    ok: adSetResponse.ok,
+    result: adSetResult,
+    hasError: !!adSetResult.error
+  })
+
   if (!adSetResponse.ok || adSetResult.error) {
+    console.error('❌ [ADSET DEBUG] AdSet creation failed:', {
+      error: adSetResult.error,
+      errorMessage: adSetResult.error?.error_user_msg,
+      errorSubcode: adSetResult.error?.error_subcode,
+      errorUserTitle: adSetResult.error?.error_user_title,
+      errorData: adSetResult.error?.error_data,
+      fullError: JSON.stringify(adSetResult.error, null, 2)
+    })
     throw new FacebookAPIError(
       adSetResult.error?.message || 'Failed to create ad set',
       adSetResponse.status,
@@ -222,6 +240,8 @@ async function createAd(
       adSetResult.error?.type
     )
   }
+
+  console.log('✅ [ADSET DEBUG] AdSet created successfully:', adSetResult.id)
 
   // Now create the ad
   const adUrl = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/ads`)
@@ -234,6 +254,9 @@ async function createAd(
     status: 'PAUSED' // Start paused so user can review
   }
 
+  console.log('📢 [AD DEBUG] Creating ad with data:', JSON.stringify(adData, null, 2))
+  console.log('📢 [AD DEBUG] URL:', adUrl.toString().replace(/access_token=[^&]+/, 'access_token=REDACTED'))
+
   const adResponse = await fetch(adUrl.toString(), {
     method: 'POST',
     headers: {
@@ -244,14 +267,22 @@ async function createAd(
 
   const adResult = await adResponse.json()
 
-  console.log('📢 Facebook API createAd response:', {
+  console.log('📢 [AD DEBUG] Ad creation response:', {
     status: adResponse.status,
     ok: adResponse.ok,
-    adResult
+    result: adResult,
+    hasError: !!adResult.error
   })
 
   if (!adResponse.ok || adResult.error) {
-    console.error('❌ Facebook API createAd error:', adResult.error)
+    console.error('❌ [AD DEBUG] Ad creation failed:', {
+      error: adResult.error,
+      errorMessage: adResult.error?.error_user_msg,
+      errorSubcode: adResult.error?.error_subcode,
+      errorUserTitle: adResult.error?.error_user_title,
+      errorData: adResult.error?.error_data,
+      fullError: JSON.stringify(adResult.error, null, 2)
+    })
     throw new FacebookAPIError(
       adResult.error?.message || 'Failed to create ad',
       adResponse.status,
@@ -259,6 +290,8 @@ async function createAd(
       adResult.error?.type
     )
   }
+
+  console.log('✅ [AD DEBUG] Ad created successfully:', adResult.id)
 
   return {
     id: adResult.id,
