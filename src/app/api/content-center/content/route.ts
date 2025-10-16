@@ -10,7 +10,20 @@ import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
 
 /**
  * GET /api/content-center/content
- * List generated content with pagination and filtering
+ * List generated content with pagination, filtering, search, and sorting
+ *
+ * Query parameters:
+ * - page: Page number (default: 1)
+ * - page_size: Items per page (default: 20)
+ * - content_type: Filter by content type
+ * - platform: Filter by platform
+ * - is_saved: Filter by saved status (true/false)
+ * - saved_only: Show only saved content (true/false)
+ * - date_from: Filter by creation date (from)
+ * - date_to: Filter by creation date (to)
+ * - search: Search in topic and content text
+ * - sort_by: Sort field (created_at, updated_at, word_count, topic)
+ * - sort_order: Sort order (asc, desc)
  */
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<ListContentResponse>>> {
   try {
@@ -35,9 +48,12 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const contentType = searchParams.get('content_type')
     const platform = searchParams.get('platform')
     const isSaved = searchParams.get('is_saved')
+    const savedOnly = searchParams.get('saved_only') === 'true'
     const dateFrom = searchParams.get('date_from')
     const dateTo = searchParams.get('date_to')
     const search = searchParams.get('search')
+    const sortBy = searchParams.get('sort_by') || 'created_at'
+    const sortOrder = searchParams.get('sort_order') || 'desc'
 
     const supabase = getSupabaseAdmin()
 
@@ -60,6 +76,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       query = query.eq('is_saved', isSaved === 'true')
     }
 
+    if (savedOnly) {
+      query = query.eq('is_saved', true)
+    }
+
     if (dateFrom) {
       query = query.gte('created_at', dateFrom)
     }
@@ -72,12 +92,17 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       query = query.or(`topic.ilike.%${search}%,generated_text.ilike.%${search}%`)
     }
 
+    // Apply sorting
+    const validSortFields = ['created_at', 'updated_at', 'word_count', 'topic']
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'created_at'
+    const ascending = sortOrder === 'asc'
+
     // Apply pagination
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
 
     query = query
-      .order('created_at', { ascending: false })
+      .order(sortField, { ascending })
       .range(from, to)
 
     const { data: content, error, count } = await query
