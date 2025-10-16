@@ -28,7 +28,7 @@ async function getAccessTokenAndPageId(shopId: string): Promise<{
 
   const { data: integration, error } = await supabaseAdmin
     .from('integrations')
-    .select('encrypted_access_token, facebook_page_id, id, provider, is_active')
+    .select('encrypted_access_token, additional_metadata, id, provider, is_active')
     .eq('shop_id', shopId)
     .eq('provider', 'facebook')
     .eq('is_active', true)
@@ -51,9 +51,13 @@ async function getAccessTokenAndPageId(shopId: string): Promise<{
   const accessToken = await decryptToken(integration.encrypted_access_token)
   console.log('✅ [SUBMIT DEBUG] Token decrypted successfully')
 
+  // Get facebook_page_id from additional_metadata
+  const metadata = integration.additional_metadata as any
+  const pageId = metadata?.facebook_page_id || null
+
   return {
     accessToken,
-    pageId: integration.facebook_page_id
+    pageId
   }
 }
 
