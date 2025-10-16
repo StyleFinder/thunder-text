@@ -56,7 +56,7 @@ function FacebookAdsContent() {
     if (shop) {
       checkFacebookConnection()
     }
-  }, [shop])
+  }, [shop, facebookConnected]) // Refetch when returning from OAuth
 
   // Show success/error banner when redirected from OAuth
   useEffect(() => {
