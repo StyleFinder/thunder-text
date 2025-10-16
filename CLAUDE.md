@@ -500,3 +500,51 @@ https://thunder-text.onrender.com/products?shop=zunosai-staging-test-store&authe
 ```
 
 This configuration enables SuperClaude to provide optimal development support for Thunder Text across all phases, with intelligent tool selection, persistent context management, and phase-appropriate development patterns.
+
+---
+
+## Technical Debt & Future Work
+
+### High Priority TODOs
+
+1. **OAuth Token Storage** ([product-updater.ts:244](src/lib/shopify/product-updater.ts#L244))
+   - **Status**: Using placeholder tokens
+   - **Issue**: Need proper OAuth token retrieval from database
+   - **Impact**: Limited to single-shop testing
+   - **Priority**: HIGH - Required for multi-tenant production
+
+2. **Analytics Integration** ([product-enhancement.ts:137](src/lib/shopify/product-enhancement.ts#L137))
+   - **Status**: Mock data being used
+   - **Issue**: Need real analytics for performance tracking
+   - **Impact**: Cannot provide accurate product performance insights
+   - **Priority**: MEDIUM - Required for Phase 2 features
+
+3. **Image Upload Handling** ([products/create/route.ts:211](src/app/api/shopify/products/create/route.ts#L211))
+   - **Status**: Basic implementation
+   - **Issue**: Need proper image validation and optimization
+   - **Impact**: Potential performance and quality issues
+   - **Priority**: MEDIUM - Quality improvement
+
+### Low Priority TODOs
+
+4. **Usage Tracking** ([generate/create/route.ts:278](src/app/api/generate/create/route.ts#L278))
+   - **Status**: Not implemented
+   - **Issue**: Need to track AI generation usage for billing
+   - **Impact**: Cannot bill customers accurately
+   - **Priority**: LOW - Required before public launch
+
+5. **Template System Integration** ([generate/enhance/templates/route.ts:12](src/app/api/generate/enhance/templates/route.ts#L12))
+   - **Status**: Placeholder implementation
+   - **Issue**: Need full template system integration
+   - **Impact**: Limited customization options
+   - **Priority**: LOW - Nice-to-have feature
+
+### Completed Features
+
+✅ **Facebook Ads Integration** (2025-10-16)
+- OAuth flow with Facebook Business
+- Campaign and ad account selection
+- AI-powered ad content generation
+- Image upload to Facebook
+- Ad creative and ad creation
+- Uses existing campaign ad sets (respects bid strategies)
