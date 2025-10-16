@@ -130,7 +130,7 @@ export function GenerationControls({
           </div>
 
           {/* Word Count */}
-          <div className="space-y-3">
+          <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-gray-50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Label>Word Count</Label>
@@ -158,7 +158,7 @@ export function GenerationControls({
           </div>
 
           {/* Tone Intensity */}
-          <div className="space-y-3">
+          <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-gray-50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Label>Tone Intensity</Label>
@@ -169,11 +169,15 @@ export function GenerationControls({
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">
-                      How strongly should your brand personality come through?
-                      Higher = more distinctive voice, Lower = more neutral tone
-                    </p>
+                  <TooltipContent className="max-w-sm">
+                    <div className="space-y-2">
+                      <p className="font-semibold">How strongly should your brand personality shine through?</p>
+                      <ul className="space-y-1 text-xs">
+                        <li><strong>Gentle (1-2):</strong> Subtle brand voice, mostly neutral and professional tone</li>
+                        <li><strong>Moderate (3):</strong> Balanced mix of your brand personality with clear messaging</li>
+                        <li><strong>Strong (4-5):</strong> Bold, distinctive voice that fully embraces your brand's unique character</li>
+                      </ul>
+                    </div>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -189,7 +193,7 @@ export function GenerationControls({
                 className="w-full"
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                <span>Subtle</span>
+                <span>Gentle</span>
                 <span>Moderate</span>
                 <span>Strong</span>
               </div>
