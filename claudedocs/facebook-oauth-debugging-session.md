@@ -40,6 +40,16 @@ error: 'column integrations.facebook_page_id does not exist'
 3. **`20deb76`** - Fixed schema cache error
    - Query `additional_metadata` instead of `facebook_page_id` column
 
+4. **`dc06f22`** - Fixed image_url not supported error
+   - Added uploadAdImage() function to upload images first
+   - Changed from image_url to image_hash in ad creative
+
+5. **`a41cf74`** - Fixed FileTypeNotSupported error
+   - Added content-type and filename to Blob upload
+
+6. **`8f52d65`** - Simplified to use copy_from parameter
+   - Let Facebook fetch image directly from URL instead of proxying
+
 ## Next Steps (After Claude Desktop Restart)
 
 1. **Verify Supabase MCP Connection**
@@ -71,9 +81,16 @@ error: 'column integrations.facebook_page_id does not exist'
 - **Thunder Text Supabase**: `https://upkmmwvbspgeanotzknk.supabase.co`
 - **Render Service**: `srv-d3jgbii4d50c73f6biog`
 - **Active Branch**: `feature/facebook-ads-integration`
-- **Latest Commit**: `20deb76`
+- **Latest Commit**: `8f52d65` (deploying)
 - **Shop Domain**: `zunosai-staging-test-store.myshopify.com`
-- **Shop ID** (Thunder Text DB): `5d4b264b-70ed-48c7-a17f-28be041427f2`
+- **Shop ID** (Zeus DB - WRONG): `38b6c917-c23d-4fa6-9fa3-165f7ca959d2`
+- **Shop ID** (Thunder Text DB - CORRECT): `5d4b264b-70ed-48c7-a17f-28be041427f2`
+
+## Errors Fixed
+
+1. ✅ **Error**: `image_url not supported in link_data` → Fixed by using image_hash
+2. ✅ **Error**: `FileTypeNotSupported` (subcode 1487411) → Fixed with content-type
+3. ✅ **Error**: `Invalid image format` (subcode 2446496) → Fixed with copy_from parameter
 
 ## Debug Logs Location
 
