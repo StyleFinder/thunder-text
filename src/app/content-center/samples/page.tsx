@@ -4,13 +4,25 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert } from '@/components/ui/alert'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Upload,
   FileText,
   CheckCircle2,
   X,
   Download,
-  Sparkles
+  Sparkles,
+  Link as LinkIcon
 } from 'lucide-react'
 
 interface WritingSample {
@@ -24,6 +36,11 @@ interface WritingSample {
 export default function SamplesPage() {
   const [samples, setSamples] = useState<WritingSample[]>([])
   const [isDragging, setIsDragging] = useState(false)
+  const [showPasteDialog, setShowPasteDialog] = useState(false)
+  const [showUrlDialog, setShowUrlDialog] = useState(false)
+  const [pasteText, setPasteText] = useState('')
+  const [pasteName, setPasteName] = useState('')
+  const [urlInput, setUrlInput] = useState('')
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -48,6 +65,40 @@ export default function SamplesPage() {
 
   const removeSample = (id: string) => {
     setSamples(samples.filter(s => s.id !== id))
+  }
+
+  const handlePasteSubmit = () => {
+    if (!pasteText.trim()) return
+
+    const newSample: WritingSample = {
+      id: Date.now().toString(),
+      name: pasteName.trim() || 'Pasted Text',
+      type: 'Text',
+      uploadDate: new Date().toLocaleDateString(),
+      size: `${Math.round(pasteText.length / 1024)}KB`
+    }
+
+    setSamples([...samples, newSample])
+    setPasteText('')
+    setPasteName('')
+    setShowPasteDialog(false)
+  }
+
+  const handleUrlSubmit = async () => {
+    if (!urlInput.trim()) return
+
+    // TODO: Implement URL fetching
+    const newSample: WritingSample = {
+      id: Date.now().toString(),
+      name: 'Content from URL',
+      type: 'URL',
+      uploadDate: new Date().toLocaleDateString(),
+      size: 'Processing...'
+    }
+
+    setSamples([...samples, newSample])
+    setUrlInput('')
+    setShowUrlDialog(false)
   }
 
   return (
@@ -117,11 +168,25 @@ export default function SamplesPage() {
             </div>
 
             <div className="mt-4 flex gap-2">
-              <Button variant="outline" className="flex-1">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowPasteDialog(true)
+                }}
+              >
                 <FileText className="h-4 w-4 mr-2" />
                 Paste Text
               </Button>
-              <Button variant="outline" className="flex-1">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowUrlDialog(true)
+                }}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Import from URL
               </Button>
@@ -195,6 +260,88 @@ export default function SamplesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Paste Text Dialog */}
+      <Dialog open={showPasteDialog} onOpenChange={setShowPasteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Paste Text Sample</DialogTitle>
+            <DialogDescription>
+              Paste your content below to add it as a writing sample
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="sample-name">Sample Name (Optional)</Label>
+              <Input
+                id="sample-name"
+                placeholder="e.g., Instagram caption for summer collection"
+                value={pasteName}
+                onChange={(e) => setPasteName(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="sample-text">Content</Label>
+              <Textarea
+                id="sample-text"
+                placeholder="Paste your content here..."
+                rows={10}
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {pasteText.length} characters
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasteDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handlePasteSubmit} disabled={!pasteText.trim()}>
+              Add Sample
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import from URL Dialog */}
+      <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import from URL</DialogTitle>
+            <DialogDescription>
+              Enter a URL to import content as a writing sample
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="url-input">URL</Label>
+              <div className="flex gap-2">
+                <LinkIcon className="h-4 w-4 text-gray-400 mt-3" />
+                <Input
+                  id="url-input"
+                  type="url"
+                  placeholder="https://example.com/blog-post"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                We'll extract the text content from this URL
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUrlDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUrlSubmit} disabled={!urlInput.trim()}>
+              Import Content
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
