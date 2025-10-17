@@ -88,7 +88,7 @@ const PERSONALITY_OPTIONS = [
 
 export default function BrandVoicePage() {
   const [isSaving, setIsSaving] = useState(false)
-  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [showSuccessToast, setShowSuccessToast] = useState(false)
   const [brandVoice, setBrandVoice] = useState<BrandVoice>({
     tone: [],
     personality: [],
@@ -113,15 +113,19 @@ export default function BrandVoicePage() {
 
   const handleSave = async () => {
     setIsSaving(true)
-    setSaveSuccess(false)
 
     try {
       // TODO: API call to save brand voice
       await new Promise(resolve => setTimeout(resolve, 1000))
-      setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
+
+      // Show success toast
+      setShowSuccessToast(true)
+
+      // Auto-hide after 3 seconds
+      setTimeout(() => setShowSuccessToast(false), 3000)
     } catch (error) {
       console.error('Failed to save brand voice:', error)
+      alert('Failed to save brand voice. Please try again.')
     } finally {
       setIsSaving(false)
     }
@@ -283,15 +287,6 @@ export default function BrandVoicePage() {
           Define your brand's messaging style to ensure consistent, on-brand content generation
         </p>
       </div>
-
-      {saveSuccess && (
-        <Alert className="mb-6 border-green-200 bg-green-50">
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
-          <div className="ml-2">
-            <p className="text-sm font-medium text-green-800">Brand voice saved successfully</p>
-          </div>
-        </Alert>
-      )}
 
       <div className="space-y-6">
         {/* Tone Selection */}
@@ -510,6 +505,45 @@ export default function BrandVoicePage() {
             </div>
           </Alert>
 
+          {/* Uploaded Samples - Shown First */}
+          {samples.length > 0 && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Your Samples ({samples.length})</CardTitle>
+                <CardDescription>
+                  These samples are used to train the AI on your brand voice
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {samples.map(sample => (
+                    <div
+                      key={sample.id}
+                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                        <div>
+                          <p className="font-medium text-gray-900">{sample.name}</p>
+                          <p className="text-sm text-gray-500">
+                            {sample.type} • {sample.size} • Uploaded {sample.uploadDate}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeSample(sample.id)}
+                      >
+                        <X className="h-4 w-4 text-gray-500" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Upload Area */}
           <Card className="mb-6">
             <CardHeader>
@@ -577,45 +611,6 @@ export default function BrandVoicePage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Uploaded Samples */}
-          {samples.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Samples ({samples.length})</CardTitle>
-                <CardDescription>
-                  These samples are used to train the AI on your brand voice
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {samples.map(sample => (
-                    <div
-                      key={sample.id}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50"
-                    >
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-blue-600" />
-                        <div>
-                          <p className="font-medium text-gray-900">{sample.name}</p>
-                          <p className="text-sm text-gray-500">
-                            {sample.type} • {sample.size} • Uploaded {sample.uploadDate}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeSample(sample.id)}
-                      >
-                        <X className="h-4 w-4 text-gray-500" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* Action Buttons */}
@@ -727,6 +722,19 @@ export default function BrandVoicePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Success Toast - Bottom Right */}
+      {showSuccessToast && (
+        <div className="fixed bottom-8 right-8 z-50 animate-in slide-in-from-bottom-5 duration-300">
+          <div className="bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px]">
+            <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
+            <div>
+              <p className="font-semibold">Success!</p>
+              <p className="text-sm text-green-50">Brand voice saved successfully</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
