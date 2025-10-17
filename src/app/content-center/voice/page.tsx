@@ -58,6 +58,12 @@ export default function BrandVoicePage() {
   const [urlInput, setUrlInput] = useState('')
   const [showSuccessToast, setShowSuccessToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [editedProfileText, setEditedProfileText] = useState('')
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [editedProfileText, setEditedProfileText] = useState('')
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
 
   // Load existing samples and profile on mount
   useEffect(() => {
@@ -82,7 +88,7 @@ export default function BrandVoicePage() {
           const uiSamples: WritingSample[] = data.data.samples.map((s: ContentSample) => ({
             id: s.id,
             dbId: s.id,
-            name: `Sample ${s.sample_type}`,
+            name: s.sample_name || `${s.sample_type.charAt(0).toUpperCase() + s.sample_type.slice(1)} Sample`,
             type: s.sample_type.toUpperCase(),
             uploadDate: new Date(s.created_at).toLocaleDateString(),
             size: `${s.word_count} words`
@@ -233,6 +239,7 @@ export default function BrandVoicePage() {
             'Authorization': `Bearer ${shopDomain}`
           },
           body: JSON.stringify({
+            sample_name: file.name,
             sample_text: text,
             sample_type: 'other'
           })
@@ -333,6 +340,7 @@ export default function BrandVoicePage() {
           'Authorization': `Bearer ${shopDomain}`
         },
         body: JSON.stringify({
+          sample_name: pasteName.trim() || 'Pasted Text',
           sample_text: pasteText,
           sample_type: 'other'
         })
@@ -408,6 +416,54 @@ export default function BrandVoicePage() {
     )
   }
 
+
+  const handleEditProfile = () => {
+    if (profile) {
+      setEditedProfileText(profile.profile_text)
+      setIsEditingProfile(true)
+    }
+  }
+
+  const handleSaveProfile = async () => {
+    if (!profile || !editedProfileText.trim()) return
+
+    setIsSavingProfile(true)
+    try {
+      const response = await fetch(`/api/content-center/voice/${profile.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${shopDomain}`
+        },
+        body: JSON.stringify({
+          profile_text: editedProfileText
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.data.profile) {
+          setProfile(data.data.profile)
+          setIsEditingProfile(false)
+          showToast('Brand voice profile updated successfully!')
+        }
+      } else {
+        const error = await response.json()
+        alert(`Failed to update profile: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to update profile:', error)
+      alert('Failed to update profile. Please try again.')
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditingProfile(false)
+    setEditedProfileText('')
+  }
+
   const samplesNeeded = Math.max(0, 3 - samples.length)
   const hasEnoughSamples = samples.length >= 3
 
@@ -442,16 +498,64 @@ export default function BrandVoicePage() {
           <CardContent>
             {profile ? (
               <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Badge variant="default" className="bg-green-600">Ready</Badge>
-                  <span className="text-sm text-gray-600">
-                    Generated from {samples.length} samples on {new Date(profile.generated_at).toLocaleDateString()}
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="bg-green-600">Ready</Badge>
+                    <span className="text-sm text-gray-600">
+                      Generated from {samples.length} samples on {new Date(profile.generated_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {!isEditingProfile && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEditProfile}
+                    >
+                      Edit Profile
+                    </Button>
+                  )}
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm font-medium text-gray-900 mb-2">Your Brand Voice:</p>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{profile.profile_text}</p>
-                </div>
+                {isEditingProfile ? (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="profile-text">Brand Voice Profile</Label>
+                      <Textarea
+                        id="profile-text"
+                        rows={12}
+                        value={editedProfileText}
+                        onChange={(e) => setEditedProfileText(e.target.value)}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleSaveProfile}
+                        disabled={isSavingProfile || !editedProfileText.trim()}
+                      >
+                        {isSavingProfile ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save Changes'
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={handleCancelEdit}
+                        disabled={isSavingProfile}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm font-medium text-gray-900 mb-2">Your Brand Voice:</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{profile.profile_text}</p>
+                  </div>
+                )}
               </div>
             ) : isGenerating ? (
               <div className="flex items-center gap-3 text-blue-600">
