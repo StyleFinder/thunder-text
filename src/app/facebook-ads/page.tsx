@@ -25,6 +25,7 @@ import {
 import { MarketingIcon } from '@shopify/polaris-icons'
 import CampaignSelector from '@/components/facebook/CampaignSelector'
 import CreateFacebookAdFlow from '@/components/facebook/CreateFacebookAdFlow'
+import CampaignMetricsCard from '@/components/facebook/CampaignMetricsCard'
 import { useShopifyAuth } from '@/app/components/UnifiedShopifyAuth'
 
 interface IntegrationInfo {
@@ -237,6 +238,16 @@ function FacebookAdsContent() {
             </InlineStack>
           </Banner>
         </Layout.Section>
+
+        {/* Campaign Performance Metrics */}
+        {selectedAdAccountId && (
+          <Layout.Section>
+            <CampaignMetricsCard
+              shop={shop || ''}
+              adAccountId={selectedAdAccountId}
+            />
+          </Layout.Section>
+        )}
 
         <Layout.Section variant="oneHalf">
           <Card>
