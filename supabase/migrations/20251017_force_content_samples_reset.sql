@@ -7,7 +7,7 @@ DROP TABLE IF EXISTS public.content_samples CASCADE;
 -- Recreate with correct public RLS policy from the start
 CREATE TABLE public.content_samples (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES public.shops(id) ON DELETE CASCADE,
+  store_id UUID NOT NULL REFERENCES public.shops(id) ON DELETE CASCADE,
   sample_text TEXT NOT NULL,
   sample_type VARCHAR(50) NOT NULL CHECK (sample_type IN ('blog', 'email', 'description', 'other')),
   word_count INTEGER NOT NULL CHECK (word_count >= 500 AND word_count <= 5000),
@@ -17,9 +17,9 @@ CREATE TABLE public.content_samples (
 );
 
 -- Create indexes BEFORE enabling RLS
-CREATE INDEX idx_content_samples_user_id ON public.content_samples(user_id);
-CREATE INDEX idx_content_samples_active ON public.content_samples(user_id, is_active) WHERE is_active = true;
-CREATE INDEX idx_content_samples_created ON public.content_samples(user_id, created_at DESC);
+CREATE INDEX idx_content_samples_store_id ON public.content_samples(store_id);
+CREATE INDEX idx_content_samples_active ON public.content_samples(store_id, is_active) WHERE is_active = true;
+CREATE INDEX idx_content_samples_created ON public.content_samples(store_id, created_at DESC);
 
 -- Grant permissions BEFORE enabling RLS (match shop_sizes exactly)
 GRANT ALL PRIVILEGES ON public.content_samples TO postgres, anon, authenticated, service_role;
