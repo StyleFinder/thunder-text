@@ -6,22 +6,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
-
-/**
- * Create a Supabase admin client for server-side operations
- */
-export function getSupabaseAdmin() {
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  })
-}
+import { supabaseAdmin } from '@/lib/supabase'
 
 /**
  * Authentication result
@@ -74,8 +59,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
     }
 
     // Verify shop exists in database
-    const supabase = getSupabaseAdmin()
-    const { data: shopData, error } = await supabase
+    const { data: shopData, error } = await supabaseAdmin
       .from('shops')
       .select('id, shop_domain')
       .eq('shop_domain', shop)
