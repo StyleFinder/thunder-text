@@ -8,7 +8,6 @@
 export interface ContentSample {
   id: string
   store_id: string
-  sample_name?: string
   sample_text: string
   sample_type: 'blog' | 'email' | 'description' | 'other'
   word_count: number
@@ -55,14 +54,12 @@ export interface GenerationParams {
 
 // POST /api/content-center/samples
 export interface CreateSampleRequest {
-  sample_name?: string
   sample_text: string
   sample_type: 'blog' | 'email' | 'description' | 'other'
 }
 
 // PATCH /api/content-center/samples/:id
 export interface UpdateSampleRequest {
-  sample_name?: string
   is_active?: boolean
   sample_text?: string
   sample_type?: 'blog' | 'email' | 'description' | 'other'

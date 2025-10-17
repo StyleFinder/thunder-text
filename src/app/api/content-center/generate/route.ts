@@ -5,7 +5,8 @@ import {
   GenerateContentResponse,
   VoiceProfileNotFoundError
 } from '@/types/content-center'
-import { getUserId, getSupabaseAdmin } from '@/lib/auth/content-center-auth'
+import { getUserId } from '@/lib/auth/content-center-auth'
+import { supabaseAdmin } from '@/lib/supabase'
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
 import { generateContent } from '@/lib/services/content-generator'
 import { postProcessContent } from '@/lib/services/content-post-processor'
@@ -58,10 +59,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       )
     }
 
-    const supabase = getSupabaseAdmin()
-
     // Get current voice profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('brand_voice_profiles')
       .select('*')
       .eq('store_id', userId)
@@ -99,7 +98,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const wordCount = postProcessed.finalWordCount
 
     // Store generated content
-    const { data: generatedContent, error: contentError } = await supabase
+    const { data: generatedContent, error: contentError } = await supabaseAdmin
       .from('generated_content')
       .insert({
         store_id: userId,

@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: CreateSampleRequest = await request.json()
-    const { sample_name, sample_text, sample_type } = body
+    const { sample_text, sample_type } = body
 
     if (!sample_text || !sample_type) {
       return NextResponse.json(
@@ -174,7 +174,6 @@ export async function POST(request: NextRequest) {
       .from('content_samples')
       .insert({
         store_id: shopData.id,
-        sample_name: sample_name,
         sample_text: sanitizedText,
         sample_type: sanitizedType,
         word_count: wordCount,
