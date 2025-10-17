@@ -24,6 +24,13 @@ function calculateWordCount(text: string): number {
  */
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<ListSamplesResponse>>> {
   try {
+    // Debug: Check environment variables
+    console.log('[DEBUG] Environment check:', {
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
+      serviceKeyPrefix: process.env.SUPABASE_SERVICE_KEY?.substring(0, 20) + '...',
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL
+    })
+
     const userId = await getUserId(request)
 
     if (!userId) {
@@ -32,6 +39,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         { status: 401 }
       )
     }
+
+    console.log('[DEBUG] Fetching samples for userId:', userId)
 
     // Rate limiting for read operations
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.READ)(request, userId)
