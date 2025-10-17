@@ -4,7 +4,7 @@
  */
 
 import OpenAI from 'openai'
-import { getOpenAIKey, logApiUsage } from '../security/api-keys'
+import { getOpenAIKey, logAPIUsage } from '../security/api-keys'
 
 // Initialize OpenAI client (server-side only)
 let openaiClient: OpenAI | null = null
@@ -86,7 +86,7 @@ export async function callChatCompletion(
       const tokensUsed = completion.usage?.total_tokens || 0
 
       // Log API usage
-      logApiUsage('openai', 'chat_completion', {
+      logAPIUsage('openai', 'chat_completion', {
         model,
         tokensUsed,
         responseTimeMs: responseTime,

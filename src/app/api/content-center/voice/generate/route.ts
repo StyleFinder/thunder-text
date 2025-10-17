@@ -65,7 +65,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     // Get current version number
-    const { data: existingProfiles } = await supabase
+    const { data: existingProfiles } = await supabaseAdmin
       .from('brand_voice_profiles')
       .select('profile_version')
       .eq('store_id', userId)
@@ -75,13 +75,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const nextVersion = (existingProfiles?.[0]?.profile_version || 0) + 1
 
     // Mark all existing profiles as not current
-    await supabase
+    await supabaseAdmin
       .from('brand_voice_profiles')
       .update({ is_current: false })
       .eq('store_id', userId)
 
     // Create new profile
-    const { data: newProfile, error: profileError } = await supabase
+    const { data: newProfile, error: profileError } = await supabaseAdmin
       .from('brand_voice_profiles')
       .insert({
         store_id: userId,
