@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { ContentTypeSelector } from '@/components/content-center/ContentTypeSelector'
 import { GenerationControls, GenerationParams } from '@/components/content-center/GenerationControls'
 import { GenerationResultView } from '@/components/content-center/GenerationResultView'
@@ -8,10 +8,12 @@ import { ContentLoader } from '@/components/ui/loading/ContentLoader'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Sparkles } from 'lucide-react'
 import { ContentType, GeneratedContent } from '@/types/content-center'
+import { useShopifyAuth } from '@/app/components/UnifiedShopifyAuth'
 
 type GenerationStep = 'select-type' | 'configure' | 'result'
 
 export default function GeneratePage() {
+  const { shop: shopDomain, isAuthenticated, isLoading: authLoading } = useShopifyAuth()
   const [currentStep, setCurrentStep] = useState<GenerationStep>('select-type')
   const [selectedType, setSelectedType] = useState<ContentType | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -20,26 +22,6 @@ export default function GeneratePage() {
     generationTimeMs: number
     costEstimate: number
   } | null>(null)
-  const [shopDomain, setShopDomain] = useState<string | null>(null)
-
-  useEffect(() => {
-    // Get shop domain from URL parameters or localStorage
-    const getShopDomain = () => {
-      const params = new URLSearchParams(window.location.search)
-      let shop = params.get('shop')
-
-      if (!shop) {
-        // Try to get from localStorage (set during Shopify OAuth)
-        shop = localStorage.getItem('shop_domain')
-      }
-
-      if (shop) {
-        setShopDomain(shop)
-        localStorage.setItem('shop_domain', shop)
-      }
-    }
-    getShopDomain()
-  }, [])
 
   const handleSelectType = (type: ContentType) => {
     setSelectedType(type)
@@ -186,6 +168,37 @@ export default function GeneratePage() {
     setCurrentStep('select-type')
     setSelectedType(null)
     setGenerationResult(null)
+  }
+
+  // Show loading state while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="flex flex-col items-center justify-center py-20 space-y-6">
+          <ContentLoader
+            message="Loading..."
+            size="lg"
+            variant="pulse"
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // Show error if not authenticated
+  if (!isAuthenticated || !shopDomain) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="flex flex-col items-center justify-center py-20 space-y-6">
+          <div className="text-center space-y-2">
+            <p className="text-lg font-medium">Authentication Required</p>
+            <p className="text-sm text-muted-foreground">
+              Please access this page from your Shopify admin.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
