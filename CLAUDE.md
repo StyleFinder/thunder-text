@@ -539,6 +539,98 @@ This configuration enables SuperClaude to provide optimal development support fo
    - **Impact**: Limited customization options
    - **Priority**: LOW - Nice-to-have feature
 
+## Deployment Debugging Priority
+
+When encountering database access errors (permission denied, column does not exist, etc.):
+
+### Investigation Order (Stop at first success)
+
+1. **Check build cache FIRST** (15 min max)
+   - Render may be deploying cached Next.js builds with old code
+   - **Quick fix**: Add `rm -rf .next` to build command temporarily
+   - **Permanent fix**: Update `build:render` script in package.json:
+     ```json
+     "build:render": "npm install --legacy-peer-deps && rm -rf .next && next build"
+     ```
+
+2. **Verify what's actually deployed** (10 min)
+   - Check Render deployment logs for actual code being run
+   - Compare deployed commit hash with local repo
+   - Verify branch: Which branch is Render deploying from?
+   - Test API endpoint directly: `curl https://app.com/api/endpoint`
+
+3. **Confirm environment** (5 min)
+   - **Supabase project**: Check `NEXT_PUBLIC_SUPABASE_URL` in .env.local vs Render env vars
+   - **Repository**: Verify you're working in the correct repo (thunder-text vs zeus2)
+   - **Branch**: Confirm Render is deploying the branch you're pushing to
+
+4. **Database schema reality check** (5 min)
+   ```sql
+   -- Don't trust Dashboard UI - query directly
+   SELECT column_name, data_type
+   FROM information_schema.columns
+   WHERE table_name = 'your_table'
+   ORDER BY ordinal_position;
+   ```
+
+5. **ONLY THEN investigate deeper issues**
+   - RLS policies and permissions
+   - Table grants (PUBLIC, anon, authenticated, service_role)
+   - PostgREST schema cache (NOTIFY pgrst, 'reload schema')
+
+### Common Render Deployment Issues
+
+**Next.js Cache Persistence**
+- Next.js `.next` directory caches between builds
+- Old imports, old schemas, old function signatures persist
+- **Symptom**: Code looks correct but errors reference old column names
+- **Fix**: Force clean build with `rm -rf .next`
+
+**Environment Variable Mismatch**
+- Local `.env.local` ≠ Render environment variables
+- May be pointing to different Supabase projects
+- **Symptom**: Changes work locally but fail on Render
+- **Fix**: Check Render dashboard → Environment → verify all vars
+
+**Branch Confusion**
+- Render auto-deploys specific branch (check service settings)
+- You may be pushing to wrong branch
+- **Symptom**: Commits pushed but not deployed
+- **Fix**: Check Render service settings → Build & Deploy → Branch
+
+### Pattern Recognition: Déjà Vu Signal
+
+**If user says:** *"This happened before with [other feature]"*
+**Then:** It's almost certainly a deployment/infrastructure issue, NOT a code logic bug.
+
+**Immediate actions:**
+1. Ask: "What fixed it last time?"
+2. Check: Build cache, deployment logs, environment vars
+3. Avoid: Deep diving into schema/permissions before ruling out deployment issues
+
+### Time-Saving Rules
+
+- ✅ **DO**: Clear cache first (5 min fix)
+- ✅ **DO**: Verify deployed code matches repo
+- ✅ **DO**: Check which Supabase project you're querying
+- ❌ **DON'T**: Spend hours on migrations if cache is the issue
+- ❌ **DON'T**: Assume Dashboard UI is real-time (query directly)
+- ❌ **DON'T**: Assume MCP tools are connected to production database
+
+### Historical Issues (Learn from these)
+
+**2025-10-17: Content Center Upload Failure (4 hours wasted)**
+- **Symptom**: "column user_id does not exist" but database had correct schema
+- **Root cause**: Next.js build cache on Render contained old code
+- **False leads**: Spent hours on schema migrations, RLS policies, column renaming
+- **Actual fix**: Added `rm -rf .next` to build command (5-minute fix)
+- **Lesson**: Check build cache FIRST before investigating schema issues
+
+**2025-10-09: Shop Sizes Module Issue (similar pattern)**
+- **Symptom**: Similar "column does not exist" errors
+- **Root cause**: Likely same build cache issue
+- **Pattern**: When user reports déjà vu, it's infrastructure not logic
+
 ### Completed Features
 
 ✅ **Facebook Ads Integration** (2025-10-16)
