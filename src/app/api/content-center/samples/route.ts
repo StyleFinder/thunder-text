@@ -8,9 +8,8 @@ import {
   InvalidWordCountError,
   SampleLimitError
 } from '@/types/content-center'
-import { getUserId } from '@/lib/auth/content-center-auth'
 import { supabaseAdmin } from '@/lib/supabase'
-import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
+import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors'
 import { sanitizeAndValidateSample } from '@/lib/security/input-sanitization'
 
 // Helper function to calculate word count
@@ -20,44 +19,50 @@ function calculateWordCount(text: string): number {
 
 /**
  * GET /api/content-center/samples
- * List all samples for the authenticated user
+ * List all samples for the authenticated shop
+ * PATTERN MATCHES: shop-sizes/route.ts (WORKING MODULE)
  */
-export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<ListSamplesResponse>>> {
+export async function GET(request: NextRequest) {
+  const corsHeaders = createCorsHeaders(request)
+
   try {
-    // Debug: Check environment variables
-    console.log('[DEBUG] Environment check:', {
-      hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
-      serviceKeyPrefix: process.env.SUPABASE_SERVICE_KEY?.substring(0, 20) + '...',
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL
-    })
+    const searchParams = request.nextUrl.searchParams
+    const shop = searchParams.get('shop')
 
-    const userId = await getUserId(request)
-
-    if (!userId) {
+    if (!shop) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
+        { success: false, error: 'Missing shop parameter' },
+        { status: 400, headers: corsHeaders }
       )
     }
 
-    console.log('[DEBUG] Fetching samples for userId:', userId)
+    // Get shop ID from shop domain
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from('shops')
+      .select('id')
+      .eq('shop_domain', fullShopDomain)
+      .single()
 
-    // Rate limiting for read operations
-    const rateLimitCheck = await withRateLimit(RATE_LIMITS.READ)(request, userId)
-    if (rateLimitCheck) return rateLimitCheck
+    if (shopError || !shopData) {
+      return NextResponse.json(
+        { success: false, error: 'Shop not found' },
+        { status: 404, headers: corsHeaders }
+      )
+    }
 
-    // Fetch all samples for user
+    // Fetch all samples for shop
     const { data: samples, error } = await supabaseAdmin
       .from('content_samples')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', shopData.id)
       .order('created_at', { ascending: false })
 
     if (error) {
       console.error('Error fetching samples:', error)
       return NextResponse.json(
         { success: false, error: 'Failed to fetch samples' },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       )
     }
 
@@ -70,13 +75,13 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         active_count: activeSamples.length,
         total_count: samples?.length || 0
       }
-    })
+    }, { headers: corsHeaders })
 
   } catch (error) {
     console.error('Error in GET /api/content-center/samples:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     )
   }
 }
@@ -84,61 +89,70 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 /**
  * POST /api/content-center/samples
  * Upload a new content sample
+ * PATTERN MATCHES: shop-sizes/route.ts (WORKING MODULE)
  */
-export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<CreateSampleResponse>>> {
-  try {
-    const userId = await getUserId(request)
+export async function POST(request: NextRequest) {
+  const corsHeaders = createCorsHeaders(request)
 
-    if (!userId) {
+  try {
+    const body: CreateSampleRequest = await request.json()
+    const { shop, sample_text, sample_type } = body
+
+    if (!shop || !sample_text || !sample_type) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
+        { success: false, error: 'Missing required fields: shop, sample_text, sample_type' },
+        { status: 400, headers: corsHeaders }
       )
     }
 
-    // Rate limiting for write operations
-    const rateLimitCheck = await withRateLimit(RATE_LIMITS.WRITE)(request, userId)
-    if (rateLimitCheck) return rateLimitCheck
+    // Get shop ID from shop domain
+    const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from('shops')
+      .select('id')
+      .eq('shop_domain', fullShopDomain)
+      .single()
 
-    const body: CreateSampleRequest = await request.json()
-
-    // Validation
-    if (!body.sample_text || !body.sample_type) {
+    if (shopError || !shopData) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: sample_text and sample_type' },
-        { status: 400 }
+        { success: false, error: 'Shop not found' },
+        { status: 404, headers: corsHeaders }
       )
     }
 
     // Sanitize and validate input
-    const validation = sanitizeAndValidateSample(body)
+    const validation = sanitizeAndValidateSample({ sample_text, sample_type })
     if (!validation.valid) {
       return NextResponse.json(
         { success: false, error: validation.error },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       )
     }
 
-    const { sample_text, sample_type } = validation.sanitized!
-    const wordCount = calculateWordCount(sample_text)
+    const sanitizedText = validation.sanitized!.sample_text
+    const sanitizedType = validation.sanitized!.sample_type
+    const wordCount = calculateWordCount(sanitizedText)
 
-    // Check sample limit (trigger will also enforce this, but we check here for better error message)
+    // Check sample limit
     const { data: existingSamples } = await supabaseAdmin
       .from('content_samples')
       .select('id')
-      .eq('user_id', userId)
+      .eq('user_id', shopData.id)
 
     if (existingSamples && existingSamples.length >= 10) {
-      throw new SampleLimitError()
+      return NextResponse.json(
+        { success: false, error: 'Maximum of 10 samples allowed' },
+        { status: 400, headers: corsHeaders }
+      )
     }
 
     // Insert sample
     const { data: sample, error } = await supabaseAdmin
       .from('content_samples')
       .insert({
-        user_id: userId,
-        sample_text,
-        sample_type,
+        user_id: shopData.id,
+        sample_text: sanitizedText,
+        sample_type: sanitizedType,
         word_count: wordCount,
         is_active: true
       })
@@ -149,7 +163,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       console.error('Error creating sample:', error)
       return NextResponse.json(
         { success: false, error: 'Failed to create sample' },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       )
     }
 
@@ -159,21 +173,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         sample: sample as ContentSample,
         word_count: wordCount
       }
-    }, { status: 201 })
+    }, { status: 201, headers: corsHeaders })
 
   } catch (error) {
     console.error('Error in POST /api/content-center/samples:', error)
-
-    if (error instanceof InvalidWordCountError || error instanceof SampleLimitError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: error.statusCode }
-      )
-    }
-
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     )
   }
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflightRequest(request)
 }
