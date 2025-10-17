@@ -191,13 +191,12 @@ export default function BrandVoicePage() {
 
     for (const file of files) {
       // Validate file
-      const isValidType = ['.txt'].some(ext =>
-        file.name.toLowerCase().endsWith(ext)
-      )
+      const extension = file.name.toLowerCase().split('.').pop()
+      const isValidType = ['txt', 'pdf', 'doc', 'docx'].includes(extension || '')
       const isValidSize = file.size <= 10 * 1024 * 1024 // 10MB
 
       if (!isValidType) {
-        alert(`File "${file.name}" is not supported yet. Currently only TXT files are supported.`)
+        alert(`File "${file.name}" is not supported. Please upload PDF, DOC, DOCX, or TXT files.`)
         continue
       }
 
@@ -207,8 +206,24 @@ export default function BrandVoicePage() {
       }
 
       try {
-        // Read file content
-        const text = await readFileAsText(file)
+        let text: string
+
+        // Extract text based on file type
+        if (extension === 'txt') {
+          text = await readFileAsText(file)
+        } else if (extension === 'pdf') {
+          text = await extractTextFromPDF(file)
+        } else if (extension === 'doc' || extension === 'docx') {
+          text = await extractTextFromWord(file)
+        } else {
+          continue
+        }
+
+        // Validate extracted text
+        if (!text || text.trim().length < 100) {
+          alert(`File "${file.name}" doesn't contain enough text. Minimum 100 characters required.`)
+          continue
+        }
 
         // Upload to API
         const response = await fetch('/api/content-center/samples', {
@@ -219,7 +234,7 @@ export default function BrandVoicePage() {
           },
           body: JSON.stringify({
             sample_text: text,
-            sample_type: 'other' // Default type for uploaded files
+            sample_type: 'other'
           })
         })
 
@@ -230,7 +245,7 @@ export default function BrandVoicePage() {
               id: data.data.sample.id,
               dbId: data.data.sample.id,
               name: file.name,
-              type: 'TXT',
+              type: extension.toUpperCase(),
               uploadDate: new Date().toLocaleDateString(),
               size: `${data.data.word_count} words`
             }
@@ -242,7 +257,7 @@ export default function BrandVoicePage() {
         }
       } catch (error) {
         console.error(`Error processing ${file.name}:`, error)
-        alert(`Failed to process "${file.name}"`)
+        alert(`Failed to process "${file.name}". ${error instanceof Error ? error.message : ''}`)
       }
     }
 
@@ -256,6 +271,40 @@ export default function BrandVoicePage() {
       reader.onerror = reject
       reader.readAsText(file)
     })
+  }
+
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    // Use pdf.js library
+    const pdfjsLib = await import('pdfjs-dist')
+
+    // Set worker source
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+
+    const arrayBuffer = await file.arrayBuffer()
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+
+    let fullText = ''
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i)
+      const textContent = await page.getTextContent()
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(' ')
+      fullText += pageText + '\n'
+    }
+
+    return fullText.trim()
+  }
+
+  const extractTextFromWord = async (file: File): Promise<string> => {
+    // Use mammoth library for Word documents
+    const mammoth = await import('mammoth')
+
+    const arrayBuffer = await file.arrayBuffer()
+    const result = await mammoth.extractRawText({ arrayBuffer })
+
+    return result.value.trim()
   }
 
   const formatFileSize = (bytes: number): string => {
