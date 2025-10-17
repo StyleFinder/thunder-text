@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -8,13 +8,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Alert } from '@/components/ui/alert'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -24,33 +17,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  Save,
   RefreshCw,
   CheckCircle2,
   AlertCircle,
   Sparkles,
   MessageSquare,
-  Target,
-  Users,
   Upload,
   FileText,
   X,
   Download,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Loader2
 } from 'lucide-react'
-
-interface BrandVoice {
-  tone: string[]
-  personality: string[]
-  writingStyle: string
-  vocabulary: {
-    preferred: string[]
-    avoid: string[]
-  }
-  audience: string
-  brandValues: string[]
-  sampleText: string
-}
+import { useShopifyAuth } from '@/app/components/UnifiedShopifyAuth'
+import type { ContentSample, BrandVoiceProfile } from '@/types/content-center'
 
 interface WritingSample {
   id: string
@@ -58,117 +38,124 @@ interface WritingSample {
   type: string
   uploadDate: string
   size: string
+  dbId?: string // Database ID if saved
 }
 
-const TONE_OPTIONS = [
-  'Professional',
-  'Casual',
-  'Friendly',
-  'Authoritative',
-  'Empathetic',
-  'Enthusiastic',
-  'Witty',
-  'Sophisticated',
-  'Bold',
-  'Warm'
-]
-
-const PERSONALITY_OPTIONS = [
-  'Innovative',
-  'Trustworthy',
-  'Playful',
-  'Elegant',
-  'Down-to-earth',
-  'Aspirational',
-  'Expert',
-  'Approachable',
-  'Luxury',
-  'Authentic'
-]
-
 export default function BrandVoicePage() {
-  const [isSaving, setIsSaving] = useState(false)
-  const [showSuccessToast, setShowSuccessToast] = useState(false)
-  const [brandVoice, setBrandVoice] = useState<BrandVoice>({
-    tone: [],
-    personality: [],
-    writingStyle: '',
-    vocabulary: {
-      preferred: [],
-      avoid: []
-    },
-    audience: '',
-    brandValues: [],
-    sampleText: ''
-  })
+  const { shop: shopDomain, isAuthenticated, isLoading: authLoading } = useShopifyAuth()
 
-  // Writing samples state
+  // State
   const [samples, setSamples] = useState<WritingSample[]>([])
+  const [profile, setProfile] = useState<BrandVoiceProfile | null>(null)
+  const [isLoadingSamples, setIsLoadingSamples] = useState(true)
+  const [isUploading, setIsUploading] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [showPasteDialog, setShowPasteDialog] = useState(false)
   const [showUrlDialog, setShowUrlDialog] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const [pasteName, setPasteName] = useState('')
   const [urlInput, setUrlInput] = useState('')
+  const [showSuccessToast, setShowSuccessToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
 
-  const handleSave = async () => {
-    setIsSaving(true)
+  // Load existing samples and profile on mount
+  useEffect(() => {
+    if (shopDomain && isAuthenticated) {
+      loadSamples()
+      loadProfile()
+    }
+  }, [shopDomain, isAuthenticated])
 
+  const loadSamples = async () => {
     try {
-      // TODO: API call to save brand voice
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const response = await fetch('/api/content-center/samples', {
+        headers: {
+          'Authorization': `Bearer ${shopDomain}`
+        }
+      })
 
-      // Show success toast
-      setShowSuccessToast(true)
-
-      // Auto-hide after 3 seconds
-      setTimeout(() => setShowSuccessToast(false), 3000)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.data.samples) {
+          // Convert DB samples to UI format
+          const uiSamples: WritingSample[] = data.data.samples.map((s: ContentSample) => ({
+            id: s.id,
+            dbId: s.id,
+            name: `Sample ${s.sample_type}`,
+            type: s.sample_type.toUpperCase(),
+            uploadDate: new Date(s.created_at).toLocaleDateString(),
+            size: `${s.word_count} words`
+          }))
+          setSamples(uiSamples)
+        }
+      }
     } catch (error) {
-      console.error('Failed to save brand voice:', error)
-      alert('Failed to save brand voice. Please try again.')
+      console.error('Failed to load samples:', error)
     } finally {
-      setIsSaving(false)
+      setIsLoadingSamples(false)
     }
   }
 
-  const toggleTone = (tone: string) => {
-    setBrandVoice(prev => ({
-      ...prev,
-      tone: prev.tone.includes(tone)
-        ? prev.tone.filter(t => t !== tone)
-        : [...prev.tone, tone]
-    }))
-  }
+  const loadProfile = async () => {
+    try {
+      const response = await fetch('/api/content-center/voice', {
+        headers: {
+          'Authorization': `Bearer ${shopDomain}`
+        }
+      })
 
-  const togglePersonality = (personality: string) => {
-    setBrandVoice(prev => ({
-      ...prev,
-      personality: prev.personality.includes(personality)
-        ? prev.personality.filter(p => p !== personality)
-        : [...prev.personality, personality]
-    }))
-  }
-
-  const addKeyword = (type: 'preferred' | 'avoid', value: string) => {
-    if (!value.trim()) return
-
-    setBrandVoice(prev => ({
-      ...prev,
-      vocabulary: {
-        ...prev.vocabulary,
-        [type]: [...prev.vocabulary[type], value.trim()]
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.data.profile) {
+          setProfile(data.data.profile)
+        }
       }
-    }))
+    } catch (error) {
+      console.error('Failed to load profile:', error)
+    }
   }
 
-  const removeKeyword = (type: 'preferred' | 'avoid', index: number) => {
-    setBrandVoice(prev => ({
-      ...prev,
-      vocabulary: {
-        ...prev.vocabulary,
-        [type]: prev.vocabulary[type].filter((_, i) => i !== index)
+  const showToast = (message: string) => {
+    setToastMessage(message)
+    setShowSuccessToast(true)
+    setTimeout(() => setShowSuccessToast(false), 3000)
+  }
+
+  // Auto-generate profile when we have 3+ samples and no profile exists
+  useEffect(() => {
+    if (samples.length >= 3 && !profile && !isGenerating) {
+      generateProfile()
+    }
+  }, [samples.length, profile])
+
+  const generateProfile = async () => {
+    if (isGenerating) return
+
+    setIsGenerating(true)
+    try {
+      const response = await fetch('/api/content-center/voice/generate', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${shopDomain}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.data.profile) {
+          setProfile(data.data.profile)
+          showToast('Brand voice profile generated successfully!')
+        }
+      } else {
+        const error = await response.json()
+        console.error('Profile generation failed:', error)
       }
-    }))
+    } catch (error) {
+      console.error('Failed to generate profile:', error)
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   // Sample handling functions
@@ -199,37 +186,76 @@ export default function BrandVoicePage() {
     e.target.value = ''
   }
 
-  const processFiles = (files: File[]) => {
-    const validFiles = files.filter(file => {
-      const isValidType = ['.pdf', '.doc', '.docx', '.txt'].some(ext =>
+  const processFiles = async (files: File[]) => {
+    setIsUploading(true)
+
+    for (const file of files) {
+      // Validate file
+      const isValidType = ['.txt'].some(ext =>
         file.name.toLowerCase().endsWith(ext)
       )
       const isValidSize = file.size <= 10 * 1024 * 1024 // 10MB
 
       if (!isValidType) {
-        alert(`File "${file.name}" is not a supported format. Please upload PDF, DOC, DOCX, or TXT files.`)
-        return false
+        alert(`File "${file.name}" is not supported yet. Currently only TXT files are supported.`)
+        continue
       }
 
       if (!isValidSize) {
         alert(`File "${file.name}" is too large. Maximum file size is 10MB.`)
-        return false
+        continue
       }
 
-      return true
-    })
+      try {
+        // Read file content
+        const text = await readFileAsText(file)
 
-    const newSamples: WritingSample[] = validFiles.map(file => ({
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name: file.name,
-      type: file.name.split('.').pop()?.toUpperCase() || 'File',
-      uploadDate: new Date().toLocaleDateString(),
-      size: formatFileSize(file.size)
-    }))
+        // Upload to API
+        const response = await fetch('/api/content-center/samples', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${shopDomain}`
+          },
+          body: JSON.stringify({
+            sample_text: text,
+            sample_type: 'other' // Default type for uploaded files
+          })
+        })
 
-    if (newSamples.length > 0) {
-      setSamples(prev => [...prev, ...newSamples])
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.data.sample) {
+            const newSample: WritingSample = {
+              id: data.data.sample.id,
+              dbId: data.data.sample.id,
+              name: file.name,
+              type: 'TXT',
+              uploadDate: new Date().toLocaleDateString(),
+              size: `${data.data.word_count} words`
+            }
+            setSamples(prev => [...prev, newSample])
+          }
+        } else {
+          const error = await response.json()
+          alert(`Failed to upload "${file.name}": ${error.error}`)
+        }
+      } catch (error) {
+        console.error(`Error processing ${file.name}:`, error)
+        alert(`Failed to process "${file.name}"`)
+      }
     }
+
+    setIsUploading(false)
+  }
+
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => resolve(e.target?.result as string)
+      reader.onerror = reject
+      reader.readAsText(file)
+    })
   }
 
   const formatFileSize = (bytes: number): string => {
@@ -242,21 +268,49 @@ export default function BrandVoicePage() {
     setSamples(samples.filter(s => s.id !== id))
   }
 
-  const handlePasteSubmit = () => {
+  const handlePasteSubmit = async () => {
     if (!pasteText.trim()) return
 
-    const newSample: WritingSample = {
-      id: Date.now().toString(),
-      name: pasteName.trim() || 'Pasted Text',
-      type: 'Text',
-      uploadDate: new Date().toLocaleDateString(),
-      size: `${Math.round(pasteText.length / 1024)}KB`
-    }
+    setIsUploading(true)
+    try {
+      const response = await fetch('/api/content-center/samples', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${shopDomain}`
+        },
+        body: JSON.stringify({
+          sample_text: pasteText,
+          sample_type: 'other'
+        })
+      })
 
-    setSamples([...samples, newSample])
-    setPasteText('')
-    setPasteName('')
-    setShowPasteDialog(false)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.data.sample) {
+          const newSample: WritingSample = {
+            id: data.data.sample.id,
+            dbId: data.data.sample.id,
+            name: pasteName.trim() || 'Pasted Text',
+            type: 'TEXT',
+            uploadDate: new Date().toLocaleDateString(),
+            size: `${data.data.word_count} words`
+          }
+          setSamples(prev => [...prev, newSample])
+          setPasteText('')
+          setPasteName('')
+          setShowPasteDialog(false)
+        }
+      } else {
+        const error = await response.json()
+        alert(`Failed to save text: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Failed to save pasted text:', error)
+      alert('Failed to save text. Please try again.')
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const handleUrlSubmit = async () => {
@@ -275,212 +329,98 @@ export default function BrandVoicePage() {
     setShowUrlDialog(false)
   }
 
+  // Loading state
+  if (authLoading || isLoadingSamples) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      </div>
+    )
+  }
+
+  // Not authenticated
+  if (!isAuthenticated || !shopDomain) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <Alert className="border-red-200 bg-red-50">
+          <AlertCircle className="h-4 w-4 text-red-600" />
+          <div className="ml-2">
+            <p className="text-sm font-medium text-red-800">Authentication Required</p>
+            <p className="text-sm text-red-700 mt-1">Please access this page from your Shopify admin.</p>
+          </div>
+        </Alert>
+      </div>
+    )
+  }
+
+  const samplesNeeded = Math.max(0, 3 - samples.length)
+  const hasEnoughSamples = samples.length >= 3
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <MessageSquare className="h-8 w-8 text-blue-600" />
-          <h1 className="text-3xl font-bold text-gray-900">Brand Voice</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Brand Voice Profile</h1>
         </div>
         <p className="text-gray-600">
-          Define your brand's messaging style to ensure consistent, on-brand content generation
+          Upload writing samples so AI can learn your brand's unique voice
         </p>
       </div>
 
       <div className="space-y-6">
-        {/* Tone Selection */}
+        {/* Profile Status Card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-blue-600" />
-              Tone of Voice
+              {profile ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              ) : isGenerating ? (
+                <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+              )}
+              Profile Status
             </CardTitle>
-            <CardDescription>
-              Select up to 3 tones that best describe your brand's communication style
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {TONE_OPTIONS.map(tone => (
-                <Badge
-                  key={tone}
-                  variant={brandVoice.tone.includes(tone) ? 'default' : 'outline'}
-                  className="cursor-pointer hover:opacity-80"
-                  onClick={() => toggleTone(tone)}
-                >
-                  {tone}
-                </Badge>
-              ))}
-            </div>
-            {brandVoice.tone.length > 3 && (
-              <p className="text-sm text-amber-600 mt-2 flex items-center gap-1">
-                <AlertCircle className="h-4 w-4" />
-                Try to limit to 3 tones for more consistent results
-              </p>
+            {profile ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Badge variant="default" className="bg-green-600">Ready</Badge>
+                  <span className="text-sm text-gray-600">
+                    Generated from {samples.length} samples on {new Date(profile.generated_at).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-gray-900 mb-2">Your Brand Voice:</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{profile.profile_text}</p>
+                </div>
+              </div>
+            ) : isGenerating ? (
+              <div className="flex items-center gap-3 text-blue-600">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span className="text-sm font-medium">Analyzing your writing samples and generating brand voice profile...</span>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm text-gray-700 mb-2">
+                  {samplesNeeded > 0 ? (
+                    <>Upload <strong>{samplesNeeded} more sample{samplesNeeded > 1 ? 's' : ''}</strong> to generate your brand voice profile.</>
+                  ) : (
+                    <>You have enough samples! Profile will generate automatically.</>
+                  )}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Minimum 3 samples required • Current: {samples.length}
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
-
-        {/* Personality Traits */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-blue-600" />
-              Brand Personality
-            </CardTitle>
-            <CardDescription>
-              Choose personality traits that align with your brand identity
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {PERSONALITY_OPTIONS.map(personality => (
-                <Badge
-                  key={personality}
-                  variant={brandVoice.personality.includes(personality) ? 'default' : 'outline'}
-                  className="cursor-pointer hover:opacity-80"
-                  onClick={() => togglePersonality(personality)}
-                >
-                  {personality}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Target Audience */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-600" />
-              Target Audience
-            </CardTitle>
-            <CardDescription>
-              Describe who you're speaking to
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              placeholder="Example: Fashion-forward women aged 25-45 who value quality and sustainability..."
-              value={brandVoice.audience}
-              onChange={(e) => setBrandVoice(prev => ({ ...prev, audience: e.target.value }))}
-              rows={3}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Writing Style */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Writing Style Guidelines</CardTitle>
-            <CardDescription>
-              Specific instructions for content creation
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              placeholder="Example: Use short, punchy sentences. Start with action verbs. Keep paragraphs under 3 sentences..."
-              value={brandVoice.writingStyle}
-              onChange={(e) => setBrandVoice(prev => ({ ...prev, writingStyle: e.target.value }))}
-              rows={4}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Vocabulary */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Vocabulary Preferences</CardTitle>
-            <CardDescription>
-              Words and phrases to use or avoid
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Preferred Words */}
-            <div>
-              <Label htmlFor="preferred-words" className="text-green-700">
-                Preferred Words/Phrases
-              </Label>
-              <div className="flex gap-2 mt-2">
-                <Input
-                  id="preferred-words"
-                  placeholder="Add a word or phrase"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      addKeyword('preferred', e.currentTarget.value)
-                      e.currentTarget.value = ''
-                    }
-                  }}
-                />
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {brandVoice.vocabulary.preferred.map((word, index) => (
-                  <Badge
-                    key={index}
-                    variant="secondary"
-                    className="cursor-pointer hover:bg-gray-300"
-                    onClick={() => removeKeyword('preferred', index)}
-                  >
-                    {word} ×
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            {/* Words to Avoid */}
-            <div>
-              <Label htmlFor="avoid-words" className="text-red-700">
-                Words/Phrases to Avoid
-              </Label>
-              <div className="flex gap-2 mt-2">
-                <Input
-                  id="avoid-words"
-                  placeholder="Add a word or phrase to avoid"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      addKeyword('avoid', e.currentTarget.value)
-                      e.currentTarget.value = ''
-                    }
-                  }}
-                />
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {brandVoice.vocabulary.avoid.map((word, index) => (
-                  <Badge
-                    key={index}
-                    variant="destructive"
-                    className="cursor-pointer hover:opacity-80"
-                    onClick={() => removeKeyword('avoid', index)}
-                  >
-                    {word} ×
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Sample Text */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Brand Voice Example</CardTitle>
-            <CardDescription>
-              Provide a sample of your ideal brand messaging (optional but recommended)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              placeholder="Paste an example of content that perfectly captures your brand voice..."
-              value={brandVoice.sampleText}
-              onChange={(e) => setBrandVoice(prev => ({ ...prev, sampleText: e.target.value }))}
-              rows={6}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Divider */}
-        <div className="border-t border-gray-300 my-12"></div>
 
         {/* Writing Samples Section */}
         <div className="mb-8">
@@ -612,33 +552,6 @@ export default function BrandVoicePage() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3 justify-end">
-          <Button
-            variant="outline"
-            onClick={() => window.location.reload()}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Reset
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save Brand Voice
-              </>
-            )}
-          </Button>
-        </div>
       </div>
 
       {/* Paste Text Dialog */}
@@ -730,8 +643,18 @@ export default function BrandVoicePage() {
             <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
             <div>
               <p className="font-semibold">Success!</p>
-              <p className="text-sm text-green-50">Brand voice saved successfully</p>
+              <p className="text-sm text-green-50">{toastMessage}</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Uploading Overlay */}
+      {isUploading && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 flex items-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+            <span className="font-medium">Uploading samples...</span>
           </div>
         </div>
       )}
