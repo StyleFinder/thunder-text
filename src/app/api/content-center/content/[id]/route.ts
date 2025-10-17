@@ -38,7 +38,7 @@ export async function GET(
       .from('generated_content')
       .select('*')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('store_id', userId)
       .single()
 
     if (error || !content) {
@@ -92,7 +92,7 @@ export async function DELETE(
       .from('generated_content')
       .delete()
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('store_id', userId)
 
     if (error) {
       console.error('Error deleting content:', error)

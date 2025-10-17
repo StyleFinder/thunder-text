@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     const { data: samples, error } = await supabaseAdmin
       .from('content_samples')
       .select('*')
-      .eq('user_id', shopData.id)
+      .eq('store_id', shopData.id)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
     const { data: existingSamples } = await supabaseAdmin
       .from('content_samples')
       .select('id')
-      .eq('user_id', shopData.id)
+      .eq('store_id', shopData.id)
 
     if (existingSamples && existingSamples.length >= 10) {
       return NextResponse.json(
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
     const { data: sample, error } = await supabaseAdmin
       .from('content_samples')
       .insert({
-        user_id: shopData.id,
+        store_id: shopData.id,
         sample_text: sanitizedText,
         sample_type: sanitizedType,
         word_count: wordCount,

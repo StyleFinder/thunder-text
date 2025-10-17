@@ -36,7 +36,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const { data: profiles, error } = await supabase
       .from('brand_voice_profiles')
       .select('*')
-      .eq('user_id', userId)
+      .eq('store_id', userId)
       .order('profile_version', { ascending: false })
       .limit(3)
 
