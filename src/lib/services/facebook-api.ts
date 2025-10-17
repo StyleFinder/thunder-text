@@ -312,3 +312,84 @@ export async function getIntegrationInfo(shopId: string): Promise<{
     }))
   }
 }
+
+interface CampaignInsight {
+  campaign_id: string
+  campaign_name: string
+  spend: number
+  purchases: number
+  purchase_value: number
+  conversion_rate: number
+  roas: number
+}
+
+/**
+ * Get campaign insights for active campaigns
+ * Calculates conversion rate and ROAS from Facebook Ads Insights API
+ */
+export async function getCampaignInsights(
+  shopId: string,
+  adAccountId: string
+): Promise<CampaignInsight[]> {
+  try {
+    // First, get all active campaigns
+    const campaigns = await getCampaigns(shopId, adAccountId, { status: 'ACTIVE' })
+
+    if (campaigns.length === 0) {
+      return []
+    }
+
+    // Get insights for all active campaigns
+    const fields = [
+      'campaign_id',
+      'campaign_name',
+      'spend',
+      'actions',
+      'action_values',
+      'impressions',
+      'clicks'
+    ].join(',')
+
+    const endpoint = `/${adAccountId}/insights?fields=${fields}&level=campaign&filtering=[{"field":"campaign.effective_status","operator":"IN","value":["ACTIVE"]}]&time_range={"since":"30 days ago","until":"today"}`
+
+    const data = await makeRequest<{ data: any[] }>(shopId, endpoint)
+
+    const insights: CampaignInsight[] = []
+
+    for (const insight of data.data || []) {
+      const spend = parseFloat(insight.spend || '0')
+      const clicks = parseInt(insight.clicks || '0')
+
+      // Extract purchase actions and values
+      const actions = insight.actions || []
+      const actionValues = insight.action_values || []
+
+      const purchaseAction = actions.find((a: any) => a.action_type === 'purchase')
+      const purchaseValue = actionValues.find((a: any) => a.action_type === 'purchase')
+
+      const purchases = purchaseAction ? parseInt(purchaseAction.value) : 0
+      const purchaseValueAmount = purchaseValue ? parseFloat(purchaseValue.value) : 0
+
+      // Calculate conversion rate: (purchases / clicks) * 100
+      const conversionRate = clicks > 0 ? (purchases / clicks) * 100 : 0
+
+      // Calculate ROAS: purchase_value / spend
+      const roas = spend > 0 ? purchaseValueAmount / spend : 0
+
+      insights.push({
+        campaign_id: insight.campaign_id,
+        campaign_name: insight.campaign_name,
+        spend,
+        purchases,
+        purchase_value: purchaseValueAmount,
+        conversion_rate: conversionRate,
+        roas
+      })
+    }
+
+    return insights
+  } catch (error) {
+    console.error('Error fetching campaign insights:', error)
+    throw error
+  }
+}
