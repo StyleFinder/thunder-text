@@ -180,13 +180,58 @@ export default function BrandVoicePage() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
-    // TODO: Handle file upload
-    console.log('Files dropped:', e.dataTransfer.files)
+
+    const files = Array.from(e.dataTransfer.files)
+    processFiles(files)
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // TODO: Handle file upload
-    console.log('Files selected:', e.target.files)
+    if (!e.target.files) return
+
+    const files = Array.from(e.target.files)
+    processFiles(files)
+
+    // Reset input so same file can be selected again
+    e.target.value = ''
+  }
+
+  const processFiles = (files: File[]) => {
+    const validFiles = files.filter(file => {
+      const isValidType = ['.pdf', '.doc', '.docx', '.txt'].some(ext =>
+        file.name.toLowerCase().endsWith(ext)
+      )
+      const isValidSize = file.size <= 10 * 1024 * 1024 // 10MB
+
+      if (!isValidType) {
+        alert(`File "${file.name}" is not a supported format. Please upload PDF, DOC, DOCX, or TXT files.`)
+        return false
+      }
+
+      if (!isValidSize) {
+        alert(`File "${file.name}" is too large. Maximum file size is 10MB.`)
+        return false
+      }
+
+      return true
+    })
+
+    const newSamples: WritingSample[] = validFiles.map(file => ({
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: file.name,
+      type: file.name.split('.').pop()?.toUpperCase() || 'File',
+      uploadDate: new Date().toLocaleDateString(),
+      size: formatFileSize(file.size)
+    }))
+
+    if (newSamples.length > 0) {
+      setSamples(prev => [...prev, ...newSamples])
+    }
+  }
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   const removeSample = (id: string) => {
