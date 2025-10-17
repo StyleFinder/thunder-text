@@ -82,14 +82,22 @@ export default function BrandVoicePage() {
         const data = await response.json()
         if (data.success && data.data.samples) {
           // Convert DB samples to UI format
-          const uiSamples: WritingSample[] = data.data.samples.map((s: ContentSample) => ({
-            id: s.id,
-            dbId: s.id,
-            name: s.sample_name || `${s.sample_type.charAt(0).toUpperCase() + s.sample_type.slice(1)} Sample`,
-            type: s.sample_type.toUpperCase(),
-            uploadDate: new Date(s.created_at).toLocaleDateString(),
-            size: `${s.word_count} words`
-          }))
+          const uiSamples: WritingSample[] = data.data.samples.map((s: ContentSample) => {
+            // Extract first line or first 50 chars as name
+            const firstLine = s.sample_text.split('\n')[0].trim()
+            const displayName = firstLine.length > 0 && firstLine.length <= 100
+              ? firstLine
+              : firstLine.substring(0, 50) + '...'
+            
+            return {
+              id: s.id,
+              dbId: s.id,
+              name: displayName,
+              type: s.sample_type.toUpperCase(),
+              uploadDate: new Date(s.created_at).toLocaleDateString(),
+              size: `${s.word_count} words`
+            }
+          })
           setSamples(uiSamples)
         }
       }
@@ -236,7 +244,6 @@ export default function BrandVoicePage() {
             'Authorization': `Bearer ${shopDomain}`
           },
           body: JSON.stringify({
-            sample_name: file.name,
             sample_text: text,
             sample_type: 'other'
           })
@@ -337,7 +344,6 @@ export default function BrandVoicePage() {
           'Authorization': `Bearer ${shopDomain}`
         },
         body: JSON.stringify({
-          sample_name: pasteName.trim() || 'Pasted Text',
           sample_text: pasteText,
           sample_type: 'other'
         })
