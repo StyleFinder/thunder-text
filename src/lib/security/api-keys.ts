@@ -116,21 +116,35 @@ export function maskSensitiveData(key: string): string {
  *
  * @param service - Service name (openai, supabase, etc.)
  * @param operation - Operation performed
- * @param userId - User ID making the request
- * @param metadata - Additional metadata
+ * @param userIdOrMetadata - User ID string OR metadata object (for backwards compatibility)
+ * @param metadata - Additional metadata (optional, used when userIdOrMetadata is a string)
  */
 export function logAPIUsage(
   service: string,
   operation: string,
-  userId: string,
+  userIdOrMetadata?: string | Record<string, any>,
   metadata?: Record<string, any>
 ): void {
+  // Handle overloaded parameters for backwards compatibility
+  let userId: string | undefined
+  let actualMetadata: Record<string, any>
+
+  if (typeof userIdOrMetadata === 'string') {
+    // Called with userId as string: logAPIUsage('openai', 'chat', 'user123', { ... })
+    userId = userIdOrMetadata
+    actualMetadata = metadata || {}
+  } else {
+    // Called with metadata directly: logAPIUsage('openai', 'chat', { ... })
+    userId = undefined
+    actualMetadata = userIdOrMetadata || {}
+  }
+
   const logEntry = {
     timestamp: new Date().toISOString(),
     service,
     operation,
-    userId,
-    metadata: metadata || {}
+    userId: userId || 'system',
+    metadata: actualMetadata
   }
 
   // In production, send to monitoring service (Datadog, Sentry, etc.)
