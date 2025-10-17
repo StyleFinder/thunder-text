@@ -36,7 +36,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       .single()
 
     // Get active sample count
-    const { data: samples, error: samplesError } = await supabase
+    const { data: samples, error: samplesError } = await supabaseAdmin
       .from('content_samples')
       .select('id')
       .eq('user_id', userId)

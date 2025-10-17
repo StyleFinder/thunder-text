@@ -202,3 +202,11 @@ COMMENT ON COLUMN generated_content.platform IS 'Social media platform (facebook
 COMMENT ON COLUMN generated_content.generation_params IS 'JSONB object storing word_count, tone_intensity, cta_type, etc.';
 COMMENT ON COLUMN generated_content.product_images IS 'JSONB array of product image URLs for social posts';
 COMMENT ON COLUMN generated_content.is_saved IS 'True if shop explicitly saved this content to library';
+
+-- ============================================================================
+-- GRANT PERMISSIONS TO SERVICE ROLE
+-- ============================================================================
+GRANT ALL ON TABLE content_samples TO service_role, postgres, authenticated, anon;
+GRANT ALL ON TABLE brand_voice_profiles TO service_role, postgres, authenticated, anon;
+GRANT ALL ON TABLE generated_content TO service_role, postgres, authenticated, anon;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO service_role, postgres, authenticated, anon;
