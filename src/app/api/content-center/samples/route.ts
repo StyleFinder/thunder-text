@@ -8,7 +8,8 @@ import {
   InvalidWordCountError,
   SampleLimitError
 } from '@/types/content-center'
-import { getUserId, getSupabaseAdmin } from '@/lib/auth/content-center-auth'
+import { getUserId } from '@/lib/auth/content-center-auth'
+import { supabaseAdmin } from '@/lib/supabase'
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
 import { sanitizeAndValidateSample } from '@/lib/security/input-sanitization'
 
@@ -36,10 +37,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.READ)(request, userId)
     if (rateLimitCheck) return rateLimitCheck
 
-    const supabase = getSupabaseAdmin()
-
     // Fetch all samples for user
-    const { data: samples, error } = await supabase
+    const { data: samples, error } = await supabaseAdmin
       .from('content_samples')
       .select('*')
       .eq('user_id', userId)
@@ -114,10 +113,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const { sample_text, sample_type } = validation.sanitized!
     const wordCount = calculateWordCount(sample_text)
 
-    const supabase = getSupabaseAdmin()
-
     // Check sample limit (trigger will also enforce this, but we check here for better error message)
-    const { data: existingSamples } = await supabase
+    const { data: existingSamples } = await supabaseAdmin
       .from('content_samples')
       .select('id')
       .eq('user_id', userId)
@@ -127,7 +124,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     // Insert sample
-    const { data: sample, error } = await supabase
+    const { data: sample, error } = await supabaseAdmin
       .from('content_samples')
       .insert({
         user_id: userId,

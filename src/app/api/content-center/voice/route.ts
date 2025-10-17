@@ -4,7 +4,8 @@ import {
   GetVoiceProfileResponse,
   BrandVoiceProfile
 } from '@/types/content-center'
-import { getUserId, getSupabaseAdmin } from '@/lib/auth/content-center-auth'
+import { getUserId } from '@/lib/auth/content-center-auth'
+import { supabaseAdmin } from '@/lib/supabase'
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
 
 /**
@@ -26,10 +27,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.READ)(request, userId)
     if (rateLimitCheck) return rateLimitCheck
 
-    const supabase = getSupabaseAdmin()
-
     // Get current voice profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('brand_voice_profiles')
       .select('*')
       .eq('user_id', userId)

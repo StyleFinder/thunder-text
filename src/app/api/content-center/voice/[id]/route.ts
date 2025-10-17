@@ -4,7 +4,9 @@ import {
   UpdateVoiceProfileRequest,
   BrandVoiceProfile
 } from '@/types/content-center'
-import { getUserId, getSupabaseAdmin } from '@/lib/auth/content-center-auth'
+import { getUserId } from '@/lib/auth/content-center-auth'
+import { supabaseAdmin } from '@/lib/supabase'
+
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
 
 
@@ -41,7 +43,7 @@ export async function PATCH(
       )
     }
 
-    const supabase = getSupabaseAdmin()
+    // Using supabaseAdmin from @/lib/supabase
 
     // Verify profile belongs to user
     const { data: existingProfile, error: fetchError } = await supabase

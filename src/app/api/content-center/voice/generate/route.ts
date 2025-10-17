@@ -5,7 +5,9 @@ import {
   InsufficientSamplesError,
   ContentSample
 } from '@/types/content-center'
-import { getUserId, getSupabaseAdmin } from '@/lib/auth/content-center-auth'
+import { getUserId } from '@/lib/auth/content-center-auth'
+import { supabaseAdmin } from '@/lib/supabase'
+
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
 import { generateVoiceProfile, validateVoiceProfile } from '@/lib/services/voice-profile-generator'
 
@@ -30,10 +32,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.VOICE_GENERATION)(request, userId)
     if (rateLimitCheck) return rateLimitCheck
 
-    const supabase = getSupabaseAdmin()
-
     // Fetch active samples
-    const { data: samples, error: samplesError } = await supabase
+    const { data: samples, error: samplesError } = await supabaseAdmin
       .from('content_samples')
       .select('*')
       .eq('user_id', userId)
