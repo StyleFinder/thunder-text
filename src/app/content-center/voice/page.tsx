@@ -61,9 +61,6 @@ export default function BrandVoicePage() {
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [editedProfileText, setEditedProfileText] = useState('')
   const [isSavingProfile, setIsSavingProfile] = useState(false)
-  const [isEditingProfile, setIsEditingProfile] = useState(false)
-  const [editedProfileText, setEditedProfileText] = useState('')
-  const [isSavingProfile, setIsSavingProfile] = useState(false)
 
   // Load existing samples and profile on mount
   useEffect(() => {
