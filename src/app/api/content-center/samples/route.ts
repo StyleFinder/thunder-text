@@ -18,6 +18,21 @@ function calculateWordCount(text: string): number {
 }
 
 /**
+ * Extract shop domain from Authorization header or query parameter
+ * Supports both embedded app (Authorization header) and external calls (query param)
+ */
+function getShopDomain(request: NextRequest): string | null {
+  // Try Authorization header first (embedded app pattern)
+  const authHeader = request.headers.get('authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.replace('Bearer ', '')
+  }
+
+  // Fallback to query parameter
+  return request.nextUrl.searchParams.get('shop')
+}
+
+/**
  * GET /api/content-center/samples
  * List all samples for the authenticated shop
  * PATTERN MATCHES: shop-sizes/route.ts (WORKING MODULE)
@@ -26,12 +41,11 @@ export async function GET(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request)
 
   try {
-    const searchParams = request.nextUrl.searchParams
-    const shop = searchParams.get('shop')
+    const shop = getShopDomain(request)
 
     if (!shop) {
       return NextResponse.json(
-        { success: false, error: 'Missing shop parameter' },
+        { success: false, error: 'Missing shop parameter or Authorization header' },
         { status: 400, headers: corsHeaders }
       )
     }
@@ -95,12 +109,21 @@ export async function POST(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request)
 
   try {
-    const body: CreateSampleRequest = await request.json()
-    const { shop, sample_text, sample_type } = body
+    const shop = getShopDomain(request)
 
-    if (!shop || !sample_text || !sample_type) {
+    if (!shop) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: shop, sample_text, sample_type' },
+        { success: false, error: 'Missing shop parameter or Authorization header' },
+        { status: 400, headers: corsHeaders }
+      )
+    }
+
+    const body: CreateSampleRequest = await request.json()
+    const { sample_text, sample_type } = body
+
+    if (!sample_text || !sample_type) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required fields: sample_text, sample_type' },
         { status: 400, headers: corsHeaders }
       )
     }
