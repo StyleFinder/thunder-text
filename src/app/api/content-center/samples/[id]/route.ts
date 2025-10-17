@@ -39,7 +39,7 @@ export async function PATCH(
       .from('content_samples')
       .select('*')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('store_id', userId)
       .single()
 
     if (fetchError || !existingSample) {
@@ -72,7 +72,7 @@ export async function PATCH(
       .from('content_samples')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('store_id', userId)
       .select()
       .single()
 
@@ -128,7 +128,7 @@ export async function DELETE(
       .from('content_samples')
       .delete()
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('store_id', userId)
 
     if (error) {
       console.error('Error deleting sample:', error)

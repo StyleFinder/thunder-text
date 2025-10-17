@@ -39,7 +39,7 @@ export async function GET(
       .from('generated_content')
       .select('*')
       .eq('id', contentId)
-      .eq('user_id', userId)
+      .eq('store_id', userId)
       .single()
 
     if (error || !content) {

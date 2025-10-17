@@ -7,7 +7,7 @@
 
 export interface ContentSample {
   id: string
-  user_id: string
+  store_id: string
   sample_text: string
   sample_type: 'blog' | 'email' | 'description' | 'other'
   word_count: number
@@ -18,7 +18,7 @@ export interface ContentSample {
 
 export interface BrandVoiceProfile {
   id: string
-  user_id: string
+  store_id: string
   profile_text: string
   profile_version: number
   is_current: boolean
@@ -29,7 +29,7 @@ export interface BrandVoiceProfile {
 
 export interface GeneratedContent {
   id: string
-  user_id: string
+  store_id: string
   content_type: 'blog' | 'ad' | 'store_copy' | 'social_facebook' | 'social_instagram' | 'social_tiktok'
   platform?: 'facebook' | 'instagram' | 'tiktok'
   topic: string

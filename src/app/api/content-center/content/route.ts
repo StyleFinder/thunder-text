@@ -61,7 +61,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     let query = supabase
       .from('generated_content')
       .select('*', { count: 'exact' })
-      .eq('user_id', userId)
+      .eq('store_id', userId)
 
     // Apply filters
     if (contentType) {

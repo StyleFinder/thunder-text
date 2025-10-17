@@ -48,7 +48,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const { data: profile, error: profileError } = await supabase
       .from('brand_voice_profiles')
       .select('*')
-      .eq('user_id', userId)
+      .eq('store_id', userId)
       .eq('is_current', true)
       .single()
 
@@ -76,7 +76,7 @@ NOTE: This is a placeholder template. AI template generation coming in Phase 3.`
     const { data: template, error: templateError } = await supabase
       .from('prompt_templates')
       .insert({
-        user_id: userId,
+        store_id: userId,
         name: body.template_name,
         prompt: systemPrompt,
         is_voice_infused: true,

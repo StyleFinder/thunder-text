@@ -64,7 +64,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const { data: profile, error: profileError } = await supabase
       .from('brand_voice_profiles')
       .select('*')
-      .eq('user_id', userId)
+      .eq('store_id', userId)
       .eq('is_current', true)
       .single()
 
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const { data: generatedContent, error: contentError } = await supabase
       .from('generated_content')
       .insert({
-        user_id: userId,
+        store_id: userId,
         content_type: body.content_type,
         platform: body.platform || null,
         topic: body.topic,

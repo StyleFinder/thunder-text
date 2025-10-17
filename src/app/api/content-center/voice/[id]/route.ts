@@ -50,7 +50,7 @@ export async function PATCH(
       .from('brand_voice_profiles')
       .select('*')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('store_id', userId)
       .single()
 
     if (fetchError || !existingProfile) {
@@ -68,7 +68,7 @@ export async function PATCH(
         user_edited: true
       })
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('store_id', userId)
       .select()
       .single()
 

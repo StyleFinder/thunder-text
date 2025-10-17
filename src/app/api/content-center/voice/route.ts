@@ -31,7 +31,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('brand_voice_profiles')
       .select('*')
-      .eq('user_id', userId)
+      .eq('store_id', userId)
       .eq('is_current', true)
       .single()
 
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const { data: samples, error: samplesError } = await supabaseAdmin
       .from('content_samples')
       .select('id')
-      .eq('user_id', userId)
+      .eq('store_id', userId)
       .eq('is_active', true)
 
     if (samplesError) {

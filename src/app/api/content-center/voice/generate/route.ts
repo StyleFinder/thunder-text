@@ -36,7 +36,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const { data: samples, error: samplesError } = await supabaseAdmin
       .from('content_samples')
       .select('*')
-      .eq('user_id', userId)
+      .eq('store_id', userId)
       .eq('is_active', true)
 
     if (samplesError) {
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const { data: existingProfiles } = await supabase
       .from('brand_voice_profiles')
       .select('profile_version')
-      .eq('user_id', userId)
+      .eq('store_id', userId)
       .order('profile_version', { ascending: false })
       .limit(1)
 
@@ -78,13 +78,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     await supabase
       .from('brand_voice_profiles')
       .update({ is_current: false })
-      .eq('user_id', userId)
+      .eq('store_id', userId)
 
     // Create new profile
     const { data: newProfile, error: profileError } = await supabase
       .from('brand_voice_profiles')
       .insert({
-        user_id: userId,
+        store_id: userId,
         profile_text: profileText,
         profile_version: nextVersion,
         is_current: true,
