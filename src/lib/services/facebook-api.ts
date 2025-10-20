@@ -339,6 +339,14 @@ export async function getCampaignInsights(
       return []
     }
 
+    // Calculate date range in YYYY-MM-DD format (last 30 days)
+    const today = new Date()
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(today.getDate() - 30)
+
+    const since = thirtyDaysAgo.toISOString().split('T')[0]
+    const until = today.toISOString().split('T')[0]
+
     // Get insights for all active campaigns
     const fields = [
       'campaign_id',
@@ -350,7 +358,14 @@ export async function getCampaignInsights(
       'clicks'
     ].join(',')
 
-    const endpoint = `/${adAccountId}/insights?fields=${fields}&level=campaign&filtering=[{"field":"campaign.effective_status","operator":"IN","value":["ACTIVE"]}]&time_range={"since":"30 days ago","until":"today"}`
+    const timeRange = JSON.stringify({ since, until })
+    const filtering = JSON.stringify([{
+      field: 'campaign.effective_status',
+      operator: 'IN',
+      value: ['ACTIVE']
+    }])
+
+    const endpoint = `/${adAccountId}/insights?fields=${fields}&level=campaign&filtering=${encodeURIComponent(filtering)}&time_range=${encodeURIComponent(timeRange)}`
 
     const data = await makeRequest<{ data: any[] }>(shopId, endpoint)
 
