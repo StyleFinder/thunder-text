@@ -121,99 +121,133 @@ export default function CampaignMetricsCard({ shop, adAccountId }: MetricsCardPr
   return (
     <Card>
       <BlockStack gap="400">
-        <Text as="h3" variant="headingMd">
-          Campaign Performance (Last 30 Days)
-        </Text>
+        <InlineStack align="space-between" blockAlign="center">
+          <Text as="h3" variant="headingMd">
+            Campaign Performance (Last 30 Days)
+          </Text>
+          <InlineStack gap="200">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ width: '12px', height: '12px', backgroundColor: '#108043', borderRadius: '2px' }}></div>
+              <Text as="span" variant="bodySm" tone="subdued">≥3% or 3x</Text>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ width: '12px', height: '12px', backgroundColor: '#D72C0D', borderRadius: '2px' }}></div>
+              <Text as="span" variant="bodySm" tone="subdued">&lt;3% or 3x</Text>
+            </div>
+          </InlineStack>
+        </InlineStack>
 
         <Grid columns={{ xs: 1, sm: 3 }} gap="400">
           {/* Conversion Rate */}
-          <Box
-            padding="400"
-            background={conversionColor === 'success' ? 'bg-fill-success' : 'bg-fill-critical'}
-            borderRadius="200"
-          >
+          <div style={{
+            border: `3px solid ${conversionColor === 'success' ? '#108043' : '#D72C0D'}`,
+            borderRadius: '8px',
+            padding: '16px',
+            backgroundColor: '#FFFFFF'
+          }}>
             <BlockStack gap="200">
-              <Text as="p" variant="bodyMd" tone={conversionColor}>
+              <Text as="p" variant="bodyMd" fontWeight="semibold">
                 Conversion Rate
               </Text>
-              <Text as="p" variant="headingLg" tone={conversionColor}>
+              <Text as="p" variant="heading2xl">
                 {avgConversionRate.toFixed(2)}%
               </Text>
-              <Text as="p" variant="bodySm" tone={conversionColor}>
+              <Text as="p" variant="bodySm" tone="subdued">
                 Benchmark: {CONVERSION_BENCHMARK}%
               </Text>
             </BlockStack>
-          </Box>
+          </div>
 
           {/* ROAS */}
-          <Box
-            padding="400"
-            background={roasColor === 'success' ? 'bg-fill-success' : 'bg-fill-critical'}
-            borderRadius="200"
-          >
+          <div style={{
+            border: `3px solid ${roasColor === 'success' ? '#108043' : '#D72C0D'}`,
+            borderRadius: '8px',
+            padding: '16px',
+            backgroundColor: '#FFFFFF'
+          }}>
             <BlockStack gap="200">
-              <Text as="p" variant="bodyMd" tone={roasColor}>
-                ROAS
+              <Text as="p" variant="bodyMd" fontWeight="semibold">
+                ROAS (Return on Ad Spend)
               </Text>
-              <Text as="p" variant="headingLg" tone={roasColor}>
+              <Text as="p" variant="heading2xl">
                 {overallROAS.toFixed(2)}x
               </Text>
-              <Text as="p" variant="bodySm" tone={roasColor}>
+              <Text as="p" variant="bodySm" tone="subdued">
                 Benchmark: {ROAS_BENCHMARK}x
               </Text>
             </BlockStack>
-          </Box>
+          </div>
 
           {/* Total Spend */}
-          <Box
-            padding="400"
-            background="bg-fill-secondary"
-            borderRadius="200"
-          >
+          <div style={{
+            border: '3px solid #E1E3E5',
+            borderRadius: '8px',
+            padding: '16px',
+            backgroundColor: '#FFFFFF'
+          }}>
             <BlockStack gap="200">
-              <Text as="p" variant="bodyMd">
+              <Text as="p" variant="bodyMd" fontWeight="semibold">
                 Total Spend
               </Text>
-              <Text as="p" variant="headingLg">
+              <Text as="p" variant="heading2xl">
                 ${totalSpend.toFixed(2)}
               </Text>
               <Text as="p" variant="bodySm" tone="subdued">
                 {insights.length} active campaign{insights.length !== 1 ? 's' : ''}
               </Text>
             </BlockStack>
-          </Box>
+          </div>
         </Grid>
 
         {/* Campaign Details */}
         <BlockStack gap="200">
           <Text as="p" variant="headingSm">Campaign Breakdown</Text>
-          {insights.map((insight) => (
-            <Box
-              key={insight.campaign_id}
-              padding="300"
-              background="bg-surface-secondary"
-              borderRadius="100"
-            >
-              <InlineStack align="space-between" blockAlign="center">
-                <BlockStack gap="100">
+          {insights.map((insight) => {
+            const campConvColor = insight.conversion_rate >= CONVERSION_BENCHMARK ? '#108043' : '#D72C0D'
+            const campRoasColor = insight.roas >= ROAS_BENCHMARK ? '#108043' : '#D72C0D'
+
+            return (
+              <Box
+                key={insight.campaign_id}
+                padding="300"
+                background="bg-surface-secondary"
+                borderRadius="100"
+              >
+                <BlockStack gap="200">
                   <Text as="p" variant="bodyMd" fontWeight="semibold">
                     {insight.campaign_name}
                   </Text>
-                  <InlineStack gap="400">
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      Conv: {insight.conversion_rate.toFixed(2)}%
-                    </Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      ROAS: {insight.roas.toFixed(2)}x
-                    </Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
+                  <InlineStack gap="400" wrap={false}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        backgroundColor: campConvColor,
+                        borderRadius: '50%'
+                      }}></div>
+                      <Text as="span" variant="bodySm">
+                        Conv: {insight.conversion_rate.toFixed(2)}%
+                      </Text>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        backgroundColor: campRoasColor,
+                        borderRadius: '50%'
+                      }}></div>
+                      <Text as="span" variant="bodySm">
+                        ROAS: {insight.roas.toFixed(2)}x
+                      </Text>
+                    </div>
+                    <Text as="span" variant="bodySm" tone="subdued">
                       Spend: ${insight.spend.toFixed(2)}
                     </Text>
                   </InlineStack>
                 </BlockStack>
-              </InlineStack>
-            </Box>
-          ))}
+              </Box>
+            )
+          })}
         </BlockStack>
       </BlockStack>
     </Card>
