@@ -16,7 +16,6 @@ import {
   Spinner,
   Banner,
   Box,
-  Grid,
 } from '@shopify/polaris'
 
 interface CampaignInsight {
@@ -137,13 +136,19 @@ export default function CampaignMetricsCard({ shop, adAccountId }: MetricsCardPr
           </InlineStack>
         </InlineStack>
 
-        <Grid columns={{ xs: 1, sm: 3 }} gap="400">
+        <div style={{
+          display: 'flex',
+          gap: '16px',
+          flexWrap: 'wrap'
+        }}>
           {/* Conversion Rate */}
           <div style={{
             border: `3px solid ${conversionColor === 'success' ? '#108043' : '#D72C0D'}`,
             borderRadius: '8px',
             padding: '16px',
-            backgroundColor: '#FFFFFF'
+            backgroundColor: '#FFFFFF',
+            minWidth: '280px',
+            flex: '1 1 280px'
           }}>
             <BlockStack gap="200">
               <Text as="p" variant="bodyMd" fontWeight="semibold">
@@ -163,7 +168,9 @@ export default function CampaignMetricsCard({ shop, adAccountId }: MetricsCardPr
             border: `3px solid ${roasColor === 'success' ? '#108043' : '#D72C0D'}`,
             borderRadius: '8px',
             padding: '16px',
-            backgroundColor: '#FFFFFF'
+            backgroundColor: '#FFFFFF',
+            minWidth: '280px',
+            flex: '1 1 280px'
           }}>
             <BlockStack gap="200">
               <Text as="p" variant="bodyMd" fontWeight="semibold">
@@ -183,7 +190,9 @@ export default function CampaignMetricsCard({ shop, adAccountId }: MetricsCardPr
             border: '3px solid #E1E3E5',
             borderRadius: '8px',
             padding: '16px',
-            backgroundColor: '#FFFFFF'
+            backgroundColor: '#FFFFFF',
+            minWidth: '280px',
+            flex: '1 1 280px'
           }}>
             <BlockStack gap="200">
               <Text as="p" variant="bodyMd" fontWeight="semibold">
@@ -197,7 +206,7 @@ export default function CampaignMetricsCard({ shop, adAccountId }: MetricsCardPr
               </Text>
             </BlockStack>
           </div>
-        </Grid>
+        </div>
 
         {/* Campaign Details */}
         <BlockStack gap="200">
