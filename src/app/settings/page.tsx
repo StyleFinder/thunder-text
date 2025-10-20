@@ -37,6 +37,7 @@ import {
 } from '@shopify/polaris-icons'
 import { useNavigation } from '../hooks/useNavigation'
 import ShopSizes from '@/components/ShopSizes'
+import FacebookSettingsCard from '@/components/facebook/FacebookSettingsCard'
 
 // Thunder Text shop info (not Zeus store info)
 interface ShopInfo {
@@ -238,6 +239,10 @@ function SettingsContent() {
               />
             )}
           </Card>
+        </Layout.Section>
+
+        <Layout.Section>
+          {shop && <FacebookSettingsCard shop={shop} />}
         </Layout.Section>
       </Layout>
 
