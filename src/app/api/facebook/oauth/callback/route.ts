@@ -24,6 +24,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { encryptToken } from '@/lib/services/encryption'
+import { validateFacebookOAuthState, type FacebookOAuthState } from '@/lib/security/oauth-validation'
+import { ZodError } from 'zod'
 
 /**
  * Exchange authorization code for access token
@@ -184,34 +186,27 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Decode state to get shop context
-    let stateData: {
-      shop_id: string
-      shop_domain: string
-      host?: string | null
-      embedded?: string | null
-      timestamp: number
-    }
+    // Validate state parameter with Zod schema
+    // This validates structure, timestamp, and prevents tampering/replay attacks
+    let stateData: FacebookOAuthState
     try {
-      stateData = JSON.parse(Buffer.from(state, 'base64url').toString('utf-8'))
-    } catch (e) {
-      console.error('Invalid state parameter:', e)
+      stateData = validateFacebookOAuthState(state)
+    } catch (error) {
+      if (error instanceof ZodError) {
+        console.error('State validation failed:', error.errors)
+        return NextResponse.json(
+          { error: 'Invalid state parameter format', details: error.errors },
+          { status: 400 }
+        )
+      }
+      console.error('State validation error:', error)
       return NextResponse.json(
-        { error: 'Invalid state parameter' },
+        { error: error instanceof Error ? error.message : 'Invalid state parameter' },
         { status: 400 }
       )
     }
 
     const { shop_id, shop_domain } = stateData
-
-    // Verify state timestamp (prevent replay attacks - max 10 minutes old)
-    const stateAge = Date.now() - stateData.timestamp
-    if (stateAge > 10 * 60 * 1000) {
-      return NextResponse.json(
-        { error: 'State parameter expired' },
-        { status: 400 }
-      )
-    }
 
     console.log('🔵 Processing Facebook OAuth callback for shop:', shop_domain)
     console.log('🔵 State data:', { shop_id, shop_domain, hasHost: !!stateData.host, hasEmbedded: !!stateData.embedded })
