@@ -23,10 +23,6 @@ export async function GET(request: NextRequest) {
 
   console.log('🔍 App Bridge Diagnostics:', diagnostics)
 
-  return NextResponse.json(diagnostics, {
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*'
-    }
-  })
+  // SECURITY: Rely on middleware.ts for CORS instead of wildcard
+  return NextResponse.json(diagnostics)
 }

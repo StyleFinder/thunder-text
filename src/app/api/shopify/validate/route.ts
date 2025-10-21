@@ -44,13 +44,10 @@ export async function GET(request: NextRequest) {
   })
 }
 
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
+  // SECURITY: Use middleware CORS handling instead of wildcard
+  // This endpoint is already protected by middleware.ts CORS
   return new Response(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-    }
+    status: 204
   })
 }
