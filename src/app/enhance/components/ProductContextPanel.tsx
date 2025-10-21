@@ -47,7 +47,7 @@ export function ProductContextPanel({ productData, suggestions = [] }: ProductCo
     }))
   }
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: string): 'critical' | 'attention' | 'success' | 'info' => {
     switch (priority) {
       case 'high': return 'critical'
       case 'medium': return 'attention'
@@ -167,7 +167,7 @@ export function ProductContextPanel({ productData, suggestions = [] }: ProductCo
                             </Text>
                           </BlockStack>
                         </InlineStack>
-                        <Badge tone={getPriorityColor(suggestion.priority) as any}>
+                        <Badge tone={getPriorityColor(suggestion.priority)}>
                           {suggestion.priority}
                         </Badge>
                       </InlineStack>

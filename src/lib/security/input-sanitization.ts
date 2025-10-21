@@ -182,12 +182,12 @@ export function validateWordCount(
  * @param input - JSON string to validate
  * @returns Parsed and validated JSON or null if invalid
  */
-export function sanitizeJSON(input: string): any | null {
+export function sanitizeJSON(input: string): unknown | null {
   try {
     const parsed = JSON.parse(input)
 
     // Recursively sanitize string values in the JSON
-    const sanitizeObject = (obj: any): any => {
+    const sanitizeObject = (obj: unknown): unknown => {
       if (typeof obj === 'string') {
         return sanitizeHTML(obj)
       }
@@ -197,7 +197,7 @@ export function sanitizeJSON(input: string): any | null {
       }
 
       if (obj !== null && typeof obj === 'object') {
-        const sanitized: any = {}
+        const sanitized: Record<string, unknown> = {}
         for (const [key, value] of Object.entries(obj)) {
           sanitized[key] = sanitizeObject(value)
         }

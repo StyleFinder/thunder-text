@@ -2,11 +2,12 @@
 
 import { useRouter, usePathname } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+import { LucideIcon } from 'lucide-react'
 
 export interface NavigationItem {
   label: string
   url: string
-  icon?: any
+  icon?: LucideIcon
   badge?: string
   disabled?: boolean
   matches?: boolean

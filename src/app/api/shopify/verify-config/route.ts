@@ -78,7 +78,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function generateRecommendations(status: any, missingVars: string[], hasStoredToken: boolean): string[] {
+function generateRecommendations(status: {
+  tokenExchangeReady: boolean
+  appBridgeReady: boolean
+  databaseReady: boolean
+  aiReady: boolean
+}, missingVars: string[], hasStoredToken: boolean): string[] {
   const recommendations = []
 
   if (!status.tokenExchangeReady) {

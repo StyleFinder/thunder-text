@@ -91,8 +91,14 @@ export async function GET(request: NextRequest) {
     const response = await client.request(query)
     console.log('📦 GraphQL Response:', JSON.stringify(response, null, 2))
 
+    interface ProductNode {
+      id: string
+      title: string
+      status: string
+    }
+
     const productCount = response.products?.edges?.length || 0
-    const products = response.products?.edges?.map((edge: any) => ({
+    const products = response.products?.edges?.map((edge: { node: ProductNode }) => ({
       id: edge.node.id,
       title: edge.node.title,
       status: edge.node.status
@@ -128,7 +134,11 @@ export async function GET(request: NextRequest) {
         hasMoreProducts: response.products?.pageInfo?.hasNextPage || false
       },
       products,
-      restProducts: restProducts.slice(0, 3).map((p: any) => ({
+      restProducts: restProducts.slice(0, 3).map((p: {
+        id: string | number
+        title: string
+        status: string
+      }) => ({
         id: p.id,
         title: p.title,
         status: p.status

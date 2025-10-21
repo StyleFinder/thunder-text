@@ -104,7 +104,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function getPossibleCauses(status: number, responseData: any): string[] {
+function getPossibleCauses(status: number, responseData: {
+  error?: string
+  error_description?: string
+}): string[] {
   const causes = []
 
   if (status === 400) {

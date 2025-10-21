@@ -122,12 +122,12 @@ export function maskSensitiveData(key: string): string {
 export function logAPIUsage(
   service: string,
   operation: string,
-  userIdOrMetadata?: string | Record<string, any>,
-  metadata?: Record<string, any>
+  userIdOrMetadata?: string | Record<string, unknown>,
+  metadata?: Record<string, unknown>
 ): void {
   // Handle overloaded parameters for backwards compatibility
   let userId: string | undefined
-  let actualMetadata: Record<string, any>
+  let actualMetadata: Record<string, unknown>
 
   if (typeof userIdOrMetadata === 'string') {
     // Called with userId as string: logAPIUsage('openai', 'chat', 'user123', { ... })

@@ -202,7 +202,12 @@ Focus on creating compelling, conversion-optimized copy that builds on the exist
     return prompt.trim()
   }
 
-  private calculateSeoImprovement(original: EnhancementProductData, enhanced: any): string {
+  private calculateSeoImprovement(original: EnhancementProductData, enhanced: {
+    keywords?: string[]
+    metaDescription?: string
+    description: string
+    bulletPoints?: string[]
+  }): string {
     let improvements = 0
     
     // Check for keyword improvements
@@ -252,7 +257,11 @@ Focus on creating compelling, conversion-optimized copy that builds on the exist
     return `+${improvement}%`
   }
 
-  private identifyAddedElements(request: EnhancementRequest, enhanced: any): string[] {
+  private identifyAddedElements(request: EnhancementRequest, enhanced: {
+    metaDescription?: string
+    keywords?: string[]
+    bulletPoints?: string[]
+  }): string[] {
     const addedElements: string[] = []
     
     if (enhanced.metaDescription && enhanced.metaDescription.length > 0) {

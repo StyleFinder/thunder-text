@@ -55,7 +55,7 @@ export default function UnifiedEnhancePage() {
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [updateResult, setUpdateResult] = useState<any>(null)
+  const [updateResult, setUpdateResult] = useState<Record<string, unknown> | null>(null)
 
   // Image states
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
@@ -65,7 +65,7 @@ export default function UnifiedEnhancePage() {
   const [parentCategory, setParentCategory] = useState('')
   const [availableSizing, setAvailableSizing] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<ProductCategory>('general')
-  const [templatePreview, setTemplatePreview] = useState<any>(null)
+  const [templatePreview, setTemplatePreview] = useState<Record<string, unknown> | null>(null)
 
   const [fabricMaterial, setFabricMaterial] = useState('')
   const [occasionUse, setOccasionUse] = useState('')
@@ -84,7 +84,7 @@ export default function UnifiedEnhancePage() {
 
   // Generation states
   const [generating, setGenerating] = useState(false)
-  const [generatedContent, setGeneratedContent] = useState<any>(null)
+  const [generatedContent, setGeneratedContent] = useState<Record<string, unknown> | null>(null)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
   const [applying, setApplying] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -310,7 +310,13 @@ export default function UnifiedEnhancePage() {
     }
   }
 
-  const handleApplyChanges = async (editedContent: any) => {
+  const handleApplyChanges = async (editedContent: {
+    title?: string
+    description?: string
+    seoTitle?: string
+    seoDescription?: string
+    bulletPoints?: string[]
+  }) => {
     setApplying(true)
     setError(null)
 

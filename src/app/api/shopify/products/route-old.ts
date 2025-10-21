@@ -192,8 +192,44 @@ export async function GET(request: NextRequest) {
 
     const response = await client.request(graphqlQuery, variables)
 
+    interface ProductNode {
+      id: string
+      title: string
+      handle: string
+      description: string | null
+      status?: string
+      tags?: string[]
+      createdAt: string
+      updatedAt: string
+      variants?: {
+        edges: Array<{
+          node: {
+            price: string
+          }
+        }>
+      }
+      priceRangeV2?: {
+        minVariantPrice: {
+          amount: string
+        }
+      }
+      images?: {
+        edges: Array<{
+          node: {
+            url: string
+            altText: string | null
+          }
+        }>
+      }
+    }
+
+    interface ProductEdge {
+      node: ProductNode
+      cursor: string
+    }
+
     // Transform the response
-    const products = response.products.edges.map((edge: any) => ({
+    const products = response.products.edges.map((edge: ProductEdge) => ({
       id: edge.node.id,
       title: edge.node.title,
       handle: edge.node.handle,
@@ -204,7 +240,12 @@ export async function GET(request: NextRequest) {
       updatedAt: edge.node.updatedAt,
       price: edge.node.variants?.edges[0]?.node?.price ||
              edge.node.priceRangeV2?.minVariantPrice?.amount || '0.00',
-      images: edge.node.images?.edges?.map((imgEdge: any) => ({
+      images: edge.node.images?.edges?.map((imgEdge: {
+        node: {
+          url: string
+          altText: string | null
+        }
+      }) => ({
         url: imgEdge.node.url,
         altText: imgEdge.node.altText
       })) || [],

@@ -8,7 +8,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 export class TokenRefreshManager {
   private static instance: TokenRefreshManager
   private refreshTimers = new Map<string, NodeJS.Timeout>()
-  private refreshPromises = new Map<string, Promise<any>>()
+  private refreshPromises = new Map<string, Promise<string>>()
 
   private constructor() {}
 

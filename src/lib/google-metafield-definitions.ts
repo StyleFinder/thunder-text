@@ -248,8 +248,28 @@ export function formatMetafieldDefinitionForShopify(definition: MetafieldDefinit
   return baseDefinition
 }
 
+interface ShopifyGraphQLClient {
+  request: (mutation: string, options: { variables: Record<string, unknown> }) => Promise<{
+    data?: {
+      metafieldDefinitionCreate?: {
+        metafieldDefinition?: {
+          id: string
+          name: string
+          namespace: string
+          key: string
+          ownerType: string
+        }
+        userErrors?: Array<{
+          field: string[]
+          message: string
+        }>
+      }
+    }
+  }>
+}
+
 // Create all metafield definitions via GraphQL
-export async function createMetafieldDefinitions(shopifyClient: any) {
+export async function createMetafieldDefinitions(shopifyClient: ShopifyGraphQLClient) {
   console.log('🔧 Creating metafield definitions for better admin integration...')
   
   const results = []
@@ -285,8 +305,8 @@ export async function createMetafieldDefinitions(shopifyClient: any) {
       if (response.data?.metafieldDefinitionCreate?.userErrors?.length > 0) {
         const errors = response.data.metafieldDefinitionCreate.userErrors
         // Ignore "already exists" errors
-        const nonExistenceErrors = errors.filter((error: any) => 
-          !error.message.includes('already exists') && 
+        const nonExistenceErrors = errors.filter((error: { field: string[]; message: string }) =>
+          !error.message.includes('already exists') &&
           !error.message.includes('already taken')
         )
         

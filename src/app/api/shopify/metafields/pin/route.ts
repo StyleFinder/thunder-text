@@ -79,8 +79,16 @@ export async function POST(request: NextRequest) {
       variables: { id: productId }
     })
 
-    const metafields = response.data?.product?.metafields?.edges?.map((edge: any) => edge.node) || []
-    const foundImportantMetafields = metafields.filter((mf: any) => 
+    interface MetafieldNode {
+      id: string
+      namespace: string
+      key: string
+      value: string
+      type: string
+    }
+
+    const metafields = response.data?.product?.metafields?.edges?.map((edge: { node: MetafieldNode }) => edge.node) || []
+    const foundImportantMetafields = metafields.filter((mf: MetafieldNode) =>
       importantMetafields.includes(`${mf.namespace}.${mf.key}`)
     )
 
@@ -89,7 +97,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `Found ${foundImportantMetafields.length} important metafields`,
-      metafields: foundImportantMetafields.map((mf: any) => ({
+      metafields: foundImportantMetafields.map((mf: MetafieldNode) => ({
         namespace: mf.namespace,
         key: mf.key,
         value: mf.value

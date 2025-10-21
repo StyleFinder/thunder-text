@@ -82,7 +82,7 @@ function FacebookAdsContent() {
           connected: true,
           accountName: 'Connected',
           adAccountsCount: data.data.length,
-          adAccounts: data.data.map((acc: any) => ({ id: acc.id, name: acc.name }))
+          adAccounts: data.data.map((acc: { id: string; name: string }) => ({ id: acc.id, name: acc.name }))
         })
       } else if (data.code === 'NOT_CONNECTED') {
         setIntegrationInfo({

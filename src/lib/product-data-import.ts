@@ -27,7 +27,10 @@ export interface ProductData {
   productType: string
   vendor: string
   collections: string[]
-  metafields: Record<string, any>
+  metafields: Record<string, {
+    value: string
+    type: string
+  }>
   seo: {
     title?: string
     description?: string
@@ -110,9 +113,36 @@ export async function importProductData(productId: string, shopDomain: string, a
 
     const product = response.data.product
 
+    interface MetafieldNode {
+      namespace: string
+      key: string
+      value: string
+      type: string
+    }
+
+    interface CollectionNode {
+      title: string
+    }
+
+    interface ImageNode {
+      id: string
+      url: string
+      altText: string | null
+    }
+
+    interface VariantNode {
+      id: string
+      title: string
+      price: string
+      compareAtPrice?: string
+      inventoryQuantity?: number
+      weight?: number
+      weightUnit?: string
+    }
+
     // Process metafields into a more usable format
-    const metafields: Record<string, any> = {}
-    product.metafields.edges.forEach(({ node }: any) => {
+    const metafields: Record<string, { value: string; type: string }> = {}
+    product.metafields.edges.forEach(({ node }: { node: MetafieldNode }) => {
       const key = `${node.namespace}.${node.key}`
       metafields[key] = {
         value: node.value,
@@ -121,19 +151,19 @@ export async function importProductData(productId: string, shopDomain: string, a
     })
 
     // Extract collection names
-    const collections = product.collections.edges.map(({ node }: any) => node.title)
+    const collections = product.collections.edges.map(({ node }: { node: CollectionNode }) => node.title)
 
     const productData: ProductData = {
       id: product.id,
       title: product.title,
       description: product.description || '',
       handle: product.handle,
-      images: product.images.edges.map(({ node }: any) => ({
+      images: product.images.edges.map(({ node }: { node: ImageNode }) => ({
         id: node.id,
         url: node.url,
         altText: node.altText
       })),
-      variants: product.variants.edges.map(({ node }: any) => ({
+      variants: product.variants.edges.map(({ node }: { node: VariantNode }) => ({
         id: node.id,
         title: node.title,
         price: node.price,
