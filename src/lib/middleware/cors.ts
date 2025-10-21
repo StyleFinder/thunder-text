@@ -51,24 +51,48 @@ export function createCorsHeaders(request: Request): HeadersInit {
     }
   }
 
-  // If no origin but valid Shopify referer, allow it (embedded app case)
+  // If no origin but valid Shopify referer, extract and validate referer origin
   if (!origin && isShopifyReferer) {
-    console.log('✅ Allowing embedded app request from referer:', referer)
+    try {
+      const refererUrl = new URL(referer)
+      const refererOrigin = refererUrl.origin
+
+      // Validate referer origin against allowed patterns
+      const refererAllowed = allowedOrigins.some(pattern => {
+        if (pattern instanceof RegExp) {
+          return pattern.test(refererOrigin)
+        }
+        return pattern === refererOrigin
+      })
+
+      if (refererAllowed) {
+        console.log('✅ Allowing embedded app request from referer origin:', refererOrigin)
+        return {
+          'Access-Control-Allow-Origin': refererOrigin,
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+          'Access-Control-Allow-Credentials': 'true',
+          'Access-Control-Max-Age': '86400'
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ Invalid referer URL:', referer)
+    }
+
+    // If referer parsing failed or not allowed, deny
     return {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-      'Access-Control-Allow-Credentials': 'false', // Can't use credentials with *
-      'Access-Control-Max-Age': '86400'
+      'Access-Control-Allow-Origin': 'null',
+      'Access-Control-Allow-Methods': 'OPTIONS',
+      'Access-Control-Max-Age': '0'
     }
   }
 
-  // Return permissive headers for allowed origins
+  // Return headers for allowed origins only
   return {
-    'Access-Control-Allow-Origin': origin || '*', // Use * only for no-origin requests
+    'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-    'Access-Control-Allow-Credentials': origin ? 'true' : 'false', // Only true with specific origin
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400' // 24 hours
   }
 }
