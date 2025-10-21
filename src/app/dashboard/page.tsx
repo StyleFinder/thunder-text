@@ -115,11 +115,6 @@ function DashboardContent() {
                 >
                   Enhance Product
                 </Button>
-                <Button
-                  onClick={() => navigateTo('/generate')}
-                >
-                  Update Existing Product
-                </Button>
               </InlineStack>
             </BlockStack>
           </Card>
