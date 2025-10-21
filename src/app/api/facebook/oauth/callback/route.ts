@@ -321,10 +321,10 @@ export async function GET(request: NextRequest) {
     if (dbError) {
       console.error('❌ [DEBUG] Failed to store Facebook integration:', {
         error: dbError,
-        code: (dbError as any)?.code,
+        code: (dbError as { code?: string })?.code,
         message: dbError.message,
-        details: (dbError as any)?.details,
-        hint: (dbError as any)?.hint
+        details: (dbError as { details?: string })?.details,
+        hint: (dbError as { hint?: string })?.hint
       })
       throw dbError
     }

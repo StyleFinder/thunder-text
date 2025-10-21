@@ -115,7 +115,13 @@ export default function CreateFacebookAdFlow({
 
         // Products are already in the correct format from getProducts()
         // Just ensure they match our interface
-        const transformedProducts: ShopifyProduct[] = productList.map((p: any) => ({
+        const transformedProducts: ShopifyProduct[] = productList.map((p: {
+          id: string
+          title: string
+          description?: string
+          images?: Array<{ url: string; altText?: string | null }>
+          handle: string
+        }) => ({
           id: p.id,
           title: p.title,
           description: p.description || '',

@@ -143,12 +143,30 @@ export async function GET(request: NextRequest) {
 
     const product = response.product
 
+    interface ImageNode {
+      url: string
+      altText: string | null
+      width: number
+      height: number
+    }
+
+    interface CollectionNode {
+      title: string
+    }
+
+    interface VariantNode {
+      id: string
+      title: string
+      price: string
+      sku: string | null
+    }
+
     // Transform to PrePopulatedProductData format
     const processedData = {
       id: product.id,
       title: product.title,
       handle: product.handle,
-      images: product.images.edges.map(({ node }: any) => ({
+      images: product.images.edges.map(({ node }: { node: ImageNode }) => ({
         url: node.url,
         altText: node.altText,
         width: node.width,
@@ -156,9 +174,9 @@ export async function GET(request: NextRequest) {
       })),
       category: {
         primary: product.productType || 'general',
-        collections: product.collections.edges.map(({ node }: any) => node.title),
+        collections: product.collections.edges.map(({ node }: { node: CollectionNode }) => node.title),
       },
-      variants: product.variants.edges.map(({ node }: any) => ({
+      variants: product.variants.edges.map(({ node }: { node: VariantNode }) => ({
         id: node.id,
         title: node.title,
         price: node.price,

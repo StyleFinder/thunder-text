@@ -12,12 +12,20 @@ import { Sparkles, FileText, Wand2, CheckCircle2, ArrowRight, ArrowLeft } from '
 
 type OnboardingStep = 'welcome' | 'upload' | 'generating' | 'review' | 'complete'
 
+interface VoiceProfile {
+  profile: {
+    profile_text: string
+  }
+  samples_analyzed: number
+  generation_time_ms: number
+}
+
 export default function OnboardingPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome')
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [generatedProfile, setGeneratedProfile] = useState<any>(null)
+  const [generatedProfile, setGeneratedProfile] = useState<VoiceProfile | null>(null)
 
   const handleNext = () => {
     if (currentStep === 'welcome') {

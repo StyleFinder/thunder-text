@@ -38,7 +38,7 @@ interface EnhancementWorkflowState {
   progress: number
   productData: EnhancementProductData | null
   formData: EnhancementFormData | null
-  generatedContent: any | null
+  generatedContent: Record<string, unknown> | null
   comparisonData: ComparisonData | null
   error: string | null
 }

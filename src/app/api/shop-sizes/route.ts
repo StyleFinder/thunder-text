@@ -66,7 +66,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Filter: If a custom set exists with same name as template, hide the template
-    const nameMap = new Map<string, any>();
+    const nameMap = new Map<string, {
+      id: string
+      store_id: string | null
+      name: string
+      sizes: string[]
+      is_default: boolean
+      is_active: boolean
+      created_at: string | null
+      updated_at: string | null
+    }>()
 
     for (const size of (allSizes || [])) {
       const existing = nameMap.get(size.name);
@@ -84,7 +93,7 @@ export async function GET(request: NextRequest) {
       data: shopSizes || [],
     }, { headers: corsHeaders });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Shop sizes API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -199,7 +208,12 @@ export async function PUT(request: NextRequest) {
         .neq('id', id);
     }
 
-    const updateData: any = {
+    const updateData: {
+      updated_at: string
+      name?: string
+      sizes?: string[]
+      is_default?: boolean
+    } = {
       updated_at: new Date().toISOString()
     };
 

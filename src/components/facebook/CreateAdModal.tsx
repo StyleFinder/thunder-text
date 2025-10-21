@@ -66,7 +66,7 @@ export default function CreateAdModal({
       const data = await response.json()
 
       if (data.success) {
-        const campaign = data.data.find((c: any) => c.id === selectedCampaignId)
+        const campaign = data.data.find((c: { id: string; name: string }) => c.id === selectedCampaignId)
         if (campaign) {
           setSelectedCampaignName(campaign.name)
         }

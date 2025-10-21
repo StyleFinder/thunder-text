@@ -13,8 +13,16 @@ interface ProductDetailsFormProps {
   sizingOptions: { label: string; value: string }[]
   selectedTemplate: ProductCategory
   setSelectedTemplate: (value: ProductCategory) => void
-  templatePreview?: any
-  setTemplatePreview?: (value: any) => void
+  templatePreview?: {
+    name: string
+    description: string
+    sections?: string[]
+  }
+  setTemplatePreview?: (value: {
+    name: string
+    description: string
+    sections?: string[]
+  }) => void
   disabled?: boolean
   initialData?: {
     parentCategory?: string

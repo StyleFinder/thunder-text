@@ -96,7 +96,10 @@ export async function POST(request: NextRequest) {
     const shopifyClient = new ShopifyAPI(shop, accessToken)
 
     // Prepare the update input for Shopify GraphQL
-    const productInput: any = {}
+    const productInput: {
+      title?: string
+      descriptionHtml?: string
+    } = {}
 
     // Map our updates to Shopify's productUpdate input format
     if (updates.title) {
@@ -164,7 +167,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Failed to update product',
-          details: updateResult.productUpdate.userErrors.map((e: any) => e.message).join(', '),
+          details: updateResult.productUpdate.userErrors.map((e: { message: string }) => e.message).join(', '),
           userErrors: updateResult.productUpdate.userErrors
         },
         { status: 400, headers: corsHeaders }

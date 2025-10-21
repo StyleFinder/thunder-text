@@ -395,5 +395,5 @@ export interface Session {
   accessToken: string
   scope: string
   expires: Date | null
-  user: any
+  user: Record<string, unknown> | null
 }

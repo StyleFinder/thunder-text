@@ -41,23 +41,35 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
   const [formSizes, setFormSizes] = useState('')
   const [formIsDefault, setFormIsDefault] = useState(false)
 
-  const normalizeSize = (raw: any): ShopSize => {
-    const id = raw?.id ? String(raw.id) : ''
-    const storeId = raw?.store_id ?? null
+  const normalizeSize = (raw: unknown): ShopSize => {
+    const rawObj = raw as {
+      id?: string | number
+      store_id?: string | null
+      name?: string
+      sizes?: unknown
+      is_default?: boolean
+      is_active?: boolean
+      created_at?: string | null
+      updated_at?: string | null
+      source?: 'fallback' | 'database'
+    }
+
+    const id = rawObj?.id ? String(rawObj.id) : ''
+    const storeId = rawObj?.store_id ?? null
     const isFallback =
-      raw?.source === 'fallback' ||
+      rawObj?.source === 'fallback' ||
       !storeId ||
       (typeof id === 'string' && id.startsWith('fallback-'))
 
     return {
       id,
       store_id: storeId,
-      name: raw?.name ?? '',
-      sizes: Array.isArray(raw?.sizes) ? raw.sizes : [],
-      is_default: Boolean(raw?.is_default),
-      is_active: raw?.is_active ?? true,
-      created_at: raw?.created_at ?? null,
-      updated_at: raw?.updated_at ?? null,
+      name: rawObj?.name ?? '',
+      sizes: Array.isArray(rawObj?.sizes) ? rawObj.sizes : [],
+      is_default: Boolean(rawObj?.is_default),
+      is_active: rawObj?.is_active ?? true,
+      created_at: rawObj?.created_at ?? null,
+      updated_at: rawObj?.updated_at ?? null,
       source: isFallback ? 'fallback' : 'database'
     }
   }
@@ -94,7 +106,7 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
 
       if (data.success) {
         const normalizedSizes = Array.isArray(data.data)
-          ? data.data.map((size: any) => normalizeSize(size))
+          ? data.data.map((size: unknown) => normalizeSize(size))
           : []
         setSizes(normalizedSizes)
       } else {
@@ -135,7 +147,7 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
         return false
       }
 
-      const payload: Record<string, any> = {
+      const payload: Record<string, string | string[] | boolean> = {
         shop,
         name: formName,
         sizes: sizesArray,

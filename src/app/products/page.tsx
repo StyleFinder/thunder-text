@@ -290,7 +290,12 @@ function ProductsContent() {
           gap: '1.5rem',
           marginBottom: '2rem'
         }}>
-          {products.map((product: any) => {
+          {products.map((product: {
+            id: string
+            title: string
+            status: string
+            images?: Array<{ url: string; altText?: string | null }>
+          }) => {
             // Products are now flat objects, not nested in node
             const primaryImage = product.images?.[0]
             const isGenerating = generatingIds.has(product.id)

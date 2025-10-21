@@ -2,13 +2,18 @@
 
 import { useEffect, useState, createContext, useContext } from 'react'
 
+interface ShopifyAppBridge {
+  idToken: () => Promise<string>
+  [key: string]: unknown
+}
+
 interface AppBridgeContextType {
   isEmbedded: boolean
   shop: string | null
   host: string | null
   isLoading: boolean
   error: string | null
-  app: any | null
+  app: ShopifyAppBridge | null
 }
 
 const AppBridgeContext = createContext<AppBridgeContextType>({
@@ -34,7 +39,7 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
   const [shop, setShop] = useState<string | null>(null)
   const [host, setHost] = useState<string | null>(null)
   const [embedded, setEmbedded] = useState<string | null>(null)
-  const [appBridge, setAppBridge] = useState<any>(null)
+  const [appBridge, setAppBridge] = useState<ShopifyAppBridge | null>(null)
 
   // Get search params on client side only to avoid SSR issues
   useEffect(() => {
@@ -168,10 +173,7 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
 // Extend window type for TypeScript
 declare global {
   interface Window {
-    shopify: {
-      idToken: () => Promise<string>
-      [key: string]: any
-    }
+    shopify: ShopifyAppBridge
     getShopifySessionToken?: () => Promise<string>
   }
 }

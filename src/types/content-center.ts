@@ -66,9 +66,8 @@ export interface UpdateSampleRequest {
 }
 
 // POST /api/content-center/voice/generate
-export interface GenerateVoiceProfileRequest {
-  // No body params - uses active samples from database
-}
+// No body params - uses active samples from database
+export type GenerateVoiceProfileRequest = Record<string, never>
 
 // PATCH /api/content-center/voice/:id
 export interface UpdateVoiceProfileRequest {

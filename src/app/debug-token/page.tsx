@@ -3,9 +3,31 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 
+interface TokenAnalysis {
+  valid: boolean
+  error?: string
+  decoded?: {
+    iss?: string
+    dest?: string
+    aud?: string
+    sub?: string
+    exp?: number
+    nbf?: number
+    iat?: number
+    jti?: string
+    sid?: string
+  }
+  exchange_test?: {
+    success: boolean
+    access_token?: string
+    error?: string
+  }
+  [key: string]: unknown
+}
+
 export default function DebugTokenPage() {
   const [sessionToken, setSessionToken] = useState<string>('')
-  const [analysis, setAnalysis] = useState<any>(null)
+  const [analysis, setAnalysis] = useState<TokenAnalysis | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const searchParams = useSearchParams()

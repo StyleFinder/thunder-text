@@ -123,7 +123,12 @@ export async function GET(
       updatedAt: product.updatedAt,
       price: product.variants?.edges[0]?.node?.price ||
              product.priceRangeV2?.minVariantPrice?.amount || '0.00',
-      images: product.images?.edges?.map((edge: any) => ({
+      images: product.images?.edges?.map((edge: {
+        node: {
+          url: string
+          altText: string | null
+        }
+      }) => ({
         url: edge.node.url,
         altText: edge.node.altText
       })) || []

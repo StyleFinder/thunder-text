@@ -30,11 +30,11 @@ export async function GET() {
         node_env: process.env.NODE_ENV || 'unknown'
       }
     })
-  } catch (err: any) {
+  } catch (err) {
     return NextResponse.json({
       success: false,
-      error: err.message,
-      stack: err.stack
+      error: err instanceof Error ? err.message : 'Unknown error',
+      stack: err instanceof Error ? err.stack : undefined
     }, { status: 500 })
   }
 }

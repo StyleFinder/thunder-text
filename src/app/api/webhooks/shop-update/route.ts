@@ -38,7 +38,18 @@ export async function POST(request: NextRequest) {
 
     // Update shop information in database
     if (shopDomain) {
-      const shopUpdateData: any = {
+      const shopUpdateData: {
+        shop_domain: string
+        updated_at: string
+        shop_email?: string
+        shop_owner?: string
+        shop_name?: string
+        shop_phone?: string
+        timezone?: string
+        country?: string
+        currency?: string
+        plan_name?: string
+      } = {
         shop_domain: shopDomain,
         updated_at: new Date().toISOString()
       }

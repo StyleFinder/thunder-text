@@ -85,8 +85,14 @@ export async function GET(request: NextRequest) {
     const shopifyData = await shopifyResponse.json()
     console.log('✅ Shopify products response:', shopifyData)
 
+    interface ProductEdge {
+      node: {
+        productType: string | null
+      }
+    }
+
     // Extract unique product types from all products
-    const productTypes = shopifyData.data?.products?.edges?.map((edge: any) => edge.node.productType).filter(Boolean) || []
+    const productTypes = shopifyData.data?.products?.edges?.map((edge: ProductEdge) => edge.node.productType).filter(Boolean) || []
     const uniqueTypes = Array.from(new Set(productTypes)).sort()
     console.log('✅ Found unique product types:', uniqueTypes)
 

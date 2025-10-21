@@ -394,10 +394,15 @@ export async function POST(request: NextRequest) {
               for (const variant of createdVariants) {
                 if (variant?.id) {
                   const variantTitle = variant.title || ''
-                  
+
+                  interface OptionValue {
+                    name: string
+                    value: string
+                  }
+
                   // Extract color and size from variant option values
-                  const colorOption = variant.selectedOptions?.find((opt: any) => opt.name === 'Color')
-                  const sizeOption = variant.selectedOptions?.find((opt: any) => opt.name === 'Size')
+                  const colorOption = variant.selectedOptions?.find((opt: OptionValue) => opt.name === 'Color')
+                  const sizeOption = variant.selectedOptions?.find((opt: OptionValue) => opt.name === 'Size')
                   
                   const googleVariantMetafields = generateGoogleVariantMetafields(
                     variantTitle,

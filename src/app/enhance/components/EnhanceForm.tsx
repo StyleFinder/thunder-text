@@ -109,7 +109,7 @@ export function EnhanceForm({
     setIsFormValid(isValid)
   }, [formData, onFormChange])
 
-  const handleFieldChange = useCallback((field: keyof EnhancementFormData, value: any) => {
+  const handleFieldChange = useCallback((field: keyof EnhancementFormData, value: string | Record<string, boolean>) => {
     setFormData(prev => ({
       ...prev,
       [field]: value

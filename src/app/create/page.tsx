@@ -76,7 +76,7 @@ function CreateProductContent() {
   const [productType, setProductType] = useState('')
   const [availableSizing, setAvailableSizing] = useState('')
   const [sizingOptions, setSizingOptions] = useState<{ label: string; value: string }[]>([])
-  const [templatePreview, setTemplatePreview] = useState<any>(null)
+  const [templatePreview, setTemplatePreview] = useState<Record<string, unknown> | null>(null)
   const [fabricMaterial, setFabricMaterial] = useState('')
   const [occasionUse, setOccasionUse] = useState('')
   const [targetAudience, setTargetAudience] = useState('')
@@ -87,9 +87,9 @@ function CreateProductContent() {
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
-  const [generatedContent, setGeneratedContent] = useState<any>(null)
+  const [generatedContent, setGeneratedContent] = useState<Record<string, unknown> | null>(null)
   const [creatingProduct, setCreatingProduct] = useState(false)
-  const [productCreated, setProductCreated] = useState<any>(null)
+  const [productCreated, setProductCreated] = useState<Record<string, unknown> | null>(null)
   const [progress, setProgress] = useState(0)
   
   // Progress timer ref
@@ -105,9 +105,9 @@ function CreateProductContent() {
   }, [])
 
   // Custom categories
-  const [customCategories, setCustomCategories] = useState<any[]>([])
-  const [parentCategories, setParentCategories] = useState<any[]>([])
-  const [subCategories, setSubCategories] = useState<any[]>([])
+  const [customCategories, setCustomCategories] = useState<Array<Record<string, unknown>>>([])
+  const [parentCategories, setParentCategories] = useState<Array<Record<string, unknown>>>([])
+  const [subCategories, setSubCategories] = useState<Array<Record<string, unknown>>>([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
   const [categoriesError, setCategoriesError] = useState<string | null>(null)
   const [selectedParentCategory, setSelectedParentCategory] = useState('')
@@ -303,9 +303,15 @@ function CreateProductContent() {
 
       if (data.success && data.data.length > 0) {
         // Convert shop sizes to dropdown options
+        interface ShopSize {
+          name: string
+          is_default: boolean
+          sizes: string[]
+        }
+
         const options = [
           { label: 'Select sizing range', value: '' },
-          ...data.data.map((size: any) => ({
+          ...data.data.map((size: ShopSize) => ({
             label: `${size.name}${size.is_default ? ' (Default)' : ''}: ${size.sizes.join(', ')}`,
             value: size.sizes.join(', ')
           }))
@@ -313,7 +319,7 @@ function CreateProductContent() {
         setSizingOptions(options)
 
         // Set default sizing if available
-        const defaultSize = data.data.find((size: any) => size.is_default)
+        const defaultSize = data.data.find((size: ShopSize) => size.is_default)
         if (defaultSize && !availableSizing) {
           setAvailableSizing(defaultSize.sizes.join(', '))
         }
@@ -376,7 +382,11 @@ function CreateProductContent() {
     }
   }
 
-  const suggestCategoryFromContent = async (generatedContent: any) => {
+  const suggestCategoryFromContent = async (generatedContent: {
+    title: string
+    description: string
+    keywords: string[]
+  }) => {
     try {
       console.log('🎯 Requesting category suggestion for generated content')
       

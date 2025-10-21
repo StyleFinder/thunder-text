@@ -143,23 +143,25 @@ export function RichTextEditor({
       label: 'Undo',
       command: 'undo',
       disabled: !canUndo,
-      shortcut: 'Cmd+Z'
+      shortcut: 'Cmd+Z',
+      variant: 'ghost' as const
     },
     {
       icon: Redo,
       label: 'Redo',
       command: 'redo',
       disabled: !canRedo,
-      shortcut: 'Cmd+Shift+Z'
+      shortcut: 'Cmd+Shift+Z',
+      variant: 'ghost' as const
     },
     {
       icon: isCopied ? Check : Copy,
       label: isCopied ? 'Copied!' : 'Copy to clipboard',
       customHandler: handleCopy,
       disabled: false,
-      variant: isCopied ? 'default' : 'outline'
+      variant: (isCopied ? 'default' : 'outline') as const
     }
-  ]
+  ] as const
 
   return (
     <Card className={className}>
@@ -214,7 +216,7 @@ export function RichTextEditor({
                       <TooltipTrigger asChild>
                         <Button
                           size="sm"
-                          variant={(button.variant as any) || 'ghost'}
+                          variant={button.variant || 'ghost'}
                           onClick={() => {
                             if (button.customHandler) {
                               button.customHandler()

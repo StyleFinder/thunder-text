@@ -28,10 +28,19 @@ import {
 } from '@shopify/polaris-icons'
 import styles from './EnhancedContentComparison.module.css'
 
+interface ContentData {
+  title?: string
+  description?: string
+  seoTitle?: string
+  seoDescription?: string
+  promoText?: string
+  bulletPoints?: string[]
+}
+
 interface EnhancedContentComparisonProps {
   active: boolean
   onClose: () => void
-  onApply: (content: any) => void
+  onApply: (content: ContentData) => void
   originalContent: {
     title?: string
     description?: string
@@ -141,7 +150,7 @@ export default function EnhancedContentComparison({
 
   const handleApplyChanges = () => {
     // Only apply fields that are checked
-    const contentToApply: any = {}
+    const contentToApply: ContentData = {}
 
     if (fieldsToApply.title && editedContent.title) {
       contentToApply.title = editedContent.title

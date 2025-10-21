@@ -28,7 +28,7 @@ interface ProductData {
   productType: string
   vendor: string
   collections?: string[]
-  metafields?: Record<string, any>
+  metafields?: Record<string, { value: string; type: string }>
 }
 
 interface GeneratedContent {

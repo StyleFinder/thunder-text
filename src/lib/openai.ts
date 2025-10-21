@@ -31,6 +31,22 @@ export interface ProductDescriptionResponse {
   }
 }
 
+export interface ProductEnhancementResponse {
+  title?: string
+  description?: string
+  seoTitle?: string
+  metaDescription?: string
+  promotionalCopy?: string
+  confidence?: number
+  processingTime: number
+  tokenUsage: {
+    prompt: number
+    completion: number
+    total: number
+  }
+  [key: string]: unknown  // Allow additional properties from OpenAI
+}
+
 export class AIDescriptionGenerator {
   private storeUsage: Map<string, number> = new Map()
 
@@ -117,7 +133,7 @@ export class AIDescriptionGenerator {
       }
     } catch (error) {
       console.error('AI generation error:', error)
-      throw new Error(`Failed to generate product description: ${error.message}`)
+      throw new Error(`Failed to generate product description: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -259,7 +275,7 @@ CRITICAL: The "description" field must strictly follow the custom prompt guideli
       createPromo: boolean
     }
     storeId: string
-  }): Promise<any> {
+  }): Promise<ProductEnhancementResponse> {
     const startTime = Date.now()
 
     try {
@@ -355,7 +371,7 @@ Please provide the output in the following JSON format:
       }
     } catch (error) {
       console.error('AI enhancement error:', error)
-      throw new Error(`Failed to enhance product description: ${error.message}`)
+      throw new Error(`Failed to enhance product description: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 }
