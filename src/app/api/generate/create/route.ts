@@ -154,7 +154,10 @@ FORMATTING REQUIREMENTS:
 - Section headers should be bold using <b>Header Name</b> tags
 - Never use **markdown bold** or asterisks for formatting
 - Use <br> for line breaks when needed
-- Keep paragraphs as plain text without HTML paragraph tags`
+- Keep paragraphs as plain text without HTML paragraph tags
+- NEVER use "Opening Hook" as a section label or header in the output
+- The first paragraph should begin directly without any label or header
+- Other section headers like "Product Details", "Styling Tips", "Care and Sizing", "Why You'll Love It" should be included as specified in the template`
       } else {
         throw new Error('No custom prompts available')
       }
@@ -186,7 +189,7 @@ OUTPUT FORMAT - Return a JSON object with these exact fields:
   "title": "Product title (max 70 characters)",
   "description": "Detailed product description (200-400 words)",
   "bulletPoints": ["Array of 5-7 key benefit bullet points"],
-  "metaDescription": "SEO meta description (max 160 characters)", 
+  "metaDescription": "SEO meta description (max 160 characters)",
   "keywords": ["Array of 8-12 relevant SEO keywords"],
   "suggestedPrice": "Suggested price range based on category and features",
   "tags": ["Array of product tags for organization"]
@@ -194,10 +197,13 @@ OUTPUT FORMAT - Return a JSON object with these exact fields:
 
 FORMATTING REQUIREMENTS:
 - Use HTML formatting, not Markdown
-- Section headers should be bold using <b>Header Name</b> tags  
+- Section headers should be bold using <b>Header Name</b> tags
 - Never use **markdown bold** or asterisks for formatting
 - Use <br> for line breaks when needed
-- Keep paragraphs as plain text without HTML paragraph tags`
+- Keep paragraphs as plain text without HTML paragraph tags
+- NEVER use "Opening Hook" as a section label or header in the output
+- The first paragraph should begin directly without any label or header
+- Other section headers like "Product Details", "Styling Tips", "Care and Sizing", "Why You'll Love It" should be included as specified in the template`
     }
 
     const userPrompt = `Analyze these product images and create compelling e-commerce content. Focus on what makes this product unique and valuable to customers.

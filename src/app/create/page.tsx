@@ -1354,7 +1354,7 @@ function CreateProductContent() {
               
               <TextField
                 label="Description"
-                value={generatedContent.description || ''}
+                value={generatedContent.description?.replace(/<[^>]*>/g, '') || ''}
                 onChange={() => {}}
                 multiline={6}
                 readOnly
