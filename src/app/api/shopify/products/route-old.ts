@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
     `
 
     // Calculate pagination cursor
-    let afterCursor = null
+    const afterCursor = null
     if (page > 1) {
       // For simplicity, we'll fetch all pages up to the current one
       // In production, you'd want to store cursors

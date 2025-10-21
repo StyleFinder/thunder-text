@@ -20,6 +20,19 @@ const eslintConfig = [
       "next-env.d.ts",
     ],
   },
+  {
+    // Allow 'any' type in debug endpoints and test files
+    // Production code must have proper types
+    files: [
+      "src/app/api/debug/**/*.ts",
+      "src/__tests__/**/*.ts",
+      "src/**/*.test.ts",
+      "src/**/*.spec.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
 ];
 
 export default eslintConfig;

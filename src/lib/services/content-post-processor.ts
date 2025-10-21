@@ -138,7 +138,7 @@ function trimToWordCount(content: string, targetWordCount: number): {
   }
 
   // Trim to target, trying to end at a sentence
-  let trimmedWords = words.slice(0, targetWordCount)
+  const trimmedWords = words.slice(0, targetWordCount)
   let trimmedText = trimmedWords.join(' ')
 
   // Try to find last complete sentence

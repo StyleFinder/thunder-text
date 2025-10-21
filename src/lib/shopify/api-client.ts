@@ -95,7 +95,7 @@ export async function fetchProducts(params: URLSearchParams) {
 /**
  * Enhance a product with authentication
  */
-export async function enhanceProduct(productId: string, shop: string, data: any) {
+export async function enhanceProduct(productId: string, shop: string, data: Record<string, unknown>) {
   // Validate productId before making request
   const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test', '']
   if (!productId || invalidProductIds.includes(productId.toLowerCase())) {

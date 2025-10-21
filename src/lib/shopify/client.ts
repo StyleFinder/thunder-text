@@ -13,7 +13,7 @@ async function getShopifyAccessToken(shop: string, sessionToken?: string): Promi
 }
 
 // Wrapper function that matches the expected interface
-export async function shopifyGraphQL(query: string, variables: any, shop: string, sessionToken?: string) {
+export async function shopifyGraphQL(query: string, variables: Record<string, unknown>, shop: string, sessionToken?: string) {
   try {
     console.log('🔍 Starting Shopify GraphQL query for shop:', shop)
     console.log('📝 Query variables:', JSON.stringify(variables, null, 2))

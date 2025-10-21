@@ -176,7 +176,7 @@ function verifySessionToken(token: string): boolean {
 /**
  * Parse JWT payload without verification (for debugging)
  */
-function parseJWT(token: string): any {
+function parseJWT(token: string): Record<string, unknown> | null {
   try {
     const [, payload] = token.split('.')
     return JSON.parse(Buffer.from(payload, 'base64').toString())
@@ -221,7 +221,7 @@ export async function authenticateRequest(
       // Also try to get from JWT payload
       if (sessionToken && !shop) {
         const payload = parseJWT(sessionToken)
-        shop = payload?.dest?.replace('https://', '')
+        shop = (payload?.dest as string | undefined)?.replace('https://', '')
       }
     }
 

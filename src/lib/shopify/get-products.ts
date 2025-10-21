@@ -1,5 +1,41 @@
 import { GraphQLClient } from 'graphql-request'
 
+// GraphQL response types
+interface ShopifyProductEdge {
+  node: {
+    id: string
+    title: string
+    handle: string
+    description: string
+    status: string
+    images: {
+      edges: Array<{
+        node: {
+          url: string
+          altText?: string
+        }
+      }>
+    }
+    variants: {
+      edges: Array<{
+        node: {
+          price: string
+        }
+      }>
+    }
+  }
+}
+
+interface ShopifyProductsResponse {
+  products: {
+    edges: ShopifyProductEdge[]
+    pageInfo: {
+      hasNextPage: boolean
+      endCursor: string
+    }
+  }
+}
+
 /**
  * Simple function to get products directly from Shopify
  * Uses the access token stored after app installation
@@ -76,7 +112,7 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
   }
 
   try {
-    const response = await client.request(query, variables)
+    const response = await client.request<ShopifyProductsResponse>(query, variables)
 
     console.log('🔍 Shopify API response:', {
       productsFound: response.products?.edges?.length || 0,
@@ -84,18 +120,18 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
       searchQuery: searchQuery || 'none',
       formattedQuery: formattedQuery || 'none',
       firstProduct: response.products?.edges?.[0]?.node?.title || 'none',
-      allTitles: response.products?.edges?.map((edge: any) => edge.node.title) || []
+      allTitles: response.products?.edges?.map((edge: ShopifyProductEdge) => edge.node.title) || []
     })
 
   // Transform to simpler format
-  let products = response.products.edges.map((edge: any) => ({
+  let products = response.products.edges.map((edge: ShopifyProductEdge) => ({
     id: edge.node.id,
     title: edge.node.title,
     handle: edge.node.handle,
     description: edge.node.description || '',
     status: edge.node.status?.toLowerCase() || 'active',
     price: edge.node.variants?.edges[0]?.node?.price || '0.00',
-    images: edge.node.images?.edges?.map((imgEdge: any) => ({
+    images: edge.node.images?.edges?.map((imgEdge) => ({
       url: imgEdge.node.url,
       altText: imgEdge.node.altText
     })) || [],
@@ -110,7 +146,7 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     const shopifyFiltered = products.length < 100
 
     // Always apply client-side filtering for better matching
-    const filteredProducts = products.filter((product: any) => {
+    const filteredProducts = products.filter((product) => {
       // More flexible matching - check if any word in the search matches
       const searchWords = searchLower.split(/\s+/)
       const titleLower = product.title.toLowerCase()
@@ -128,7 +164,7 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
       searchTerm: searchLower,
       searchWords: searchLower.split(/\s+/),
       shopifyFiltered,
-      sampleTitles: products.slice(0, 3).map((p: any) => p.title)
+      sampleTitles: products.slice(0, 3).map((p) => p.title)
     })
 
     // Use filtered results

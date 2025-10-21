@@ -137,7 +137,7 @@ export default function GeneratePage() {
         break
       case 'md':
         // Simple HTML to Markdown conversion
-        let markdown = content
+        const markdown = content
           .replace(/<h1>/g, '# ')
           .replace(/<h2>/g, '## ')
           .replace(/<h3>/g, '### ')

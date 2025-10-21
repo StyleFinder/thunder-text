@@ -31,7 +31,7 @@ export interface Shop {
   is_active: boolean
   installed_at: string
   last_used_at: string
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
   created_at: string
   updated_at: string
 }
@@ -40,7 +40,7 @@ export interface DescriptionGeneration {
   id: string
   shop_id: string
   product_id: string
-  generated_content: Record<string, any>
+  generated_content: Record<string, unknown>
   status: 'pending' | 'completed' | 'error'
   created_at: string
   updated_at: string

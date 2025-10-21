@@ -17,7 +17,7 @@ interface ShopifyGlobal {
   }
 
   // Resource picker
-  resourcePicker(options: { type: string; multiple?: boolean }): Promise<any[]>
+  resourcePicker(options: { type: string; multiple?: boolean }): Promise<unknown[]>
 
   // Navigation
   navigate(url: string): void
