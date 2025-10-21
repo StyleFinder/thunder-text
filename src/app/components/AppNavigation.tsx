@@ -16,6 +16,7 @@ import {
   EditIcon,
   MarketingIcon,
   TextIcon,
+  SocialAdIcon,
 } from '@shopify/polaris-icons'
 import { useNavigation } from '../hooks/useNavigation'
 
@@ -75,7 +76,7 @@ function NavigationContent({ children }: AppNavigationProps) {
     {
       url: buildUrl('/facebook-ads'),
       label: 'Facebook Ads',
-      icon: MarketingIcon,
+      icon: SocialAdIcon,
       onClick: () => navigateTo('/facebook-ads'),
       matches: isActive({
         label: 'Facebook Ads',
