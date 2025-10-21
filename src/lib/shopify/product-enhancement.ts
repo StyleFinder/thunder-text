@@ -450,8 +450,18 @@ export async function updateProductWithEnhancement(
   success: boolean
   error?: string
   updatedAt?: string
-  backup?: any
-  changes?: any
+  backup?: {
+    original_description: string
+    original_title: string
+    backup_id: string
+    backup_timestamp: string
+    metafield_id?: string
+  }
+  changes?: {
+    title_updated: boolean
+    description_updated: boolean
+    seo_updated: boolean
+  }
 }> {
   try {
     // For now, directly update via Shopify API
@@ -477,7 +487,7 @@ export async function updateProductWithEnhancement(
 
     const shopifyApi = new ShopifyAPI(shop, accessToken)
 
-    const updateInput: any = {
+    const updateInput: Record<string, unknown> = {
       descriptionHtml: enhancementData.description
     }
 

@@ -99,7 +99,7 @@ export class ShopifyProductUpdater {
       }
 
       // Prepare product update input
-      const updateInput: any = {}
+      const updateInput: Record<string, unknown> = {}
       const changes = {
         title_updated: false,
         description_updated: false,

@@ -1,5 +1,69 @@
 import { shopifyGraphQL } from './client'
 
+// GraphQL response types
+interface ShopifyImageNode {
+  node: {
+    url: string
+    altText?: string
+    width?: number
+    height?: number
+  }
+}
+
+interface ShopifyCollectionNode {
+  node: {
+    title: string
+  }
+}
+
+interface ShopifyVariantNode {
+  node: {
+    id: string
+    title: string
+    price: string
+    sku?: string
+    weight?: number
+    metafields: ShopifyMetafieldEdges
+  }
+}
+
+interface ShopifyMetafieldNode {
+  node: {
+    namespace: string
+    key: string
+    value: string
+    type: string
+  }
+}
+
+interface ShopifyMetafieldEdges {
+  edges: ShopifyMetafieldNode[]
+}
+
+interface ShopifyProductData {
+  id: string
+  title: string
+  handle: string
+  descriptionHtml: string
+  vendor: string
+  productType: string
+  tags: string[]
+  seo?: {
+    title?: string
+    description?: string
+  }
+  images: {
+    edges: ShopifyImageNode[]
+  }
+  variants: {
+    edges: ShopifyVariantNode[]
+  }
+  collections: {
+    edges: ShopifyCollectionNode[]
+  }
+  metafields: ShopifyMetafieldEdges
+}
+
 export interface PrePopulatedProductData {
   id: string
   title: string
@@ -32,9 +96,9 @@ export interface PrePopulatedProductData {
     careInstructions?: string[]
   }
   metafields: {
-    sizing?: any
-    specifications?: any
-    features?: any
+    sizing?: Record<string, unknown> | null
+    specifications?: Record<string, unknown> | null
+    features?: Record<string, unknown> | null
   }
   vendor: string
   productType: string
@@ -64,7 +128,7 @@ export async function fetchProductDataForPrePopulation(
       id: productData.id,
       title: productData.title,
       handle: productData.handle,
-      images: productData.images.edges.map(({ node }: any) => ({
+      images: productData.images.edges.map(({ node }: ShopifyImageNode) => ({
         url: node.url,
         altText: node.altText,
         width: node.width,
@@ -72,9 +136,9 @@ export async function fetchProductDataForPrePopulation(
       })),
       category: {
         primary: extractPrimaryCategory(productData),
-        collections: productData.collections.edges.map(({ node }: any) => node.title),
+        collections: productData.collections.edges.map(({ node }: ShopifyCollectionNode) => node.title),
       },
-      variants: productData.variants.edges.map(({ node }: any) => ({
+      variants: productData.variants.edges.map(({ node }: ShopifyVariantNode) => ({
         id: node.id,
         title: node.title,
         price: node.price,
@@ -236,7 +300,7 @@ async function fetchShopifyProduct(productId: string, shop: string, sessionToken
   }
 }
 
-function extractPrimaryCategory(productData: any): string {
+function extractPrimaryCategory(productData: ShopifyProductData): string {
   // Priority order for category detection:
   // 1. First collection title
   // 2. Product type
@@ -263,12 +327,12 @@ function extractPrimaryCategory(productData: any): string {
   return 'general'
 }
 
-function extractDimensions(metafields: any): { length?: number; width?: number; height?: number } {
+function extractDimensions(metafields: ShopifyMetafieldEdges): { length?: number; width?: number; height?: number } {
   const dimensions: { length?: number; width?: number; height?: number } = {}
-  
+
   if (!metafields || !metafields.edges) return dimensions
 
-  metafields.edges.forEach(({ node }: any) => {
+  metafields.edges.forEach(({ node }: ShopifyMetafieldNode) => {
     const { namespace, key, value } = node
     
     if (namespace === 'custom' || namespace === 'product') {
@@ -292,12 +356,12 @@ function extractDimensions(metafields: any): { length?: number; width?: number; 
   return dimensions
 }
 
-function extractMaterials(metafields: any): { fabric?: string; composition?: string[]; careInstructions?: string[] } {
+function extractMaterials(metafields: ShopifyMetafieldEdges): { fabric?: string; composition?: string[]; careInstructions?: string[] } {
   const materials: { fabric?: string; composition?: string[]; careInstructions?: string[] } = {}
-  
+
   if (!metafields || !metafields.edges) return materials
 
-  metafields.edges.forEach(({ node }: any) => {
+  metafields.edges.forEach(({ node }: ShopifyMetafieldNode) => {
     const { namespace, key, value } = node
     
     if (namespace === 'custom' || namespace === 'product') {
@@ -330,12 +394,12 @@ function extractMaterials(metafields: any): { fabric?: string; composition?: str
   return materials
 }
 
-function extractSizingInfo(metafields: any): any {
+function extractSizingInfo(metafields: ShopifyMetafieldEdges): Record<string, unknown> | null {
   if (!metafields || !metafields.edges) return null
 
-  const sizingInfo: any = {}
+  const sizingInfo: Record<string, unknown> = {}
 
-  metafields.edges.forEach(({ node }: any) => {
+  metafields.edges.forEach(({ node }: ShopifyMetafieldNode) => {
     const { namespace, key, value } = node
     
     if (namespace === 'custom' || namespace === 'product') {
@@ -357,12 +421,12 @@ function extractSizingInfo(metafields: any): any {
   return Object.keys(sizingInfo).length > 0 ? sizingInfo : null
 }
 
-function extractSpecifications(metafields: any): any {
+function extractSpecifications(metafields: ShopifyMetafieldEdges): Record<string, unknown> | null {
   if (!metafields || !metafields.edges) return null
 
-  const specifications: any = {}
+  const specifications: Record<string, unknown> = {}
 
-  metafields.edges.forEach(({ node }: any) => {
+  metafields.edges.forEach(({ node }: ShopifyMetafieldNode) => {
     const { namespace, key, value } = node
     
     if (namespace === 'custom' || namespace === 'product' || namespace === 'specifications') {
@@ -383,12 +447,12 @@ function extractSpecifications(metafields: any): any {
   return Object.keys(specifications).length > 0 ? specifications : null
 }
 
-function extractFeatures(metafields: any): any {
+function extractFeatures(metafields: ShopifyMetafieldEdges): Record<string, unknown> | null {
   if (!metafields || !metafields.edges) return null
 
-  const features: any = {}
+  const features: Record<string, unknown> = {}
 
-  metafields.edges.forEach(({ node }: any) => {
+  metafields.edges.forEach(({ node }: ShopifyMetafieldNode) => {
     const { namespace, key, value } = node
     
     if (namespace === 'custom' || namespace === 'product') {
@@ -416,9 +480,9 @@ export function formatKeyFeatures(data: PrePopulatedProductData): string {
   // Extract features from various sources
   if (data.metafields.features) {
     const metafieldFeatures = data.metafields.features
-    Object.values(metafieldFeatures).forEach((value: any) => {
+    Object.values(metafieldFeatures).forEach((value: unknown) => {
       if (Array.isArray(value)) {
-        features.push(...value)
+        features.push(...value.filter((v): v is string => typeof v === 'string'))
       } else if (typeof value === 'string') {
         features.push(value)
       }
@@ -451,7 +515,7 @@ export function formatKeyFeatures(data: PrePopulatedProductData): string {
   return features.join(', ')
 }
 
-export function formatSizingData(sizingData: any): string {
+export function formatSizingData(sizingData: Record<string, unknown> | null): string {
   if (!sizingData) return ''
 
   // Convert sizing data to a readable format

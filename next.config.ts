@@ -1,13 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // SECURITY: Enable type checking and linting in production builds
+  // All TypeScript and ESLint errors must be fixed before deployment
   eslint: {
-    // Disable ESLint during production builds to prevent deployment failures
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    // Disable TypeScript strict checks during production builds
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   // Ensure environment variables are available
   env: {

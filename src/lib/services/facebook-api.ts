@@ -7,6 +7,15 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { decryptToken, encryptToken } from './encryption'
+import type {
+  FacebookIntegration,
+  AdAccount,
+  Campaign,
+  CampaignInsight,
+  FacebookAPIResponse,
+  FacebookInsightData,
+  FacebookTokenResponse
+} from '@/types/facebook'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
@@ -14,39 +23,6 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 const FACEBOOK_API_VERSION = 'v21.0'
 const FACEBOOK_GRAPH_URL = `https://graph.facebook.com/${FACEBOOK_API_VERSION}`
-
-interface FacebookIntegration {
-  id: string
-  shop_id: string
-  provider: string
-  provider_account_id: string
-  provider_account_name: string | null
-  encrypted_access_token: string
-  encrypted_refresh_token: string | null
-  token_expires_at: string | null
-  is_active: boolean
-  additional_metadata: any
-}
-
-interface AdAccount {
-  id: string
-  account_id: string
-  name: string
-  account_status: number
-  currency: string
-  timezone_name: string
-}
-
-interface Campaign {
-  id: string
-  name: string
-  status: string
-  objective: string
-  daily_budget?: string
-  lifetime_budget?: string
-  created_time: string
-  updated_time: string
-}
 
 export class FacebookAPIError extends Error {
   constructor(
@@ -204,7 +180,7 @@ export async function getAdAccounts(shopId: string): Promise<AdAccount[]> {
 
     const userId = integration.provider_account_id
 
-    const data = await makeRequest<{ data: AdAccount[] }>(
+    const data = await makeRequest<FacebookAPIResponse<AdAccount[]>>(
       shopId,
       `/${userId}/adaccounts?fields=id,account_id,name,account_status,currency,timezone_name`
     )
@@ -234,7 +210,7 @@ export async function getCampaigns(
     const fields = 'id,name,status,objective,daily_budget,lifetime_budget,created_time,updated_time'
     const endpoint = `/${adAccountId}/campaigns?fields=${fields}&limit=${limit}`
 
-    const data = await makeRequest<{ data: Campaign[] }>(shopId, endpoint)
+    const data = await makeRequest<FacebookAPIResponse<Campaign[]>>(shopId, endpoint)
 
     let campaigns = data.data || []
 
@@ -306,21 +282,11 @@ export async function getIntegrationInfo(shopId: string): Promise<{
     connected: true,
     accountName: integration.provider_account_name,
     adAccountsCount: adAccounts.length,
-    adAccounts: adAccounts.map((acc: any) => ({
+    adAccounts: adAccounts.map((acc) => ({
       id: acc.id,
       name: acc.name
     }))
   }
-}
-
-interface CampaignInsight {
-  campaign_id: string
-  campaign_name: string
-  spend: number
-  purchases: number
-  purchase_value: number
-  conversion_rate: number
-  roas: number
 }
 
 /**
@@ -367,7 +333,7 @@ export async function getCampaignInsights(
 
     const endpoint = `/${adAccountId}/insights?fields=${fields}&level=campaign&filtering=${encodeURIComponent(filtering)}&time_range=${encodeURIComponent(timeRange)}`
 
-    const data = await makeRequest<{ data: any[] }>(shopId, endpoint)
+    const data = await makeRequest<FacebookAPIResponse<FacebookInsightData[]>>(shopId, endpoint)
 
     const insights: CampaignInsight[] = []
 
@@ -379,8 +345,8 @@ export async function getCampaignInsights(
       const actions = insight.actions || []
       const actionValues = insight.action_values || []
 
-      const purchaseAction = actions.find((a: any) => a.action_type === 'purchase')
-      const purchaseValue = actionValues.find((a: any) => a.action_type === 'purchase')
+      const purchaseAction = actions.find((a) => a.action_type === 'purchase')
+      const purchaseValue = actionValues.find((a) => a.action_type === 'purchase')
 
       const purchases = purchaseAction ? parseInt(purchaseAction.value) : 0
       const purchaseValueAmount = purchaseValue ? parseFloat(purchaseValue.value) : 0

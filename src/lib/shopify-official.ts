@@ -1,9 +1,21 @@
 import { createAdminApiClient } from '@shopify/admin-api-client'
+import type {
+  ShopifyProductInput,
+  ShopifyMetafieldInput,
+  ShopifyVariantInput,
+  ShopifyMediaUploadTarget,
+  ShopifyMediaImage,
+  ShopifyProductCreateMediaResponse
+} from '@/types/shopify'
+
+interface ShopifyAdminApiClient {
+  request: <T>(query: string, options?: { variables?: Record<string, unknown> }) => Promise<{ data: T }>
+}
 
 export class ShopifyOfficialAPI {
   private shop: string
   private accessToken: string
-  private client: any
+  private client: ShopifyAdminApiClient
 
   constructor(shop: string, accessToken: string) {
     this.shop = shop
@@ -15,7 +27,7 @@ export class ShopifyOfficialAPI {
     })
   }
 
-  async createProduct(productData: any) {
+  async createProduct(productData: ShopifyProductInput) {
     try {
       console.log('🔄 Creating product with official Admin API client...')
 
@@ -90,7 +102,7 @@ export class ShopifyOfficialAPI {
   }
 
   // CORRECTED GraphQL Media Upload - Using recommended productUpdate approach
-  async createProductImage(productId: string, imageData: any, altText?: string) {
+  async createProductImage(productId: string, imageData: string | { data?: string; src?: string; dataURL?: string; dataUrl?: string; url?: string; base64?: string }, altText?: string) {
     try {
       console.log('🔄 Starting CORRECTED GraphQL media upload process...')
       console.log('🔍 DEBUG: imageData type:', typeof imageData)
@@ -191,7 +203,7 @@ export class ShopifyOfficialAPI {
 
       if (stagedUploadData.userErrors?.length > 0) {
         console.error('❌ Staged upload creation failed:', stagedUploadData.userErrors)
-        throw new Error(`Staged upload failed: ${stagedUploadData.userErrors.map((e: any) => e.message).join(', ')}`)
+        throw new Error(`Staged upload failed: ${stagedUploadData.userErrors.map((e) => e.message).join(', ')}`)
       }
 
       const stagedTarget = stagedUploadData.stagedTargets[0]
@@ -218,7 +230,8 @@ export class ShopifyOfficialAPI {
         throw new Error(`Image buffer too small (${buffer.length} bytes) - likely truncated base64 data`)
       }
       
-      const FormData = require('form-data')
+      const FormDataModule = await import('form-data')
+      const FormData = FormDataModule.default
       const form = new FormData()
 
       console.log('🔍 DEBUG: Adding parameters to form...', stagedTarget.parameters.length, 'parameters')
@@ -310,7 +323,7 @@ export class ShopifyOfficialAPI {
 
       if (mediaData?.mediaUserErrors?.length > 0) {
         console.error('❌ Media creation failed:', JSON.stringify(mediaData.mediaUserErrors, null, 2))
-        throw new Error(`Media creation failed: ${mediaData.mediaUserErrors.map((e: any) => e.message).join(', ')}`)
+        throw new Error(`Media creation failed: ${mediaData.mediaUserErrors.map((e) => e.message).join(', ')}`)
       }
       
       if (!mediaData?.media?.length) {
@@ -343,7 +356,7 @@ export class ShopifyOfficialAPI {
     }
   }
 
-  async createProductOption(productId: string, option: any) {
+  async createProductOption(productId: string, option: { name: string; values: string[]; position?: number }) {
     try {
       console.log('🔄 Creating product option with official library...')
       
@@ -381,7 +394,7 @@ export class ShopifyOfficialAPI {
     }
   }
 
-  async createProductVariants(productId: string, variants: any[]) {
+  async createProductVariants(productId: string, variants: ShopifyVariantInput[]) {
     try {
       console.log('🔄 Creating product variants with official library...')
       
@@ -445,7 +458,7 @@ export class ShopifyOfficialAPI {
     }
   }
 
-  async createProductMetafield(productId: string, metafield: any) {
+  async createProductMetafield(productId: string, metafield: ShopifyMetafieldInput) {
     try {
       console.log('🔄 Creating product metafield with official library...')
       
@@ -487,7 +500,7 @@ export class ShopifyOfficialAPI {
     }
   }
 
-  async createProductVariantMetafield(variantId: string, metafield: any) {
+  async createProductVariantMetafield(variantId: string, metafield: ShopifyMetafieldInput) {
     try {
       console.log('🔄 Creating variant metafield with official library...')
       

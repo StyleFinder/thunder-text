@@ -40,8 +40,8 @@ async function getAccessTokenAndPageId(shopId: string): Promise<{
   const accessToken = await decryptToken(integration.encrypted_access_token)
 
   // Get facebook_page_id from additional_metadata
-  const metadata = integration.additional_metadata as any
-  const pageId = metadata?.facebook_page_id || null
+  const metadata = integration.additional_metadata as Record<string, unknown> | null
+  const pageId = (metadata?.facebook_page_id as string | undefined) || null
 
   return {
     accessToken,
@@ -120,7 +120,7 @@ async function createAdCreative(
   const url = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/adcreatives`)
   url.searchParams.set('access_token', accessToken)
 
-  const creativeData: any = {
+  const creativeData = {
     name: title,
     object_story_spec: {
       page_id: pageId, // Required: Facebook page to post from
@@ -186,7 +186,7 @@ async function getOrCreateAdSet(
 
   if (fetchResponse.ok && fetchResult.data && fetchResult.data.length > 0) {
     // Use the first ad set (preferably active)
-    const activeAdSet = fetchResult.data.find((as: any) =>
+    const activeAdSet = fetchResult.data.find((as: { status: string; effective_status: string; id: string }) =>
       as.status === 'ACTIVE' || as.effective_status === 'ACTIVE'
     ) || fetchResult.data[0]
 
@@ -366,7 +366,8 @@ export async function POST(request: NextRequest) {
       if (draft.shopify_product_id) {
         // Get product handle from Shopify product ID
         // Format: gid://shopify/Product/123456 -> extract 123456 as handle fallback
-        const productHandle = draft.additional_metadata?.product_handle ||
+        const metadata = draft.additional_metadata as Record<string, unknown> | null
+        const productHandle = (metadata?.product_handle as string | undefined) ||
                             draft.shopify_product_id.split('/').pop()
         productUrl = `https://${shop}/products/${productHandle}`
       }
@@ -398,7 +399,7 @@ export async function POST(request: NextRequest) {
         draft.facebook_campaign_id,
         creative.id,
         draft.ad_title
-      )
+      ) as { id: string; adset_id?: string }
 
       // Update draft with success
       const { data: updatedDraft, error: updateError } = await supabaseAdmin
@@ -406,7 +407,7 @@ export async function POST(request: NextRequest) {
         .update({
           status: 'submitted',
           facebook_ad_id: ad.id,
-          facebook_adset_id: ad.adset_id,
+          facebook_adset_id: ad.adset_id || null,
           facebook_creative_id: creative.id,
           submitted_at: new Date().toISOString()
         })

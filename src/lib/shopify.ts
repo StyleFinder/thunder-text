@@ -1,4 +1,15 @@
 import { GraphQLClient } from 'graphql-request'
+import type {
+  ShopifyProduct,
+  ShopifyProductInput,
+  ShopifyMetafieldInput,
+  ShopifyVariantInput,
+  ShopifyMediaUploadTarget,
+  ShopifyMediaImage,
+  ShopifyProductCreateMediaResponse,
+  ShopifyGraphQLResponse,
+  ShopifyEdge
+} from '@/types/shopify'
 
 export class ShopifyAPI {
   private client: GraphQLClient
@@ -74,7 +85,7 @@ export class ShopifyAPI {
     })
   }
 
-  async updateProduct(productId: string, input: any) {
+  async updateProduct(productId: string, input: Partial<ShopifyProductInput>) {
     const mutation = `
       mutation productUpdate($input: ProductInput!) {
         productUpdate(input: $input) {
@@ -100,7 +111,7 @@ export class ShopifyAPI {
     })
   }
 
-  async createProductMetafield(productId: string, metafield: any) {
+  async createProductMetafield(productId: string, metafield: ShopifyMetafieldInput) {
     const mutation = `
       mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
         metafieldsSet(metafields: $metafields) {
@@ -125,7 +136,7 @@ export class ShopifyAPI {
     })
   }
 
-  async createProduct(input: any) {
+  async createProduct(input: ShopifyProductInput) {
     // Modern Shopify GraphQL API - ProductInput only accepts specific fields
     const productInput = {
       title: input.title,
@@ -167,7 +178,7 @@ export class ShopifyAPI {
     return result
   }
   
-  async createProductVariants(productId: string, variants: any[]) {
+  async createProductVariants(productId: string, variants: ShopifyVariantInput[]) {
     // For now, let's skip variants creation as it requires a more complex setup
     // The product will be created with a default variant automatically
     console.log('Skipping variant creation - default variant will be created automatically')
@@ -241,7 +252,7 @@ export class ShopifyAPI {
       const formData = new FormData()
       
       // Add all the parameters returned by Shopify
-      stagedTarget.parameters.forEach((param: any) => {
+      stagedTarget.parameters.forEach((param) => {
         formData.append(param.name, param.value)
       })
       
@@ -310,7 +321,7 @@ export class ShopifyAPI {
 
       if (result.productCreateMedia.mediaUserErrors?.length > 0) {
         console.error('Media creation errors:', result.productCreateMedia.mediaUserErrors)
-        throw new Error(`Media creation failed: ${result.productCreateMedia.mediaUserErrors.map((e: any) => e.message).join(', ')}`)
+        throw new Error(`Media creation failed: ${result.productCreateMedia.mediaUserErrors.map((e) => e.message).join(', ')}`)
       }
 
       const createdMedia = result.productCreateMedia.media[0]
@@ -338,7 +349,7 @@ export class ShopifyAPI {
   }
 
   // Helper method to poll media processing status
-  async waitForMediaProcessing(mediaId: string, productId: string, maxAttempts: number = 10): Promise<any> {
+  async waitForMediaProcessing(mediaId: string, productId: string, maxAttempts: number = 10): Promise<ShopifyProductCreateMediaResponse> {
     const mediaStatusQuery = `
       query getMediaStatus($productId: ID!) {
         product(id: $productId) {
@@ -363,8 +374,8 @@ export class ShopifyAPI {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       console.log(`   Polling attempt ${attempt}/${maxAttempts}...`)
       
-      const result = await this.client.request(mediaStatusQuery, { productId })
-      const media = result.product.media.edges.find((edge: any) => edge.node.id === mediaId)?.node
+      const result = await this.client.request(mediaStatusQuery, { productId }) as { product: { media: { edges: ShopifyEdge<ShopifyMediaImage>[] } } }
+      const media = result.product.media.edges.find((edge) => edge.node.id === mediaId)?.node
       
       if (!media) {
         throw new Error(`Media ${mediaId} not found in product`)
@@ -394,13 +405,13 @@ export class ShopifyAPI {
 
     console.log(`   ⚠️  Media ${mediaId} did not become READY after ${maxAttempts} attempts, but continuing anyway`)
     // Return the current state instead of throwing error - sometimes media works even if not READY
-    const result = await this.client.request(mediaStatusQuery, { productId })
-    const media = result.product.media.edges.find((edge: any) => edge.node.id === mediaId)?.node
-    return { productCreateMedia: { media: [media] } }
+    const result = await this.client.request(mediaStatusQuery, { productId }) as { product: { media: { edges: ShopifyEdge<ShopifyMediaImage>[] } } }
+    const media = result.product.media.edges.find((edge) => edge.node.id === mediaId)?.node
+    return { productCreateMedia: { media: media ? [media] : [] } }
   }
 
   // New method for Files API processing status
-  async waitForFileProcessing(fileId: string, maxAttempts: number = 12): Promise<any> {
+  async waitForFileProcessing(fileId: string, maxAttempts: number = 12): Promise<ShopifyMediaImage> {
     const fileStatusQuery = `
       query getFileStatus($id: ID!) {
         node(id: $id) {
@@ -471,7 +482,7 @@ export class ShopifyAPI {
     console.log(`   ⚠️ File ${fileId} did not become READY after ${maxAttempts} attempts, but returning anyway`)
     
     // Return the current state instead of throwing error
-    const result = await this.client.request(fileStatusQuery, { id: fileId })
+    const result = await this.client.request(fileStatusQuery, { id: fileId }) as { node: ShopifyMediaImage }
     return result.node
   }
 
@@ -508,7 +519,7 @@ export class ShopifyAPI {
   }
 
   // Enhanced media processing with exponential backoff and retry logic
-  async waitForMediaProcessingWithRetry(mediaId: string, productId: string, maxRetries: number = 3): Promise<any> {
+  async waitForMediaProcessingWithRetry(mediaId: string, productId: string, maxRetries: number = 3): Promise<ShopifyProductCreateMediaResponse> {
     let lastError: Error | null = null
     
     for (let retry = 0; retry < maxRetries; retry++) {
