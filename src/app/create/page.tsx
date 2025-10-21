@@ -1351,14 +1351,29 @@ function CreateProductContent() {
                 onChange={() => {}}
                 readOnly
               />
-              
-              <TextField
-                label="Description"
-                value={generatedContent.description?.replace(/<[^>]*>/g, '') || ''}
-                onChange={() => {}}
-                multiline={6}
-                readOnly
-              />
+
+              <Card>
+                <BlockStack gap="200">
+                  <Text as="h3" variant="headingMd">Description</Text>
+                  <Box
+                    padding="400"
+                    background="bg-surface-secondary"
+                    borderRadius="200"
+                  >
+                    <div
+                      style={{
+                        whiteSpace: 'pre-wrap',
+                        fontFamily: 'inherit',
+                        fontSize: '14px',
+                        lineHeight: '1.6'
+                      }}
+                      dangerouslySetInnerHTML={{
+                        __html: generatedContent.description || ''
+                      }}
+                    />
+                  </Box>
+                </BlockStack>
+              </Card>
               
               <TextField
                 label="Meta Description"
