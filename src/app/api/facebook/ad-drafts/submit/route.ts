@@ -86,7 +86,13 @@ async function uploadAdImage(
   const data = await response.json()
 
   if (!response.ok || data.error) {
-    console.error('Failed to upload image to Facebook:', data.error)
+    console.error('❌ FACEBOOK API ERROR - Image Upload:', {
+      status: response.status,
+      error: data.error,
+      fullResponse: data,
+      imageUrl,
+      adAccountId
+    })
     throw new FacebookAPIError(
       data.error?.message || 'Failed to upload image',
       response.status,
@@ -138,7 +144,15 @@ async function createAdCreative(
   const data = await response.json()
 
   if (!response.ok || data.error) {
-    console.error('Failed to create Facebook ad creative:', data.error)
+    console.error('❌ FACEBOOK API ERROR - Ad Creative:', {
+      status: response.status,
+      error: data.error,
+      fullResponse: data,
+      adAccountId,
+      pageId,
+      title,
+      imageHash
+    })
     throw new FacebookAPIError(
       data.error?.message || 'Failed to create ad creative',
       response.status,
@@ -255,7 +269,15 @@ async function createAd(
   const adResult = await adResponse.json()
 
   if (!adResponse.ok || adResult.error) {
-    console.error('Failed to create Facebook ad:', adResult.error)
+    console.error('❌ FACEBOOK API ERROR - Ad Creation:', {
+      status: adResponse.status,
+      error: adResult.error,
+      fullResponse: adResult,
+      adAccountId,
+      adSetId,
+      creativeId,
+      adName
+    })
     throw new FacebookAPIError(
       adResult.error?.message || 'Failed to create ad',
       adResponse.status,

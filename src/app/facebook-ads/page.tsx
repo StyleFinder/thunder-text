@@ -22,7 +22,7 @@ import {
   EmptyState,
   Badge,
 } from '@shopify/polaris'
-import { MarketingIcon } from '@shopify/polaris-icons'
+import { SocialAdIcon } from '@shopify/polaris-icons'
 import CampaignSelector from '@/components/facebook/CampaignSelector'
 import CreateFacebookAdFlow from '@/components/facebook/CreateFacebookAdFlow'
 import CampaignMetricsCard from '@/components/facebook/CampaignMetricsCard'
@@ -276,7 +276,7 @@ function FacebookAdsContent() {
                   </Text>
                   <Button
                     variant="primary"
-                    icon={MarketingIcon}
+                    icon={SocialAdIcon}
                     onClick={() => setCreateAdModalOpen(true)}
                   >
                     Create Facebook Ad
