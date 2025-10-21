@@ -15,6 +15,7 @@ import {
   Box,
   Badge
 } from '@shopify/polaris'
+import { createShopifyOAuthState } from '@/lib/security/oauth-validation'
 
 export default function InstallPage() {
   const searchParams = useSearchParams()
@@ -41,12 +42,16 @@ export default function InstallPage() {
       ? shop
       : `${shop}.myshopify.com`
 
+    // Generate secure state parameter with cryptographic nonce and timestamp
+    // This prevents CSRF and replay attacks
+    const secureState = createShopifyOAuthState(shopDomain)
+
     // Construct OAuth authorization URL
     const params = new URLSearchParams({
       client_id: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY!,
       scope: 'read_products,write_products,read_content,write_content',
       redirect_uri: `${window.location.origin}/api/shopify/auth/callback`,
-      state: shopDomain,
+      state: secureState,
       'grant_options[]': 'per-user'
     })
 

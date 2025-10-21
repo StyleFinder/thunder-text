@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateShopifyOAuthState } from '@/lib/security/oauth-validation'
+import { ZodError } from 'zod'
 
 export async function GET(request: NextRequest) {
   // Check if we're in a build environment without proper configuration
@@ -25,10 +27,21 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Verify the state parameter matches the shop
-    if (state !== shop) {
+    // Validate state parameter with Zod schema
+    // This validates structure, timestamp, nonce, and prevents tampering/replay attacks
+    try {
+      validateShopifyOAuthState(state, shop)
+    } catch (error) {
+      if (error instanceof ZodError) {
+        console.error('Shopify OAuth state validation failed:', error.errors)
+        return NextResponse.json(
+          { error: 'Invalid state parameter format', details: error.errors },
+          { status: 400 }
+        )
+      }
+      console.error('Shopify OAuth state validation error:', error)
       return NextResponse.json(
-        { error: 'Invalid state parameter' },
+        { error: error instanceof Error ? error.message : 'Invalid state parameter' },
         { status: 400 }
       )
     }

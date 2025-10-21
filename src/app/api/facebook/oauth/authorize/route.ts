@@ -21,6 +21,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { createFacebookOAuthState } from '@/lib/security/oauth-validation'
 
 export async function GET(request: NextRequest) {
   try {
@@ -59,18 +60,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Generate state parameter with shop context for callback
-    // State is used to prevent CSRF attacks and maintain context
-    // Include host and embedded params to restore Shopify embedded app context after OAuth
-    const state = Buffer.from(
-      JSON.stringify({
-        shop_id: shopData.id,
-        shop_domain: shopData.shop_domain,
-        host: searchParams.get('host'),
-        embedded: searchParams.get('embedded'),
-        timestamp: Date.now(),
-      })
-    ).toString('base64url')
+    // Generate secure state parameter with Zod validation
+    // Includes cryptographic nonce for CSRF protection and timestamp for replay attack prevention
+    const state = createFacebookOAuthState({
+      shop_id: shopData.id,
+      shop_domain: shopData.shop_domain,
+      host: searchParams.get('host'),
+      embedded: searchParams.get('embedded')
+    })
 
     // Construct redirect URI
     const redirectUri = process.env.FACEBOOK_REDIRECT_URI ||
