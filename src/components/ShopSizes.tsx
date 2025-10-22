@@ -427,7 +427,7 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
                         </Button>
                         {!isFallback && (
                           <Button
-                            tone={isTemplateOverride(size) ? "caution" : "critical"}
+                            tone="critical"
                             onClick={() => handleDelete(size.id, isTemplateOverride(size))}
                           >
                             {isTemplateOverride(size) ? 'Restore Default' : 'Delete'}
