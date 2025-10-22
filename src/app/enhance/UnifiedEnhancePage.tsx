@@ -149,7 +149,7 @@ export default function UnifiedEnhancePage() {
 
         // Extract and pre-fill material info from tags/metafields
         if (data.tags) {
-          const tagsArray = Array.isArray(data.tags) ? data.tags : data.tags.split(',').map(t => t.trim())
+          const tagsArray = Array.isArray(data.tags) ? data.tags : (typeof data.tags === 'string' ? data.tags.split(',').map(t => t.trim()) : [])
           const materials = tagsArray.filter(tag =>
             tag.toLowerCase().includes('cotton') ||
             tag.toLowerCase().includes('polyester') ||
