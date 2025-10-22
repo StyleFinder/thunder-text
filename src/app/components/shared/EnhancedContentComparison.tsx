@@ -189,11 +189,11 @@ export default function EnhancedContentComparison({
 
     return (
       <Card roundedAbove="sm">
-        <Box padding="4">
-          <BlockStack gap="4">
+        <Box padding="400">
+          <BlockStack gap="400">
             {/* Header with checkbox and edit button */}
             <InlineStack align="space-between" blockAlign="center">
-              <InlineStack gap="3" blockAlign="center">
+              <InlineStack gap="300" blockAlign="center">
                 <Checkbox
                   label=""
                   checked={fieldsToApply[fieldName as keyof typeof fieldsToApply]}
@@ -202,8 +202,8 @@ export default function EnhancedContentComparison({
                     [fieldName]: checked
                   }))}
                 />
-                <BlockStack gap="1">
-                  <InlineStack gap="2" blockAlign="center">
+                <BlockStack gap="100">
+                  <InlineStack gap="200" blockAlign="center">
                     <Text variant="headingMd" as="h3">{label}</Text>
                     {hasChanged && (
                       <Badge tone="success" icon={MagicIcon}>
@@ -230,15 +230,15 @@ export default function EnhancedContentComparison({
             </InlineStack>
 
             {/* Content comparison */}
-            <InlineGrid columns={2} gap="4">
+            <InlineGrid columns={2} gap="400">
               {/* Original Content */}
               <Box
                 background="bg-surface-secondary"
                 padding="4"
                 borderRadius="200"
               >
-                <BlockStack gap="2">
-                  <InlineStack gap="2" blockAlign="center">
+                <BlockStack gap="200">
+                  <InlineStack gap="200" blockAlign="center">
                     <Box>
                       <Icon source={DuplicateIcon} tone="subdued" />
                     </Box>
@@ -273,8 +273,8 @@ export default function EnhancedContentComparison({
                 borderWidth="025"
                 borderColor={fieldsToApply[fieldName as keyof typeof fieldsToApply] ? 'border-success' : 'border'}
               >
-                <BlockStack gap="2">
-                  <InlineStack gap="2" blockAlign="center">
+                <BlockStack gap="200">
+                  <InlineStack gap="200" blockAlign="center">
                     <Box>
                       <Icon source={MagicIcon} tone="magic" />
                     </Box>
@@ -285,7 +285,7 @@ export default function EnhancedContentComparison({
                   <Divider />
                   <Box paddingBlockStart="2">
                     {isEditing ? (
-                      <BlockStack gap="3">
+                      <BlockStack gap="300">
                         <TextField
                           label=""
                           value={currentValue}
@@ -296,7 +296,7 @@ export default function EnhancedContentComparison({
                           multiline={multiline ? 5 : false}
                           autoComplete="off"
                         />
-                        <InlineStack gap="2">
+                        <InlineStack gap="200">
                           <Button
                             size="slim"
                             variant="primary"
@@ -344,8 +344,8 @@ export default function EnhancedContentComparison({
 
     return (
       <Card roundedAbove="sm">
-        <Box padding="4">
-          <BlockStack gap="4">
+        <Box padding="400">
+          <BlockStack gap="400">
             <InlineStack gap="2" blockAlign="center">
               <Icon source={MagicIcon} tone="magic" />
               <Text variant="headingMd" as="h3">Key Features</Text>
@@ -424,9 +424,9 @@ export default function EnhancedContentComparison({
           <BlockStack gap="4">
             {/* Quick Actions Bar */}
             <Card>
-              <Box padding="3">
+              <Box padding="300">
                 <InlineStack align="space-between" blockAlign="center">
-                  <InlineStack gap="3" blockAlign="center">
+                  <InlineStack gap="300" blockAlign="center">
                     <Icon source={MagicIcon} tone="magic" />
                     <Text variant="headingSm" as="h3">
                       AI-Generated Content Ready
@@ -473,7 +473,7 @@ export default function EnhancedContentComparison({
                     padding="4"
                     style={{ minHeight: '600px' }}
                   >
-                    <BlockStack gap="6">
+                    <BlockStack gap="600">
                       {enhancedContent.title && renderModernField(
                         'Product Title',
                         'title',
@@ -507,7 +507,7 @@ export default function EnhancedContentComparison({
                     padding="4"
                     style={{ minHeight: '600px' }}
                   >
-                    <BlockStack gap="6">
+                    <BlockStack gap="600">
                       {enhancedContent.seoTitle && renderModernField(
                         'SEO Title',
                         'seoTitle',
@@ -569,10 +569,10 @@ export default function EnhancedContentComparison({
                 return (
                   <Box
                     background="bg-surface-success"
-                    padding="3"
+                    padding="300"
                     borderRadius="200"
                   >
-                    <InlineStack gap="2" blockAlign="center">
+                    <InlineStack gap="200" blockAlign="center">
                       <Icon source={CheckIcon} tone="success" />
                       <Text variant="bodySm" tone="success">
                         {selectedCount} field{selectedCount !== 1 ? 's' : ''} selected for update
