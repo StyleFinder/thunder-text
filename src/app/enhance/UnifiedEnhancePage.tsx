@@ -387,12 +387,11 @@ export default function UnifiedEnhancePage() {
         }
 
         // Update SEO fields if they exist
-        if (editedContent.seoTitle !== undefined || editedContent.seoDescription !== undefined) {
-          updatedData.seo = {
-            ...updatedData.seo,
-            title: editedContent.seoTitle !== undefined ? editedContent.seoTitle : updatedData.seo?.title,
-            description: editedContent.seoDescription !== undefined ? editedContent.seoDescription : updatedData.seo?.description
-          }
+        if (editedContent.seoTitle !== undefined) {
+          updatedData.seoTitle = editedContent.seoTitle
+        }
+        if (editedContent.seoDescription !== undefined) {
+          updatedData.seoDescription = editedContent.seoDescription
         }
 
         console.log('📝 Updating local product data from:', productData)
