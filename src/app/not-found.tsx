@@ -23,7 +23,7 @@ function NotFoundContent() {
               <Box paddingBlockStart="800" paddingBlockEnd="800">
                 <InlineStack align="center">
                   <BlockStack gap="200" align="center">
-                    <Text as="h1" variant="heading4xl" alignment="center">
+                    <Text as="h1" variant="headingXl" alignment="center">
                       404
                     </Text>
                     <Text as="h2" variant="headingLg" alignment="center">
