@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Card, Frame, Modal, Button, FormLayout, TextField, Select, RadioButton, Stack, Thumbnail, Badge, Banner, Spinner, Layout, Page, Icon } from '@shopify/polaris'
-import { CloseIcon, ImageIcon, EditIcon, CheckIcon } from '@shopify/polaris-icons'
+import { Card, Modal, Button, FormLayout, TextField, Select, RadioButton, Thumbnail, Badge, Banner, Layout, Icon, BlockStack } from '@shopify/polaris'
+import { CheckIcon } from '@shopify/polaris-icons'
 import { useSearchParams } from 'next/navigation'
 
 interface ProductImage {
@@ -242,8 +242,8 @@ export default function ProductDescriptionOverlay({
         </p>
 
         <Layout>
-          <Layout.Section oneHalf>
-            <Stack vertical spacing="loose">
+          <Layout.Section>
+            <BlockStack gap="500">
               <div>
                 <h3 style={{ fontSize: '1rem', fontWeight: '500', marginBottom: '0.5rem' }}>Product Title</h3>
                 <p style={{ color: '#374151' }}>{productData.title}</p>
@@ -267,10 +267,10 @@ export default function ProductDescriptionOverlay({
                   ))}
                 </div>
               </div>
-            </Stack>
+            </BlockStack>
           </Layout.Section>
 
-          <Layout.Section oneHalf>
+          <Layout.Section>
             <div>
               <h3 style={{ fontSize: '1rem', fontWeight: '500', marginBottom: '0.5rem' }}>Product Images ({productData.images.length})</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '0.5rem' }}>
@@ -327,7 +327,7 @@ export default function ProductDescriptionOverlay({
         </Layout>
 
         <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
-          <Button primary onClick={() => setCurrentStep(2)}>
+          <Button variant="primary" onClick={() => setCurrentStep(2)}>
             Continue to Image Selection
           </Button>
         </div>
@@ -406,7 +406,7 @@ export default function ProductDescriptionOverlay({
         </div>
 
         {selectedImages.length === 0 && (
-          <Banner status="warning" onDismiss={() => {}}>
+          <Banner tone="warning" onDismiss={() => {}}>
             Please select at least one image for analysis
           </Banner>
         )}
@@ -416,7 +416,7 @@ export default function ProductDescriptionOverlay({
             Back
           </Button>
           <Button 
-            primary 
+            variant="primary"
             disabled={selectedImages.length === 0}
             onClick={() => setCurrentStep(3)}
           >
@@ -450,7 +450,7 @@ export default function ProductDescriptionOverlay({
             <label style={{ display: 'block', fontWeight: '500', marginBottom: '1rem' }}>
               Target Length
             </label>
-            <Stack vertical spacing="tight">
+            <BlockStack gap="200">
               {TARGET_LENGTHS.map((option) => (
                 <RadioButton
                   key={option.value}
@@ -462,7 +462,7 @@ export default function ProductDescriptionOverlay({
                   onChange={() => setTargetLength(option.value)}
                 />
               ))}
-            </Stack>
+            </BlockStack>
           </div>
 
           <div>
@@ -491,6 +491,7 @@ export default function ProductDescriptionOverlay({
             multiline={4}
             placeholder="Add any specific requirements, key features to highlight, or special instructions for the AI..."
             helpText="Provide additional context to help generate more targeted content"
+            autoComplete="off"
           />
         </FormLayout>
 
@@ -498,7 +499,7 @@ export default function ProductDescriptionOverlay({
           <Button onClick={() => setCurrentStep(2)}>
             Back
           </Button>
-          <Button primary onClick={() => setCurrentStep(4)}>
+          <Button variant="primary" onClick={() => setCurrentStep(4)}>
             Continue to Preview
           </Button>
         </div>
@@ -539,7 +540,7 @@ export default function ProductDescriptionOverlay({
         </div>
 
         {error && (
-          <Banner status="critical" onDismiss={() => setError(null)}>
+          <Banner tone="critical" onDismiss={() => setError(null)}>
             {error}
           </Banner>
         )}
@@ -549,7 +550,7 @@ export default function ProductDescriptionOverlay({
             Back to Settings
           </Button>
           <Button 
-            primary 
+            variant="primary"
             loading={loading}
             onClick={handleGenerate}
           >
@@ -630,7 +631,7 @@ export default function ProductDescriptionOverlay({
         )}
 
         {error && (
-          <Banner status="critical" onDismiss={() => setError(null)}>
+          <Banner tone="critical" onDismiss={() => setError(null)}>
             {error}
           </Banner>
         )}

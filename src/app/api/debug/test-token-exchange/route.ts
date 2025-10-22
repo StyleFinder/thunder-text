@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
       subject_token_type: 'urn:ietf:params:oauth:token-type:id_token',
       requested_token_type: 'urn:shopify:params:oauth:token-type:online-access-token'
     },
-    possibleIssues: [],
+    possibleIssues: [] as string[],
+    shopifyConnectivity: null as unknown,
   }
 
   // Check for common issues

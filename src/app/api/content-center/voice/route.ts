@@ -25,7 +25,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 
     // Rate limiting for read operations
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.READ)(request, userId)
-    if (rateLimitCheck) return rateLimitCheck
+    if (rateLimitCheck) return rateLimitCheck as NextResponse<ApiResponse<GetVoiceProfileResponse>>
 
     // Get current voice profile
     const { data: profile, error: profileError } = await supabaseAdmin

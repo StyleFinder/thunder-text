@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 Executing query with ID:', formattedProductId)
 
-    const response = await client.request(query, { id: formattedProductId })
+    const response = await client.request<{ product?: { title?: string; [key: string]: unknown } }>(query, { id: formattedProductId })
 
     if (!response?.product) {
       console.error('❌ No product found in response')

@@ -10,12 +10,12 @@ import {
 // Fetch product data for enhancement
 export async function GET(
   request: NextRequest,
-  { params }: { params: { productId: string } }
+  { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url)
     const shop = searchParams.get('shop')
-    const productId = params.productId
+    const { productId } = await params
 
     if (!shop || !productId) {
       return NextResponse.json(
@@ -93,12 +93,12 @@ export async function GET(
 // Update product with enhanced description
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { productId: string } }
+  { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url)
     const shop = searchParams.get('shop')
-    const productId = params.productId
+    const { productId } = await params
 
     if (!shop || !productId) {
       return NextResponse.json(
@@ -188,12 +188,12 @@ export async function PUT(
 // Rollback enhanced product to original
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { productId: string } }
+  { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url)
     const shop = searchParams.get('shop')
-    const productId = params.productId
+    const { productId } = await params
 
     if (!shop || !productId) {
       return NextResponse.json(

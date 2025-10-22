@@ -21,8 +21,9 @@ export async function GET() {
       preview: apiSecret ? apiSecret.substring(0, 8) + '...' : 'NOT SET',
       expectedFormat: 'Usually 64 characters (newer apps) or 32 characters (legacy apps)'
     },
-    possibleIssues: [],
-    recommendations: []
+    possibleIssues: [] as string[],
+    recommendations: [] as string[],
+    formatValidation: null as unknown
   }
 
   // Check for common issues

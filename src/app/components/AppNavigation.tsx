@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useRef } from 'react'
 import {
   Navigation,
   TopBar,
@@ -14,7 +14,7 @@ import {
   PlusCircleIcon,
   QuestionCircleIcon,
   EditIcon,
-  MarketingIcon,
+  MarketsIcon,
   TextIcon,
   SocialAdIcon,
 } from '@shopify/polaris-icons'
@@ -26,8 +26,10 @@ interface AppNavigationProps {
 
 function NavigationContent({ children }: AppNavigationProps) {
   const [mobileNavigationActive, setMobileNavigationActive] = useState(false)
+  const [userMenuActive, setUserMenuActive] = useState(false)
+  const skipToContentRef = useRef<HTMLAnchorElement>(null)
   const { buildUrl, navigateTo, isActive, getAuthParams } = useNavigation()
-  
+
   const { hasAuth } = getAuthParams()
 
   const navigationItems = [
@@ -164,6 +166,8 @@ function NavigationContent({ children }: AppNavigationProps) {
           name="Thunder Text"
           detail={hasAuth ? "Connected to Shopify" : "Not Connected"}
           initials="TT"
+          open={userMenuActive}
+          onToggle={() => setUserMenuActive(!userMenuActive)}
         />
       }
       onNavigationToggle={toggleMobileNavigationActive}
@@ -177,7 +181,7 @@ function NavigationContent({ children }: AppNavigationProps) {
         navigation={navigation}
         showMobileNavigation={mobileNavigationActive}
         onNavigationDismiss={toggleMobileNavigationActive}
-        skipToContentTarget="main-content"
+        skipToContentTarget={skipToContentRef as React.RefObject<HTMLAnchorElement>}
       >
         <main id="main-content">
           {children}
@@ -188,6 +192,8 @@ function NavigationContent({ children }: AppNavigationProps) {
 }
 
 function NavigationFallback() {
+  const skipToContentRef = useRef<HTMLAnchorElement>(null)
+
   return (
     <div style={{ minHeight: '100vh' }}>
       <Frame
@@ -199,13 +205,15 @@ function NavigationFallback() {
                 actions={[
                   {
                     items: [
-                      { content: 'Loading...', disabled: true },
+                      { content: 'Loading...', onAction: () => {} },
                     ],
                   },
                 ]}
                 name="Thunder Text"
                 detail="Loading..."
                 initials="TT"
+                open={false}
+                onToggle={() => {}}
               />
             }
           />
@@ -218,7 +226,7 @@ function NavigationFallback() {
             />
           </Navigation>
         }
-        skipToContentTarget="main-content"
+        skipToContentTarget={skipToContentRef as React.RefObject<HTMLAnchorElement>}
       >
         <main id="main-content">
           <Box padding="800" minHeight="400px">

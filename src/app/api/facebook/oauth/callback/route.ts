@@ -143,6 +143,8 @@ async function getFacebookPages(accessToken: string, userId: string): Promise<{
 }
 
 export async function GET(request: NextRequest) {
+  let stateData: FacebookOAuthState | undefined
+
   try {
     console.log('🔵 Facebook OAuth callback received:', request.url)
 
@@ -188,7 +190,6 @@ export async function GET(request: NextRequest) {
 
     // Validate state parameter with Zod schema
     // This validates structure, timestamp, and prevents tampering/replay attacks
-    let stateData: FacebookOAuthState
     try {
       stateData = validateFacebookOAuthState(state)
     } catch (error) {

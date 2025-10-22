@@ -71,17 +71,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Log webhook processing
-    await supabaseAdmin
-      .from('webhook_logs')
-      .insert({
-        topic: metadata.topic,
-        shop_domain: shopDomain,
-        webhook_id: metadata.webhookId,
-        api_version: metadata.apiVersion,
-        processed_at: new Date().toISOString(),
-        status: 'success'
-      })
-      .catch(err => console.error('Failed to log webhook:', err))
+    try {
+      await supabaseAdmin
+        .from('webhook_logs')
+        .insert({
+          topic: metadata.topic,
+          shop_domain: shopDomain,
+          webhook_id: metadata.webhookId,
+          api_version: metadata.apiVersion,
+          processed_at: new Date().toISOString(),
+          status: 'success'
+        })
+    } catch (err) {
+      console.error('Failed to log webhook:', err)
+    }
 
     // Return success response
     return NextResponse.json(

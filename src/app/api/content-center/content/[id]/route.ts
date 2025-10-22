@@ -3,7 +3,8 @@ import {
   ApiResponse,
   GeneratedContent
 } from '@/types/content-center'
-import { getUserId, getSupabaseAdmin } from '@/lib/auth/content-center-auth'
+import { getUserId } from '@/lib/auth/content-center-auth'
+import { supabaseAdmin } from '@/lib/supabase'
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
 
 
@@ -14,7 +15,7 @@ import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse<GeneratedContent>>> {
   try {
     const userId = await getUserId(request)
@@ -28,13 +29,12 @@ export async function GET(
 
     // Rate limiting for read operations
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.READ)(request, userId)
-    if (rateLimitCheck) return rateLimitCheck
+    if (rateLimitCheck) return rateLimitCheck as NextResponse<ApiResponse<GeneratedContent>>
 
-    const { id } = params
-    const supabase = getSupabaseAdmin()
+    const { id } = await params
 
     // Fetch content
-    const { data: content, error } = await supabase
+    const { data: content, error } = await supabaseAdmin
       .from('generated_content')
       .select('*')
       .eq('id', id)
@@ -68,7 +68,7 @@ export async function GET(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse<{ deleted: boolean }>>> {
   try {
     const userId = await getUserId(request)
@@ -82,13 +82,12 @@ export async function DELETE(
 
     // Rate limiting for write operations
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.WRITE)(request, userId)
-    if (rateLimitCheck) return rateLimitCheck
+    if (rateLimitCheck) return rateLimitCheck as NextResponse<ApiResponse<{ deleted: boolean }>>
 
-    const { id } = params
-    const supabase = getSupabaseAdmin()
+    const { id } = await params
 
     // Delete content (RLS will ensure user owns it)
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('generated_content')
       .delete()
       .eq('id', id)

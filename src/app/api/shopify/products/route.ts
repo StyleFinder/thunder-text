@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const shop = searchParams.get('shop') || 'zunosai-staging-test-store.myshopify.com'
-    const query = searchParams.get('query') || null
+    const query = searchParams.get('query') || undefined
 
     // Get session token from Authorization header
     const authHeader = request.headers.get('authorization')

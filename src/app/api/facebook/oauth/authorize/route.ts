@@ -24,9 +24,10 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { createFacebookOAuthState } from '@/lib/security/oauth-validation'
 
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const shop = searchParams.get('shop')
+
   try {
-    const { searchParams } = new URL(request.url)
-    const shop = searchParams.get('shop')
 
     if (!shop) {
       return NextResponse.json(
