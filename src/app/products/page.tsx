@@ -43,7 +43,7 @@ interface ProductsResponse {
 function ProductsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { shop, isAuthenticated, authenticatedFetch, sessionToken } = useShopifyAuth()
+  const { shop, isAuthenticated, sessionToken } = useShopifyAuth()
 
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
