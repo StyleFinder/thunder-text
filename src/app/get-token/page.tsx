@@ -90,7 +90,7 @@ export default function GetToken() {
                     </Button>
                   </LegacyStack>
                   
-                  <Card sectioned>
+                  <Card>
                     <Text variant="headingMd" as="h3">Next Steps:</Text>
                     <LegacyStack vertical spacing="tight">
                       <Text as="p">1. Copy the token above</Text>
