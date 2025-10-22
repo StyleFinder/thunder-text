@@ -265,7 +265,7 @@ function EnhanceProductContent() {
       const comparisonData: ComparisonData = {
         original: {
           title: workflow.productData.title,
-          description: workflow.productData.originalDescription || workflow.productData.description || '',
+          description: workflow.productData.originalDescription || '',
           seoScore: workflow.productData.seoAnalysis?.titleLength ? 
             Math.min(100, (workflow.productData.seoAnalysis.titleLength / 60) * 50) : 45
         },
@@ -400,8 +400,8 @@ function EnhanceProductContent() {
                 <InlineStack align="center" gap="400">
                   <Spinner size="large" />
                   <BlockStack gap="200">
-                    <Text variant="headingMd">Authenticating...</Text>
-                    <Text variant="bodyMd" tone="subdued">
+                    <Text variant="headingMd" as="h2">Authenticating...</Text>
+                    <Text variant="bodyMd" tone="subdued" as="p">
                       Connecting to Shopify
                     </Text>
                   </BlockStack>
@@ -420,7 +420,7 @@ function EnhanceProductContent() {
       <Page title="Enhance Product Description">
         <Layout>
           <Layout.Section>
-            <Banner status="critical">
+            <Banner tone="critical">
               <BlockStack gap="200">
                 <Text as="p" variant="headingMd">Authentication Error</Text>
                 <Text as="p">{authError}</Text>
@@ -430,7 +430,7 @@ function EnhanceProductContent() {
               <BlockStack gap="400">
                 <Text as="h2" variant="headingLg">Unable to Authenticate</Text>
                 <Text as="p">Please try accessing this page through your Shopify admin panel.</Text>
-                <Button primary onClick={() => window.location.href = '/'}>
+                <Button variant="primary" onClick={() => window.location.href = '/'}>
                   Back to Home
                 </Button>
               </BlockStack>
@@ -451,7 +451,7 @@ function EnhanceProductContent() {
               <BlockStack gap="400">
                 <Text as="h2" variant="headingLg">Authentication Required</Text>
                 <Text as="p">Please access this page through your Shopify admin panel.</Text>
-                <Button primary onClick={() => window.location.href = '/'}>
+                <Button variant="primary" onClick={() => window.location.href = '/'}>
                   Back to Home
                 </Button>
               </BlockStack>
@@ -469,7 +469,7 @@ function EnhanceProductContent() {
       <Page title="Enhance Product Description">
         <Layout>
           <Layout.Section>
-            <Banner status="critical">
+            <Banner tone="critical">
               <BlockStack gap="200">
                 <Text as="p" variant="headingMd">Error Loading Product</Text>
                 <Text as="p">{workflow.error}</Text>
@@ -539,8 +539,8 @@ function EnhanceProductContent() {
                 <InlineStack align="center" gap="400">
                   <Spinner size="large" />
                   <BlockStack gap="200">
-                    <Text variant="headingMd">Loading Product Data...</Text>
-                    <Text variant="bodyMd" tone="subdued">
+                    <Text variant="headingMd" as="h2">Loading Product Data...</Text>
+                    <Text variant="bodyMd" tone="subdued" as="p">
                       Fetching product information from Shopify
                     </Text>
                   </BlockStack>
@@ -559,7 +559,7 @@ function EnhanceProductContent() {
       case 'context':
         return (
           <Layout>
-            <Layout.Section variant="oneThird">
+            <Layout.Section>
               {workflow.productData && (
                 <ProductContextPanel
                   productData={workflow.productData}
@@ -580,11 +580,11 @@ function EnhanceProductContent() {
                 />
               )}
             </Layout.Section>
-            <Layout.Section variant="twoThirds">
+            <Layout.Section>
               <Card>
                 <BlockStack gap="400">
                   <Text variant="headingMd" as="h2">Current Product Overview</Text>
-                  <Text variant="bodyMd">
+                  <Text variant="bodyMd" as="p">
                     Review your product's current information and AI-generated improvement suggestions.
                     When you're ready, proceed to configure enhancement settings.
                   </Text>
@@ -601,7 +601,7 @@ function EnhanceProductContent() {
         return (
           <Layout>
             <Layout.Section>
-              {workflow.productData && (
+              {workflow.productData && shop && (
                 <EnhanceForm
                   productData={workflow.productData}
                   shop={shop}
@@ -622,8 +622,8 @@ function EnhanceProductContent() {
                 <Box padding="600">
                   <BlockStack gap="400" align="center">
                     <Spinner size="large" />
-                    <Text variant="headingMd">Generating Enhanced Description</Text>
-                    <Text variant="bodyMd" tone="subdued" alignment="center">
+                    <Text variant="headingMd" as="h2">Generating Enhanced Description</Text>
+                    <Text variant="bodyMd" tone="subdued" alignment="center" as="p">
                       Our AI is analyzing your product and creating an optimized description based on your preferences...
                     </Text>
                     <ProgressBar progress={workflow.progress} size="large" />
@@ -659,8 +659,8 @@ function EnhanceProductContent() {
                 <Box padding="600">
                   <BlockStack gap="400" align="center">
                     <Spinner size="large" />
-                    <Text variant="headingMd">Applying Changes</Text>
-                    <Text variant="bodyMd" tone="subdued" alignment="center">
+                    <Text variant="headingMd" as="h2">Applying Changes</Text>
+                    <Text variant="bodyMd" tone="subdued" alignment="center" as="p">
                       Updating your product in Shopify with the enhanced description...
                     </Text>
                     <ProgressBar progress={workflow.progress} size="large" />
@@ -685,8 +685,8 @@ function EnhanceProductContent() {
                     >
                       <CheckIcon />
                     </Box>
-                    <Text variant="headingLg">Enhancement Complete!</Text>
-                    <Text variant="bodyMd" tone="subdued" alignment="center">
+                    <Text variant="headingLg" as="h1">Enhancement Complete!</Text>
+                    <Text variant="bodyMd" tone="subdued" alignment="center" as="p">
                       Your product description has been successfully enhanced and updated in Shopify.
                     </Text>
                     <InlineStack gap="300">
@@ -751,7 +751,7 @@ function EnhanceProductContent() {
       {/* Error Banner */}
       {workflow.error && workflow.currentStep !== 'loading' && (
         <Layout.Section>
-          <Banner status="critical">
+          <Banner tone="critical">
             <Text as="p">{workflow.error}</Text>
           </Banner>
         </Layout.Section>

@@ -271,6 +271,8 @@ export function RichTextEditor({
             /* Edit Mode */
             <Box paddingBlockStart="300">
               <TextField
+                label="Description"
+                labelHidden
                 value={value}
                 onChange={onChange}
                 multiline={8}
@@ -321,13 +323,13 @@ export function RichTextEditor({
             <Text variant="bodySm" tone="subdued" as="span">
               Readability Score:
             </Text>
-            <Badge 
+            <Badge
               tone={
                 seoMetrics.readabilityScore >= 70 ? 'success' :
                 seoMetrics.readabilityScore >= 40 ? 'attention' : 'critical'
               }
             >
-              {Math.round(seoMetrics.readabilityScore)}/100
+              {`${Math.round(seoMetrics.readabilityScore)}/100`}
             </Badge>
           </InlineStack>
         )}
