@@ -132,7 +132,7 @@ export function ComparisonView({
     const originalLength = comparisonData.original.description?.length || 0
     const enhancedLength = comparisonData.enhanced.description?.length || 0
     const lengthChange = enhancedLength - originalLength
-    
+
     const originalSeo = comparisonData.original.seoScore || 0
     const enhancedSeo = comparisonData.enhanced.seoScore || 0
     const seoImprovement = enhancedSeo - originalSeo
@@ -141,7 +141,7 @@ export function ComparisonView({
       lengthChange,
       lengthPercentage: originalLength > 0 ? Math.round((lengthChange / originalLength) * 100) : 0,
       seoImprovement,
-      wordCount: enhancedLength > 0 ? enhancedLength.split(/\s+/).length : 0
+      wordCount: comparisonData.enhanced.description ? comparisonData.enhanced.description.split(/\s+/).length : 0
     }
   }
 
@@ -150,12 +150,13 @@ export function ComparisonView({
   const renderSideBySide = () => (
     <InlineStack gap="400" align="start">
       {/* Original Version */}
-      <Box style={{ flex: 1 }}>
+      <div style={{ flex: 1 }}>
+        <Box>
         <Card background="bg-surface-secondary">
           <BlockStack gap="300">
             <InlineStack align="space-between">
               <Text variant="headingSm" as="h3">Original</Text>
-              <Badge tone="subdued">Current</Badge>
+              <Badge>Current</Badge>
             </InlineStack>
             
             <Text variant="headingMd" as="h4">
@@ -182,10 +183,12 @@ export function ComparisonView({
             )}
           </BlockStack>
         </Card>
-      </Box>
+        </Box>
+      </div>
 
       {/* Enhanced Version */}
-      <Box style={{ flex: 1 }}>
+      <div style={{ flex: 1 }}>
+        <Box>
         <Card background="bg-surface-success-subdued">
           <BlockStack gap="300">
             <InlineStack align="space-between">
@@ -232,7 +235,8 @@ export function ComparisonView({
             )}
           </BlockStack>
         </Card>
-      </Box>
+        </Box>
+      </div>
     </InlineStack>
   )
 
