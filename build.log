@@ -1,0 +1,555 @@
+
+> thunder-text@0.1.0 build
+> next build
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /Users/bigdaddy/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /Users/bigdaddy/prod_desc/thunder-text/package-lock.json
+
+   ▲ Next.js 15.5.2
+   - Environments: .env.production.local, .env.local
+
+   Creating an optimized production build ...
+
+[2m[261.87ms][22m [@tailwindcss/postcss] src/app/globals.css
+[2m[  0.04ms][22m  [2m ↳ [22mQuick bail check
+[2m[ 72.89ms][22m  [2m ↳ [22mSetup compiler
+[2m[  0.41ms][22m    [2m ↳ [22mPostCSS AST -> Tailwind CSS AST
+[2m[ 72.25ms][22m    [2m ↳ [22mCreate compiler
+[2m[  0.17ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[ 10.17ms][22m  [2m ↳ [22mSetup scanner
+[2m[ 26.48ms][22m  [2m ↳ [22mScan for candidates
+[2m[ 17.80ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[ 40.84ms][22m  [2m ↳ [22mBuild utilities
+[2m[ 88.92ms][22m  [2m ↳ [22mOptimization
+[2m[  0.71ms][22m    [2m ↳ [22mAST -> CSS
+[2m[ 77.29ms][22m    [2m ↳ [22mLightning CSS
+[2m[ 10.87ms][22m    [2m ↳ [22mCSS -> PostCSS AST
+[2m[  3.81ms][22m  [2m ↳ [22mUpdate PostCSS AST
+
+ ✓ Compiled successfully in 6.6s
+   Linting and checking validity of types ...
+
+./src/app/api/content-center/content/route.ts
+6:3  Warning: 'ContentFilterParams' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/content-center/samples/route.ts
+3:3  Warning: 'ApiResponse' is defined but never used.  @typescript-eslint/no-unused-vars
+5:3  Warning: 'CreateSampleResponse' is defined but never used.  @typescript-eslint/no-unused-vars
+6:3  Warning: 'ListSamplesResponse' is defined but never used.  @typescript-eslint/no-unused-vars
+8:3  Warning: 'InvalidWordCountError' is defined but never used.  @typescript-eslint/no-unused-vars
+9:3  Warning: 'SampleLimitError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/content-center/voice/generate/route.ts
+19:9  Warning: 'startTime' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/debug/test-session-token/route.ts
+45:11  Warning: 'clientSecret' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/debug/test-token-exchange/route.ts
+3:27  Warning: 'request' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/debug/token-exchange-test/route.ts
+34:14  Warning: 'header' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+34:31  Warning: 'signature' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/debug/update-token/route.ts
+28:13  Warning: 'data' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/enhance/route.ts
+64:11  Warning: 'shop' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/facebook/generate-ad-content/route.ts
+20:53  Warning: 'productHandle' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+88:14  Warning: 'parseError' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/prompts/route.ts
+8:3  Warning: 'updateCategoryTemplate' is defined but never used.  @typescript-eslint/no-unused-vars
+9:3  Warning: 'resetSystemPrompt' is defined but never used.  @typescript-eslint/no-unused-vars
+10:3  Warning: 'resetCategoryTemplate' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/shopify/products/[productId]/enhance/route.ts
+6:8  Warning: 'EnhancementProductData' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/shopify/products/[productId]/route.ts
+2:10  Warning: 'getShopToken' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/shopify/token-exchange/route.ts
+115:16  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/shopify/validate/route.ts
+47:31  Warning: 'request' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/shopify/verify-config/route.ts
+42:17  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/components/AppNavigation.tsx
+17:3  Warning: 'MarketsIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/components/CategoryTemplateSelector.tsx
+4:29  Warning: 'Button' is defined but never used.  @typescript-eslint/no-unused-vars
+4:37  Warning: 'InlineStack' is defined but never used.  @typescript-eslint/no-unused-vars
+76:9  Warning: 'currentTemplate' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/components/ProductDescriptionOverlay.tsx
+84:9  Warning: 'shop' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+93:10  Warning: 'generatedContent' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+192:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+364:17  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/app/components/onboarding/AppIntroduction.tsx
+15:3  Warning: 'MediaCard' is defined but never used.  @typescript-eslint/no-unused-vars
+16:3  Warning: 'VideoThumbnail' is defined but never used.  @typescript-eslint/no-unused-vars
+17:3  Warning: 'Thumbnail' is defined but never used.  @typescript-eslint/no-unused-vars
+244:11  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+245:115  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/app/components/shared/EnhancedContentComparison.tsx
+25:3  Warning: 'ViewIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/components/shared/ProductDetailsForm.tsx
+3:36  Warning: 'TextField' is defined but never used.  @typescript-eslint/no-unused-vars
+4:32  Warning: 'PRODUCT_CATEGORIES' is defined but never used.  @typescript-eslint/no-unused-vars
+44:3  Warning: 'templatePreview' is defined but never used.  @typescript-eslint/no-unused-vars
+45:3  Warning: 'setTemplatePreview' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/components/shared/ProductImageUpload.tsx
+4:85  Warning: 'Button' is defined but never used.  @typescript-eslint/no-unused-vars
+5:10  Warning: 'ImageIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+59:9  Warning: 'fileUpload' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/content-center/layout.tsx
+10:3  Warning: 'Upload' is defined but never used.  @typescript-eslint/no-unused-vars
+12:3  Warning: 'Settings' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/content-center/library/[id]/page.tsx
+59:6  Warning: React Hook useEffect has a missing dependency: 'fetchContent'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+207:30  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+207:51  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/content-center/library/page.tsx
+63:6  Warning: React Hook useEffect has a missing dependency: 'fetchContent'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/content-center/onboarding/page.tsx
+108:20  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+122:67  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+249:62  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/content-center/page.tsx
+51:9  Warning: 'quickActions' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/content-center/samples/page.tsx
+113:40  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+123:97  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+331:19  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/content-center/voice/page.tsx
+20:3  Warning: 'RefreshCw' is defined but never used.  @typescript-eslint/no-unused-vars
+71:6  Warning: React Hook useEffect has missing dependencies: 'loadProfile' and 'loadSamples'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+141:6  Warning: React Hook useEffect has missing dependencies: 'generateProfile' and 'isGenerating'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+325:9  Warning: 'formatFileSize' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+471:9  Warning: 'hasEnoughSamples' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+482:60  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+603:101  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+784:19  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/create/page.tsx
+24:3  Warning: 'Frame' is defined but never used.  @typescript-eslint/no-unused-vars
+55:9  Warning: 'productTitle' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+58:9  Warning: 'description' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+59:9  Warning: 'tagsParam' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+60:9  Warning: 'imagesParam' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+61:9  Warning: 'variantsParam' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+70:10  Warning: 'uploadedFiles' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+79:10  Warning: 'templatePreview' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+109:10  Warning: 'parentCategories' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+110:10  Warning: 'subCategories' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+111:10  Warning: 'categoriesLoading' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+112:10  Warning: 'categoriesError' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+114:10  Warning: 'selectedSubCategory' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+120:10  Warning: 'categoryDetected' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+143:9  Warning: 'categoryOptions' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+234:6  Warning: React Hook useEffect has missing dependencies: 'productTypeParam' and 'vendor'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+244:6  Warning: React Hook useEffect has missing dependencies: 'fetchCustomCategories', 'fetchGlobalDefaultTemplate', 'fetchParentCategories', and 'fetchShopSizes'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+254:6  Warning: React Hook useEffect has a missing dependency: 'fetchSubCategories'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+444:9  Warning: 'templateOptions' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+600:9  Warning: 'handleDrop' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+601:48  Warning: 'rejectedFiles' is defined but never used.  @typescript-eslint/no-unused-vars
+623:9  Warning: 'removeFile' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+1050:55  Warning: 'index' is defined but never used.  @typescript-eslint/no-unused-vars
+1085:106  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/dashboard/page.tsx
+3:10  Warning: 'useState' is defined but never used.  @typescript-eslint/no-unused-vars
+3:20  Warning: 'useEffect' is defined but never used.  @typescript-eslint/no-unused-vars
+18:3  Warning: 'Badge' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/debug-appbridge/page.tsx
+129:6  Warning: React Hook useEffect has a missing dependency: 'debugAppBridge'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/debug-token/page.tsx
+45:11  Warning: Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free.  @typescript-eslint/ban-ts-comment
+46:17  Warning: 'app' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+51:11  Warning: Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free.  @typescript-eslint/ban-ts-comment
+168:21  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+168:35  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/app/embedded/page.tsx
+3:21  Warning: 'useState' is defined but never used.  @typescript-eslint/no-unused-vars
+13:3  Warning: 'Button' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/enhance/UnifiedEnhancePage.tsx
+22:3  Warning: 'Badge' is defined but never used.  @typescript-eslint/no-unused-vars
+23:3  Warning: 'Select' is defined but never used.  @typescript-eslint/no-unused-vars
+45:11  Warning: 'isAuthenticated' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+48:9  Warning: 'source' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+540:27  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+540:40  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+540:95  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+540:112  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/app/enhance/components/ComparisonView.tsx
+14:3  Warning: 'Icon' is defined but never used.  @typescript-eslint/no-unused-vars
+50:3  Warning: 'onEditEnhanced' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/enhance/components/EnhanceForm.tsx
+10:3  Warning: 'Select' is defined but never used.  @typescript-eslint/no-unused-vars
+15:3  Warning: 'Icon' is defined but never used.  @typescript-eslint/no-unused-vars
+17:3  Warning: 'ButtonGroup' is defined but never used.  @typescript-eslint/no-unused-vars
+192:59  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/enhance/components/ProductContextPanel.tsx
+14:3  Warning: 'Icon' is defined but never used.  @typescript-eslint/no-unused-vars
+15:3  Warning: 'List' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/enhance/components/ProductSelector.tsx
+13:3  Warning: 'Thumbnail' is defined but never used.  @typescript-eslint/no-unused-vars
+19:3  Warning: 'ChoiceList' is defined but never used.  @typescript-eslint/no-unused-vars
+45:41  Warning: 'onProductSelect' is defined but never used.  @typescript-eslint/no-unused-vars
+54:24  Warning: 'setStatusFilter' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+188:9  Warning: 'statusOptions' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+320:27  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/app/enhance/components/RichTextEditor.tsx
+18:3  Warning: 'Divider' is defined but never used.  @typescript-eslint/no-unused-vars
+24:3  Warning: 'LinkIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+25:3  Warning: 'ViewIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+26:3  Warning: 'EditIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+62:10  Warning: 'formatMenuActive' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+62:28  Warning: 'setFormatMenuActive' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/enhance/page.backup-full.tsx
+7:10  Warning: 'authenticatedFetch' is defined but never used.  @typescript-eslint/no-unused-vars
+22:3  Warning: 'ButtonGroup' is defined but never used.  @typescript-eslint/no-unused-vars
+24:36  Warning: 'EditIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+29:10  Warning: 'RichTextEditor' is defined but never used.  @typescript-eslint/no-unused-vars
+76:9  Warning: The 'stepOrder' array makes the dependencies of useCallback Hook (at line 379) change on every render. To fix this, wrap the initialization of 'stepOrder' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+76:9  Warning: The 'stepOrder' array makes the dependencies of useCallback Hook (at line 390) change on every render. To fix this, wrap the initialization of 'stepOrder' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+197:6  Warning: React Hook useEffect has missing dependencies: 'hasAttemptedLoad' and 'isLoading'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+355:6  Warning: React Hook useCallback has a missing dependency: 'authenticatedFetch'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+522:35  Warning: 'selectedProductId' is defined but never used.  @typescript-eslint/no-unused-vars
+588:40  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+589:29  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/facebook-ads/page.tsx
+23:3  Warning: 'Badge' is defined but never used.  @typescript-eslint/no-unused-vars
+43:9  Warning: 'authenticated' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+60:6  Warning: React Hook useEffect has a missing dependency: 'checkFacebookConnection'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+275:24  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/help/page.tsx
+31:36  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+31:55  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+34:36  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+34:57  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+36:36  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+36:62  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+43:36  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+43:52  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+46:36  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+46:66  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+106:40  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+106:48  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+107:36  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+107:63  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+134:65  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+154:64  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+157:41  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+181:37  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+199:44  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+210:25  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+265:59  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/install/page.tsx
+14:3  Warning: 'Link' is defined but never used.  @typescript-eslint/no-unused-vars
+157:23  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+161:30  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+161:35  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+162:28  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+162:41  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/app/not-found.tsx
+33:35  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+33:56  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/onboarding/page.tsx
+88:24  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+106:61  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+138:21  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/page.tsx
+13:3  Warning: 'Box' is defined but never used.  @typescript-eslint/no-unused-vars
+21:11  Warning: 'GenerationResult' is defined but never used.  @typescript-eslint/no-unused-vars
+37:10  Warning: 'deploymentStatus' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+37:28  Warning: 'setDeploymentStatus' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+40:9  Warning: 'router' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/privacy/page.tsx
+24:31  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+24:35  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+24:37  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+24:42  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+24:47  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+24:50  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+168:76  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+171:26  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+171:39  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+177:77  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+196:29  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+196:42  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+274:194  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/products/page.tsx
+30:11  Warning: 'ProductsResponse' is defined but never used.  @typescript-eslint/no-unused-vars
+60:6  Warning: React Hook useEffect has a missing dependency: 'fetchProducts'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+276:43  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+322:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/app/settings/page.tsx
+18:3  Warning: 'Select' is defined but never used.  @typescript-eslint/no-unused-vars
+19:3  Warning: 'ProgressBar' is defined but never used.  @typescript-eslint/no-unused-vars
+20:3  Warning: 'Badge' is defined but never used.  @typescript-eslint/no-unused-vars
+23:3  Warning: 'FormLayout' is defined but never used.  @typescript-eslint/no-unused-vars
+24:3  Warning: 'RadioButton' is defined but never used.  @typescript-eslint/no-unused-vars
+25:3  Warning: 'TextField' is defined but never used.  @typescript-eslint/no-unused-vars
+26:3  Warning: 'Modal' is defined but never used.  @typescript-eslint/no-unused-vars
+27:3  Warning: 'DataTable' is defined but never used.  @typescript-eslint/no-unused-vars
+28:3  Warning: 'Icon' is defined but never used.  @typescript-eslint/no-unused-vars
+33:3  Warning: 'PlusIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+34:3  Warning: 'EditIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+35:3  Warning: 'DeleteIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+36:3  Warning: 'ImportIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+38:10  Warning: 'useNavigation' is defined but never used.  @typescript-eslint/no-unused-vars
+67:6  Warning: React Hook useEffect has a missing dependency: 'fetchSettings'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+215:91  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/settings/prompts/page-old.tsx
+264:13  Warning: 'result' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+680:81  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/settings/prompts/page-v2-card-based.tsx
+20:3  Warning: 'DataTable' is defined but never used.  @typescript-eslint/no-unused-vars
+383:55  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+383:75  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/app/settings/prompts/page.tsx
+392:55  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+392:75  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+609:47  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+609:72  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/app/store-token/page.tsx
+140:21  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+140:45  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+142:18  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/app/test-create-ad/page.tsx
+81:28  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+81:47  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/app/test-session/page.tsx
+161:31  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+161:51  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+164:26  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+164:35  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+167:23  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+167:47  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/components/ShopSizes.tsx
+99:6  Warning: React Hook useEffect has a missing dependency: 'fetchSizes'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+345:43  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+345:55  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/components/ShopifyAuthProvider.tsx
+228:6  Warning: React Hook useEffect has a missing dependency: 'performTokenExchange'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/content-center/GenerationControls.tsx
+4:29  Warning: 'CardDescription' is defined but never used.  @typescript-eslint/no-unused-vars
+29:3  Warning: 'getCTATypeLabel' is defined but never used.  @typescript-eslint/no-unused-vars
+178:114  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/components/content-center/OnboardingGuidance.tsx
+24:3  Warning: 'totalSampleCount' is defined but never used.  @typescript-eslint/no-unused-vars
+105:53  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+133:43  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+246:19  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+246:21  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+248:88  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+266:19  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+268:60  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/components/content-center/SampleList.tsx
+290:18  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/components/content-center/SampleUpload.tsx
+93:7  Warning: Expected an assignment or function call and instead saw an expression.  @typescript-eslint/no-unused-expressions
+
+./src/components/content-center/VoiceProfile.tsx
+10:3  Warning: 'Select' is defined but never used.  @typescript-eslint/no-unused-vars
+11:3  Warning: 'SelectContent' is defined but never used.  @typescript-eslint/no-unused-vars
+12:3  Warning: 'SelectItem' is defined but never used.  @typescript-eslint/no-unused-vars
+13:3  Warning: 'SelectTrigger' is defined but never used.  @typescript-eslint/no-unused-vars
+14:3  Warning: 'SelectValue' is defined but never used.  @typescript-eslint/no-unused-vars
+25:3  Warning: 'Eye' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/facebook/AdPreview.tsx
+18:3  Warning: 'Thumbnail' is defined but never used.  @typescript-eslint/no-unused-vars
+170:19  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/facebook/CampaignMetricsCard.tsx
+48:6  Warning: React Hook useEffect has a missing dependency: 'fetchMetrics'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+76:9  Warning: 'totalPurchases' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/facebook/CampaignSelector.tsx
+64:6  Warning: React Hook useEffect has a missing dependency: 'fetchAdAccounts'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+74:6  Warning: React Hook useEffect has a missing dependency: 'fetchCampaigns'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+84:6  Warning: React Hook useEffect has a missing dependency: 'onSelect'. Either include it or remove the dependency array. If 'onSelect' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./src/components/facebook/CreateAdModal.tsx
+17:3  Warning: 'InlineStack' is defined but never used.  @typescript-eslint/no-unused-vars
+52:10  Warning: 'draftId' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+59:6  Warning: React Hook useEffect has missing dependencies: 'fetchCampaignName' and 'selectedAdAccountId'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/facebook/CreateFacebookAdFlow.tsx
+19:3  Warning: 'Button' is defined but never used.  @typescript-eslint/no-unused-vars
+20:3  Warning: 'Select' is defined but never used.  @typescript-eslint/no-unused-vars
+28:10  Warning: 'ImageIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+64:10  Warning: 'selectedProductId' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+70:9  Warning: 'searchFieldRef' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+73:10  Warning: 'generatingContent' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+449:46  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+449:69  Warning: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+514:17  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/facebook/FacebookSettingsCard.tsx
+25:3  Warning: 'Icon' is defined but never used.  @typescript-eslint/no-unused-vars
+66:6  Warning: React Hook useEffect has a missing dependency: 'fetchSettings'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+202:45  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+390:20  Warning: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+
+./src/components/ui/input.tsx
+4:18  Warning: An interface declaring no members is equivalent to its supertype.  @typescript-eslint/no-empty-object-type
+
+./src/components/ui/label.tsx
+4:18  Warning: An interface declaring no members is equivalent to its supertype.  @typescript-eslint/no-empty-object-type
+
+./src/components/ui/textarea.tsx
+4:18  Warning: An interface declaring no members is equivalent to its supertype.  @typescript-eslint/no-empty-object-type
+
+./src/hooks/useTokenRefresh.ts
+39:6  Warning: React Hook useCallback has missing dependencies: 'refreshToken' and 'scheduleNextCheck'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+96:6  Warning: React Hook useCallback has a missing dependency: 'scheduleNextCheck'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/lib/auth/content-center-auth.ts
+112:3  Warning: 'userId' is defined but never used.  @typescript-eslint/no-unused-vars
+113:3  Warning: 'resourceType' is defined but never used.  @typescript-eslint/no-unused-vars
+114:3  Warning: 'resourceId' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/auth/token-refresh.ts
+141:16  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/middleware/cors.ts
+78:14  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/openai-enhancement.ts
+2:10  Warning: 'aiGenerator' is defined but never used.  @typescript-eslint/no-unused-vars
+2:28  Warning: 'ProductDescriptionResponse' is defined but never used.  @typescript-eslint/no-unused-vars
+3:44  Warning: 'EnhancementContext' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/product-data-import.ts
+104:80  Warning: 'accessToken' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/security/input-sanitization.ts
+211:12  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/security/oauth-validation.ts
+106:12  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+114:12  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+170:12  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+178:12  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/services/content-post-processor.ts
+165:42  Warning: 'contentType' is defined but never used.  @typescript-eslint/no-unused-vars
+185:38  Warning: 'contentType' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/services/encryption.ts
+49:12  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+58:10  Warning: 'deriveKey' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/services/facebook-api.ts
+17:3  Warning: 'FacebookTokenResponse' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/services/file-parser.ts
+111:43  Warning: 'fileBuffer' is defined but never used.  @typescript-eslint/no-unused-vars
+111:63  Warning: 'mimeType' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/shopify/product-enhancement.ts
+2:3  Warning: 'fetchProductDataForPrePopulation' is defined but never used.  @typescript-eslint/no-unused-vars
+498:11  Warning: 'result' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/shopify/product-prepopulation.ts
+500:42  Warning: 'key' is defined but never used.  @typescript-eslint/no-unused-vars
+524:40  Warning: 'key' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/shopify/product-updater.ts
+199:31  Warning: 'productId' is defined but never used.  @typescript-eslint/no-unused-vars
+202:13  Warning: 'products' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/shopify-auth.ts
+92:16  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/shopify-official.ts
+6:3  Warning: 'ShopifyMediaUploadTarget' is defined but never used.  @typescript-eslint/no-unused-vars
+7:3  Warning: 'ShopifyMediaImage' is defined but never used.  @typescript-eslint/no-unused-vars
+8:3  Warning: 'ShopifyProductCreateMediaResponse' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/shopify.ts
+3:3  Warning: 'ShopifyProduct' is defined but never used.  @typescript-eslint/no-unused-vars
+7:3  Warning: 'ShopifyMediaUploadTarget' is defined but never used.  @typescript-eslint/no-unused-vars
+10:3  Warning: 'ShopifyGraphQLResponse' is defined but never used.  @typescript-eslint/no-unused-vars
+181:31  Warning: 'productId' is defined but never used.  @typescript-eslint/no-unused-vars
+181:50  Warning: 'variants' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/middleware.ts
+83:16  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/types/shopify-global.d.ts
+5:11  Warning: 'ShopifyIdTokenResult' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+Failed to compile.
+
+./src/components/content-center/GenerationControls.tsx:52:5
+Type error: Type '"sign_up"' is not assignable to type '"shop_now" | "learn_more" | "visit_website" | "contact_us" | "custom"'.
+
+[0m [90m 50 |[39m   { value[33m:[39m [32m'shop_now'[39m[33m,[39m label[33m:[39m [32m'Shop Now'[39m }[33m,[39m
+ [90m 51 |[39m   { value[33m:[39m [32m'learn_more'[39m[33m,[39m label[33m:[39m [32m'Learn More'[39m }[33m,[39m
+[31m[1m>[22m[39m[90m 52 |[39m   { value[33m:[39m [32m'sign_up'[39m[33m,[39m label[33m:[39m [32m'Sign Up'[39m }[33m,[39m
+ [90m    |[39m     [31m[1m^[22m[39m
+ [90m 53 |[39m   { value[33m:[39m [32m'contact_us'[39m[33m,[39m label[33m:[39m [32m'Contact Us'[39m }[33m,[39m
+ [90m 54 |[39m   { value[33m:[39m [32m'limited_time'[39m[33m,[39m label[33m:[39m [32m'Limited Time Offer'[39m }[33m,[39m
+ [90m 55 |[39m   { value[33m:[39m [32m'custom'[39m[33m,[39m label[33m:[39m [32m'Custom CTA'[39m }[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null
