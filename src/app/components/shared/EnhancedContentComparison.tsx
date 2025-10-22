@@ -247,7 +247,7 @@ export default function EnhancedContentComparison({
                     </Text>
                   </InlineStack>
                   <Divider />
-                  <Box paddingBlockStart="2">
+                  <Box paddingBlockStart="200">
                     {original ? (
                       isHtml ? (
                         renderFormattedHTML(original)
@@ -283,7 +283,7 @@ export default function EnhancedContentComparison({
                     </Text>
                   </InlineStack>
                   <Divider />
-                  <Box paddingBlockStart="2">
+                  <Box paddingBlockStart="200">
                     {isEditing ? (
                       <BlockStack gap="300">
                         <TextField
