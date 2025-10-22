@@ -416,7 +416,7 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
                         </InlineStack>
                         <InlineStack gap="200" wrap>
                           {size.sizes.map((s, idx) => (
-                            <Badge key={idx} tone="subdued">{s}</Badge>
+                            <Badge key={idx}>{s}</Badge>
                           ))}
                         </InlineStack>
                       </BlockStack>
