@@ -107,7 +107,7 @@ export default function TestSessionPage() {
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <Text as="span">Token Found:</Text>
                 {testResults.tokenFound === null ? (
-                  <Badge tone="neutral">Not tested</Badge>
+                  <Badge tone="info">Not tested</Badge>
                 ) : testResults.tokenFound ? (
                   <Badge tone="success">✅ Pass</Badge>
                 ) : (
@@ -118,7 +118,7 @@ export default function TestSessionPage() {
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <Text as="span">API Call:</Text>
                 {testResults.apiCall === null ? (
-                  <Badge tone="neutral">Not tested</Badge>
+                  <Badge tone="info">Not tested</Badge>
                 ) : testResults.apiCall ? (
                   <Badge tone="success">✅ Pass</Badge>
                 ) : (
@@ -129,7 +129,7 @@ export default function TestSessionPage() {
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <Text as="span">Real Data:</Text>
                 {testResults.realData === null ? (
-                  <Badge tone="neutral">Not tested</Badge>
+                  <Badge tone="info">Not tested</Badge>
                 ) : testResults.realData ? (
                   <Badge tone="success">✅ Pass</Badge>
                 ) : (
