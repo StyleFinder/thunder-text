@@ -61,7 +61,7 @@ export default function HomePage() {
             <BlockStack gap="400">
               <Text as="h2" variant="headingMd">Deployment Complete - Services Ready</Text>
               
-              <Banner status="info">
+              <Banner tone="info">
                 <Text as="p" variant="bodyMd">
                   🚀 <strong>Version:</strong> Render Build (2025-10-09) |
                   🌐 <strong>Source:</strong> thunder-text.onrender.com |
