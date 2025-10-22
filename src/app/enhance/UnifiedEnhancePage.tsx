@@ -176,11 +176,9 @@ export default function UnifiedEnhancePage() {
         if (data.productType) {
           const type = data.productType.toLowerCase()
           if (type.includes('cloth') || type.includes('apparel') || type.includes('shirt') || type.includes('dress')) {
-            setSelectedTemplate('clothing')
+            setSelectedTemplate('womens_clothing')
           } else if (type.includes('jewelry') || type.includes('accessory')) {
-            setSelectedTemplate('jewelry')
-          } else if (type.includes('home') || type.includes('decor')) {
-            setSelectedTemplate('home')
+            setSelectedTemplate('jewelry_accessories')
           } else {
             setSelectedTemplate('general')
           }
@@ -252,11 +250,14 @@ export default function UnifiedEnhancePage() {
       let detectedSizing = ''
       if (productData?.variants && productData.variants.length > 0) {
         const sizes = productData.variants
-          .filter(v => v.selectedOptions && Array.isArray(v.selectedOptions) &&
+          .filter(v => 'selectedOptions' in v && v.selectedOptions && Array.isArray(v.selectedOptions) &&
                    v.selectedOptions.some(opt => opt && opt.name && opt.name.toLowerCase() === 'size'))
           .map(v => {
-            const sizeOption = v.selectedOptions?.find(opt => opt && opt.name && opt.name.toLowerCase() === 'size')
-            return sizeOption?.value
+            if ('selectedOptions' in v && Array.isArray(v.selectedOptions)) {
+              const sizeOption = v.selectedOptions.find(opt => opt && opt.name && opt.name.toLowerCase() === 'size')
+              return sizeOption?.value
+            }
+            return undefined
           })
           .filter(Boolean)
 
@@ -382,8 +383,7 @@ export default function UnifiedEnhancePage() {
           updatedData.title = editedContent.title
         }
         if (editedContent.description !== undefined && editedContent.description !== null) {
-          updatedData.description = editedContent.description
-          updatedData.descriptionHtml = `<p>${editedContent.description.replace(/\n/g, '</p><p>')}</p>`
+          updatedData.originalDescription = editedContent.description
         }
 
         // Update SEO fields if they exist
