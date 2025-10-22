@@ -234,7 +234,7 @@ export default function EnhancedContentComparison({
               {/* Original Content */}
               <Box
                 background="bg-surface-secondary"
-                padding="4"
+                padding="400"
                 borderRadius="200"
               >
                 <BlockStack gap="200">
@@ -268,7 +268,7 @@ export default function EnhancedContentComparison({
               {/* Enhanced Content */}
               <Box
                 background="bg-surface"
-                padding="4"
+                padding="400"
                 borderRadius="200"
                 borderWidth="025"
                 borderColor={fieldsToApply[fieldName as keyof typeof fieldsToApply] ? 'border-success' : 'border'}
@@ -346,14 +346,14 @@ export default function EnhancedContentComparison({
       <Card roundedAbove="sm">
         <Box padding="400">
           <BlockStack gap="400">
-            <InlineStack gap="2" blockAlign="center">
+            <InlineStack gap="200" blockAlign="center">
               <Icon source={MagicIcon} tone="magic" />
               <Text variant="headingMd" as="h3">Key Features</Text>
               <Badge tone="info">{editedContent.bulletPoints.length} points</Badge>
             </InlineStack>
             <Box
               background="bg-surface"
-              padding="4"
+              padding="400"
               borderRadius="200"
             >
               <ul style={{
@@ -421,7 +421,7 @@ export default function EnhancedContentComparison({
         large
       >
         <Modal.Section>
-          <BlockStack gap="4">
+          <BlockStack gap="400">
             {/* Quick Actions Bar */}
             <Card>
               <Box padding="300">
@@ -432,7 +432,7 @@ export default function EnhancedContentComparison({
                       AI-Generated Content Ready
                     </Text>
                   </InlineStack>
-                  <InlineStack gap="2">
+                  <InlineStack gap="200">
                     <Button
                       size="slim"
                       onClick={() => setFieldsToApply({
@@ -470,7 +470,7 @@ export default function EnhancedContentComparison({
                 {/* Main Content Tab */}
                 {selectedTab === 0 && (
                   <Box
-                    padding="4"
+                    padding="400"
                     style={{ minHeight: '600px' }}
                   >
                     <BlockStack gap="600">
@@ -504,7 +504,7 @@ export default function EnhancedContentComparison({
                 {/* SEO & Marketing Tab */}
                 {selectedTab === 1 && (
                   <Box
-                    padding="4"
+                    padding="400"
                     style={{ minHeight: '600px' }}
                   >
                     <BlockStack gap="600">
@@ -547,7 +547,7 @@ export default function EnhancedContentComparison({
                 {/* Key Features Tab */}
                 {selectedTab === 2 && (
                   <Box
-                    padding="4"
+                    padding="400"
                     style={{ minHeight: '600px' }}
                   >
                     {editedContent.bulletPoints && editedContent.bulletPoints.length > 0 ? (
