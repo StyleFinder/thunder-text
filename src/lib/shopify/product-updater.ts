@@ -67,7 +67,13 @@ export class ShopifyProductUpdater {
       const warnings: string[] = []
       
       // Prepare backup if needed
-      let backup = null
+      let backup: {
+        original_description: string
+        original_title: string
+        backup_id: string
+        backup_timestamp: string
+        metafield_id?: string
+      } | null = null
       if (preserveOriginal) {
         backup = {
           original_description: originalProduct.originalDescription,

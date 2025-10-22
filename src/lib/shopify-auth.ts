@@ -176,10 +176,22 @@ function verifySessionToken(token: string): boolean {
 /**
  * Parse JWT payload without verification (for debugging)
  */
-function parseJWT(token: string): Record<string, unknown> | null {
+interface ShopifyJWTPayload {
+  iss: string
+  dest: string
+  aud: string
+  sub: string
+  exp: number
+  nbf: number
+  iat: number
+  jti: string
+  sid: string
+}
+
+function parseJWT(token: string): ShopifyJWTPayload | null {
   try {
     const [, payload] = token.split('.')
-    return JSON.parse(Buffer.from(payload, 'base64').toString())
+    return JSON.parse(Buffer.from(payload, 'base64').toString()) as ShopifyJWTPayload
   } catch (error) {
     console.error('❌ Error parsing JWT:', error)
     return null
