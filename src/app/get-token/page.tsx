@@ -50,7 +50,7 @@ export default function GetToken() {
               <Text variant="headingMd" as="h2">
                 Generate Shopify Access Token
               </Text>
-              <Text as="p" color="subdued">
+              <Text as="p" tone="subdued">
                 This will generate a fresh access token for your development store.
               </Text>
               <LegacyStack distribution="leading">
