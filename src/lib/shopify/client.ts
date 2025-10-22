@@ -13,7 +13,7 @@ async function getShopifyAccessToken(shop: string, sessionToken?: string): Promi
 }
 
 // Wrapper function that matches the expected interface
-export async function shopifyGraphQL(query: string, variables: Record<string, unknown>, shop: string, sessionToken?: string) {
+export async function shopifyGraphQL<T = any>(query: string, variables: Record<string, unknown>, shop: string, sessionToken?: string): Promise<{ data: T }> {
   try {
     console.log('🔍 Starting Shopify GraphQL query for shop:', shop)
     console.log('📝 Query variables:', JSON.stringify(variables, null, 2))
@@ -40,10 +40,10 @@ export async function shopifyGraphQL(query: string, variables: Record<string, un
       }
     )
 
-    const response = await client.request(query, variables)
+    const response = await client.request<T>(query, variables)
     console.log('✅ Shopify GraphQL query successful')
     return { data: response }
-    
+
   } catch (error) {
     console.error('❌ Shopify GraphQL query failed:', error)
     throw error

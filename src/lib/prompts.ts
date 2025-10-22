@@ -34,6 +34,9 @@ export interface CombinedPrompt {
 export const PRODUCT_CATEGORIES = [
   { value: 'womens_clothing', label: "Women's Clothing" },
   { value: 'jewelry_accessories', label: 'Jewelry & Accessories' },
+  { value: 'home_living', label: 'Home & Living' },
+  { value: 'beauty_personal_care', label: 'Beauty & Personal Care' },
+  { value: 'electronics', label: 'Electronics' },
   { value: 'general', label: 'General Products' }
 ] as const
 
