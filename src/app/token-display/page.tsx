@@ -28,7 +28,7 @@ function TokenDisplayContent() {
     >
       <Layout>
         <Layout.Section>
-          <Banner status="success">
+          <Banner tone="success">
             <p>Successfully obtained Shopify access token!</p>
           </Banner>
         </Layout.Section>
