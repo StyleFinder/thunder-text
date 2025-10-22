@@ -274,7 +274,7 @@ async function fetchShopifyProduct(productId: string, shop: string, sessionToken
     })
 
     // Use shopifyGraphQL helper which handles authentication properly
-    const response = await shopifyGraphQL(query, { id: formattedProductId }, shop, sessionToken)
+    const response = await shopifyGraphQL<{ product: ShopifyProductData }>(query, { id: formattedProductId }, shop, sessionToken)
 
     console.log('📦 GraphQL response received:', {
       hasData: !!response?.data,

@@ -88,8 +88,8 @@ export class ShopifyProductUpdater {
                 type: 'json'
               }
             )
-            if (backupMetafield?.id) {
-              backup.metafield_id = backupMetafield.id
+            if (backupMetafield?.metafieldsSet?.metafields?.[0]?.id) {
+              backup.metafield_id = backupMetafield.metafieldsSet.metafields[0].id
             }
           } catch (error) {
             warnings.push('Failed to create backup metafield')
@@ -162,9 +162,9 @@ export class ShopifyProductUpdater {
         success: true,
         product: {
           id: productId,
-          title: updatedProduct.title || enhancedContent.title || originalProduct.title,
+          title: updatedProduct.productUpdate.product.title || enhancedContent.title || originalProduct.title,
           description: enhancedContent.description,
-          handle: updatedProduct.handle || originalProduct.handle,
+          handle: updatedProduct.productUpdate.product.handle || originalProduct.handle,
           updated_at: new Date().toISOString(),
           changes
         },
