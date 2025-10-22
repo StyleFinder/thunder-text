@@ -13,6 +13,7 @@ async function getShopifyAccessToken(shop: string, sessionToken?: string): Promi
 }
 
 // Wrapper function that matches the expected interface
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function shopifyGraphQL<T = any>(query: string, variables: Record<string, unknown>, shop: string, sessionToken?: string): Promise<{ data: T }> {
   try {
     console.log('🔍 Starting Shopify GraphQL query for shop:', shop)

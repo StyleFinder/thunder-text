@@ -8,14 +8,10 @@ import type {
   ShopifyProductCreateMediaResponse
 } from '@/types/shopify'
 
-interface ShopifyAdminApiClient {
-  request: <T>(query: string, options?: { variables?: Record<string, unknown> }) => Promise<{ data: T }>
-}
-
 export class ShopifyOfficialAPI {
   private shop: string
   private accessToken: string
-  public client: ShopifyAdminApiClient
+  public client: AdminApiClient
 
   constructor(shop: string, accessToken: string) {
     this.shop = shop
