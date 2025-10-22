@@ -421,7 +421,7 @@ function PromptsSettingsContent() {
                 >
                   <BlockStack gap="300">
                     <InlineStack align="space-between">
-                      <Text as="h3" variant="headingSm" tone="text-accent-secondary">
+                      <Text as="h3" variant="headingSm">
                         Global Default Template
                       </Text>
                       <Text as="p" variant="bodySm" tone="subdued">
@@ -562,8 +562,10 @@ function PromptsSettingsContent() {
                             background="bg-surface-secondary"
                             borderRadius="200"
                           >
-                            <Text variant="bodySm" as="pre" style={{ whiteSpace: 'pre-wrap' }}>
-                              {template?.content || `No template configured for ${categoryLabel}`}
+                            <Text as="p" variant="bodySm">
+                              <pre style={{ whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit' }}>
+                                {template?.content || `No template configured for ${categoryLabel}`}
+                              </pre>
                             </Text>
                           </Box>
                         )}
