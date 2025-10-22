@@ -124,8 +124,8 @@ export default function UnifiedEnhancePage() {
             .filter(v => 'selectedOptions' in v && v.selectedOptions && Array.isArray(v.selectedOptions) &&
                      v.selectedOptions.some(opt => opt && opt.name && opt.name.toLowerCase() === 'size'))
             .map(v => {
-              if ('selectedOptions' in v) {
-                const sizeOption = v.selectedOptions?.find(opt => opt && opt.name && opt.name.toLowerCase() === 'size')
+              if ('selectedOptions' in v && Array.isArray(v.selectedOptions)) {
+                const sizeOption = v.selectedOptions.find(opt => opt && opt.name && opt.name.toLowerCase() === 'size')
                 return sizeOption?.value
               }
               return undefined
