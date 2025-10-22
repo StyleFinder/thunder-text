@@ -577,6 +577,7 @@ export default function ProductDescriptionOverlay({
               label="Product Title"
               value={editableContent.title}
               onChange={(value) => setEditableContent({...editableContent, title: value})}
+              autoComplete="off"
             />
 
             <TextField
@@ -584,6 +585,7 @@ export default function ProductDescriptionOverlay({
               value={editableContent.description}
               onChange={(value) => setEditableContent({...editableContent, description: value})}
               multiline={8}
+              autoComplete="off"
             />
 
             <TextField
@@ -592,6 +594,7 @@ export default function ProductDescriptionOverlay({
               onChange={(value) => setEditableContent({...editableContent, metaDescription: value})}
               multiline={3}
               helpText={`${editableContent.metaDescription.length}/160 characters`}
+              autoComplete="off"
             />
 
             <div>
