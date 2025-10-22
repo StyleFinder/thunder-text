@@ -73,7 +73,7 @@ export default function HomePage() {
                 Thunder Text is now deployed and ready to generate AI-powered product descriptions for your Shopify store.
               </Text>
               
-              <Banner status="success">
+              <Banner tone="success">
                 <BlockStack gap="200">
                   <Text as="h3" variant="headingSm">✅ System Status</Text>
                   <List type="bullet">
@@ -84,8 +84,8 @@ export default function HomePage() {
                   </List>
                 </BlockStack>
               </Banner>
-              
-              <Banner status="warning">
+
+              <Banner tone="warning">
                 <BlockStack gap="200">
                   <Text as="h3" variant="headingSm">📋 Next Steps</Text>
                   <List type="number">
