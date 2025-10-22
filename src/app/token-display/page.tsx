@@ -39,7 +39,7 @@ function TokenDisplayContent() {
               <Text variant="headingMd" as="h2">
                 Your Shopify Access Token
               </Text>
-              <Text as="p" color="subdued">
+              <Text as="p" tone="subdued">
                 Copy this token and update your .env.local file:
               </Text>
               <div style={{ 
@@ -66,7 +66,7 @@ function TokenDisplayContent() {
                   Continue to Create Product
                 </Button>
               </LegacyStack>
-              <Card sectioned>
+              <Card>
                 <Text variant="headingMd" as="h3">
                   Next Steps:
                 </Text>
