@@ -544,10 +544,7 @@ export default function UnifiedEnhancePage() {
             <Layout.Section>
               <Card>
                 <BlockStack gap="200">
-                  <InlineStack gap="200" align="space-between">
-                    <Text as="h3" variant="headingMd">{productData.title}</Text>
-                    <Badge tone="info">{productData.status}</Badge>
-                  </InlineStack>
+                  <Text as="h3" variant="headingMd">{productData.title}</Text>
                   <Text as="p" variant="bodySm" tone="subdued">
                     SKU: {productData.variants[0]?.sku || 'N/A'} |
                     Type: {productData.productType || 'N/A'} |
