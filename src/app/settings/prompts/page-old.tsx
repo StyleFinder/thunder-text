@@ -635,8 +635,10 @@ function PromptsSettingsContent() {
                     background="bg-surface-secondary"
                     borderRadius="200"
                   >
-                    <Text variant="bodySm" as="pre" style={{ whiteSpace: 'pre-wrap' }}>
-                      {systemPrompt?.content || 'No system prompt configured'}
+                    <Text as="p" variant="bodySm">
+                      <pre style={{ whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit' }}>
+                        {systemPrompt?.content || 'No system prompt configured'}
+                      </pre>
                     </Text>
                   </Box>
                 )}
