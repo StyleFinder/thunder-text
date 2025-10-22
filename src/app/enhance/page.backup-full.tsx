@@ -464,7 +464,7 @@ function EnhanceProductContent() {
 
   // Error state - only show if we've attempted to load and failed WITH a productId
   // Don't show error if no productId is provided (that means we should show product selector)
-  if (workflow.error && workflow.currentStep === 'loading' && hasAttemptedLoad && !isLoading && productId && productId !== '') {
+  if (workflow.error && hasAttemptedLoad && !isLoading && productId && productId !== '') {
     return (
       <Page title="Enhance Product Description">
         <Layout>
@@ -510,7 +510,7 @@ function EnhanceProductContent() {
 
 
   // Loading state or Product Selection
-  if (workflow.currentStep === 'loading') {
+  if (false) {
     // If no productId provided, show product selector
     if (!productId) {
       return (
@@ -749,7 +749,7 @@ function EnhanceProductContent() {
       </Layout.Section>
 
       {/* Error Banner */}
-      {workflow.error && workflow.currentStep !== 'loading' && (
+      {workflow.error && (
         <Layout.Section>
           <Banner tone="critical">
             <Text as="p">{workflow.error}</Text>
