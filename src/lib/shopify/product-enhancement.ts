@@ -142,7 +142,7 @@ export async function fetchProductDataForEnhancement(
         keywordDensity: analyzeKeywordDensity(baseData.existingDescription || ''),
         titleLength: baseData.title.length,
         descriptionLength: (baseData.existingDescription || '').length,
-        missingAltTexts: baseData.images.filter(img => !img.altText).length
+        missingAltTexts: baseData.images.filter((img: { altText?: string }) => !img.altText).length
       },
       enhancementHistory: []
     }
