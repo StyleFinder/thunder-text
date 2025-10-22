@@ -76,7 +76,7 @@ function CreateProductContent() {
   const [productType, setProductType] = useState('')
   const [availableSizing, setAvailableSizing] = useState('')
   const [sizingOptions, setSizingOptions] = useState<{ label: string; value: string }[]>([])
-  const [templatePreview, setTemplatePreview] = useState<Record<string, unknown> | null>(null)
+  const [templatePreview, setTemplatePreview] = useState<{id: string; name: string; category: string; content: string; is_default: boolean} | null>(null)
   const [fabricMaterial, setFabricMaterial] = useState('')
   const [occasionUse, setOccasionUse] = useState('')
   const [targetAudience, setTargetAudience] = useState('')
@@ -195,7 +195,7 @@ function CreateProductContent() {
             }
             
             // Format and set sizing data
-            const formattedSizing = formatSizingData(data.metafields.sizing)
+            const formattedSizing = data.metafields.sizing ? formatSizingData(data.metafields.sizing) : null
             if (formattedSizing) {
               setAvailableSizing(formattedSizing)
             }
@@ -747,7 +747,7 @@ function CreateProductContent() {
               resolve({
                 dataUrl: reader.result as string,
                 name: file.name,
-                altText: generatedContent.title || file.name
+                altText: (typeof generatedContent?.title === 'string' ? generatedContent.title : null) || file.name
               })
             }
             reader.readAsDataURL(file)
@@ -850,7 +850,7 @@ function CreateProductContent() {
                 <Text as="p">
                   Please install Thunder Text from your Shopify admin panel to access this page.
                 </Text>
-                <Button primary onClick={() => window.location.href = '/'}>
+                <Button variant="primary" onClick={() => window.location.href = '/'}>
                   Back to Home
                 </Button>
               </BlockStack>
@@ -866,8 +866,8 @@ function CreateProductContent() {
       title="Create New Product" 
       subtitle="Generate product descriptions from images"
       primaryAction={
-        <Button 
-          primary 
+        <Button
+          variant="primary"
           onClick={() => window.location.href = `/dashboard?${searchParams?.toString() || ''}`}
         >
           Back to Dashboard
@@ -880,7 +880,7 @@ function CreateProductContent() {
           <BlockStack gap="400">
             {/* Product Data Loading State */}
             {dataLoading && (
-              <Banner status="info">
+              <Banner tone="info">
                 <BlockStack gap="200" inlineAlign="center">
                   <Spinner size="small" />
                   <Text as="p">Loading product data from Shopify...</Text>
@@ -890,7 +890,7 @@ function CreateProductContent() {
             
             {/* Product Data Load Error */}
             {dataLoadError && (
-              <Banner status="warning">
+              <Banner tone="warning">
                 <BlockStack gap="200">
                   <Text as="h3" variant="headingMd">Product Data Load Error</Text>
                   <Text as="p">{dataLoadError}</Text>
@@ -901,7 +901,7 @@ function CreateProductContent() {
             
             {/* Pre-populated Data Success */}
             {prePopulatedData && !dataLoading && (
-              <Banner status="success">
+              <Banner tone="success">
                 <BlockStack gap="200">
                   <Text as="h3" variant="headingMd">✅ Product Data Loaded from Shopify</Text>
                   <Text as="p">
@@ -1066,6 +1066,7 @@ function CreateProductContent() {
                               value={variant.userOverride || ''}
                               onChange={(value) => updateVariantOverride(variant.standardizedColor, value)}
                               placeholder={`Leave blank to use "${variant.standardizedColor}"`}
+                              autoComplete="off"
                             />
                           </BlockStack>
                         </Card>
@@ -1147,7 +1148,7 @@ function CreateProductContent() {
                     
                     {/* Image Upload Requirement Notice */}
                     {primaryPhotos.length === 0 && (
-                      <Banner status="info">
+                      <Banner tone="info">
                         <Text as="p">
                           Upload primary photos first, then manually select the product category below
                         </Text>
@@ -1156,7 +1157,7 @@ function CreateProductContent() {
                     
                     {/* Category Suggestion Display */}
                     {suggestedCategory && (
-                      <Banner status="success">
+                      <Banner tone="success">
                         <BlockStack gap="200">
                           <Text as="p">
                             <Text as="span" fontWeight="bold">Suggested Category:</Text> {suggestedCategory.category}
@@ -1217,6 +1218,7 @@ function CreateProductContent() {
                       onChange={setFabricMaterial}
                       helpText="Describe the materials used in this product"
                       multiline={2}
+                      autoComplete="off"
                     />
                     
                     <TextField
@@ -1226,6 +1228,7 @@ function CreateProductContent() {
                       onChange={setOccasionUse}
                       helpText="When or where would customers use this product?"
                       multiline={2}
+                      autoComplete="off"
                     />
                     
                     <TextField
@@ -1235,6 +1238,7 @@ function CreateProductContent() {
                       onChange={setTargetAudience}
                       helpText="Who is this product designed for?"
                       multiline={2}
+                      autoComplete="off"
                     />
                   </BlockStack>
                 </Card>
@@ -1253,6 +1257,7 @@ function CreateProductContent() {
                   onChange={setKeyFeatures}
                   helpText="List the main features and benefits"
                   multiline={3}
+                  autoComplete="off"
                 />
                 
                 <TextField
@@ -1262,13 +1267,14 @@ function CreateProductContent() {
                   onChange={setAdditionalNotes}
                   helpText="Optional: Add any special instructions or details"
                   multiline={3}
+                  autoComplete="off"
                 />
               </BlockStack>
             </Card>
 
             {/* Error Display */}
             {error && (
-              <Banner status="critical">
+              <Banner tone="critical">
                 <Text as="p">{error}</Text>
               </Banner>
             )}
@@ -1280,7 +1286,7 @@ function CreateProductContent() {
                   Cancel
                 </Button>
                 <Button
-                  primary
+                  variant="primary"
                   loading={generating}
                   onClick={handleGenerateDescription}
                   disabled={primaryPhotos.length === 0 || !selectedTemplate}
@@ -1357,9 +1363,10 @@ function CreateProductContent() {
             <BlockStack gap="400">
               <TextField
                 label="Product Title"
-                value={generatedContent.title || ''}
+                value={(typeof generatedContent?.title === 'string' ? generatedContent.title : null) || ''}
                 onChange={() => {}}
                 readOnly
+                autoComplete="off"
               />
 
               <Card>
@@ -1387,16 +1394,17 @@ function CreateProductContent() {
               
               <TextField
                 label="Meta Description"
-                value={generatedContent.metaDescription || ''}
+                value={(typeof generatedContent?.metaDescription === 'string' ? generatedContent.metaDescription : null) || ''}
                 onChange={() => {}}
                 multiline={2}
                 readOnly
+                autoComplete="off"
               />
               
               <Card>
                 <BlockStack gap="200">
                   <Text as="h3" variant="headingMd">Key Features</Text>
-                  {generatedContent.bulletPoints && generatedContent.bulletPoints.length > 0 ? (
+                  {Array.isArray(generatedContent?.bulletPoints) && generatedContent.bulletPoints.length > 0 ? (
                     <BlockStack gap="100">
                       {generatedContent.bulletPoints.map((point: string, index: number) => (
                         <Text as="p" key={index}>• {point}</Text>
@@ -1412,8 +1420,8 @@ function CreateProductContent() {
                 <BlockStack gap="200">
                   <Text as="h3" variant="headingMd">SEO Keywords</Text>
                   <Text as="p">
-                    {generatedContent.keywords && generatedContent.keywords.length > 0 
-                      ? generatedContent.keywords.join(', ') 
+                    {Array.isArray(generatedContent?.keywords) && generatedContent.keywords.length > 0
+                      ? generatedContent.keywords.join(', ')
                       : 'No keywords generated'
                     }
                   </Text>
@@ -1464,9 +1472,9 @@ function CreateProductContent() {
         >
           <Modal.Section>
             <BlockStack gap="400">
-              <Banner status="success">
+              <Banner tone="success">
                 <Text as="p">
-                  Your product has been successfully created in Shopify as a draft. 
+                  Your product has been successfully created in Shopify as a draft.
                   You can now review and publish it from your Shopify admin.
                 </Text>
               </Banner>
