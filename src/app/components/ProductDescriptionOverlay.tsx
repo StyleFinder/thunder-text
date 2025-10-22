@@ -644,7 +644,7 @@ export default function ProductDescriptionOverlay({
             Regenerate
           </Button>
           <Button
-            primary
+            variant="primary"
             loading={applying}
             onClick={handleApplyContent}
           >
