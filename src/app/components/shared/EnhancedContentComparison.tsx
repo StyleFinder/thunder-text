@@ -349,7 +349,7 @@ export default function EnhancedContentComparison({
             <InlineStack gap="200" blockAlign="center">
               <Icon source={MagicIcon} tone="magic" />
               <Text variant="headingMd" as="h3">Key Features</Text>
-              <Badge tone="info">{editedContent.bulletPoints.length} points</Badge>
+              <Badge tone="info">{`${editedContent.bulletPoints.length} points`}</Badge>
             </InlineStack>
             <Box
               background="bg-surface"
@@ -418,7 +418,7 @@ export default function EnhancedContentComparison({
             onAction: onClose,
           },
         ]}
-        large
+        size="large"
       >
         <Modal.Section>
           <BlockStack gap="400">
@@ -469,10 +469,8 @@ export default function EnhancedContentComparison({
               <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab}>
                 {/* Main Content Tab */}
                 {selectedTab === 0 && (
-                  <Box
-                    padding="400"
-                    style={{ minHeight: '600px' }}
-                  >
+                  <div style={{ minHeight: '600px' }}>
+                    <Box padding="400">
                     <BlockStack gap="600">
                       {enhancedContent.title && renderModernField(
                         'Product Title',
@@ -498,15 +496,14 @@ export default function EnhancedContentComparison({
                         </Banner>
                       )}
                     </BlockStack>
-                  </Box>
+                    </Box>
+                  </div>
                 )}
 
                 {/* SEO & Marketing Tab */}
                 {selectedTab === 1 && (
-                  <Box
-                    padding="400"
-                    style={{ minHeight: '600px' }}
-                  >
+                  <div style={{ minHeight: '600px' }}>
+                    <Box padding="400">
                     <BlockStack gap="600">
                       {enhancedContent.seoTitle && renderModernField(
                         'SEO Title',
@@ -541,15 +538,14 @@ export default function EnhancedContentComparison({
                         </Banner>
                       )}
                     </BlockStack>
-                  </Box>
+                    </Box>
+                  </div>
                 )}
 
                 {/* Key Features Tab */}
                 {selectedTab === 2 && (
-                  <Box
-                    padding="400"
-                    style={{ minHeight: '600px' }}
-                  >
+                  <div style={{ minHeight: '600px' }}>
+                    <Box padding="400">
                     {editedContent.bulletPoints && editedContent.bulletPoints.length > 0 ? (
                       renderBulletPoints()
                     ) : (
@@ -557,7 +553,8 @@ export default function EnhancedContentComparison({
                         <Text as="p">No key features were generated. The AI will extract features when analyzing product images.</Text>
                       </Banner>
                     )}
-                  </Box>
+                    </Box>
+                  </div>
                 )}
               </Tabs>
             </Card>
