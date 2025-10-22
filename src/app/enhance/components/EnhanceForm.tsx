@@ -67,9 +67,9 @@ export function EnhanceForm({
   const [formData, setFormData] = useState<EnhancementFormData>({
     productCategory: (productData.category?.primary as ProductCategory) || 'general',
     template: '',
-    targetAudience: productData.vendor || productData.brand || '',
-    fabricMaterial: productData.material || '',
-    keyFeatures: productData.keyFeatures?.join('\n') || '',
+    targetAudience: productData.vendor || '',
+    fabricMaterial: productData.materials.fabric || '',
+    keyFeatures: '',
     availableSizing: productData.variants?.map(v => v.title).join(', ') || '',
     additionalNotes: '',
     enhancementGoals: {
@@ -142,9 +142,9 @@ export function EnhanceForm({
   const resetField = useCallback((field: keyof EnhancementFormData) => {
     const originalValues: Partial<EnhancementFormData> = {
       productCategory: (productData.category?.primary as ProductCategory) || 'general',
-      targetAudience: productData.vendor || productData.brand || '',
-      fabricMaterial: productData.material || '',
-      keyFeatures: productData.keyFeatures?.join('\n') || '',
+      targetAudience: productData.vendor || '',
+      fabricMaterial: productData.materials.fabric || '',
+      keyFeatures: '',
       availableSizing: productData.variants?.map(v => v.title).join(', ') || '',
       additionalNotes: ''
     }
@@ -167,7 +167,7 @@ export function EnhanceForm({
     if (isEdited) {
       return (
         <InlineStack gap="200" blockAlign="center">
-          <Text variant="bodyMd" fontWeight="medium">{field}</Text>
+          <Text variant="bodyMd" fontWeight="medium" as="span">{field}</Text>
           <Badge tone="attention">Modified</Badge>
           <Button
             variant="plain"
@@ -188,7 +188,7 @@ export function EnhanceForm({
       <BlockStack gap="500">
         <Box>
           <Text variant="headingMd" as="h2">Enhancement Settings</Text>
-          <Text variant="bodyMd" tone="subdued">
+          <Text variant="bodyMd" tone="subdued" as="p">
             Configure how you want to enhance this product's description
           </Text>
         </Box>
@@ -196,13 +196,14 @@ export function EnhanceForm({
         {/* Category Selection */}
         <Box>
           <CategoryTemplateSelector
-            selectedCategory={formData.productCategory}
-            selectedTemplate={formData.template}
-            shop={shop}
-            onCategoryChange={(category) => handleFieldChange('productCategory', category)}
-            onTemplateChange={(template) => handleFieldChange('template', template)}
-            showCustomTemplates={true}
-            compact={false}
+            value={formData.productCategory}
+            onChange={(value, category) => {
+              handleFieldChange('productCategory', value)
+              if (category) {
+                handleFieldChange('template', value)
+              }
+            }}
+            storeId={shop}
           />
         </Box>
 
@@ -259,7 +260,7 @@ export function EnhanceForm({
         <Card background="bg-surface-secondary">
           <BlockStack gap="400">
             <Text variant="headingSm" as="h3">Enhancement Goals</Text>
-            <Text variant="bodySm" tone="subdued">
+            <Text variant="bodySm" tone="subdued" as="p">
               Select what aspects you want to improve in the product description
             </Text>
             
@@ -312,7 +313,7 @@ export function EnhanceForm({
         <Card background="bg-surface-secondary">
           <BlockStack gap="400">
             <Text variant="headingSm" as="h3">Preserve Product Elements</Text>
-            <Text variant="bodySm" tone="subdued">
+            <Text variant="bodySm" tone="subdued" as="p">
               Choose which existing product elements to keep unchanged
             </Text>
             
@@ -349,7 +350,7 @@ export function EnhanceForm({
         {/* Form Validation */}
         {!isFormValid && (
           <Banner tone="warning">
-            <Text variant="bodyMd">
+            <Text variant="bodyMd" as="p">
               Please ensure you have selected at least one enhancement goal and provided target audience information.
             </Text>
           </Banner>

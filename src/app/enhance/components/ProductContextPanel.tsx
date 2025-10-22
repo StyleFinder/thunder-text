@@ -82,10 +82,10 @@ export function ProductContextPanel({ productData, suggestions = [] }: ProductCo
             <Text variant="headingSm" as="h3">
               {productData.title || 'Untitled Product'}
             </Text>
-            
-            {productData.price && (
-              <Text variant="bodyMd" tone="subdued">
-                ${productData.price}
+
+            {productData.variants && productData.variants.length > 0 && (
+              <Text variant="bodyMd" tone="subdued" as="p">
+                ${productData.variants[0].price}
               </Text>
             )}
           </BlockStack>
@@ -100,14 +100,14 @@ export function ProductContextPanel({ productData, suggestions = [] }: ProductCo
                 {productData.images.slice(0, 4).map((image, index) => (
                   <Thumbnail
                     key={index}
-                    source={image.url || image.src || ''}
+                    source={image.url || ''}
                     alt={image.altText || `Product image ${index + 1}`}
                     size="small"
                   />
                 ))}
                 {productData.images.length > 4 && (
                   <Box padding="200" background="bg-surface-secondary">
-                    <Text variant="bodySm" tone="subdued">
+                    <Text variant="bodySm" tone="subdued" as="span">
                       +{productData.images.length - 4} more
                     </Text>
                   </Box>
@@ -122,8 +122,8 @@ export function ProductContextPanel({ productData, suggestions = [] }: ProductCo
           <Text variant="headingSm" as="h4">Current Description</Text>
           <Box paddingBlockStart="200">
             <Card background="bg-surface-secondary">
-              <Text variant="bodyMd">
-                {productData.originalDescription || productData.description || 'No description available'}
+              <Text variant="bodyMd" as="p">
+                {productData.originalDescription || 'No description available'}
               </Text>
             </Card>
           </Box>
@@ -139,9 +139,7 @@ export function ProductContextPanel({ productData, suggestions = [] }: ProductCo
               fullWidth
               textAlign="left"
             >
-              <Text variant="headingSm" as="h4">
-                AI Improvement Suggestions ({suggestions.length})
-              </Text>
+              {`AI Improvement Suggestions (${suggestions.length})`}
             </Button>
             
             <Collapsible
@@ -155,14 +153,14 @@ export function ProductContextPanel({ productData, suggestions = [] }: ProductCo
                     <Card key={index} background="bg-surface-secondary">
                       <InlineStack align="space-between" blockAlign="start">
                         <InlineStack gap="200" blockAlign="start">
-                          <Text variant="bodyMd">
+                          <Text variant="bodyMd" as="span">
                             {getSuggestionIcon(suggestion.type)}
                           </Text>
                           <BlockStack gap="100">
-                            <Text variant="bodyMd" fontWeight="medium">
+                            <Text variant="bodyMd" fontWeight="medium" as="p">
                               {suggestion.title}
                             </Text>
-                            <Text variant="bodySm" tone="subdued">
+                            <Text variant="bodySm" tone="subdued" as="p">
                               {suggestion.description}
                             </Text>
                           </BlockStack>
@@ -188,7 +186,7 @@ export function ProductContextPanel({ productData, suggestions = [] }: ProductCo
             fullWidth
             textAlign="left"
           >
-            <Text variant="headingSm" as="h4">Product Metadata</Text>
+            Product Metadata
           </Button>
           
           <Collapsible
@@ -198,44 +196,34 @@ export function ProductContextPanel({ productData, suggestions = [] }: ProductCo
           >
             <Box paddingBlockStart="300">
               <BlockStack gap="200">
-                {productData.material && (
+                {productData.materials?.fabric && (
                   <InlineStack align="space-between">
-                    <Text variant="bodyMd">Material:</Text>
-                    <Text variant="bodyMd" fontWeight="medium">{productData.material}</Text>
+                    <Text variant="bodyMd" as="span">Material:</Text>
+                    <Text variant="bodyMd" fontWeight="medium" as="span">{productData.materials.fabric}</Text>
                   </InlineStack>
                 )}
                 
-                {productData.brand && (
+                {productData.vendor && (
                   <InlineStack align="space-between">
-                    <Text variant="bodyMd">Brand:</Text>
-                    <Text variant="bodyMd" fontWeight="medium">{productData.brand}</Text>
+                    <Text variant="bodyMd" as="span">Vendor:</Text>
+                    <Text variant="bodyMd" fontWeight="medium" as="span">{productData.vendor}</Text>
                   </InlineStack>
                 )}
                 
                 {productData.tags && productData.tags.length > 0 && (
                   <BlockStack gap="100">
-                    <Text variant="bodyMd">Tags:</Text>
+                    <Text variant="bodyMd" as="p">Tags:</Text>
                     <InlineStack gap="100">
                       {productData.tags.slice(0, 5).map((tag, index) => (
                         <Badge key={index} tone="info">{tag}</Badge>
                       ))}
                       {productData.tags.length > 5 && (
-                        <Badge>+{productData.tags.length - 5} more</Badge>
+                        <Badge>{`+${productData.tags.length - 5} more`}</Badge>
                       )}
                     </InlineStack>
                   </BlockStack>
                 )}
                 
-                {productData.keyFeatures && productData.keyFeatures.length > 0 && (
-                  <BlockStack gap="100">
-                    <Text variant="bodyMd">Key Features:</Text>
-                    <List type="bullet">
-                      {productData.keyFeatures.slice(0, 3).map((feature, index) => (
-                        <List.Item key={index}>{feature}</List.Item>
-                      ))}
-                    </List>
-                  </BlockStack>
-                )}
               </BlockStack>
             </Box>
           </Collapsible>
@@ -251,9 +239,7 @@ export function ProductContextPanel({ productData, suggestions = [] }: ProductCo
               fullWidth
               textAlign="left"
             >
-              <Text variant="headingSm" as="h4">
-                Variants ({productData.variants.length})
-              </Text>
+              {`Variants (${productData.variants.length})`}
             </Button>
             
             <Collapsible
@@ -265,16 +251,16 @@ export function ProductContextPanel({ productData, suggestions = [] }: ProductCo
                 <BlockStack gap="200">
                   {productData.variants.slice(0, 5).map((variant, index) => (
                     <InlineStack key={index} align="space-between">
-                      <Text variant="bodyMd">
+                      <Text variant="bodyMd" as="span">
                         {variant.title || `Variant ${index + 1}`}
                       </Text>
-                      <Text variant="bodyMd" fontWeight="medium">
+                      <Text variant="bodyMd" fontWeight="medium" as="span">
                         ${variant.price || '0.00'}
                       </Text>
                     </InlineStack>
                   ))}
                   {productData.variants.length > 5 && (
-                    <Text variant="bodySm" tone="subdued">
+                    <Text variant="bodySm" tone="subdued" as="p">
                       +{productData.variants.length - 5} more variants
                     </Text>
                   )}
@@ -294,7 +280,7 @@ export function ProductContextPanel({ productData, suggestions = [] }: ProductCo
               fullWidth
               textAlign="left"
             >
-              <Text variant="headingSm" as="h4">Performance Insights</Text>
+              Performance Insights
             </Button>
             
             <Collapsible
@@ -306,25 +292,25 @@ export function ProductContextPanel({ productData, suggestions = [] }: ProductCo
                 <BlockStack gap="200">
                   {productData.performance.viewCount !== undefined && (
                     <InlineStack align="space-between">
-                      <Text variant="bodyMd">Views:</Text>
-                      <Text variant="bodyMd" fontWeight="medium">
+                      <Text variant="bodyMd" as="span">Views:</Text>
+                      <Text variant="bodyMd" fontWeight="medium" as="span">
                         {productData.performance.viewCount.toLocaleString()}
                       </Text>
                     </InlineStack>
                   )}
-                  
+
                   {productData.performance.conversionRate !== undefined && (
                     <InlineStack align="space-between">
-                      <Text variant="bodyMd">Conversion Rate:</Text>
-                      <Text variant="bodyMd" fontWeight="medium">
+                      <Text variant="bodyMd" as="span">Conversion Rate:</Text>
+                      <Text variant="bodyMd" fontWeight="medium" as="span">
                         {(productData.performance.conversionRate * 100).toFixed(1)}%
                       </Text>
                     </InlineStack>
                   )}
-                  
+
                   <InlineStack align="space-between">
-                    <Text variant="bodyMd">Last Modified:</Text>
-                    <Text variant="bodyMd" fontWeight="medium">
+                    <Text variant="bodyMd" as="span">Last Modified:</Text>
+                    <Text variant="bodyMd" fontWeight="medium" as="span">
                       {new Date(productData.performance.lastModified).toLocaleDateString()}
                     </Text>
                   </InlineStack>

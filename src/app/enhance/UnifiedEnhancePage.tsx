@@ -121,11 +121,14 @@ export default function UnifiedEnhancePage() {
         // Pre-populate sizing from variants
         if (data.variants && data.variants.length > 0) {
           const sizes = data.variants
-            .filter(v => v.selectedOptions && Array.isArray(v.selectedOptions) &&
+            .filter(v => 'selectedOptions' in v && v.selectedOptions && Array.isArray(v.selectedOptions) &&
                      v.selectedOptions.some(opt => opt && opt.name && opt.name.toLowerCase() === 'size'))
             .map(v => {
-              const sizeOption = v.selectedOptions?.find(opt => opt && opt.name && opt.name.toLowerCase() === 'size')
-              return sizeOption?.value
+              if ('selectedOptions' in v) {
+                const sizeOption = v.selectedOptions?.find(opt => opt && opt.name && opt.name.toLowerCase() === 'size')
+                return sizeOption?.value
+              }
+              return undefined
             })
             .filter(Boolean)
 

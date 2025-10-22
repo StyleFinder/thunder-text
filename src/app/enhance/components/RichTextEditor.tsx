@@ -194,7 +194,7 @@ export function RichTextEditor({
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/^• (.*)$/gm, '<li>$1</li>')
-      .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+      .replace(/(<li>[\s\S]*<\/li>)/, '<ul>$1</ul>')
       .replace(/\n/g, '<br />')
   }
 
@@ -206,10 +206,10 @@ export function RichTextEditor({
           <Text variant="headingSm" as="h3">{label}</Text>
           {showCharacterCount && (
             <InlineStack gap="200">
-              <Text variant="bodySm" tone="subdued">
+              <Text variant="bodySm" tone="subdued" as="span">
                 {seoMetrics.characterCount} characters
               </Text>
-              <Text variant="bodySm" tone="subdued">
+              <Text variant="bodySm" tone="subdued" as="span">
                 {seoMetrics.wordCount} words
               </Text>
             </InlineStack>
@@ -305,10 +305,10 @@ export function RichTextEditor({
         {showSeoHints && seoMetrics.suggestions.length > 0 && (
           <Banner tone="info">
             <BlockStack gap="200">
-              <Text variant="bodyMd" fontWeight="medium">SEO Suggestions:</Text>
+              <Text variant="bodyMd" fontWeight="medium" as="p">SEO Suggestions:</Text>
               <BlockStack gap="100">
                 {seoMetrics.suggestions.slice(0, 3).map((suggestion, index) => (
-                  <Text key={index} variant="bodySm">• {suggestion}</Text>
+                  <Text key={index} variant="bodySm" as="p">• {suggestion}</Text>
                 ))}
               </BlockStack>
             </BlockStack>
@@ -318,7 +318,7 @@ export function RichTextEditor({
         {/* Readability Score */}
         {showSeoHints && (
           <InlineStack gap="300">
-            <Text variant="bodySm" tone="subdued">
+            <Text variant="bodySm" tone="subdued" as="span">
               Readability Score:
             </Text>
             <Badge 
@@ -335,7 +335,7 @@ export function RichTextEditor({
         {/* Character Count Details */}
         {showCharacterCount && (
           <InlineStack gap="400">
-            <Text variant="bodySm" tone="subdued">
+            <Text variant="bodySm" tone="subdued" as="span">
               Optimal length: 150-300 characters for SEO
             </Text>
             <Badge 
