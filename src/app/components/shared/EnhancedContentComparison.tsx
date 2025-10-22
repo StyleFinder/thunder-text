@@ -212,7 +212,7 @@ export default function EnhancedContentComparison({
                     )}
                   </InlineStack>
                   {fieldsToApply[fieldName as keyof typeof fieldsToApply] && (
-                    <Text variant="bodySm" tone="success">
+                    <Text variant="bodySm" as="p" tone="success">
                       ✓ Will be applied to product
                     </Text>
                   )}
@@ -574,7 +574,7 @@ export default function EnhancedContentComparison({
                   >
                     <InlineStack gap="200" blockAlign="center">
                       <Icon source={CheckIcon} tone="success" />
-                      <Text variant="bodySm" tone="success">
+                      <Text variant="bodySm" as="p" tone="success">
                         {selectedCount} field{selectedCount !== 1 ? 's' : ''} selected for update
                       </Text>
                     </InlineStack>
