@@ -351,9 +351,9 @@ export default function ContentDetailPage() {
                 <Clock className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Last Updated</p>
+                <p className="text-xs text-muted-foreground">Created</p>
                 <p className="text-sm font-semibold">
-                  {new Date(content.updated_at).toLocaleDateString()}
+                  {new Date(content.created_at).toLocaleDateString()}
                 </p>
               </div>
             </div>

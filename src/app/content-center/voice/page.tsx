@@ -304,7 +304,7 @@ export default function BrandVoicePage() {
       const page = await pdf.getPage(i)
       const textContent = await page.getTextContent()
       const pageText = textContent.items
-        .map((item: { str: string }) => item.str)
+        .map((item) => ('str' in item ? item.str : ''))
         .join(' ')
       fullText += pageText + '\n'
     }
