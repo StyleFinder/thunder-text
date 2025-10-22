@@ -205,8 +205,8 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
           <InlineStack align="center" gap="400">
             <Spinner size="large" />
             <BlockStack gap="200">
-              <Text variant="headingMd">Loading Products...</Text>
-              <Text variant="bodyMd" tone="subdued">
+              <Text variant="headingMd" as="h2">Loading Products...</Text>
+              <Text variant="bodyMd" tone="subdued" as="p">
                 Fetching your products from Shopify
               </Text>
             </BlockStack>
@@ -251,7 +251,7 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
             <InlineStack align="space-between">
               <BlockStack gap="100">
                 <Text variant="headingLg" as="h1">Select Product to Enhance</Text>
-                <Text variant="bodyMd" tone="subdued">
+                <Text variant="bodyMd" tone="subdued" as="p">
                   Choose an existing product to enhance its description with AI
                 </Text>
               </BlockStack>
@@ -261,6 +261,8 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
             <InlineStack gap="400" align="space-between">
               <Box minWidth="300px">
                 <TextField
+                  label="Search products"
+                  labelHidden
                   value={searchQuery}
                   onChange={handleSearchChange}
                   placeholder="Search products..."
@@ -350,11 +352,11 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
                           <Text variant="headingSm" as="h3" truncate>
                             {product.title}
                           </Text>
-                          <Text variant="bodyMd" tone="subdued">
+                          <Text variant="bodyMd" tone="subdued" as="p">
                             ${product.price}
                           </Text>
                           {product.description && (
-                            <Text variant="bodySm" tone="subdued" truncate>
+                            <Text variant="bodySm" tone="subdued" truncate as="p">
                               {product.description.replace(/<[^>]*>/g, '').substring(0, 80)}...
                             </Text>
                           )}
@@ -388,20 +390,12 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
 
               {/* Loading overlay for subsequent loads */}
               {loading && products.length > 0 && (
-                <Box 
-                  position="absolute" 
-                  insetBlockStart="0" 
-                  insetInlineStart="0" 
-                  width="100%" 
-                  height="100%" 
-                  background="bg-surface" 
-                  style={{ opacity: 0.7 }}
-                >
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(255, 255, 255, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <InlineStack align="center" blockAlign="center" gap="200">
                     <Spinner size="small" />
-                    <Text variant="bodySm">Loading...</Text>
+                    <Text variant="bodySm" as="span">Loading...</Text>
                   </InlineStack>
-                </Box>
+                </div>
               )}
             </BlockStack>
           )}
