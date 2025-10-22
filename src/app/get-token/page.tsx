@@ -63,13 +63,13 @@ export default function GetToken() {
                 </Button>
               </LegacyStack>
               {error && (
-                <Banner status="critical">
+                <Banner tone="critical">
                   <p>{error}</p>
                 </Banner>
               )}
               {token && (
                 <>
-                  <Banner status="success">
+                  <Banner tone="success">
                     <p>Access token generated successfully!</p>
                   </Banner>
                   
