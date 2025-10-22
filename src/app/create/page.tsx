@@ -1441,7 +1441,8 @@ function CreateProductContent() {
           primaryAction={{
             content: 'View in Shopify Admin',
             onAction: () => {
-              window.open(productCreated.shopifyUrl, '_blank')
+              const url = typeof productCreated?.shopifyUrl === 'string' ? productCreated.shopifyUrl : undefined
+              if (url) window.open(url, '_blank')
             }
           }}
           secondaryActions={[
@@ -1484,13 +1485,13 @@ function CreateProductContent() {
                   <Text as="h3" variant="headingMd">Product Details</Text>
                   <BlockStack gap="200">
                     <Text as="p">
-                      <Text as="span" fontWeight="bold">Title:</Text> {productCreated.product?.title}
+                      <Text as="span" fontWeight="bold">Title:</Text> {typeof productCreated?.product === 'object' && productCreated.product && 'title' in productCreated.product ? String(productCreated.product.title) : 'N/A'}
                     </Text>
                     <Text as="p">
                       <Text as="span" fontWeight="bold">Status:</Text> Draft (ready for review)
                     </Text>
                     <Text as="p">
-                      <Text as="span" fontWeight="bold">Product ID:</Text> {productCreated.product?.id}
+                      <Text as="span" fontWeight="bold">Product ID:</Text> {typeof productCreated?.product === 'object' && productCreated.product && 'id' in productCreated.product ? String(productCreated.product.id) : 'N/A'}
                     </Text>
                   </BlockStack>
                 </BlockStack>
