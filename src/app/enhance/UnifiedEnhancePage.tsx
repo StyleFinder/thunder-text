@@ -733,9 +733,9 @@ export default function UnifiedEnhancePage() {
           onApply={handleApplyChanges}
           originalContent={{
             title: productData?.title || '',
-            description: productData?.descriptionHtml || '',
-            seoTitle: productData?.seo?.title || '',
-            seoDescription: productData?.seo?.description || '',
+            description: productData?.originalDescription || '',
+            seoTitle: productData?.seoTitle || '',
+            seoDescription: productData?.seoDescription || '',
             promoText: ''  // Products don't have existing promo text
           }}
           enhancedContent={generatedContent || {}}
