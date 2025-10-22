@@ -174,7 +174,7 @@ export class ShopifyProductUpdater {
           updated_at: new Date().toISOString(),
           changes
         },
-        backup,
+        backup: backup ?? undefined,
         errors: errors.length > 0 ? errors : undefined,
         warnings: warnings.length > 0 ? warnings : undefined
       }

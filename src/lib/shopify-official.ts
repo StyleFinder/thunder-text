@@ -1,4 +1,4 @@
-import { createAdminApiClient } from '@shopify/admin-api-client'
+import { createAdminApiClient, type AdminApiClient } from '@shopify/admin-api-client'
 import type {
   ShopifyProductInput,
   ShopifyMetafieldInput,
@@ -199,7 +199,7 @@ export class ShopifyOfficialAPI {
 
       if (stagedUploadData.userErrors?.length > 0) {
         console.error('❌ Staged upload creation failed:', stagedUploadData.userErrors)
-        throw new Error(`Staged upload failed: ${stagedUploadData.userErrors.map((e) => e.message).join(', ')}`)
+        throw new Error(`Staged upload failed: ${stagedUploadData.userErrors.map((e: { message: string }) => e.message).join(', ')}`)
       }
 
       const stagedTarget = stagedUploadData.stagedTargets[0]
@@ -253,7 +253,7 @@ export class ShopifyOfficialAPI {
       // Use form-data with proper stream handling for Node.js + fetch compatibility
       const uploadResponse = await fetch(stagedTarget.url, {
         method: 'POST',
-        body: form.getBuffer(),
+        body: form.getBuffer() as unknown as BodyInit,
         headers: {
           ...headers,
           'Content-Length': form.getLengthSync().toString()
@@ -319,7 +319,7 @@ export class ShopifyOfficialAPI {
 
       if (mediaData?.mediaUserErrors?.length > 0) {
         console.error('❌ Media creation failed:', JSON.stringify(mediaData.mediaUserErrors, null, 2))
-        throw new Error(`Media creation failed: ${mediaData.mediaUserErrors.map((e) => e.message).join(', ')}`)
+        throw new Error(`Media creation failed: ${mediaData.mediaUserErrors.map((e: { message: string }) => e.message).join(', ')}`)
       }
       
       if (!mediaData?.media?.length) {
