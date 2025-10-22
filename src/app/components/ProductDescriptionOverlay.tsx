@@ -661,7 +661,7 @@ export default function ProductDescriptionOverlay({
         open={isOpen}
         onClose={onClose}
         title="Generate Product Description"
-        large
+        size="large"
         primaryAction={{
           content: 'Close',
           onAction: onClose,
