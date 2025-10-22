@@ -112,7 +112,7 @@ export default function InstallPage() {
 
               <InlineStack gap="300">
                 <Button
-                  primary
+                  variant="primary"
                   onClick={handleInstall}
                   loading={installing}
                   disabled={!shop || installing}
