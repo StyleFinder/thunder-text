@@ -102,11 +102,12 @@ export async function exchangeToken(params: TokenExchangeParams): Promise<TokenE
 
     // Save the access token to database for future use
     if (requestedTokenType === 'offline') {
-      await saveShopToken({
-        shop_domain: shop,
-        access_token: tokenData.access_token,
-        scope: tokenData.scope
-      })
+      await saveShopToken(
+        shop,
+        tokenData.access_token,
+        'offline',
+        tokenData.scope
+      )
       console.log('💾 Offline access token saved to database')
     }
 
