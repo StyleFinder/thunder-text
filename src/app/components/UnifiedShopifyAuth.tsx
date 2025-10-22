@@ -178,11 +178,21 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
             const freshToken = await getSessionToken(appInstance)
             if (freshToken) {
               sessionStorage.setItem('shopify_session_token', freshToken)
+              return freshToken
             }
-            return freshToken
+            // If no fresh token, try to get from storage
+            const storedToken = sessionStorage.getItem('shopify_session_token')
+            if (storedToken) {
+              return storedToken
+            }
+            throw new Error('No session token available')
           } catch (error) {
             console.error('Failed to get fresh session token:', error)
-            return sessionStorage.getItem('shopify_session_token')
+            const storedToken = sessionStorage.getItem('shopify_session_token')
+            if (!storedToken) {
+              throw new Error('No session token available')
+            }
+            return storedToken
           }
         }
         console.log('✅ Global session token getter configured')
