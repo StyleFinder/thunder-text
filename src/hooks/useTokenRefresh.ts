@@ -9,7 +9,7 @@ import { useAppBridge } from '@/app/components/AppBridgeProvider'
 
 export function useTokenRefresh() {
   const { shop, app } = useAppBridge()
-  const refreshTimerRef = useRef<NodeJS.Timeout>()
+  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null)
   const isRefreshingRef = useRef(false)
 
   /**

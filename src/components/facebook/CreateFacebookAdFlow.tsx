@@ -615,7 +615,7 @@ export default function CreateFacebookAdFlow({
       open={open}
       onClose={onClose}
       title="Create Facebook Ad"
-      large
+      size="large"
       primaryAction={modalActions.primaryAction}
       secondaryActions={modalActions.secondaryActions}
     >

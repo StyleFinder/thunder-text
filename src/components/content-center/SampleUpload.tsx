@@ -90,7 +90,7 @@ export function SampleUpload({ onUploadSuccess }: SampleUploadProps) {
 
       setSuccess(true)
       setSampleText('')
-      setFileInputRef.current && (fileInputRef.current.value = '')
+      fileInputRef.current && (fileInputRef.current.value = '')
 
       // Call success callback after a short delay
       setTimeout(() => {
