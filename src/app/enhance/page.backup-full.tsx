@@ -729,13 +729,13 @@ function EnhanceProductContent() {
             <InlineStack align="space-between">
               <Text variant="headingSm" as="h3">Enhancement Progress</Text>
               <Badge tone={workflow.currentStep === 'complete' ? 'success' : 'info'}>
-                Step {currentStepIndex + 1} of {stepOrder.length}
+                {`Step ${currentStepIndex + 1} of ${stepOrder.length}`}
               </Badge>
             </InlineStack>
             <ProgressBar progress={workflow.progress} size="medium" />
             
             {/* Step Navigation */}
-            {workflow.currentStep !== 'loading' && workflow.currentStep !== 'generating' && workflow.currentStep !== 'apply' && (
+            {workflow.currentStep !== 'generating' && workflow.currentStep !== 'apply' && (
               <InlineStack gap="200" align="end">
                 {currentStepIndex > 1 && (
                   <Button onClick={goBack} disabled={workflow.currentStep === 'complete'}>
