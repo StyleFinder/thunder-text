@@ -376,7 +376,7 @@ function PromptsSettingsContent() {
               <Box padding="600">
                 <InlineStack align="center">
                   <Spinner size="large" />
-                  <Text variant="bodyMd">Loading prompts...</Text>
+                  <Text as="p" variant="bodyMd">Loading prompts...</Text>
                 </InlineStack>
               </Box>
             </Card>
@@ -407,7 +407,7 @@ function PromptsSettingsContent() {
                 <InlineStack align="space-between">
                   <Box>
                     <Text as="h2" variant="headingMd">Default Template Settings</Text>
-                    <Text variant="bodySm" tone="subdued">
+                    <Text as="p" variant="bodySm" tone="subdued">
                       Configure which template is automatically used for new products
                     </Text>
                   </Box>
@@ -415,17 +415,16 @@ function PromptsSettingsContent() {
                 
                 <Box
                   padding="400"
-                  background="bg-surface-accent"
+                  background="bg-surface-secondary"
                   borderRadius="200"
                   borderWidth="0165"
-                  borderColor="border-accent"
                 >
                   <BlockStack gap="300">
                     <InlineStack align="space-between">
                       <Text as="h3" variant="headingSm" tone="text-accent-secondary">
                         Global Default Template
                       </Text>
-                      <Text variant="bodySm" tone="subdued">
+                      <Text as="p" variant="bodySm" tone="subdued">
                         Applied to all new products
                       </Text>
                     </InlineStack>
@@ -456,7 +455,7 @@ function PromptsSettingsContent() {
                 <InlineStack align="space-between">
                   <Box>
                     <Text as="h2" variant="headingMd">Template Editor</Text>
-                    <Text variant="bodySm" tone="subdued">
+                    <Text as="p" variant="bodySm" tone="subdued">
                       Edit and customize templates for different product categories
                     </Text>
                   </Box>
@@ -583,7 +582,7 @@ function PromptsSettingsContent() {
                 <InlineStack align="space-between">
                   <Box>
                     <Text as="h2" variant="headingMd">Master System Prompt</Text>
-                    <Text variant="bodySm" tone="subdued">
+                    <Text as="p" variant="bodySm" tone="subdued">
                       Universal copywriting principles applied to all product descriptions
                     </Text>
                   </Box>
