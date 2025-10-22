@@ -510,25 +510,25 @@ export default function UnifiedEnhancePage() {
                         The following changes have been applied:
                       </Text>
                       <Box paddingBlockStart="200">
-                        {updateResult.updates && typeof updateResult.updates === 'object' && (
+                        {updateResult.updates && typeof updateResult.updates === 'object' ? (
                           <>
-                            {'title' in updateResult.updates && updateResult.updates.title && (
+                            {'title' in updateResult.updates && updateResult.updates.title ? (
                               <Text variant="bodySm" as="p">• Title updated</Text>
-                            )}
-                            {'description' in updateResult.updates && updateResult.updates.description && (
+                            ) : null}
+                            {'description' in updateResult.updates && updateResult.updates.description ? (
                               <Text variant="bodySm" as="p">• Description updated</Text>
-                            )}
-                            {'seoTitle' in updateResult.updates && updateResult.updates.seoTitle && (
+                            ) : null}
+                            {'seoTitle' in updateResult.updates && updateResult.updates.seoTitle ? (
                               <Text variant="bodySm" as="p">• SEO title updated</Text>
-                            )}
-                            {'seoDescription' in updateResult.updates && updateResult.updates.seoDescription && (
+                            ) : null}
+                            {'seoDescription' in updateResult.updates && updateResult.updates.seoDescription ? (
                               <Text variant="bodySm" as="p">• SEO meta description updated</Text>
-                            )}
-                            {'bulletPoints' in updateResult.updates && updateResult.updates.bulletPoints && (
+                            ) : null}
+                            {'bulletPoints' in updateResult.updates && updateResult.updates.bulletPoints ? (
                               <Text variant="bodySm" as="p">• Bullet points added</Text>
-                            )}
+                            ) : null}
                           </>
-                        )}
+                        ) : null}
                       </Box>
                     </Box>
                   ) : null}
