@@ -65,8 +65,16 @@ export async function GET(request: NextRequest) {
       }
     `
 
+    interface ShopResponse {
+      shop?: { name?: string; id?: string }
+      currentAppInstallation?: {
+        id?: string
+        accessScopes?: Array<{ handle?: string }>
+      }
+    }
+
     console.log('📊 Checking shop and scopes...')
-    const shopResponse = await client.request(shopQuery)
+    const shopResponse = await client.request<ShopResponse>(shopQuery)
     console.log('🏪 Shop info:', JSON.stringify(shopResponse, null, 2))
 
     // Now try to get products with different query approaches
@@ -87,15 +95,22 @@ export async function GET(request: NextRequest) {
       }
     `
 
-    console.log('📊 Making GraphQL query to Shopify...')
-    const response = await client.request(query)
-    console.log('📦 GraphQL Response:', JSON.stringify(response, null, 2))
-
     interface ProductNode {
       id: string
       title: string
       status: string
     }
+
+    interface ProductsResponse {
+      products?: {
+        edges?: Array<{ node: ProductNode }>
+        pageInfo?: { hasNextPage?: boolean }
+      }
+    }
+
+    console.log('📊 Making GraphQL query to Shopify...')
+    const response = await client.request<ProductsResponse>(query)
+    console.log('📦 GraphQL Response:', JSON.stringify(response, null, 2))
 
     const productCount = response.products?.edges?.length || 0
     const products = response.products?.edges?.map((edge: { node: ProductNode }) => ({

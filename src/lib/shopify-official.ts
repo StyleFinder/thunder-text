@@ -15,7 +15,7 @@ interface ShopifyAdminApiClient {
 export class ShopifyOfficialAPI {
   private shop: string
   private accessToken: string
-  private client: ShopifyAdminApiClient
+  public client: ShopifyAdminApiClient
 
   constructor(shop: string, accessToken: string) {
     this.shop = shop

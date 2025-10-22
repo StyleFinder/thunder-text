@@ -84,6 +84,7 @@ export interface GenerateContentRequest {
   custom_cta?: string
   platform?: 'facebook' | 'instagram' | 'tiktok'
   product_images?: string[]
+  additional_context?: string
   save?: boolean // If true, saves to library immediately
 }
 

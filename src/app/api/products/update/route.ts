@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
           // Save the token for future use
           const { saveShopToken } = await import('@/lib/shopify/token-manager')
-          await saveShopToken(shop, accessToken, exchangeResult.scope)
+          await saveShopToken(shop, accessToken, 'online', exchangeResult.scope)
         } else {
           throw new Error('No access token available and no session token provided')
         }
@@ -149,10 +149,10 @@ export async function POST(request: NextRequest) {
     })
 
     // Update the product
-    let updateResult
+    let updateResult: { productUpdate?: { product?: unknown; userErrors?: unknown[] } } | undefined
     try {
       console.log('📤 Sending update to Shopify GraphQL API...')
-      updateResult = await shopifyClient.updateProduct(productId, productInput)
+      updateResult = await shopifyClient.updateProduct(productId, productInput) as { productUpdate?: { product?: unknown; userErrors?: unknown[] } }
       console.log('📥 Shopify API response received:', {
         hasProduct: !!updateResult.productUpdate?.product,
         hasErrors: !!updateResult.productUpdate?.userErrors?.length
@@ -162,12 +162,12 @@ export async function POST(request: NextRequest) {
       throw new Error(`Shopify API error: ${apiError instanceof Error ? apiError.message : 'Unknown error'}`)
     }
 
-    if (updateResult.productUpdate?.userErrors?.length > 0) {
+    if (updateResult.productUpdate?.userErrors && updateResult.productUpdate.userErrors.length > 0) {
       console.error('❌ Shopify API errors:', updateResult.productUpdate.userErrors)
       return NextResponse.json(
         {
           error: 'Failed to update product',
-          details: updateResult.productUpdate.userErrors.map((e: { message: string }) => e.message).join(', '),
+          details: (updateResult.productUpdate.userErrors as Array<{ message: string }>).map(e => e.message).join(', '),
           userErrors: updateResult.productUpdate.userErrors
         },
         { status: 400, headers: corsHeaders }

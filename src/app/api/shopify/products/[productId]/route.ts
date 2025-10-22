@@ -6,12 +6,12 @@ import { shopifyGraphQL } from '@/lib/shopify/client'
 // Fetch a single product by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { productId: string } }
+  { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url)
     const shop = searchParams.get('shop')
-    const { productId } = params
+    const { productId } = await params
 
     if (!shop) {
       return NextResponse.json(
@@ -51,6 +51,42 @@ export async function GET(
     let formattedProductId = productId
     if (!productId.startsWith('gid://')) {
       formattedProductId = `gid://shopify/Product/${productId}`
+    }
+
+    interface ProductQueryResponse {
+      data?: {
+        product?: {
+          id: string
+          title: string
+          handle: string
+          description: string | null
+          status: string
+          tags: string[]
+          createdAt: string
+          updatedAt: string
+          priceRangeV2?: {
+            minVariantPrice?: {
+              amount: string
+              currencyCode: string
+            }
+          }
+          images?: {
+            edges: Array<{
+              node: {
+                url: string
+                altText: string | null
+              }
+            }>
+          }
+          variants?: {
+            edges: Array<{
+              node: {
+                price: string
+              }
+            }>
+          }
+        }
+      }
     }
 
     // GraphQL query to fetch single product
@@ -96,7 +132,7 @@ export async function GET(
       { id: formattedProductId },
       shop,
       sessionToken
-    )
+    ) as ProductQueryResponse
 
     if (!response?.data?.product) {
       return NextResponse.json(

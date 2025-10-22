@@ -69,6 +69,66 @@ export async function GET(request: NextRequest) {
       }
     )
 
+    interface ImageNode {
+      id: string
+      url: string
+      altText: string | null
+      width: number
+      height: number
+    }
+
+    interface CollectionNode {
+      id: string
+      title: string
+      handle: string
+    }
+
+    interface VariantNode {
+      id: string
+      title: string
+      price: string
+      sku: string | null
+    }
+
+    interface MetafieldNode {
+      id: string
+      namespace: string
+      key: string
+      value: string
+      type: string
+    }
+
+    interface ProductData {
+      id: string
+      title: string
+      handle: string
+      description: string
+      descriptionHtml: string
+      vendor: string
+      productType: string
+      tags: string[]
+      seo: {
+        title: string | null
+        description: string | null
+      }
+      images: {
+        edges: Array<{ node: ImageNode }>
+      }
+      collections: {
+        edges: Array<{ node: CollectionNode }>
+      }
+      variants: {
+        edges: Array<{ node: VariantNode }>
+      }
+      metafields: {
+        edges: Array<{ node: MetafieldNode }>
+      }
+    }
+
+    interface ProductResponse {
+      product?: ProductData
+    }
+
     const query = `
       query GetProduct($id: ID!) {
         product(id: $id) {
@@ -131,9 +191,9 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 Executing query with ID:', formattedProductId)
 
-    const response = await client.request(query, { id: formattedProductId })
+    const data = await client.request<ProductResponse>(query, { id: formattedProductId })
 
-    if (!response?.product) {
+    if (!data?.product) {
       console.error('❌ No product found in response')
       return NextResponse.json(
         { error: 'Product not found' },
@@ -141,25 +201,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const product = response.product
-
-    interface ImageNode {
-      url: string
-      altText: string | null
-      width: number
-      height: number
-    }
-
-    interface CollectionNode {
-      title: string
-    }
-
-    interface VariantNode {
-      id: string
-      title: string
-      price: string
-      sku: string | null
-    }
+    const product = data.product
 
     // Transform to PrePopulatedProductData format
     const processedData = {

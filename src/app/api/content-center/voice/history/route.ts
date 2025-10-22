@@ -28,12 +28,12 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 
     // Rate limiting for read operations
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.READ)(request, userId)
-    if (rateLimitCheck) return rateLimitCheck
+    if (rateLimitCheck) return rateLimitCheck as NextResponse<ApiResponse<VoiceProfileHistoryResponse>>
 
     // Using supabaseAdmin from @/lib/supabase
 
     // Get last 3 profiles
-    const { data: profiles, error } = await supabase
+    const { data: profiles, error } = await supabaseAdmin
       .from('brand_voice_profiles')
       .select('*')
       .eq('store_id', userId)

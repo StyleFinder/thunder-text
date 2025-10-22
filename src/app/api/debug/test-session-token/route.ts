@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
 
     // Manual signature verification (without jsonwebtoken package)
     const clientSecret = process.env.SHOPIFY_API_SECRET
-    let signatureValid = false
-    let signatureError = null
+    let signatureValid: boolean | null = false
+    let signatureError: string | null = null
 
     try {
       // For now, we'll skip signature verification and focus on other validations
@@ -94,7 +94,8 @@ export async function POST(request: NextRequest) {
       tokenExchange: {
         url: shop ? `https://${shop}/admin/oauth/access_token` : null,
         readyForExchange: !isExpired && !notYetValid && shop,
-        issues: []
+        issues: [] as string[],
+        testResult: null as unknown
       },
       currentTime: new Date().toISOString(),
       currentTimestamp: now

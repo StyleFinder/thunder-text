@@ -28,15 +28,6 @@ export async function POST(request: NextRequest) {
 
     const sessionToken = authHeader.substring(7)
 
-    // Verify session token using authenticateRequest
-    const authResult = await authenticateRequest(sessionToken)
-    if (!authResult.authenticated) {
-      return NextResponse.json(
-        { error: 'Invalid session token' },
-        { status: 401, headers: corsHeaders }
-      )
-    }
-
     // Get shop from request body
     const body = await request.json()
     const { shop } = body
@@ -45,6 +36,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Shop parameter required' },
         { status: 400, headers: corsHeaders }
+      )
+    }
+
+    // Verify session token using authenticateRequest
+    try {
+      await authenticateRequest(request, { sessionToken, shop })
+    } catch (authError) {
+      console.error('❌ Authentication failed:', authError)
+      return NextResponse.json(
+        { error: 'Invalid session token' },
+        { status: 401, headers: corsHeaders }
       )
     }
 

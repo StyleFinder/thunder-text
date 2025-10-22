@@ -31,7 +31,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     // Rate limiting for content generation
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.GENERATION)(request, userId)
-    if (rateLimitCheck) return rateLimitCheck
+    if (rateLimitCheck) return rateLimitCheck as NextResponse<ApiResponse<GenerateContentResponse>>
 
     const body: GenerateContentRequest = await request.json()
 

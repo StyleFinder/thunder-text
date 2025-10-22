@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createMetafieldDefinitions } from '@/lib/google-metafield-definitions'
+import { ShopifyOfficialAPI } from '@/lib/shopify-official'
+import { getShopToken } from '@/lib/shopify/token-manager'
 
 export async function POST(request: NextRequest) {
   // Check if we're in a build environment without proper configuration
@@ -11,46 +13,37 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Dynamic imports to avoid loading during build
-    const { auth } = await import('@/lib/auth')
-    const { ShopifyOfficialAPI } = await import('@/lib/shopify-official')
-    
-    // Check for development bypass or proper session
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
+
+    if (!shop) {
+      return NextResponse.json({ error: 'Shop parameter required' }, { status: 400 })
+    }
+
+    // Get access token for shop
+    let accessToken: string
     const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-    
-    let session = null
-    let storeData = null
-    
-    if (authBypass && shop) {
+
+    if (authBypass) {
       // Development mode bypass
       console.log('Using auth bypass for metafield definitions setup')
-      const testStore = process.env.SHOPIFY_TEST_STORE || 'zunosai-staging-test-store'
-      storeData = {
-        shop_domain: `${testStore}.myshopify.com`,
-        access_token: process.env.SHOPIFY_ACCESS_TOKEN || 'dev-token'
+      accessToken = process.env.SHOPIFY_ACCESS_TOKEN || ''
+      if (!accessToken) {
+        return NextResponse.json({ error: 'Access token not configured' }, { status: 500 })
       }
     } else {
-      // Production authentication
-      session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      // Try to get stored token
+      const tokenResult = await getShopToken(shop)
+      if (!tokenResult.success || !tokenResult.accessToken) {
+        return NextResponse.json({ error: 'Unauthorized - no valid access token' }, { status: 401 })
       }
+      accessToken = tokenResult.accessToken
     }
 
-    if (!storeData) {
-      return NextResponse.json(
-        { error: 'Store configuration not found' },
-        { status: 400 }
-      )
-    }
+    const shopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
 
     // Initialize Shopify API
-    const shopify = new ShopifyOfficialAPI(
-      storeData.shop_domain,
-      storeData.access_token
-    )
+    const shopify = new ShopifyOfficialAPI(shopDomain, accessToken)
 
     console.log('🔧 Setting up Google Shopping metafield definitions...')
 
@@ -71,7 +64,7 @@ export async function POST(request: NextRequest) {
         failed: failed.length,
         failedDefinitions: failed.map(f => ({
           definition: f.definition,
-          error: f.error?.message || 'Unknown error'
+          error: f.error instanceof Error ? f.error.message : String(f.error || 'Unknown error')
         }))
       }
     })

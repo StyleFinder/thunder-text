@@ -1,42 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ShopifyOfficialAPI } from '@/lib/shopify-official'
+import { getShopToken } from '@/lib/shopify/token-manager'
 
 export async function POST(request: NextRequest) {
   try {
-    const { auth } = await import('@/lib/auth')
-    const { ShopifyOfficialAPI } = await import('@/lib/shopify-official')
-    
-    // Check for development bypass or proper session
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
     const productId = url.searchParams.get('productId')
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-    
+
     if (!productId) {
       return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
     }
-    
-    let storeData = null
-    
-    if (authBypass && shop) {
+
+    if (!shop) {
+      return NextResponse.json({ error: 'Shop parameter required' }, { status: 400 })
+    }
+
+    // Get access token for shop
+    let accessToken: string
+    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
+
+    if (authBypass) {
       console.log('Using auth bypass for metafield pinning')
-      const testStore = process.env.SHOPIFY_TEST_STORE || 'zunosai-staging-test-store'
-      storeData = {
-        shop_domain: `${testStore}.myshopify.com`,
-        access_token: process.env.SHOPIFY_ACCESS_TOKEN || 'dev-token'
+      accessToken = process.env.SHOPIFY_ACCESS_TOKEN || ''
+      if (!accessToken) {
+        return NextResponse.json({ error: 'Access token not configured' }, { status: 500 })
       }
     } else {
-      const session = await auth()
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      // Try to get stored token
+      const tokenResult = await getShopToken(shop)
+      if (!tokenResult.success || !tokenResult.accessToken) {
+        return NextResponse.json({ error: 'Unauthorized - no valid access token' }, { status: 401 })
       }
+      accessToken = tokenResult.accessToken
     }
 
-    if (!storeData) {
-      return NextResponse.json({ error: 'Store configuration not found' }, { status: 400 })
-    }
+    const shopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
 
     // Initialize Shopify API
-    const shopify = new ShopifyOfficialAPI(storeData.shop_domain, storeData.access_token)
+    const shopify = new ShopifyOfficialAPI(shopDomain, accessToken)
 
     // Important Google metafields to auto-pin
     const importantMetafields = [
@@ -57,6 +59,24 @@ export async function POST(request: NextRequest) {
     // 2. Return instructions for manual pinning
     // 3. In the future, potentially use Shopify Admin API extensions
 
+    interface MetafieldNode {
+      id: string
+      namespace: string
+      key: string
+      value: string
+      type: string
+    }
+
+    interface MetafieldsResponse {
+      product?: {
+        metafields?: {
+          edges?: Array<{
+            node: MetafieldNode
+          }>
+        }
+      }
+    }
+
     const metafieldQuery = `
       query getProductMetafields($id: ID!) {
         product(id: $id) {
@@ -75,17 +95,9 @@ export async function POST(request: NextRequest) {
       }
     `
 
-    const response = await shopify.client.request(metafieldQuery, {
+    const response = await shopify.client.request<MetafieldsResponse>(metafieldQuery, {
       variables: { id: productId }
     })
-
-    interface MetafieldNode {
-      id: string
-      namespace: string
-      key: string
-      value: string
-      type: string
-    }
 
     const metafields = response.data?.product?.metafields?.edges?.map((edge: { node: MetafieldNode }) => edge.node) || []
     const foundImportantMetafields = metafields.filter((mf: MetafieldNode) =>

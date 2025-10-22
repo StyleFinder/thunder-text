@@ -243,7 +243,7 @@ async function createAd(
   campaignId: string,
   creativeId: string,
   adName: string
-): Promise<{ id: string }> {
+): Promise<{ id: string; adset_id?: string }> {
   // Get or create ad set (preferring existing ones)
   const adSetId = await getOrCreateAdSet(accessToken, adAccountId, campaignId, adName)
 

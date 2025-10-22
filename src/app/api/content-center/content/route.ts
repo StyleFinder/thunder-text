@@ -5,7 +5,8 @@ import {
   GeneratedContent,
   ContentFilterParams
 } from '@/types/content-center'
-import { getUserId, getSupabaseAdmin } from '@/lib/auth/content-center-auth'
+import { getUserId } from '@/lib/auth/content-center-auth'
+import { supabaseAdmin } from '@/lib/supabase'
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
 
 /**
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 
     // Rate limiting for read operations
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.READ)(request, userId)
-    if (rateLimitCheck) return rateLimitCheck
+    if (rateLimitCheck) return rateLimitCheck as NextResponse<ApiResponse<ListContentResponse>>
 
     const { searchParams } = new URL(request.url)
 
@@ -55,10 +56,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const sortBy = searchParams.get('sort_by') || 'created_at'
     const sortOrder = searchParams.get('sort_order') || 'desc'
 
-    const supabase = getSupabaseAdmin()
-
     // Build query
-    let query = supabase
+    let query = supabaseAdmin
       .from('generated_content')
       .select('*', { count: 'exact' })
       .eq('store_id', userId)

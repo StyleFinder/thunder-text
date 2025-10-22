@@ -17,7 +17,7 @@ import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse<BrandVoiceProfile>>> {
   try {
     const userId = await getUserId(request)
@@ -31,9 +31,9 @@ export async function PATCH(
 
     // Rate limiting for write operations
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.WRITE)(request, userId)
-    if (rateLimitCheck) return rateLimitCheck
+    if (rateLimitCheck) return rateLimitCheck as NextResponse<ApiResponse<BrandVoiceProfile>>
 
-    const { id } = params
+    const { id } = await params
     const body: UpdateVoiceProfileRequest = await request.json()
 
     if (!body.profile_text) {
@@ -44,6 +44,7 @@ export async function PATCH(
     }
 
     // Using supabaseAdmin from @/lib/supabase
+    const supabase = supabaseAdmin
 
     // Verify profile belongs to user
     const { data: existingProfile, error: fetchError } = await supabase

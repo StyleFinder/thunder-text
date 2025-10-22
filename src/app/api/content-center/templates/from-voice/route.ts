@@ -5,7 +5,8 @@ import {
   CreateVoiceTemplateResponse,
   VoiceProfileNotFoundError
 } from '@/types/content-center'
-import { getUserId, getSupabaseAdmin } from '@/lib/auth/content-center-auth'
+import { getUserId } from '@/lib/auth/content-center-auth'
+import { supabaseAdmin } from '@/lib/supabase'
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
 
 
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     // Rate limiting for write operations
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.WRITE)(request, userId)
-    if (rateLimitCheck) return rateLimitCheck
+    if (rateLimitCheck) return rateLimitCheck as NextResponse<ApiResponse<CreateVoiceTemplateResponse>>
 
     const body: CreateVoiceTemplateRequest = await request.json()
 
@@ -42,10 +43,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       )
     }
 
-    const supabase = getSupabaseAdmin()
-
     // Get current voice profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('brand_voice_profiles')
       .select('*')
       .eq('store_id', userId)
@@ -73,7 +72,7 @@ INSTRUCTIONS:
 NOTE: This is a placeholder template. AI template generation coming in Phase 3.`
 
     // Insert template into prompt_templates table
-    const { data: template, error: templateError } = await supabase
+    const { data: template, error: templateError } = await supabaseAdmin
       .from('prompt_templates')
       .insert({
         store_id: userId,

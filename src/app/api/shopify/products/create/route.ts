@@ -141,33 +141,33 @@ export async function POST(request: NextRequest) {
     })
 
     // Parse color variants from detected colors
-    let colorVariants = []
+    let colorVariants: string[] = []
     if (productData?.colorVariants && productData.colorVariants.length > 0) {
-      colorVariants = productData.colorVariants.map(variant => 
+      colorVariants = productData.colorVariants.map((variant: { userOverride?: string; standardizedColor: string }) =>
         variant.userOverride || variant.standardizedColor
       )
       console.log('🎨 DEBUG: Processing color variants:', colorVariants)
     }
 
     // Parse sizing data to get available sizes (for explicit variant creation)
-    let sizeVariants = []
+    let sizeVariants: string[] = []
     if (productData?.sizing) {
       console.log('🔍 DEBUG: Processing sizing for explicit variants:', productData.sizing)
-      
+
       if (productData.sizing.includes(' - ')) {
         console.log('🔍 DEBUG: Using range format')
         const [startSize, endSize] = productData.sizing.split(' - ')
         const allSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
         const startIndex = allSizes.indexOf(startSize.toUpperCase())
         const endIndex = allSizes.indexOf(endSize.toUpperCase())
-        
+
         if (startIndex !== -1 && endIndex !== -1) {
           sizeVariants = allSizes.slice(startIndex, endIndex + 1)
           console.log('🔍 DEBUG: Generated size range for variants:', sizeVariants)
         }
       } else if (productData.sizing.includes(',')) {
         console.log('🔍 DEBUG: Using comma-separated format')
-        sizeVariants = productData.sizing.split(',').map(size => size.trim().toUpperCase())
+        sizeVariants = productData.sizing.split(',').map((size: string) => size.trim().toUpperCase())
         console.log('🔍 DEBUG: Generated sizes from comma format:', sizeVariants)
       } else {
         console.log('🔍 DEBUG: Using single size format')
@@ -214,22 +214,35 @@ export async function POST(request: NextRequest) {
 
     console.log('Creating product with input:', JSON.stringify(productInput, null, 2))
 
+    interface ProductCreateResult {
+      data?: {
+        productCreate?: {
+          product?: {
+            id: string
+            [key: string]: unknown
+          }
+          userErrors?: Array<{ field: string[]; message: string }>
+        }
+      }
+      errors?: Array<{ message: string }>
+    }
+
     // Create product in Shopify
-    const createResult = await shopify.createProduct(productInput)
+    const createResult = await shopify.createProduct(productInput) as ProductCreateResult
 
     // Handle authentication and API errors
-    if (createResult.errors) {
+    if (createResult.errors && createResult.errors.length > 0) {
       console.error('Shopify API error:', createResult.errors)
       return NextResponse.json(
-        { 
-          error: 'Shopify API authentication failed', 
-          details: createResult.errors.message || 'Invalid credentials or permissions'
+        {
+          error: 'Shopify API authentication failed',
+          details: createResult.errors[0].message || 'Invalid credentials or permissions'
         },
         { status: 401 }
       )
     }
 
-    if (createResult.data?.productCreate?.userErrors?.length > 0) {
+    if (createResult.data?.productCreate?.userErrors && createResult.data.productCreate.userErrors.length > 0) {
       console.error('Shopify product creation errors:', createResult.data.productCreate.userErrors)
       return NextResponse.json(
         { 
@@ -375,12 +388,31 @@ export async function POST(request: NextRequest) {
         const additionalVariants = allVariantCombinations.slice(1)
 
         console.log('🔍 DEBUG: Additional variant input data:', JSON.stringify(additionalVariants, null, 2))
-        
-        let variantResult = null
+
+        interface OptionValue {
+          name: string
+          value: string
+        }
+
+        interface VariantCreateResult {
+          data?: {
+            productVariantsBulkCreate?: {
+              productVariants?: Array<{
+                id?: string
+                title?: string
+                selectedOptions?: OptionValue[]
+                [key: string]: unknown
+              }>
+              userErrors?: Array<{ field: string[]; message: string }>
+            }
+          }
+        }
+
+        let variantResult: VariantCreateResult | null = null
         if (additionalVariants.length > 0) {
-          variantResult = await shopify.createProductVariants(createdProduct.id, additionalVariants)
+          variantResult = await shopify.createProductVariants(createdProduct.id, additionalVariants) as VariantCreateResult
         
-          if (variantResult.data?.productVariantsBulkCreate?.userErrors?.length > 0) {
+          if (variantResult.data?.productVariantsBulkCreate?.userErrors && variantResult.data.productVariantsBulkCreate.userErrors.length > 0) {
             console.error('⚠️ Variant creation had errors:', variantResult.data.productVariantsBulkCreate.userErrors)
             // Continue anyway, product was created successfully
           } else {
@@ -395,11 +427,6 @@ export async function POST(request: NextRequest) {
                 if (variant?.id) {
                   const variantTitle = variant.title || ''
 
-                  interface OptionValue {
-                    name: string
-                    value: string
-                  }
-
                   // Extract color and size from variant option values
                   const colorOption = variant.selectedOptions?.find((opt: OptionValue) => opt.name === 'Color')
                   const sizeOption = variant.selectedOptions?.find((opt: OptionValue) => opt.name === 'Size')
@@ -411,9 +438,9 @@ export async function POST(request: NextRequest) {
                     undefined  // Material will be inherited from product
                   )
                   
-                  if (googleVariantMetafields.length > 0) {
+                  if (googleVariantMetafields.length > 0 && variant.id) {
                     const variantMetafieldPromises = googleVariantMetafields.map(metafield =>
-                      shopify.createProductVariantMetafield(variant.id, metafield)
+                      shopify.createProductVariantMetafield(variant.id!, metafield)
                     )
                     await Promise.all(variantMetafieldPromises)
                     console.log(`✅ Google metafields created for variant: ${variantTitle}`)

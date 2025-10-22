@@ -30,7 +30,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     // Rate limiting for voice generation (most expensive operation)
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.VOICE_GENERATION)(request, userId)
-    if (rateLimitCheck) return rateLimitCheck
+    if (rateLimitCheck) return rateLimitCheck as NextResponse<ApiResponse<GenerateVoiceProfileResponse>>
 
     // Fetch active samples
     const { data: samples, error: samplesError } = await supabaseAdmin

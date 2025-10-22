@@ -23,8 +23,12 @@ export async function GET(request: NextRequest) {
 
     console.log('🔄 Fetching product data for enhancement:', { productId, shop })
 
+    // Get session token from Authorization header if provided
+    const authHeader = request.headers.get('authorization')
+    const sessionToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined
+
     // Fetch comprehensive product data for enhancement
-    const productData = await fetchProductDataForEnhancement(productId, shop)
+    const productData = await fetchProductDataForEnhancement(productId, shop, sessionToken)
 
     if (!productData) {
       return NextResponse.json(
@@ -34,16 +38,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Validate product is suitable for enhancement
-    const validation = validateProductForEnhancement(productData)
-    
-    if (!validation.valid) {
+    const validation = await validateProductForEnhancement(productId, shop, sessionToken)
+
+    if (!validation.isValid) {
       return NextResponse.json({
         success: false,
         error: 'Product not suitable for enhancement',
-        validation: {
-          issues: validation.issues,
-          suggestions: validation.suggestions
-        }
+        reason: validation.reason
       }, { status: 422 })
     }
 

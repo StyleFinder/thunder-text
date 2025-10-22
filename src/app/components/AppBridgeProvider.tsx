@@ -2,18 +2,14 @@
 
 import { useEffect, useState, createContext, useContext } from 'react'
 
-interface ShopifyAppBridge {
-  idToken: () => Promise<string>
-  [key: string]: unknown
-}
-
+// Import ShopifyGlobal type from global declarations
 interface AppBridgeContextType {
   isEmbedded: boolean
   shop: string | null
   host: string | null
   isLoading: boolean
   error: string | null
-  app: ShopifyAppBridge | null
+  app: (Pick<Window, 'shopify'>['shopify']) | null
 }
 
 const AppBridgeContext = createContext<AppBridgeContextType>({
@@ -39,7 +35,7 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
   const [shop, setShop] = useState<string | null>(null)
   const [host, setHost] = useState<string | null>(null)
   const [embedded, setEmbedded] = useState<string | null>(null)
-  const [appBridge, setAppBridge] = useState<ShopifyAppBridge | null>(null)
+  const [appBridge, setAppBridge] = useState<Pick<Window, 'shopify'>['shopify'] | null>(null)
 
   // Get search params on client side only to avoid SSR issues
   useEffect(() => {
@@ -107,32 +103,37 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
           setAppBridge(window.shopify)
 
           // Get initial session token using the shopify.idToken() method
-          try {
-            const token = await window.shopify.idToken()
-            console.log('✅ Initial session token obtained successfully')
+          if (window.shopify) {
+            try {
+              const token = await window.shopify.idToken()
+              console.log('✅ Initial session token obtained successfully')
 
-            // Store the token for API calls
-            if (typeof window !== 'undefined') {
-              window.sessionStorage.setItem('shopify_session_token', token)
-            }
-
-            // Set up automatic token refresh
-            // Instead of a timer, we'll fetch fresh tokens on each request
-            // This is more reliable and follows the guide's recommendation
-            window.getShopifySessionToken = async () => {
-              try {
-                const freshToken = await window.shopify.idToken()
-                window.sessionStorage.setItem('shopify_session_token', freshToken)
-                return freshToken
-              } catch (error) {
-                console.error('Failed to get session token:', error)
-                throw error
+              // Store the token for API calls
+              if (typeof window !== 'undefined') {
+                window.sessionStorage.setItem('shopify_session_token', token)
               }
-            }
 
-          } catch (tokenError) {
-            console.error('Failed to get initial session token:', tokenError)
-            setError('Failed to authenticate with Shopify')
+              // Set up automatic token refresh
+              // Instead of a timer, we'll fetch fresh tokens on each request
+              // This is more reliable and follows the guide's recommendation
+              window.getShopifySessionToken = async () => {
+                try {
+                  if (!window.shopify) {
+                    throw new Error('Shopify App Bridge not available')
+                  }
+                  const freshToken = await window.shopify.idToken()
+                  window.sessionStorage.setItem('shopify_session_token', freshToken)
+                  return freshToken
+                } catch (error) {
+                  console.error('Failed to get session token:', error)
+                  throw error
+                }
+              }
+
+            } catch (tokenError) {
+              console.error('Failed to get initial session token:', tokenError)
+              setError('Failed to authenticate with Shopify')
+            }
           }
         }
 
@@ -171,9 +172,9 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
 }
 
 // Extend window type for TypeScript
+// Window.shopify type is defined in src/types/shopify-global.d.ts
 declare global {
   interface Window {
-    shopify: ShopifyAppBridge
     getShopifySessionToken?: () => Promise<string>
   }
 }

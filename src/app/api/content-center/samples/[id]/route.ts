@@ -4,7 +4,8 @@ import {
   UpdateSampleRequest,
   ContentSample
 } from '@/types/content-center'
-import { getUserId, getSupabaseAdmin } from '@/lib/auth/content-center-auth'
+import { getUserId } from '@/lib/auth/content-center-auth'
+import { supabaseAdmin } from '@/lib/supabase'
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
 
 /**
@@ -13,7 +14,7 @@ import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse<ContentSample>>> {
   try {
     const userId = await getUserId(request)
@@ -27,15 +28,13 @@ export async function PATCH(
 
     // Rate limiting for write operations
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.WRITE)(request, userId)
-    if (rateLimitCheck) return rateLimitCheck
+    if (rateLimitCheck) return rateLimitCheck as NextResponse<ApiResponse<ContentSample>>
 
-    const { id } = params
+    const { id } = await params
     const body: UpdateSampleRequest = await request.json()
 
-    const supabase = getSupabaseAdmin()
-
     // Verify sample belongs to user
-    const { data: existingSample, error: fetchError } = await supabase
+    const { data: existingSample, error: fetchError } = await supabaseAdmin
       .from('content_samples')
       .select('*')
       .eq('id', id)
@@ -68,7 +67,7 @@ export async function PATCH(
     }
 
     // Update sample
-    const { data: updatedSample, error: updateError } = await supabase
+    const { data: updatedSample, error: updateError } = await supabaseAdmin
       .from('content_samples')
       .update(updates)
       .eq('id', id)
@@ -104,7 +103,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse<{ deleted: boolean }>>> {
   try {
     const userId = await getUserId(request)
@@ -118,13 +117,12 @@ export async function DELETE(
 
     // Rate limiting for write operations
     const rateLimitCheck = await withRateLimit(RATE_LIMITS.WRITE)(request, userId)
-    if (rateLimitCheck) return rateLimitCheck
+    if (rateLimitCheck) return rateLimitCheck as NextResponse<ApiResponse<{ deleted: boolean }>>
 
-    const { id } = params
-    const supabase = getSupabaseAdmin()
+    const { id } = await params
 
     // Delete sample (RLS will ensure user owns it)
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('content_samples')
       .delete()
       .eq('id', id)

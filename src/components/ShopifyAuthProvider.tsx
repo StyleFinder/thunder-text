@@ -240,12 +240,4 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
   )
 }
 
-// Extend window type for TypeScript
-declare global {
-  interface Window {
-    shopify: {
-      idToken: () => Promise<string>
-      [key: string]: unknown
-    }
-  }
-}
+// Window.shopify type is defined in src/types/shopify-global.d.ts

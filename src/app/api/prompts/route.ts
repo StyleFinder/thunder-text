@@ -92,7 +92,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    let result = null
+    let result: unknown = null
 
     if (type === 'system_prompt') {
       result = await updateSystemPrompt(store_id, content, name)
@@ -131,7 +131,10 @@ export async function PUT(request: NextRequest) {
 
       if (error) {
         console.error('Error updating template:', error)
-        return null
+        return NextResponse.json(
+          { error: 'Failed to update template' },
+          { status: 500 }
+        )
       }
 
       result = data

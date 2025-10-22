@@ -51,7 +51,7 @@ export function AppIntroductionModal({ open, onClose, onGetStarted }: AppIntrodu
           onAction: onClose
         }
       ]}
-      large
+      size="large"
     >
       <Modal.Section>
         <BlockStack gap="500">

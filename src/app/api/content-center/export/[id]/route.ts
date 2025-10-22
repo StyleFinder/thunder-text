@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUserId, getSupabaseAdmin } from '@/lib/auth/content-center-auth'
+import { getUserId } from '@/lib/auth/content-center-auth'
+import { supabaseAdmin } from '@/lib/supabase'
 
 type ExportFormat = 'txt' | 'html' | 'md'
 
@@ -9,7 +10,7 @@ type ExportFormat = 'txt' | 'html' | 'md'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
     const userId = await getUserId(request)
@@ -20,7 +21,7 @@ export async function GET(
       )
     }
 
-    const contentId = params.id
+    const { id: contentId } = await params
     const searchParams = request.nextUrl.searchParams
     const format = (searchParams.get('format') || 'txt') as ExportFormat
 
@@ -32,10 +33,8 @@ export async function GET(
       )
     }
 
-    const supabase = getSupabaseAdmin()
-
     // Fetch content
-    const { data: content, error } = await supabase
+    const { data: content, error } = await supabaseAdmin
       .from('generated_content')
       .select('*')
       .eq('id', contentId)
