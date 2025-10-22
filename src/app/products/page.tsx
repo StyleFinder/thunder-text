@@ -54,10 +54,10 @@ function ProductsContent() {
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    if (shop && isAuthenticated && authenticatedFetch) {
+    if (shop && isAuthenticated && sessionToken) {
       fetchProducts()
     }
-  }, [shop, isAuthenticated, authenticatedFetch])
+  }, [shop, isAuthenticated, sessionToken])
 
   const fetchProducts = async (nextCursor?: string) => {
     try {
