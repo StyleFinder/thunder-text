@@ -504,36 +504,34 @@ export default function UnifiedEnhancePage() {
                   <Banner tone="success">
                     <p>{successMessage}</p>
                   </Banner>
-                  {updateResult?.shopifyResult && (
-                    <>
-                      <Box>
-                        <Text variant="bodySm" as="p">
-                          The following changes have been applied:
-                        </Text>
-                        <Box paddingBlockStart="200">
-                          {updateResult.updates && typeof updateResult.updates === 'object' && (
-                            <>
-                              {'title' in updateResult.updates && updateResult.updates.title && (
-                                <Text variant="bodySm" as="p">• Title updated</Text>
-                              )}
-                              {'description' in updateResult.updates && updateResult.updates.description && (
-                                <Text variant="bodySm" as="p">• Description updated</Text>
-                              )}
-                              {'seoTitle' in updateResult.updates && updateResult.updates.seoTitle && (
-                                <Text variant="bodySm" as="p">• SEO title updated</Text>
-                              )}
-                              {'seoDescription' in updateResult.updates && updateResult.updates.seoDescription && (
-                                <Text variant="bodySm" as="p">• SEO meta description updated</Text>
-                              )}
-                              {'bulletPoints' in updateResult.updates && updateResult.updates.bulletPoints && (
-                                <Text variant="bodySm" as="p">• Bullet points added</Text>
-                              )}
-                            </>
-                          )}
-                        </Box>
+                  {updateResult?.shopifyResult ? (
+                    <Box>
+                      <Text variant="bodySm" as="p">
+                        The following changes have been applied:
+                      </Text>
+                      <Box paddingBlockStart="200">
+                        {updateResult.updates && typeof updateResult.updates === 'object' && (
+                          <>
+                            {'title' in updateResult.updates && updateResult.updates.title && (
+                              <Text variant="bodySm" as="p">• Title updated</Text>
+                            )}
+                            {'description' in updateResult.updates && updateResult.updates.description && (
+                              <Text variant="bodySm" as="p">• Description updated</Text>
+                            )}
+                            {'seoTitle' in updateResult.updates && updateResult.updates.seoTitle && (
+                              <Text variant="bodySm" as="p">• SEO title updated</Text>
+                            )}
+                            {'seoDescription' in updateResult.updates && updateResult.updates.seoDescription && (
+                              <Text variant="bodySm" as="p">• SEO meta description updated</Text>
+                            )}
+                            {'bulletPoints' in updateResult.updates && updateResult.updates.bulletPoints && (
+                              <Text variant="bodySm" as="p">• Bullet points added</Text>
+                            )}
+                          </>
+                        )}
                       </Box>
-                    </>
-                  )}
+                    </Box>
+                  ) : null}
                   <Text variant="bodySm" as="p" tone="subdued">
                     Click "View Product" to see the updated product in your Shopify admin, or "Continue Editing" to make more changes.
                   </Text>
