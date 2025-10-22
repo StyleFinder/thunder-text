@@ -65,7 +65,11 @@ export default function UnifiedEnhancePage() {
   const [parentCategory, setParentCategory] = useState('')
   const [availableSizing, setAvailableSizing] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<ProductCategory>('general')
-  const [templatePreview, setTemplatePreview] = useState<Record<string, unknown> | null>(null)
+  const [templatePreview, setTemplatePreview] = useState<{
+    name: string
+    description: string
+    sections?: string[]
+  } | undefined>(undefined)
 
   const [fabricMaterial, setFabricMaterial] = useState('')
   const [occasionUse, setOccasionUse] = useState('')
