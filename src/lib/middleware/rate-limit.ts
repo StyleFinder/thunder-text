@@ -114,7 +114,7 @@ export function checkRateLimit(
   const remainingRequests = Math.max(0, config.maxRequests - entry.count)
 
   // Build rate limit headers (following GitHub API conventions)
-  const headers = {
+  const headers: Record<string, string> = {
     'X-RateLimit-Limit': config.maxRequests.toString(),
     'X-RateLimit-Remaining': remainingRequests.toString(),
     'X-RateLimit-Reset': Math.ceil(entry.resetTime / 1000).toString(),
