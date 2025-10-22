@@ -782,7 +782,7 @@ export default function PromptsSettingsPage() {
               <Box padding="600">
                 <InlineStack align="center">
                   <Spinner size="large" />
-                  <Text variant="bodyMd">Loading...</Text>
+                  <Text as="p" variant="bodyMd">Loading...</Text>
                 </InlineStack>
               </Box>
             </Card>

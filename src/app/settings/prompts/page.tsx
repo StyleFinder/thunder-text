@@ -312,7 +312,7 @@ function PromptsSettingsContent() {
               <Box padding="600">
                 <InlineStack align="center">
                   <Spinner size="large" />
-                  <Text variant="bodyMd">Loading prompts...</Text>
+                  <Text as="p" variant="bodyMd">Loading prompts...</Text>
                 </InlineStack>
               </Box>
             </Card>
@@ -373,7 +373,7 @@ function PromptsSettingsContent() {
                 <InlineStack align="space-between">
                   <Box>
                     <Text as="h2" variant="headingMd">Product Description Templates</Text>
-                    <Text variant="bodySm" tone="subdued">
+                    <Text as="p" variant="bodySm" tone="subdued">
                       Create and manage custom templates for different product types
                     </Text>
                   </Box>
@@ -388,7 +388,7 @@ function PromptsSettingsContent() {
 
                 {templates.length === 0 ? (
                   <Box padding="400">
-                    <Text variant="bodyMd" tone="subdued">
+                    <Text as="p" variant="bodyMd" tone="subdued">
                       No templates created yet. Click "Create New Template" to get started.
                     </Text>
                   </Box>
@@ -489,7 +489,7 @@ function PromptsSettingsContent() {
                 <InlineStack align="space-between">
                   <Box>
                     <Text as="h2" variant="headingMd">Master System Prompt</Text>
-                    <Text variant="bodySm" tone="subdued">
+                    <Text as="p" variant="bodySm" tone="subdued">
                       Universal copywriting principles applied to all product descriptions
                     </Text>
                   </Box>
@@ -625,7 +625,7 @@ export default function PromptsSettingsPage() {
               <Box padding="600">
                 <InlineStack align="center">
                   <Spinner size="large" />
-                  <Text variant="bodyMd">Loading...</Text>
+                  <Text as="p" variant="bodyMd">Loading...</Text>
                 </InlineStack>
               </Box>
             </Card>
