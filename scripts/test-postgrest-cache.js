@@ -30,10 +30,17 @@ async function testPostgRESTCache() {
     "🔍 Testing PostgREST schema cache for generation_metadata column...\n",
   );
 
+  // Get a real shop ID first
+  const { data: shops } = await supabase.from("shops").select("id").limit(1);
+  if (!shops || shops.length === 0) {
+    console.log("❌ No shops found in database. Cannot run test.");
+    return false;
+  }
+
   // Test data with generation_metadata field
   const testData = {
-    store_id: "00000000-0000-0000-0000-000000000000", // Test UUID
-    content_type: "product_description",
+    store_id: shops[0].id,
+    content_type: "blog",
     topic: "PostgREST Cache Test",
     generated_text:
       "This is a test to verify PostgREST schema cache has refreshed.",
