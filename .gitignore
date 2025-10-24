@@ -45,3 +45,7 @@ next-env.d.ts
 
 # Preview environment credentials
 .env.preview
+
+# Security scan reports
+audit-report.json
+.snyk
