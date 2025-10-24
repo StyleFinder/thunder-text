@@ -112,8 +112,6 @@ export async function POST(
     const wordCount = postProcessed.finalWordCount;
 
     // Store generated content
-    // NOTE: generation_metadata temporarily removed due to PostgREST schema cache issue (PGRST204)
-    // Will be re-added once cache refreshes (typically within 24 hours)
     const { data: generatedContent, error: contentError } = await supabaseAdmin
       .from("generated_content")
       .insert({
@@ -129,12 +127,12 @@ export async function POST(
           cta_type: body.cta_type,
           custom_cta: body.custom_cta,
         },
-        // generation_metadata: {
-        //   tokensUsed: generationResult.tokensUsed,
-        //   generationTimeMs: generationResult.generationTimeMs,
-        //   voiceProfileVersion: generationResult.metadata.voiceProfileVersion,
-        //   postProcessing: postProcessed.modifications
-        // },
+        generation_metadata: {
+          tokensUsed: generationResult.tokensUsed,
+          generationTimeMs: generationResult.generationTimeMs,
+          voiceProfileVersion: generationResult.metadata.voiceProfileVersion,
+          postProcessing: postProcessed.modifications,
+        },
         product_images: body.product_images || null,
         is_saved: body.save || false,
       })
