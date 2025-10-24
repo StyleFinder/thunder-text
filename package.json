@@ -12,7 +12,13 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "security:lint": "next lint --max-warnings 0",
+    "security:audit": "npm audit --audit-level=moderate --json > audit-report.json || true && npm audit --audit-level=moderate",
+    "security:scan": "snyk test --severity-threshold=medium || true",
+    "security:check": "npm run security:lint && npm run security:audit && npm run security:scan",
+    "security:monitor": "snyk monitor",
+    "prepare": "husky"
   },
   "dependencies": {
     "@next-auth/supabase-adapter": "^0.2.1",
@@ -62,8 +68,14 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "^15.5.2",
+    "eslint-plugin-no-secrets": "^2.2.1",
+    "eslint-plugin-security": "^3.0.1",
+    "husky": "^9.1.7",
     "jest": "^30.1.3",
     "jest-environment-jsdom": "^30.1.2",
+    "lint-staged": "^16.2.6",
+    "prettier": "^3.6.2",
+    "snyk": "^1.1300.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

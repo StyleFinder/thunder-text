@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Run lint-staged for file-specific checks
+npx lint-staged
+
+# Run type check on entire project
+echo "Running TypeScript type check..."
+npm run type-check
+
+# Note: Full test suite can be slow, consider running only changed tests
+# Uncomment if you want to run tests on every commit:
+# npm test
