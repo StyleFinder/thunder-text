@@ -84,7 +84,7 @@ export default function LibraryPage() {
 
       const data = await response.json();
       if (data.success) {
-        setContent(data.data);
+        setContent(data.data.content || []);
       }
     } catch (error) {
       console.error("Error fetching content:", error);
