@@ -409,12 +409,22 @@ OUTPUT FORMAT - Return JSON with this exact structure:
 
 FORMATTING REQUIREMENTS:
 - Use HTML formatting for the description, not Markdown
-- Section headers should be bold using <b>Header Name</b> tags
+- ONLY section headers should be bold using <b>Header Name</b> tags
+- Body text and paragraphs must be plain text (NOT bold, no HTML tags)
 - Never use **markdown bold** or asterisks for formatting
-- Use <br> for line breaks between sections
-- Keep paragraphs as plain text without HTML paragraph tags
+- Use <br><br> for line breaks between sections
+- Do NOT wrap paragraphs in <p> tags or any other HTML tags
 - NEVER use "Opening Hook" as a section label - start directly with engaging content
-- Include ALL required sections: Product Details, Perfect For, Styling Tips, Materials & Details, FAQ, Care and Sizing, Why You'll Love It`;
+- Include ALL required sections: Product Details, Perfect For, Styling Tips, Materials & Details, FAQ, Care and Sizing, Why You'll Love It
+
+EXAMPLE FORMAT:
+Opening paragraph goes here as plain text without any tags.
+
+<b>Product Details</b>
+This section has plain text describing product details. No bold tags on this text.
+
+<b>Perfect For</b>
+More plain text here describing what it's perfect for.`;
 
       // Call GPT-4 Vision with images
       const response = await openai.chat.completions.create({
