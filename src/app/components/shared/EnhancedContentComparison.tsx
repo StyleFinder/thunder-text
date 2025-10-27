@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   Card,
@@ -17,47 +17,46 @@ import {
   Icon,
   Checkbox,
   Tabs,
-} from '@shopify/polaris'
+} from "@shopify/polaris";
 import {
   EditIcon,
   CheckIcon,
   XIcon,
-  ViewIcon,
   DuplicateIcon,
   MagicIcon,
-} from '@shopify/polaris-icons'
-import styles from './EnhancedContentComparison.module.css'
+} from "@shopify/polaris-icons";
+import styles from "./EnhancedContentComparison.module.css";
 
 interface ContentData {
-  title?: string
-  description?: string
-  seoTitle?: string
-  seoDescription?: string
-  promoText?: string
-  bulletPoints?: string[]
+  title?: string;
+  description?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  promoText?: string;
+  bulletPoints?: string[];
 }
 
 interface EnhancedContentComparisonProps {
-  active: boolean
-  onClose: () => void
-  onApply: (content: ContentData) => void
+  active: boolean;
+  onClose: () => void;
+  onApply: (content: ContentData) => void;
   originalContent: {
-    title?: string
-    description?: string
-    seoTitle?: string
-    seoDescription?: string
-    promoText?: string
-  }
+    title?: string;
+    description?: string;
+    seoTitle?: string;
+    seoDescription?: string;
+    promoText?: string;
+  };
   enhancedContent: {
-    title?: string
-    description?: string
-    seoTitle?: string
-    seoDescription?: string
-    promoText?: string
-    bulletPoints?: string[]
-    confidence?: number
-  }
-  loading?: boolean
+    title?: string;
+    description?: string;
+    seoTitle?: string;
+    seoDescription?: string;
+    promoText?: string;
+    bulletPoints?: string[];
+    confidence?: number;
+  };
+  loading?: boolean;
 }
 
 export default function EnhancedContentComparison({
@@ -66,11 +65,11 @@ export default function EnhancedContentComparison({
   onApply,
   originalContent,
   enhancedContent,
-  loading = false
+  loading = false,
 }: EnhancedContentComparisonProps) {
-  const [editedContent, setEditedContent] = useState(enhancedContent)
-  const [editingField, setEditingField] = useState<string | null>(null)
-  const [selectedTab, setSelectedTab] = useState(0)
+  const [editedContent, setEditedContent] = useState(enhancedContent);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState(0);
 
   // Track which fields to apply
   const [fieldsToApply, setFieldsToApply] = useState({
@@ -79,31 +78,33 @@ export default function EnhancedContentComparison({
     seoTitle: !!enhancedContent.seoTitle,
     seoDescription: !!enhancedContent.seoDescription,
     promoText: !!enhancedContent.promoText,
-    bulletPoints: !!enhancedContent.bulletPoints && enhancedContent.bulletPoints.length > 0
-  })
+    bulletPoints:
+      !!enhancedContent.bulletPoints && enhancedContent.bulletPoints.length > 0,
+  });
 
   // Helper function to render HTML content properly
   const renderFormattedHTML = (htmlContent: string) => {
     // Process the HTML to ensure proper formatting
     const processedHTML = htmlContent
-      .replace(/<b>/g, '<strong>')
-      .replace(/<\/b>/g, '</strong>')
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/^(?!<p>)/, '<p>')
-      .replace(/(?!<\/p>)$/, '</p>')
+      .replace(/<b>/g, "<strong>")
+      .replace(/<\/b>/g, "</strong>")
+      .replace(/\n\n/g, "</p><p>")
+      .replace(/^(?!<p>)/, "<p>")
+      .replace(/(?!<\/p>)$/, "</p>");
 
     return (
       <div
         dangerouslySetInnerHTML={{ __html: processedHTML }}
         style={{
           lineHeight: 1.8,
-          fontSize: '14px',
-          color: '#202223',
-          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+          fontSize: "14px",
+          color: "#202223",
+          fontFamily:
+            '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
         }}
       />
-    )
-  }
+    );
+  };
 
   // Force modal to be wider when it opens
   useEffect(() => {
@@ -111,69 +112,84 @@ export default function EnhancedContentComparison({
       // Wait for modal to render
       setTimeout(() => {
         // Find all modal-related elements and force their width
-        const modalDialog = document.querySelector('.Polaris-Modal-Dialog')
-        const modalContainer = document.querySelector('.Polaris-Modal-Dialog__Container')
-        const modalModal = document.querySelector('.Polaris-Modal-Dialog__Modal')
+        const modalDialog = document.querySelector(".Polaris-Modal-Dialog");
+        const modalContainer = document.querySelector(
+          ".Polaris-Modal-Dialog__Container",
+        );
+        const modalModal = document.querySelector(
+          ".Polaris-Modal-Dialog__Modal",
+        );
 
         if (modalDialog) {
-          (modalDialog as HTMLElement).style.maxWidth = '95vw'
-          ;(modalDialog as HTMLElement).style.width = '95vw'
+          (modalDialog as HTMLElement).style.maxWidth = "95vw";
+          (modalDialog as HTMLElement).style.width = "95vw";
         }
         if (modalContainer) {
-          (modalContainer as HTMLElement).style.maxWidth = '100%'
-          ;(modalContainer as HTMLElement).style.width = '100%'
+          (modalContainer as HTMLElement).style.maxWidth = "100%";
+          (modalContainer as HTMLElement).style.width = "100%";
         }
         if (modalModal) {
-          (modalModal as HTMLElement).style.maxWidth = '100%'
-          ;(modalModal as HTMLElement).style.width = '100%'
+          (modalModal as HTMLElement).style.maxWidth = "100%";
+          (modalModal as HTMLElement).style.width = "100%";
         }
-      }, 100)
+      }, 100);
     }
-  }, [active])
+  }, [active]);
 
   const handleEdit = (field: string) => {
-    setEditingField(field)
-  }
+    setEditingField(field);
+  };
 
   const handleSave = (field: string, value: string) => {
-    setEditedContent(prev => ({
+    setEditedContent((prev) => ({
       ...prev,
-      [field]: value
-    }))
-    setEditingField(null)
-  }
+      [field]: value,
+    }));
+    setEditingField(null);
+  };
 
   const handleCancel = () => {
-    setEditingField(null)
-    setEditedContent(enhancedContent)
-  }
+    setEditingField(null);
+    setEditedContent(enhancedContent);
+  };
 
   const handleApplyChanges = () => {
     // Only apply fields that are checked
-    const contentToApply: ContentData = {}
+    const contentToApply: ContentData = {};
+
+    console.log("🔧 DEBUG handleApplyChanges:", {
+      fieldsToApply,
+      editedContent,
+      "editedContent.description length":
+        editedContent.description?.length || 0,
+      "editedContent.description preview": editedContent.description?.substring(
+        0,
+        100,
+      ),
+    });
 
     if (fieldsToApply.title && editedContent.title) {
-      contentToApply.title = editedContent.title
+      contentToApply.title = editedContent.title;
     }
     if (fieldsToApply.description && editedContent.description) {
-      contentToApply.description = editedContent.description
+      contentToApply.description = editedContent.description;
     }
     if (fieldsToApply.seoTitle && editedContent.seoTitle) {
-      contentToApply.seoTitle = editedContent.seoTitle
+      contentToApply.seoTitle = editedContent.seoTitle;
     }
     if (fieldsToApply.seoDescription && editedContent.seoDescription) {
-      contentToApply.seoDescription = editedContent.seoDescription
+      contentToApply.seoDescription = editedContent.seoDescription;
     }
     if (fieldsToApply.promoText && editedContent.promoText) {
-      contentToApply.promoText = editedContent.promoText
+      contentToApply.promoText = editedContent.promoText;
     }
     if (fieldsToApply.bulletPoints && editedContent.bulletPoints) {
-      contentToApply.bulletPoints = editedContent.bulletPoints
+      contentToApply.bulletPoints = editedContent.bulletPoints;
     }
 
-    onApply(contentToApply)
-    onClose()
-  }
+    onApply(contentToApply);
+    onClose();
+  };
 
   const renderModernField = (
     label: string,
@@ -181,11 +197,14 @@ export default function EnhancedContentComparison({
     original: string | undefined,
     enhanced: string | undefined,
     multiline: boolean = false,
-    isHtml: boolean = false
+    isHtml: boolean = false,
   ) => {
-    const isEditing = editingField === fieldName
-    const currentValue = editedContent[fieldName as keyof typeof editedContent] as string || enhanced || ''
-    const hasChanged = original !== enhanced && enhanced
+    const isEditing = editingField === fieldName;
+    const currentValue =
+      (editedContent[fieldName as keyof typeof editedContent] as string) ||
+      enhanced ||
+      "";
+    const hasChanged = original !== enhanced && enhanced;
 
     return (
       <Card roundedAbove="sm">
@@ -196,15 +215,21 @@ export default function EnhancedContentComparison({
               <InlineStack gap="300" blockAlign="center">
                 <Checkbox
                   label=""
-                  checked={fieldsToApply[fieldName as keyof typeof fieldsToApply]}
-                  onChange={(checked) => setFieldsToApply(prev => ({
-                    ...prev,
-                    [fieldName]: checked
-                  }))}
+                  checked={
+                    fieldsToApply[fieldName as keyof typeof fieldsToApply]
+                  }
+                  onChange={(checked) =>
+                    setFieldsToApply((prev) => ({
+                      ...prev,
+                      [fieldName]: checked,
+                    }))
+                  }
                 />
                 <BlockStack gap="100">
                   <InlineStack gap="200" blockAlign="center">
-                    <Text variant="headingMd" as="h3">{label}</Text>
+                    <Text variant="headingMd" as="h3">
+                      {label}
+                    </Text>
                     {hasChanged && (
                       <Badge tone="success" icon={MagicIcon}>
                         AI Enhanced
@@ -271,7 +296,11 @@ export default function EnhancedContentComparison({
                 padding="400"
                 borderRadius="200"
                 borderWidth="025"
-                borderColor={fieldsToApply[fieldName as keyof typeof fieldsToApply] ? 'border-success' : 'border'}
+                borderColor={
+                  fieldsToApply[fieldName as keyof typeof fieldsToApply]
+                    ? "border-success"
+                    : "border"
+                }
               >
                 <BlockStack gap="200">
                   <InlineStack gap="200" blockAlign="center">
@@ -289,10 +318,12 @@ export default function EnhancedContentComparison({
                         <TextField
                           label=""
                           value={currentValue}
-                          onChange={(value) => setEditedContent(prev => ({
-                            ...prev,
-                            [fieldName]: value
-                          }))}
+                          onChange={(value) =>
+                            setEditedContent((prev) => ({
+                              ...prev,
+                              [fieldName]: value,
+                            }))
+                          }
                           multiline={multiline ? 5 : false}
                           autoComplete="off"
                         />
@@ -314,20 +345,18 @@ export default function EnhancedContentComparison({
                           </Button>
                         </InlineStack>
                       </BlockStack>
-                    ) : (
-                      enhanced ? (
-                        isHtml || fieldName === 'description' ? (
-                          renderFormattedHTML(currentValue)
-                        ) : (
-                          <Text as="p" breakWord>
-                            {currentValue}
-                          </Text>
-                        )
+                    ) : enhanced ? (
+                      isHtml || fieldName === "description" ? (
+                        renderFormattedHTML(currentValue)
                       ) : (
-                        <Text as="p" tone="subdued">
-                          No enhanced content generated
+                        <Text as="p" breakWord>
+                          {currentValue}
                         </Text>
                       )
+                    ) : (
+                      <Text as="p" tone="subdued">
+                        No enhanced content generated
+                      </Text>
                     )}
                   </Box>
                 </BlockStack>
@@ -336,11 +365,12 @@ export default function EnhancedContentComparison({
           </BlockStack>
         </Box>
       </Card>
-    )
-  }
+    );
+  };
 
   const renderBulletPoints = () => {
-    if (!editedContent.bulletPoints || editedContent.bulletPoints.length === 0) return null
+    if (!editedContent.bulletPoints || editedContent.bulletPoints.length === 0)
+      return null;
 
     return (
       <Card roundedAbove="sm">
@@ -348,25 +378,28 @@ export default function EnhancedContentComparison({
           <BlockStack gap="400">
             <InlineStack gap="200" blockAlign="center">
               <Icon source={MagicIcon} tone="magic" />
-              <Text variant="headingMd" as="h3">Key Features</Text>
+              <Text variant="headingMd" as="h3">
+                Key Features
+              </Text>
               <Badge tone="info">{`${editedContent.bulletPoints.length} points`}</Badge>
             </InlineStack>
-            <Box
-              background="bg-surface"
-              padding="400"
-              borderRadius="200"
-            >
-              <ul style={{
-                paddingLeft: '24px',
-                margin: 0,
-                lineHeight: '1.8'
-              }}>
+            <Box background="bg-surface" padding="400" borderRadius="200">
+              <ul
+                style={{
+                  paddingLeft: "24px",
+                  margin: 0,
+                  lineHeight: "1.8",
+                }}
+              >
                 {editedContent.bulletPoints.map((point, index) => (
-                  <li key={index} style={{
-                    marginBottom: '12px',
-                    color: '#202223',
-                    fontSize: '14px'
-                  }}>
+                  <li
+                    key={index}
+                    style={{
+                      marginBottom: "12px",
+                      color: "#202223",
+                      fontSize: "14px",
+                    }}
+                  >
                     {point}
                   </li>
                 ))}
@@ -375,30 +408,30 @@ export default function EnhancedContentComparison({
           </BlockStack>
         </Box>
       </Card>
-    )
-  }
+    );
+  };
 
   // Define tabs for content organization
   const tabs = [
     {
-      id: 'main',
-      content: 'Main Content',
+      id: "main",
+      content: "Main Content",
       badge: `${enhancedContent.title ? 1 : 0} + ${enhancedContent.description ? 1 : 0}`,
-      panelID: 'main-content',
+      panelID: "main-content",
     },
     {
-      id: 'seo',
-      content: 'SEO & Marketing',
+      id: "seo",
+      content: "SEO & Marketing",
       badge: `${enhancedContent.seoTitle ? 1 : 0} + ${enhancedContent.seoDescription ? 1 : 0} + ${enhancedContent.promoText ? 1 : 0}`,
-      panelID: 'seo-content',
+      panelID: "seo-content",
     },
     {
-      id: 'features',
-      content: 'Key Features',
+      id: "features",
+      content: "Key Features",
       badge: `${editedContent.bulletPoints?.length || 0}`,
-      panelID: 'features-content',
+      panelID: "features-content",
     },
-  ]
+  ];
 
   return (
     <div className={styles.wideModalWrapper}>
@@ -407,14 +440,14 @@ export default function EnhancedContentComparison({
         onClose={onClose}
         title="AI Enhanced Content Review"
         primaryAction={{
-          content: 'Apply Selected Changes',
+          content: "Apply Selected Changes",
           onAction: handleApplyChanges,
           loading: loading,
           disabled: !Object.values(fieldsToApply).some(Boolean),
         }}
         secondaryActions={[
           {
-            content: 'Cancel',
+            content: "Cancel",
             onAction: onClose,
           },
         ]}
@@ -435,27 +468,31 @@ export default function EnhancedContentComparison({
                   <InlineStack gap="200">
                     <Button
                       size="slim"
-                      onClick={() => setFieldsToApply({
-                        title: true,
-                        description: true,
-                        seoTitle: true,
-                        seoDescription: true,
-                        promoText: true,
-                        bulletPoints: true
-                      })}
+                      onClick={() =>
+                        setFieldsToApply({
+                          title: true,
+                          description: true,
+                          seoTitle: true,
+                          seoDescription: true,
+                          promoText: true,
+                          bulletPoints: true,
+                        })
+                      }
                     >
                       Select All
                     </Button>
                     <Button
                       size="slim"
-                      onClick={() => setFieldsToApply({
-                        title: false,
-                        description: false,
-                        seoTitle: false,
-                        seoDescription: false,
-                        promoText: false,
-                        bulletPoints: false
-                      })}
+                      onClick={() =>
+                        setFieldsToApply({
+                          title: false,
+                          description: false,
+                          seoTitle: false,
+                          seoDescription: false,
+                          promoText: false,
+                          bulletPoints: false,
+                        })
+                      }
                     >
                       Deselect All
                     </Button>
@@ -466,93 +503,117 @@ export default function EnhancedContentComparison({
 
             {/* Tabbed Content */}
             <Card>
-              <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab}>
+              <Tabs
+                tabs={tabs}
+                selected={selectedTab}
+                onSelect={setSelectedTab}
+              >
                 {/* Main Content Tab */}
                 {selectedTab === 0 && (
-                  <div style={{ minHeight: '600px' }}>
+                  <div style={{ minHeight: "600px" }}>
                     <Box padding="400">
-                    <BlockStack gap="600">
-                      {enhancedContent.title && renderModernField(
-                        'Product Title',
-                        'title',
-                        originalContent.title,
-                        enhancedContent.title,
-                        false,
-                        false
-                      )}
+                      <BlockStack gap="600">
+                        {enhancedContent.title &&
+                          renderModernField(
+                            "Product Title",
+                            "title",
+                            originalContent.title,
+                            enhancedContent.title,
+                            false,
+                            false,
+                          )}
 
-                      {enhancedContent.description && renderModernField(
-                        'Product Description',
-                        'description',
-                        originalContent.description,
-                        enhancedContent.description,
-                        true,
-                        true
-                      )}
+                        {enhancedContent.description &&
+                          renderModernField(
+                            "Product Description",
+                            "description",
+                            originalContent.description,
+                            enhancedContent.description,
+                            true,
+                            true,
+                          )}
 
-                      {!enhancedContent.title && !enhancedContent.description && (
-                        <Banner tone="info">
-                          <Text as="p">No main content was generated. Try enabling title or description generation in enhancement options.</Text>
-                        </Banner>
-                      )}
-                    </BlockStack>
+                        {!enhancedContent.title &&
+                          !enhancedContent.description && (
+                            <Banner tone="info">
+                              <Text as="p">
+                                No main content was generated. Try enabling
+                                title or description generation in enhancement
+                                options.
+                              </Text>
+                            </Banner>
+                          )}
+                      </BlockStack>
                     </Box>
                   </div>
                 )}
 
                 {/* SEO & Marketing Tab */}
                 {selectedTab === 1 && (
-                  <div style={{ minHeight: '600px' }}>
+                  <div style={{ minHeight: "600px" }}>
                     <Box padding="400">
-                    <BlockStack gap="600">
-                      {enhancedContent.seoTitle && renderModernField(
-                        'SEO Title',
-                        'seoTitle',
-                        originalContent.seoTitle,
-                        enhancedContent.seoTitle,
-                        false,
-                        false
-                      )}
+                      <BlockStack gap="600">
+                        {enhancedContent.seoTitle &&
+                          renderModernField(
+                            "SEO Title",
+                            "seoTitle",
+                            originalContent.seoTitle,
+                            enhancedContent.seoTitle,
+                            false,
+                            false,
+                          )}
 
-                      {enhancedContent.seoDescription && renderModernField(
-                        'SEO Meta Description',
-                        'seoDescription',
-                        originalContent.seoDescription,
-                        enhancedContent.seoDescription,
-                        true,
-                        false
-                      )}
+                        {enhancedContent.seoDescription &&
+                          renderModernField(
+                            "SEO Meta Description",
+                            "seoDescription",
+                            originalContent.seoDescription,
+                            enhancedContent.seoDescription,
+                            true,
+                            false,
+                          )}
 
-                      {enhancedContent.promoText && renderModernField(
-                        'Promotional Copy',
-                        'promoText',
-                        originalContent.promoText,
-                        enhancedContent.promoText,
-                        true,
-                        true
-                      )}
+                        {enhancedContent.promoText &&
+                          renderModernField(
+                            "Promotional Copy",
+                            "promoText",
+                            originalContent.promoText,
+                            enhancedContent.promoText,
+                            true,
+                            true,
+                          )}
 
-                      {!enhancedContent.seoTitle && !enhancedContent.seoDescription && !enhancedContent.promoText && (
-                        <Banner tone="info">
-                          <Text as="p">No SEO or marketing content was generated. Enable these options in enhancement settings to generate them.</Text>
-                        </Banner>
-                      )}
-                    </BlockStack>
+                        {!enhancedContent.seoTitle &&
+                          !enhancedContent.seoDescription &&
+                          !enhancedContent.promoText && (
+                            <Banner tone="info">
+                              <Text as="p">
+                                No SEO or marketing content was generated.
+                                Enable these options in enhancement settings to
+                                generate them.
+                              </Text>
+                            </Banner>
+                          )}
+                      </BlockStack>
                     </Box>
                   </div>
                 )}
 
                 {/* Key Features Tab */}
                 {selectedTab === 2 && (
-                  <div style={{ minHeight: '600px' }}>
+                  <div style={{ minHeight: "600px" }}>
                     <Box padding="400">
-                    {editedContent.bulletPoints && editedContent.bulletPoints.length > 0 ? (
-                      renderBulletPoints()
-                    ) : (
-                      <Banner tone="info">
-                        <Text as="p">No key features were generated. The AI will extract features when analyzing product images.</Text>
-                      </Banner>
-                    )}
+                      {editedContent.bulletPoints &&
+                      editedContent.bulletPoints.length > 0 ? (
+                        renderBulletPoints()
+                      ) : (
+                        <Banner tone="info">
+                          <Text as="p">
+                            No key features were generated. The AI will extract
+                            features when analyzing product images.
+                          </Text>
+                        </Banner>
+                      )}
                     </Box>
                   </div>
                 )}
@@ -561,7 +622,8 @@ export default function EnhancedContentComparison({
 
             {/* Selected Fields Summary */}
             {(() => {
-              const selectedCount = Object.values(fieldsToApply).filter(Boolean).length
+              const selectedCount =
+                Object.values(fieldsToApply).filter(Boolean).length;
               if (selectedCount > 0) {
                 return (
                   <Box
@@ -572,17 +634,18 @@ export default function EnhancedContentComparison({
                     <InlineStack gap="200" blockAlign="center">
                       <Icon source={CheckIcon} tone="success" />
                       <Text variant="bodySm" as="p" tone="success">
-                        {selectedCount} field{selectedCount !== 1 ? 's' : ''} selected for update
+                        {selectedCount} field{selectedCount !== 1 ? "s" : ""}{" "}
+                        selected for update
                       </Text>
                     </InlineStack>
                   </Box>
-                )
+                );
               }
-              return null
+              return null;
             })()}
           </BlockStack>
         </Modal.Section>
       </Modal>
     </div>
-  )
+  );
 }
