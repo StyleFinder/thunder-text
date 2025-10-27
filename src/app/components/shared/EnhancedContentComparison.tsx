@@ -82,6 +82,29 @@ export default function EnhancedContentComparison({
       !!enhancedContent.bulletPoints && enhancedContent.bulletPoints.length > 0,
   });
 
+  // Sync editedContent when enhancedContent prop changes
+  useEffect(() => {
+    console.log("🔄 EnhancedContent prop changed, updating editedContent:", {
+      "enhancedContent.description length":
+        enhancedContent.description?.length || 0,
+      "enhancedContent.description preview":
+        enhancedContent.description?.substring(0, 100),
+    });
+    setEditedContent(enhancedContent);
+
+    // Also update fieldsToApply based on new content
+    setFieldsToApply({
+      title: !!enhancedContent.title,
+      description: !!enhancedContent.description,
+      seoTitle: !!enhancedContent.seoTitle,
+      seoDescription: !!enhancedContent.seoDescription,
+      promoText: !!enhancedContent.promoText,
+      bulletPoints:
+        !!enhancedContent.bulletPoints &&
+        enhancedContent.bulletPoints.length > 0,
+    });
+  }, [enhancedContent]);
+
   // Helper function to render HTML content properly
   const renderFormattedHTML = (htmlContent: string) => {
     // Process the HTML to ensure proper formatting
