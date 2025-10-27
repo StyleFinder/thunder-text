@@ -391,6 +391,12 @@ export default function UnifiedEnhancePage() {
       }
 
       const result = await response.json();
+      console.log("🎯 Generated content received:", {
+        resultData: result.data,
+        "result.data.description": result.data?.description,
+        "description length": result.data?.description?.length || 0,
+        "description preview": result.data?.description?.substring(0, 100),
+      });
       setGeneratedContent(result.data);
       setProgress(100);
       setShowPreviewModal(true);
