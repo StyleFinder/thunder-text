@@ -58,6 +58,14 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
   // Use ref to track if initialization has been attempted
   const initializationAttempted = useRef(false);
 
+  // Debug: Track component mount/unmount
+  useEffect(() => {
+    console.log("🚀 UnifiedShopifyAuth component MOUNTED");
+    return () => {
+      console.log("💥 UnifiedShopifyAuth component UNMOUNTING");
+    };
+  }, []);
+
   // Determine if we're in embedded context
   const isEmbedded =
     typeof window !== "undefined" &&
