@@ -58,23 +58,6 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
   // Use ref to track if initialization has been attempted
   const initializationAttempted = useRef(false);
 
-  // Debug: Track component mount/unmount
-  useEffect(() => {
-    console.log("🚀 UnifiedShopifyAuth component MOUNTED");
-    return () => {
-      console.log("💥 UnifiedShopifyAuth component UNMOUNTING");
-    };
-  }, []);
-
-  // Debug: Track searchParams changes
-  useEffect(() => {
-    console.log("🔍 searchParams changed:", {
-      shop: searchParams?.get("shop"),
-      host: searchParams?.get("host"),
-      embedded: searchParams?.get("embedded"),
-    });
-  }, [searchParams]);
-
   // Determine if we're in embedded context
   const isEmbedded =
     typeof window !== "undefined" &&
@@ -290,8 +273,7 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       setIsAuthenticated(false);
       setIsLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, isEmbedded]);
+  }, [searchParams, isEmbedded, refreshToken]);
 
   useEffect(() => {
     // Only initialize once per component instance - use ref to prevent re-runs
@@ -304,18 +286,7 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       initializationAttempted.current = true;
       initializeAuth();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Debug: Log auth state changes
-  useEffect(() => {
-    console.log("🔐 Auth state changed:", {
-      isAuthenticated,
-      shop,
-      isLoading,
-      error: error?.substring(0, 50),
-    });
-  }, [isAuthenticated, shop, isLoading, error]);
+  }, [isAuthenticated, error, isLoading, initializeAuth]);
 
   return (
     <ShopifyAuthContext.Provider
