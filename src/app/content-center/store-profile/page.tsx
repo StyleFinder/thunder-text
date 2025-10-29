@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -60,13 +60,13 @@ export default function StoreProfilePage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const showCompletionState = useCallback(() => {
+  const showCompletionState = () => {
     // Clear chat and show completion UI
     setMessages([]);
     setInterviewStatus("completed");
-  }, []);
+  };
 
-  const loadProfile = useCallback(async () => {
+  const loadProfile = async () => {
     try {
       const response = await fetch("/api/business-profile", {
         headers: {
@@ -93,7 +93,7 @@ export default function StoreProfilePage() {
     } catch (error) {
       console.error("Failed to load profile:", error);
     }
-  }, [shopDomain, showCompletionState]);
+  };
 
   // Load profile on mount (prevent duplicate calls)
   useEffect(() => {
@@ -101,7 +101,8 @@ export default function StoreProfilePage() {
       hasLoadedProfile.current = true;
       loadProfile();
     }
-  }, [shopDomain, isAuthenticated, loadProfile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopDomain, isAuthenticated]);
 
   const startInterview = async () => {
     setIsSubmitting(true);
