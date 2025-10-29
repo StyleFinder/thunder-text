@@ -60,6 +60,12 @@ export default function StoreProfilePage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const showCompletionState = useCallback(() => {
+    // Clear chat and show completion UI
+    setMessages([]);
+    setInterviewStatus("completed");
+  }, []);
+
   const loadProfile = useCallback(async () => {
     try {
       const response = await fetch("/api/business-profile", {
@@ -87,7 +93,7 @@ export default function StoreProfilePage() {
     } catch (error) {
       console.error("Failed to load profile:", error);
     }
-  }, [shopDomain]);
+  }, [shopDomain, showCompletionState]);
 
   // Load profile on mount (prevent duplicate calls)
   useEffect(() => {
@@ -273,12 +279,6 @@ export default function StoreProfilePage() {
     } finally {
       setIsGeneratingProfile(false);
     }
-  };
-
-  const showCompletionState = () => {
-    // Clear chat and show completion UI
-    setMessages([]);
-    setInterviewStatus("completed");
   };
 
   // Helper functions to add messages
