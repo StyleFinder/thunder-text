@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -60,16 +60,7 @@ export default function StoreProfilePage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Load profile on mount (prevent duplicate calls)
-  useEffect(() => {
-    if (shopDomain && isAuthenticated && !hasLoadedProfile.current) {
-      hasLoadedProfile.current = true;
-      loadProfile();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shopDomain, isAuthenticated]);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
       const response = await fetch("/api/business-profile", {
         headers: {
@@ -96,7 +87,15 @@ export default function StoreProfilePage() {
     } catch (error) {
       console.error("Failed to load profile:", error);
     }
-  };
+  }, [shopDomain]);
+
+  // Load profile on mount (prevent duplicate calls)
+  useEffect(() => {
+    if (shopDomain && isAuthenticated && !hasLoadedProfile.current) {
+      hasLoadedProfile.current = true;
+      loadProfile();
+    }
+  }, [shopDomain, isAuthenticated, loadProfile]);
 
   const startInterview = async () => {
     setIsSubmitting(true);
