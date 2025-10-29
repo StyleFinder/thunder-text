@@ -37,6 +37,13 @@ export default function StoreProfilePage() {
     isLoading: authLoading,
   } = useShopifyAuth();
 
+  // Debug logging
+  console.log("🔍 StoreProfilePage - Auth State:", {
+    shopDomain,
+    isAuthenticated,
+    authLoading,
+  });
+
   // State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentInput, setCurrentInput] = useState("");
