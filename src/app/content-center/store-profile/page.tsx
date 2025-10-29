@@ -97,7 +97,13 @@ export default function StoreProfilePage() {
 
   // Load profile on mount (prevent duplicate calls)
   useEffect(() => {
+    console.log("🔄 useEffect triggered:", {
+      shopDomain,
+      isAuthenticated,
+      hasLoaded: hasLoadedProfile.current,
+    });
     if (shopDomain && isAuthenticated && !hasLoadedProfile.current) {
+      console.log("✅ Loading profile - First time only");
       hasLoadedProfile.current = true;
       loadProfile();
     }
