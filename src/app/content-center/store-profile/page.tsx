@@ -95,9 +95,21 @@ export default function StoreProfilePage() {
           setInterviewStatus(data.data.profile.interview_status);
           setProgress(data.data.progress.percentage_complete);
 
-          // Set current prompt if available
+          // Set current prompt if available and add to chat
           if (data.data.progress.next_prompt) {
             setCurrentPrompt(data.data.progress.next_prompt);
+
+            // Add the prompt as an AI message to the chat
+            const prompt = data.data.progress.next_prompt;
+            const message: ChatMessage = {
+              id: Date.now().toString() + Math.random(),
+              type: "ai",
+              content: prompt.question_text,
+              timestamp: new Date(),
+              prompt_key: prompt.prompt_key,
+              question_number: prompt.question_number,
+            };
+            setMessages([message]);
           }
 
           // If profile is complete, show completion message
