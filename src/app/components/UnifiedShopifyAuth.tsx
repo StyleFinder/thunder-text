@@ -66,6 +66,15 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
     };
   }, []);
 
+  // Debug: Track searchParams changes
+  useEffect(() => {
+    console.log("🔍 searchParams changed:", {
+      shop: searchParams?.get("shop"),
+      host: searchParams?.get("host"),
+      embedded: searchParams?.get("embedded"),
+    });
+  }, [searchParams]);
+
   // Determine if we're in embedded context
   const isEmbedded =
     typeof window !== "undefined" &&
@@ -295,7 +304,8 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       initializationAttempted.current = true;
       initializeAuth();
     }
-  }, [isAuthenticated, error, isLoading, initializeAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Debug: Log auth state changes
   useEffect(() => {
