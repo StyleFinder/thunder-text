@@ -37,6 +37,13 @@ export default function StoreProfilePage() {
     isLoading: authLoading,
   } = useShopifyAuth();
 
+  // Debug: Log auth values on every render
+  console.log("🎭 StoreProfilePage render:", {
+    shopDomain,
+    isAuthenticated,
+    authLoading,
+  });
+
   // State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentInput, setCurrentInput] = useState("");
@@ -347,6 +354,7 @@ export default function StoreProfilePage() {
 
   // Loading state
   if (authLoading) {
+    console.log("🔄 Rendering: Auth Loading state");
     return (
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="flex items-center justify-center py-20">
@@ -358,6 +366,10 @@ export default function StoreProfilePage() {
 
   // Not authenticated
   if (!isAuthenticated || !shopDomain) {
+    console.log("🚫 Rendering: Not Authenticated", {
+      isAuthenticated,
+      shopDomain,
+    });
     return (
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <Alert className="border-red-200 bg-red-50">
@@ -374,6 +386,11 @@ export default function StoreProfilePage() {
       </div>
     );
   }
+
+  console.log("✅ Rendering: Main content", {
+    interviewStatus,
+    hasProfile: !!profile,
+  });
 
   // Profile completed state
   if (interviewStatus === "completed" && profile?.master_profile_text) {
