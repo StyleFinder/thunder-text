@@ -60,15 +60,18 @@ export default function StoreProfilePage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hasLoadedProfile = useRef(false);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Load profile on mount
+  // Load profile on mount (prevent duplicate calls)
   useEffect(() => {
-    if (shopDomain && isAuthenticated) {
+    if (shopDomain && isAuthenticated && !hasLoadedProfile.current) {
+      console.log("🔄 Loading profile - First time only");
+      hasLoadedProfile.current = true;
       loadProfile();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
