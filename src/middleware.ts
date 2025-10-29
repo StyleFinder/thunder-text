@@ -55,7 +55,23 @@ export function middleware(request: NextRequest) {
     const origin = request.headers.get("origin") || "";
     const referer = request.headers.get("referer") || "";
 
-    // Validate origin against whitelist
+    // Check if this is a same-origin request (no origin header, referer is our domain)
+    const isOwnDomainReferer =
+      referer &&
+      (referer.startsWith("https://thunder-text.onrender.com") ||
+        (process.env.RENDER_EXTERNAL_URL &&
+          referer.startsWith(process.env.RENDER_EXTERNAL_URL)) ||
+        (process.env.NODE_ENV === "development" &&
+          referer.startsWith("http://localhost:")));
+
+    // For same-origin requests, don't apply CORS (browser handles it)
+    if (!origin && isOwnDomainReferer) {
+      // Same-origin: Let the request proceed without CORS headers
+      // Browser will handle same-origin policy automatically
+      return response;
+    }
+
+    // Validate origin against whitelist for cross-origin requests
     const isAllowed = isAllowedOrigin(origin);
 
     // For embedded apps without origin, check referer as fallback
@@ -66,7 +82,7 @@ export function middleware(request: NextRequest) {
         referer.includes(".spin.dev") ||
         referer.includes(".shopifypreview.com"));
 
-    // SECURITY: Only set CORS headers for whitelisted origins
+    // SECURITY: Only set CORS headers for whitelisted cross-origin requests
     if (isAllowed) {
       response.headers.set("Access-Control-Allow-Origin", origin);
       response.headers.set(
