@@ -79,15 +79,24 @@ export default function StoreProfilePage() {
 
   const loadProfile = async () => {
     try {
+      console.log("📡 Fetching profile from API...");
       const response = await fetch("/api/business-profile", {
         headers: {
           Authorization: `Bearer ${shopDomain}`,
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data.profile) {
+      console.log("📡 API Response:", {
+        status: response.status,
+        ok: response.ok,
+      });
+
+      const data = await response.json();
+      console.log("📡 API Data:", data);
+
+      if (response.ok && data.success) {
+        if (data.data.profile) {
+          console.log("✅ Setting profile:", data.data.profile);
           setProfile(data.data.profile);
           setInterviewStatus(data.data.profile.interview_status);
           setProgress(data.data.progress.percentage_complete);
@@ -99,10 +108,16 @@ export default function StoreProfilePage() {
           ) {
             showCompletionState();
           }
+        } else {
+          console.log("⚠️ No profile in response");
         }
+      } else {
+        console.error("❌ API Error:", data.error || "Unknown error");
+        setError(data.error || "Failed to load profile");
       }
     } catch (error) {
-      console.error("Failed to load profile:", error);
+      console.error("❌ Failed to load profile:", error);
+      setError("Failed to load profile");
     }
   };
 
