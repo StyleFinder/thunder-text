@@ -289,6 +289,16 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
     }
   }, [isAuthenticated, error, isLoading, initializeAuth]);
 
+  // Debug: Log auth state changes
+  useEffect(() => {
+    console.log("🔐 Auth state changed:", {
+      isAuthenticated,
+      shop,
+      isLoading,
+      error: error?.substring(0, 50),
+    });
+  }, [isAuthenticated, shop, isLoading, error]);
+
   return (
     <ShopifyAuthContext.Provider
       value={{
