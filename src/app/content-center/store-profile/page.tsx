@@ -95,6 +95,11 @@ export default function StoreProfilePage() {
           setInterviewStatus(data.data.profile.interview_status);
           setProgress(data.data.progress.percentage_complete);
 
+          // Set current prompt if available
+          if (data.data.progress.next_prompt) {
+            setCurrentPrompt(data.data.progress.next_prompt);
+          }
+
           // If profile is complete, show completion message
           if (
             data.data.profile.interview_status === "completed" &&
