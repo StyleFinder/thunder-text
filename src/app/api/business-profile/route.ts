@@ -27,28 +27,38 @@ export async function GET(
       );
     }
 
-    // Get or create business profile using database function
-    const { data: profileId, error: rpcError } = await supabaseAdmin.rpc(
-      "get_or_create_business_profile",
-      {
-        p_store_id: userId,
-      },
-    );
-
-    if (rpcError) {
-      console.error("Error getting/creating profile:", rpcError);
-      return NextResponse.json(
-        { success: false, error: "Failed to get business profile" },
-        { status: 500 },
-      );
-    }
-
-    // Now fetch the created/existing profile
-    const { data: profile, error: profileError } = await supabaseAdmin
+    // Get or create business profile - direct table operations instead of RPC
+    let profile: BusinessProfile | null = null;
+    const { data: existingProfile, error: profileError } = await supabaseAdmin
       .from("business_profiles")
       .select("*")
-      .eq("id", profileId)
-      .single();
+      .eq("store_id", userId)
+      .eq("is_current", true)
+      .maybeSingle();
+
+    // If no profile exists, create one
+    if (!existingProfile && !profileError) {
+      const { data: newProfile, error: createError } = await supabaseAdmin
+        .from("business_profiles")
+        .insert({
+          store_id: userId,
+          interview_status: "not_started",
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error("Error creating profile:", createError);
+        return NextResponse.json(
+          { success: false, error: "Failed to create business profile" },
+          { status: 500 },
+        );
+      }
+
+      profile = newProfile as BusinessProfile;
+    } else {
+      profile = existingProfile as BusinessProfile | null;
+    }
 
     if (profileError || !profile) {
       console.error("Error fetching business profile:", profileError);
