@@ -77,11 +77,17 @@ export async function GET(
       const answeredKeys = responses.map((r) => r.prompt_key);
 
       // Get next unanswered prompt
-      const { data: nextPromptData } = await supabaseAdmin
+      let query = supabaseAdmin
         .from("interview_prompts")
         .select("*")
-        .eq("is_active", true)
-        .not("prompt_key", "in", `(${answeredKeys.join(",")})`)
+        .eq("is_active", true);
+
+      // Only add the NOT IN filter if there are answered questions
+      if (answeredKeys.length > 0) {
+        query = query.not("prompt_key", "in", `(${answeredKeys.join(",")})`);
+      }
+
+      const { data: nextPromptData } = await query
         .order("display_order", { ascending: true })
         .limit(1)
         .single();
