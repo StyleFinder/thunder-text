@@ -128,6 +128,17 @@ export async function POST(
       );
     }
 
+    // Update profile status to in_progress if this is the first answer
+    if (profile.interview_status === "not_started") {
+      await supabaseAdmin
+        .from("business_profiles")
+        .update({
+          interview_status: "in_progress",
+          interview_started_at: new Date().toISOString(),
+        })
+        .eq("id", profile.id);
+    }
+
     // Update profile progress
     await supabaseAdmin.rpc("update_interview_progress", {
       p_profile_id: profile.id,

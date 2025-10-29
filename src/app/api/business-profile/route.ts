@@ -27,16 +27,30 @@ export async function GET(
       );
     }
 
-    // Get current business profile
+    // Get or create business profile using database function
+    const { data: profileId, error: rpcError } = await supabaseAdmin.rpc(
+      "get_or_create_business_profile",
+      {
+        p_store_id: userId,
+      },
+    );
+
+    if (rpcError) {
+      console.error("Error getting/creating profile:", rpcError);
+      return NextResponse.json(
+        { success: false, error: "Failed to get business profile" },
+        { status: 500 },
+      );
+    }
+
+    // Now fetch the created/existing profile
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("business_profiles")
       .select("*")
-      .eq("store_id", userId)
-      .eq("is_current", true)
+      .eq("id", profileId)
       .single();
 
-    if (profileError && profileError.code !== "PGRST116") {
-      // PGRST116 = no rows
+    if (profileError || !profile) {
       console.error("Error fetching business profile:", profileError);
       return NextResponse.json(
         { success: false, error: "Failed to fetch business profile" },
@@ -70,7 +84,8 @@ export async function GET(
     let nextPrompt: InterviewPrompt | null = null;
     if (
       profile &&
-      profile.interview_status === "in_progress" &&
+      (profile.interview_status === "not_started" ||
+        profile.interview_status === "in_progress") &&
       questionsCompleted < totalQuestions
     ) {
       // Get answered prompt keys
