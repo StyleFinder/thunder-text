@@ -96,6 +96,13 @@ export async function POST(
         ? existingResponses[0].response_order + 1
         : 1;
 
+    // Calculate word and character counts
+    const wordCount = response_text
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w.length > 0).length;
+    const characterCount = response_text.length;
+
     // Insert new response
     const { data: newResponse, error: responseError } = await supabaseAdmin
       .from("business_profile_responses")
@@ -104,8 +111,11 @@ export async function POST(
         prompt_key,
         question_number,
         response_text,
+        word_count: wordCount,
+        character_count: characterCount,
         response_order: nextOrder,
         is_current: true,
+        original_response: response_text, // Store as original for first answer
       })
       .select()
       .single();
