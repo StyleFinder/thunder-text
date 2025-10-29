@@ -68,14 +68,21 @@ export default function StoreProfilePage() {
 
   const loadProfile = async () => {
     try {
+      console.log(
+        "📡 Fetching /api/business-profile with shopDomain:",
+        shopDomain,
+      );
       const response = await fetch("/api/business-profile", {
         headers: {
           Authorization: `Bearer ${shopDomain}`,
         },
       });
 
+      console.log("📥 API response status:", response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log("✅ API response data:", data);
         if (data.success && data.data.profile) {
           setProfile(data.data.profile);
           setInterviewStatus(data.data.profile.interview_status);
@@ -89,9 +96,14 @@ export default function StoreProfilePage() {
             showCompletionState();
           }
         }
+      } else {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        console.error("❌ API error response:", errorData);
       }
     } catch (error) {
-      console.error("Failed to load profile:", error);
+      console.error("❌ Failed to load profile:", error);
     }
   };
 
