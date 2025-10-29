@@ -139,12 +139,7 @@ export async function POST(
         .eq("id", profile.id);
     }
 
-    // Update profile progress
-    await supabaseAdmin.rpc("update_interview_progress", {
-      p_profile_id: profile.id,
-    });
-
-    // Get all current responses count
+    // Update profile progress - direct table operation instead of RPC
     const { data: allResponses } = await supabaseAdmin
       .from("business_profile_responses")
       .select("prompt_key")
@@ -157,6 +152,16 @@ export async function POST(
       (questionsCompleted / totalQuestions) * 100,
     );
     const interviewComplete = questionsCompleted >= totalQuestions;
+
+    // Update profile with progress (replaces update_interview_progress RPC)
+    await supabaseAdmin
+      .from("business_profiles")
+      .update({
+        questions_completed: questionsCompleted,
+        current_question_number: questionsCompleted,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", profile.id);
 
     // Get next prompt if not complete
     let nextPrompt: InterviewPrompt | null = null;
