@@ -105,8 +105,11 @@ export default function StoreProfilePage() {
           setInterviewStatus(data.data.profile.interview_status);
           setProgress(data.data.progress.percentage_complete);
 
-          // Set current prompt if available and add to chat
-          if (data.data.progress.next_prompt) {
+          // Set current prompt if available and add to chat ONLY if interview is in progress
+          if (
+            data.data.progress.next_prompt &&
+            data.data.profile.interview_status === "in_progress"
+          ) {
             setCurrentPrompt(data.data.progress.next_prompt);
 
             // Add the prompt as an AI message to the chat
