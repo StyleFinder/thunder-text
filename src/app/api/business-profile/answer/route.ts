@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { pool } from "@/lib/postgres";
+import { queryWithTenant } from "@/lib/postgres";
 import { getUserId } from "@/lib/auth/content-center-auth";
 import type {
   ApiResponse,
@@ -38,7 +38,7 @@ export async function POST(
       );
     }
 
-    // Get current profile
+    // Get current profile with explicit tenant validation
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("business_profiles")
       .select("*")
@@ -54,6 +54,19 @@ export async function POST(
             "Business profile not found. Please start the interview first.",
         },
         { status: 404 },
+      );
+    }
+
+    // SECURITY: Double-check that profile belongs to authenticated tenant
+    if (profile.store_id !== userId) {
+      console.error("🚨 SECURITY VIOLATION: Profile store_id mismatch", {
+        authenticated_store: userId,
+        profile_store: profile.store_id,
+        profile_id: profile.id,
+      });
+      return NextResponse.json(
+        { success: false, error: "Unauthorized access" },
+        { status: 403 },
       );
     }
 
@@ -104,13 +117,14 @@ export async function POST(
       .filter((w) => w.length > 0).length;
     const characterCount = response_text.length;
 
-    // Insert new response using direct PostgreSQL (bypasses PostgREST entirely)
-    // This avoids PostgREST schema cache issues
+    // Insert new response using tenant-aware PostgreSQL connection
+    // This bypasses PostgREST cache issues while maintaining tenant isolation
     let newResponse: BusinessProfileResponse | null = null;
     let responseError: Error | null = null;
 
     try {
-      console.log("🔵 Attempting INSERT with params:", {
+      console.log("🔵 Attempting tenant-scoped INSERT:", {
+        tenant_id: userId,
         business_profile_id: profile.id,
         prompt_key,
         question_number,
@@ -118,7 +132,9 @@ export async function POST(
         character_count: characterCount,
       });
 
-      const result = await pool.query(
+      // Use tenant-aware query function that logs and validates tenant access
+      const result = await queryWithTenant<BusinessProfileResponse>(
+        userId, // Tenant ID for audit logging
         `INSERT INTO business_profile_responses (
           business_profile_id, prompt_key, question_number, response_text,
           word_count, character_count, response_order, is_current, original_response
@@ -138,22 +154,43 @@ export async function POST(
       );
 
       newResponse = result.rows[0] as BusinessProfileResponse;
-      console.log("✅ INSERT successful, returned ID:", newResponse?.id);
+      console.log("✅ Tenant-scoped INSERT successful:", {
+        id: newResponse?.id,
+        tenant: userId,
+      });
 
-      // VERIFY: Immediately query to confirm the record exists
-      const verifyResult = await pool.query(
-        "SELECT id, question_number FROM business_profile_responses WHERE id = $1",
+      // VERIFY: Immediately query to confirm the record exists and belongs to correct tenant
+      const verifyResult = await queryWithTenant(
+        userId,
+        `SELECT bpr.id, bpr.question_number, bp.store_id
+         FROM business_profile_responses bpr
+         JOIN business_profiles bp ON bpr.business_profile_id = bp.id
+         WHERE bpr.id = $1`,
         [newResponse?.id],
       );
+
       console.log("🔍 Verification query result:", {
         found: verifyResult.rows.length > 0,
         record: verifyResult.rows[0],
+        tenant_match: verifyResult.rows[0]?.store_id === userId,
       });
 
       if (verifyResult.rows.length === 0) {
         throw new Error(
           "CRITICAL: INSERT returned success but record cannot be found immediately after!",
         );
+      }
+
+      // SECURITY: Verify the response belongs to the correct tenant
+      if (verifyResult.rows[0].store_id !== userId) {
+        console.error(
+          "🚨 SECURITY VIOLATION: Response created for wrong tenant",
+          {
+            authenticated_tenant: userId,
+            response_tenant: verifyResult.rows[0].store_id,
+          },
+        );
+        throw new Error("SECURITY: Tenant isolation violation detected");
       }
     } catch (error) {
       responseError = error as Error;
