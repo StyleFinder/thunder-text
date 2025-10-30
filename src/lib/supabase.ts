@@ -11,11 +11,20 @@ export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
 // Server-side Supabase client with service key
 // Prefer SUPABASE_SERVICE_ROLE_KEY (matches Render env var and token-exchange pattern)
+const serviceRoleKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+
+if (!serviceRoleKey || serviceRoleKey === "placeholder-service-key") {
+  console.error("❌ CRITICAL: No valid Supabase service role key found!", {
+    hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
+    env: process.env.NODE_ENV,
+  });
+}
+
 export const supabaseAdmin = createClient(
   supabaseUrl,
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SERVICE_KEY ||
-    "placeholder-service-key",
+  serviceRoleKey || "placeholder-service-key",
   {
     auth: {
       autoRefreshToken: false,
