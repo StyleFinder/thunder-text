@@ -103,21 +103,19 @@ export async function POST(
       .filter((w) => w.length > 0).length;
     const characterCount = response_text.length;
 
-    // Insert new response - direct table operation (verified working in SQL)
+    // Insert new response using RPC function to bypass PostgREST schema cache
     const { data: newResponse, error: responseError } = await supabaseAdmin
-      .from("business_profile_responses")
-      .insert({
-        business_profile_id: profile.id,
-        prompt_key,
-        question_number,
-        response_text,
-        word_count: wordCount,
-        character_count: characterCount,
-        response_order: nextOrder,
-        is_current: true,
-        original_response: response_text,
+      .rpc("insert_response", {
+        p_business_profile_id: profile.id,
+        p_prompt_key: prompt_key,
+        p_question_number: question_number,
+        p_response_text: response_text,
+        p_word_count: wordCount,
+        p_character_count: characterCount,
+        p_response_order: nextOrder,
+        p_is_current: true,
+        p_original_response: response_text,
       })
-      .select()
       .single();
 
     if (responseError) {
