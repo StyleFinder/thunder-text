@@ -13,6 +13,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Loader2,
   Send,
   Building2,
@@ -61,6 +69,8 @@ export default function StoreProfilePage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasLoadedProfile = useRef(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -363,6 +373,45 @@ export default function StoreProfilePage() {
     }
   };
 
+  // Handle reset functionality
+  const handleReset = async () => {
+    setIsResetting(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/business-profile/reset", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${shopDomain}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Clear all local state
+        setMessages([]);
+        setInterviewStatus("not_started");
+        setProgress(0);
+        setCurrentPrompt(null);
+        setProfile(null);
+        setCurrentInput("");
+        setShowResetConfirm(false);
+
+        // Force reload profile to get fresh state
+        hasLoadedProfile.current = false;
+        await loadProfile();
+      } else {
+        setError(data.error || "Failed to reset interview");
+      }
+    } catch (error) {
+      console.error("Failed to reset interview:", error);
+      setError("Failed to reset interview. Please try again.");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   // Calculate word count
   const wordCount = currentInput
     .trim()
@@ -604,9 +653,21 @@ export default function StoreProfilePage() {
               Store Profile Interview
             </h1>
           </div>
-          <Badge variant="secondary" className="text-sm">
-            Question {currentPrompt?.question_number || 0} of 21
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge variant="secondary" className="text-sm">
+              Question {currentPrompt?.question_number || 0} of 21
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowResetConfirm(true)}
+              disabled={isResetting}
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Start Over
+            </Button>
+          </div>
         </div>
 
         {/* Progress Bar */}
@@ -730,6 +791,52 @@ export default function StoreProfilePage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Reset Confirmation Dialog */}
+      <Dialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Interview?</DialogTitle>
+            <DialogDescription>
+              This will delete all your current responses and restart the
+              interview from the beginning. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <Alert className="border-amber-200 bg-amber-50">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800">
+              You will lose all progress ({currentPrompt?.question_number || 0}{" "}
+              questions completed). Are you sure you want to start over?
+            </AlertDescription>
+          </Alert>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowResetConfirm(false)}
+              disabled={isResetting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleReset}
+              disabled={isResetting}
+            >
+              {isResetting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Resetting...
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Yes, Start Over
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
