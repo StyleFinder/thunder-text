@@ -110,6 +110,14 @@ export async function POST(
     let responseError: Error | null = null;
 
     try {
+      console.log("🔵 Attempting INSERT with params:", {
+        business_profile_id: profile.id,
+        prompt_key,
+        question_number,
+        word_count: wordCount,
+        character_count: characterCount,
+      });
+
       const result = await pool.query(
         `INSERT INTO business_profile_responses (
           business_profile_id, prompt_key, question_number, response_text,
@@ -130,6 +138,7 @@ export async function POST(
       );
 
       newResponse = result.rows[0] as BusinessProfileResponse;
+      console.log("✅ INSERT successful, returned ID:", newResponse?.id);
     } catch (error) {
       responseError = error as Error;
     }
