@@ -139,6 +139,22 @@ export async function POST(
 
       newResponse = result.rows[0] as BusinessProfileResponse;
       console.log("✅ INSERT successful, returned ID:", newResponse?.id);
+
+      // VERIFY: Immediately query to confirm the record exists
+      const verifyResult = await pool.query(
+        "SELECT id, question_number FROM business_profile_responses WHERE id = $1",
+        [newResponse?.id],
+      );
+      console.log("🔍 Verification query result:", {
+        found: verifyResult.rows.length > 0,
+        record: verifyResult.rows[0],
+      });
+
+      if (verifyResult.rows.length === 0) {
+        throw new Error(
+          "CRITICAL: INSERT returned success but record cannot be found immediately after!",
+        );
+      }
     } catch (error) {
       responseError = error as Error;
     }
