@@ -103,18 +103,19 @@ export async function POST(
       .filter((w) => w.length > 0).length;
     const characterCount = response_text.length;
 
-    // Insert new response using RPC function to bypass PostgREST schema cache
+    // Insert new response using RPC function with ALPHABETICAL parameter order
+    // PostgREST requires alphabetical ordering for RPC parameters
     const { data: newResponse, error: responseError } = await supabaseAdmin
       .rpc("insert_response", {
         p_business_profile_id: profile.id,
-        p_prompt_key: prompt_key,
-        p_question_number: question_number,
-        p_response_text: response_text,
-        p_word_count: wordCount,
         p_character_count: characterCount,
-        p_response_order: nextOrder,
         p_is_current: true,
         p_original_response: response_text,
+        p_prompt_key: prompt_key,
+        p_question_number: question_number,
+        p_response_order: nextOrder,
+        p_response_text: response_text,
+        p_word_count: wordCount,
       })
       .single();
 
