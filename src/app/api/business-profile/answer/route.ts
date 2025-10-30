@@ -103,33 +103,19 @@ export async function POST(
       .filter((w) => w.length > 0).length;
     const characterCount = response_text.length;
 
-    // Insert new response
-    console.log("🔧 Attempting INSERT with:", {
-      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
-      keyBeingUsed: process.env.SUPABASE_SERVICE_ROLE_KEY
-        ? "SUPABASE_SERVICE_ROLE_KEY"
-        : process.env.SUPABASE_SERVICE_KEY
-          ? "SUPABASE_SERVICE_KEY"
-          : "placeholder",
-      profileId: profile.id,
-      promptKey: prompt_key,
-    });
-
+    // Insert new response using bypass function to avoid PostgREST schema cache issues
     const { data: newResponse, error: responseError } = await supabaseAdmin
-      .from("business_profile_responses")
-      .insert({
-        business_profile_id: profile.id,
-        prompt_key,
-        question_number,
-        response_text,
-        word_count: wordCount,
-        character_count: characterCount,
-        response_order: nextOrder,
-        is_current: true,
-        original_response: response_text, // Store as original for first answer
+      .rpc("insert_business_profile_response", {
+        p_business_profile_id: profile.id,
+        p_prompt_key: prompt_key,
+        p_question_number: question_number,
+        p_response_text: response_text,
+        p_word_count: wordCount,
+        p_character_count: characterCount,
+        p_response_order: nextOrder,
+        p_is_current: true,
+        p_original_response: response_text,
       })
-      .select()
       .single();
 
     if (responseError) {
