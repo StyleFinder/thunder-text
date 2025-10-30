@@ -496,10 +496,12 @@ export default function StoreProfilePage() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="border-green-600 text-green-700 hover:bg-green-100"
+                    onClick={() => setShowResetConfirm(true)}
+                    disabled={isResetting}
+                    className="border-amber-300 text-amber-700 hover:bg-amber-50"
                   >
                     <RotateCcw className="h-4 w-4 mr-2" />
-                    Edit Responses
+                    {isResetting ? "Resetting..." : "Start Over"}
                   </Button>
                 </div>
               </div>
@@ -525,6 +527,53 @@ export default function StoreProfilePage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Reset Confirmation Dialog */}
+        <Dialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reset Interview?</DialogTitle>
+              <DialogDescription>
+                This will delete your completed Business Profile and all
+                responses, allowing you to restart the interview from the
+                beginning. This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <Alert className="border-amber-200 bg-amber-50">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800">
+                You will lose your completed Business Profile and all 21
+                question responses. Are you sure you want to start over?
+              </AlertDescription>
+            </Alert>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowResetConfirm(false)}
+                disabled={isResetting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleReset}
+                disabled={isResetting}
+              >
+                {isResetting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Resetting...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Yes, Start Over
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
