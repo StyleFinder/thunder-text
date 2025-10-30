@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { pool } from "@/lib/postgres";
 import { getUserId } from "@/lib/auth/content-center-auth";
 import type {
   ApiResponse,
@@ -103,29 +104,41 @@ export async function POST(
       .filter((w) => w.length > 0).length;
     const characterCount = response_text.length;
 
-    // Insert new response using RPC function with ALPHABETICAL parameter order
-    // Using save_profile_response (new function name to bypass PostgREST cache)
-    const { data: newResponse, error: responseError } = await supabaseAdmin
-      .rpc("save_profile_response", {
-        p_business_profile_id: profile.id,
-        p_character_count: characterCount,
-        p_is_current: true,
-        p_original_response: response_text,
-        p_prompt_key: prompt_key,
-        p_question_number: question_number,
-        p_response_order: nextOrder,
-        p_response_text: response_text,
-        p_word_count: wordCount,
-      })
-      .single();
+    // Insert new response using direct PostgreSQL (bypasses PostgREST entirely)
+    // This avoids PostgREST schema cache issues
+    let newResponse: BusinessProfileResponse | null = null;
+    let responseError: Error | null = null;
+
+    try {
+      const result = await pool.query(
+        `INSERT INTO business_profile_responses (
+          business_profile_id, prompt_key, question_number, response_text,
+          word_count, character_count, response_order, is_current, original_response
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *`,
+        [
+          profile.id,
+          prompt_key,
+          question_number,
+          response_text,
+          wordCount,
+          characterCount,
+          nextOrder,
+          true,
+          response_text,
+        ],
+      );
+
+      newResponse = result.rows[0] as BusinessProfileResponse;
+    } catch (error) {
+      responseError = error as Error;
+    }
 
     if (responseError) {
       console.error("❌ Error saving response:", {
         error: responseError,
-        code: responseError.code,
         message: responseError.message,
-        details: responseError.details,
-        hint: responseError.hint,
+        stack: responseError.stack,
       });
       return NextResponse.json(
         { success: false, error: "Failed to save response" },
