@@ -104,6 +104,18 @@ export async function POST(
     const characterCount = response_text.length;
 
     // Insert new response
+    console.log("🔧 Attempting INSERT with:", {
+      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
+      keyBeingUsed: process.env.SUPABASE_SERVICE_ROLE_KEY
+        ? "SUPABASE_SERVICE_ROLE_KEY"
+        : process.env.SUPABASE_SERVICE_KEY
+          ? "SUPABASE_SERVICE_KEY"
+          : "placeholder",
+      profileId: profile.id,
+      promptKey: prompt_key,
+    });
+
     const { data: newResponse, error: responseError } = await supabaseAdmin
       .from("business_profile_responses")
       .insert({
@@ -121,7 +133,13 @@ export async function POST(
       .single();
 
     if (responseError) {
-      console.error("Error saving response:", responseError);
+      console.error("❌ Error saving response:", {
+        error: responseError,
+        code: responseError.code,
+        message: responseError.message,
+        details: responseError.details,
+        hint: responseError.hint,
+      });
       return NextResponse.json(
         { success: false, error: "Failed to save response" },
         { status: 500 },
