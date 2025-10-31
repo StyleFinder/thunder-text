@@ -11,8 +11,6 @@ export interface InterviewPrompt {
   category: string;
   question_number: number;
   question_text: string;
-  context_text: string | null;
-  help_text: string | null;
   display_order: number;
   is_required: boolean;
   min_words: number;
