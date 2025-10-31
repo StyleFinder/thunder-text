@@ -189,13 +189,6 @@ export default function StoreProfilePage() {
             data.data.first_prompt.question_text,
             data.data.first_prompt.prompt_key,
           );
-
-          // Add help text if available
-          if (data.data.first_prompt.help_text) {
-            setTimeout(() => {
-              addSystemMessage(`💡 ${data.data.first_prompt.help_text}`);
-            }, 1000);
-          }
         }, 1500);
       } else {
         setError(data.error || "Failed to start interview");
@@ -273,13 +266,6 @@ export default function StoreProfilePage() {
               data.data.next_prompt.question_text,
               data.data.next_prompt.prompt_key,
             );
-
-            // Add help text if available
-            if (data.data.next_prompt.help_text) {
-              setTimeout(() => {
-                addSystemMessage(`💡 ${data.data.next_prompt.help_text}`);
-              }, 1000);
-            }
           }, 1000);
         }
       } else {
@@ -353,16 +339,6 @@ export default function StoreProfilePage() {
     const message: ChatMessage = {
       id: Date.now().toString() + Math.random(),
       type: "user",
-      content,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, message]);
-  };
-
-  const addSystemMessage = (content: string) => {
-    const message: ChatMessage = {
-      id: Date.now().toString() + Math.random(),
-      type: "system",
       content,
       timestamp: new Date(),
     };
@@ -791,11 +767,6 @@ export default function StoreProfilePage() {
       {!isGeneratingProfile && currentPrompt && (
         <Card>
           <CardContent className="p-4">
-            {currentPrompt.context_text && (
-              <p className="text-sm text-gray-600 mb-3 italic">
-                {currentPrompt.context_text}
-              </p>
-            )}
             <Textarea
               ref={textareaRef}
               value={currentInput}
