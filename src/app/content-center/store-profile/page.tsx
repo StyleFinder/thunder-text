@@ -244,7 +244,7 @@ export default function StoreProfilePage() {
         if (data.data.interview_complete) {
           // Add completion message
           setTimeout(() => {
-            addAIMessage("Excellent! You've completed all 21 questions. 🎉");
+            addAIMessage("Excellent! You've completed all 19 questions. 🎉");
           }, 800);
 
           setTimeout(() => {
@@ -493,7 +493,7 @@ export default function StoreProfilePage() {
           <CardHeader>
             <CardTitle>Profile Summary</CardTitle>
             <CardDescription>
-              Generated from your 21-question interview • Version{" "}
+              Generated from your 19-question interview • Version{" "}
               {profile.profile_version}
             </CardDescription>
           </CardHeader>
@@ -521,7 +521,7 @@ export default function StoreProfilePage() {
             <Alert className="border-amber-200 bg-amber-50">
               <AlertCircle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-800">
-                You will lose your completed Business Profile and all 21
+                You will lose your completed Business Profile and all 19
                 question responses. Are you sure you want to start over?
               </AlertDescription>
             </Alert>
@@ -627,7 +627,7 @@ export default function StoreProfilePage() {
                   How It Works
                 </p>
                 <p className="text-sm text-blue-700 mt-1">
-                  I&apos;ll ask you 21 questions about your business, customers,
+                  I&apos;ll ask you 19 questions about your business, customers,
                   and goals. Answer naturally and conversationally - there are
                   no wrong answers. The AI will then synthesize your responses
                   into a comprehensive profile that guides all future content
@@ -683,7 +683,7 @@ export default function StoreProfilePage() {
           </div>
           <div className="flex items-center gap-3">
             <Badge variant="secondary" className="text-sm">
-              Question {currentPrompt?.question_number || 0} of 21
+              Question {currentPrompt?.question_number || 0} of 19
             </Badge>
             <Button
               variant="outline"
