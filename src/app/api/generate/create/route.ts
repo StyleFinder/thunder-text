@@ -121,9 +121,32 @@ export async function POST(request: NextRequest) {
       });
 
       if (customPrompts?.combined) {
+        // Add primary product focus if productType is specified
+        const primaryProductGuidance = productType
+          ? `
+
+🎯 PRIMARY PRODUCT FOCUS: "${productType}"
+
+CRITICAL INSTRUCTIONS FOR MULTI-ITEM IMAGES:
+- The product being sold is: "${productType}"
+- Images may show this product styled with other items (e.g., jacket with shirt underneath, shoes with pants, watch with sleeve visible)
+- Your description must focus ONLY on the "${productType}"
+- IGNORE any secondary/styling items visible in the images
+- DO NOT mention or describe items that are only shown for styling context
+- Focus all feature descriptions, measurements, and details on the "${productType}" only
+
+EXAMPLES OF WHAT TO IGNORE:
+- If selling "Jacket" → ignore any shirt/top worn underneath
+- If selling "Shoes" → ignore pants, socks, or other clothing items
+- If selling "Watch" → ignore shirt sleeves or other clothing visible
+- If selling "Handbag" → ignore the model's clothing/outfit
+`
+          : '';
+
         systemPrompt = `${customPrompts.combined}
 
 === TASK INSTRUCTIONS ===
+${primaryProductGuidance}
 
 Analyze the provided product images and generate compelling content based on the custom guidelines above.
 
@@ -165,8 +188,23 @@ FORMATTING REQUIREMENTS:
       }
     } catch (error) {
       console.error("❌ Failed to load custom prompts, using fallback:", error);
+
+      // Add primary product focus for fallback prompt too
+      const primaryProductGuidance = productType
+        ? `
+
+🎯 PRIMARY PRODUCT FOCUS: "${productType}"
+
+CRITICAL INSTRUCTIONS:
+- The product being sold is: "${productType}"
+- Images may show this product with other styling items
+- Focus ONLY on the "${productType}" in your description
+- Ignore secondary items visible for styling purposes
+`
+        : '';
+
       // Fallback to basic prompt if custom prompts fail
-      systemPrompt = `You are a professional e-commerce copywriter tasked with creating compelling product descriptions for a new product. 
+      systemPrompt = `You are a professional e-commerce copywriter tasked with creating compelling product descriptions for a new product.
 
 REQUIREMENTS:
 - Create engaging, SEO-optimized content that converts browsers to buyers
@@ -174,6 +212,7 @@ REQUIREMENTS:
 - Match the specified template style and target the right audience
 - Include relevant keywords naturally throughout the content
 - Generate content that's appropriate for the product category: ${category}
+${primaryProductGuidance}
 
 PRODUCT DETAILS:
 - Category: ${category}

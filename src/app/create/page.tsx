@@ -928,13 +928,48 @@ function CreateProductContent() {
 
         <Layout.Section>
           <BlockStack gap="500">
+            {/* Step 1: Product Type Selection */}
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">Step 1: What Product Are You Selling?</Text>
+                <Text as="p" tone="subdued">
+                  Specify the primary product type first. This helps the AI focus on the correct item when analyzing images with multiple objects (e.g., jacket with visible shirt, shoes with pants).
+                </Text>
+
+                <ProductTypeSelector
+                  value={productType}
+                  onChange={setProductType}
+                  shopDomain={shop || undefined}
+                />
+
+                {productType && (
+                  <Banner tone="info">
+                    <Text as="p">
+                      ✓ Product type set to: <Text as="span" fontWeight="bold">{productType}</Text>
+                    </Text>
+                    <Text as="p" tone="subdued" variant="bodySm">
+                      The AI will focus product descriptions on this item and ignore styling elements in your photos.
+                    </Text>
+                  </Banner>
+                )}
+              </BlockStack>
+            </Card>
+
             {/* Primary Photos Upload */}
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">Step 1: Primary Photos (One per color variant)</Text>
+                <Text as="h2" variant="headingMd">Step 2: Primary Photos (One per color variant)</Text>
                 <Text as="p" tone="subdued">
                   Upload one photo for each color variant of your product. These will be used for automatic color detection.
                 </Text>
+
+                {!productType && (
+                  <Banner tone="warning">
+                    <Text as="p">
+                      Please specify the product type in Step 1 before uploading images.
+                    </Text>
+                  </Banner>
+                )}
                 <DropZone
                   onDrop={(files) => handlePrimaryPhotosDrop(files.filter(f => f instanceof File) as File[])}
                   accept="image/*"
@@ -1080,9 +1115,9 @@ function CreateProductContent() {
             {/* Secondary Photos Upload */}
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">Additional Photos (Multiple angles)</Text>
+                <Text as="h2" variant="headingMd">Step 3: Additional Photos (Multiple angles)</Text>
                 <Text as="p" tone="subdued">
-                  Upload additional photos showing different angles of the same color variants. These won't be used for color detection.
+                  Upload additional photos showing different angles of the same color variants. These will not be used for color detection.
                 </Text>
                 <DropZone
                   onDrop={(files) => handleSecondaryPhotosDrop(files.filter(f => f instanceof File) as File[])}
@@ -1144,8 +1179,8 @@ function CreateProductContent() {
               <Layout.Section variant="oneHalf">
                 <Card>
                   <BlockStack gap="400">
-                    <Text as="h2" variant="headingMd">Step 2: Product Details</Text>
-                    
+                    <Text as="h2" variant="headingMd">Step 4: Product Details</Text>
+
                     {/* Image Upload Requirement Notice */}
                     {primaryPhotos.length === 0 && (
                       <Banner tone="info">
@@ -1154,7 +1189,7 @@ function CreateProductContent() {
                         </Text>
                       </Banner>
                     )}
-                    
+
                     {/* Category Suggestion Display */}
                     {suggestedCategory && (
                       <Banner tone="success">
@@ -1180,7 +1215,7 @@ function CreateProductContent() {
                         </BlockStack>
                       </Banner>
                     )}
-                    
+
                     <Select
                       label="Available Sizing"
                       helpText="Select the available size range for this product"
@@ -1188,12 +1223,6 @@ function CreateProductContent() {
                       value={availableSizing}
                       disabled={primaryPhotos.length === 0}
                       onChange={setAvailableSizing}
-                    />
-                    
-                    <ProductTypeSelector
-                      value={productType}
-                      onChange={setProductType}
-                      shopDomain={shop || undefined}
                     />
 
                     <CategoryTemplateSelector
@@ -1209,7 +1238,7 @@ function CreateProductContent() {
               <Layout.Section variant="oneHalf">
                 <Card>
                   <BlockStack gap="400">
-                    <Text as="h2" variant="headingMd">Step 3: Additional Information</Text>
+                    <Text as="h2" variant="headingMd">Step 5: Additional Information</Text>
                     
                     <TextField
                       label="Fabric/Material Content"
@@ -1248,7 +1277,7 @@ function CreateProductContent() {
             {/* Additional Features and Notes */}
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">Step 4: Features & Additional Details</Text>
+                <Text as="h2" variant="headingMd">Step 6: Features & Additional Details</Text>
                 
                 <TextField
                   label="Key Features"
