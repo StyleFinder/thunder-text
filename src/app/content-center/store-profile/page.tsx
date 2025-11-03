@@ -105,24 +105,10 @@ export default function StoreProfilePage() {
           setInterviewStatus(data.data.profile.interview_status);
           setProgress(data.data.progress.percentage_complete);
 
-          // Set current prompt if available and add to chat ONLY if interview is in progress
-          if (
-            data.data.progress.next_prompt &&
-            data.data.profile.interview_status === "in_progress"
-          ) {
+          // Set current prompt if available but DON'T auto-add to chat
+          // Let the user start the interview by clicking "Start Interview" button
+          if (data.data.progress.next_prompt) {
             setCurrentPrompt(data.data.progress.next_prompt);
-
-            // Add the prompt as an AI message to the chat
-            const prompt = data.data.progress.next_prompt;
-            const message: ChatMessage = {
-              id: Date.now().toString() + Math.random(),
-              type: "ai",
-              content: prompt.question_text,
-              timestamp: new Date(),
-              prompt_key: prompt.prompt_key,
-              question_number: prompt.question_number,
-            };
-            setMessages([message]);
           }
 
           // If profile is complete, show completion message
@@ -557,8 +543,8 @@ export default function StoreProfilePage() {
     );
   }
 
-  // Not started state
-  if (interviewStatus === "not_started" && messages.length === 0) {
+  // Welcome screen - show when not started OR when no messages yet
+  if (messages.length === 0 && interviewStatus !== "completed") {
     return (
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         {/* Header */}
