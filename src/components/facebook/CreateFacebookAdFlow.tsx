@@ -619,9 +619,11 @@ export default function CreateFacebookAdFlow({
       size="large"
       primaryAction={modalActions.primaryAction}
       secondaryActions={modalActions.secondaryActions}
+      sectioned={false}
     >
-      <Modal.Section>
-        <BlockStack gap="400">
+      <div style={{ minHeight: '600px' }}>
+        <Modal.Section>
+          <BlockStack gap="400">
           {error && (
             <Banner tone="critical" title="Error">
               {error}
@@ -638,6 +640,7 @@ export default function CreateFacebookAdFlow({
           {step === 'preview' && renderPreview()}
         </BlockStack>
       </Modal.Section>
+      </div>
     </Modal>
   )
 }
