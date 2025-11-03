@@ -372,7 +372,7 @@ export default function CreateFacebookAdFlow({
                   top: '100%',
                   left: 0,
                   right: 0,
-                  maxHeight: '300px',
+                  maxHeight: '500px',
                   overflowY: 'auto',
                   backgroundColor: 'white',
                   border: '1px solid #ddd',
