@@ -343,26 +343,17 @@ export default function CreateFacebookAdFlow({
     <BlockStack gap="400">
       <Text as="h3" variant="headingMd">Select a Product</Text>
 
-      {loadingProducts ? (
-        <InlineStack align="center" blockAlign="center" gap="200">
-          <Spinner size="small" />
-          <Text as="p" tone="subdued">Loading products from Shopify...</Text>
-        </InlineStack>
-      ) : products.length === 0 ? (
-        <Banner tone="warning">
-          No products found in your Shopify store. Please create products first.
-        </Banner>
-      ) : (
-        <>
-          <div style={{ position: 'relative', minHeight: '100px' }}>
-            <TextField
-              label="Search for a product"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              placeholder="Type to search products..."
-              autoComplete="off"
-              onFocus={() => setShowProductList(true)}
-            />
+      {/* Always show search box */}
+      <div style={{ position: 'relative', minHeight: '100px' }}>
+        <TextField
+          label="Search for a product"
+          value={searchQuery}
+          onChange={handleSearchChange}
+          placeholder="Type to search products..."
+          autoComplete="off"
+          onFocus={() => setShowProductList(true)}
+          autoFocus
+        />
 
             {/* Product search results dropdown */}
             {showProductList && (products.length > 0 || loadingProducts) && (
@@ -459,34 +450,49 @@ export default function CreateFacebookAdFlow({
             )}
           </div>
 
-          {/* Selected product preview */}
-          {selectedProduct && (
-            <Card>
-              <BlockStack gap="300">
-                <Text as="p" variant="bodyMd" fontWeight="semibold">
-                  Selected Product:
+      </div>
+
+      {/* Show loading state */}
+      {loadingProducts && !showProductList && (
+        <InlineStack align="center" blockAlign="center" gap="200">
+          <Spinner size="small" />
+          <Text as="p" tone="subdued">Loading products from Shopify...</Text>
+        </InlineStack>
+      )}
+
+      {/* Show no results message */}
+      {!loadingProducts && products.length === 0 && debouncedSearchQuery && (
+        <Banner tone="info">
+          No products found matching "{debouncedSearchQuery}". Try a different search term.
+        </Banner>
+      )}
+
+      {/* Selected product preview */}
+      {selectedProduct && (
+        <Card>
+          <BlockStack gap="300">
+            <Text as="p" variant="bodyMd" fontWeight="semibold">
+              Selected Product:
+            </Text>
+            <InlineStack gap="300" blockAlign="center">
+              {selectedProduct.images.length > 0 && (
+                <Thumbnail
+                  source={selectedProduct.images[0].url}
+                  alt={selectedProduct.title}
+                  size="large"
+                />
+              )}
+              <BlockStack gap="200">
+                <Text as="p" variant="bodyMd" fontWeight="medium">
+                  {selectedProduct.title}
                 </Text>
-                <InlineStack gap="300" blockAlign="center">
-                  {selectedProduct.images.length > 0 && (
-                    <Thumbnail
-                      source={selectedProduct.images[0].url}
-                      alt={selectedProduct.title}
-                      size="large"
-                    />
-                  )}
-                  <BlockStack gap="200">
-                    <Text as="p" variant="bodyMd" fontWeight="medium">
-                      {selectedProduct.title}
-                    </Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {selectedProduct.images.length} image(s) available
-                    </Text>
-                  </BlockStack>
-                </InlineStack>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {selectedProduct.images.length} image(s) available
+                </Text>
               </BlockStack>
-            </Card>
-          )}
-        </>
+            </InlineStack>
+          </BlockStack>
+        </Card>
       )}
     </BlockStack>
   )
