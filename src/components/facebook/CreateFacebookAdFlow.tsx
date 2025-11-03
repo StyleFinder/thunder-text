@@ -365,7 +365,7 @@ export default function CreateFacebookAdFlow({
             />
 
             {/* Product search results dropdown */}
-            {showProductList && products.length > 0 && (
+            {showProductList && (products.length > 0 || loadingProducts) && (
               <div
                 style={{
                   position: 'absolute',
@@ -387,7 +387,12 @@ export default function CreateFacebookAdFlow({
                   e.preventDefault()
                 }}
               >
-                {products.map((product) => (
+                {loadingProducts ? (
+                  <div style={{ padding: '20px', textAlign: 'center' }}>
+                    <Spinner size="small" />
+                  </div>
+                ) : (
+                  products.map((product) => (
                   <div
                     key={product.id}
                     onClick={(e) => handleProductSelect(product, e)}
@@ -425,7 +430,8 @@ export default function CreateFacebookAdFlow({
                       )}
                     </div>
                   </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
 
