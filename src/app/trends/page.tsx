@@ -7,10 +7,10 @@ import {
   Card,
   DataTable,
   Badge,
-  EmptyState,
   Spinner,
 } from "@shopify/polaris";
 import { TrendThermometer } from "../components/trends/TrendThermometer";
+import { ThemeSelector } from "../components/trends/ThemeSelector";
 
 interface Theme {
   id: string;
@@ -94,13 +94,15 @@ export default function TrendsPage() {
 
   if (inSeasonThemes.length === 0) {
     return (
-      <Page title="Seasonal Trends">
-        <EmptyState
-          heading="No active seasonal themes"
-          image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
-        >
-          <p>Enable themes to start tracking seasonal demand trends.</p>
-        </EmptyState>
+      <Page
+        title="Seasonal Trends"
+        subtitle="Track search interest and optimize merchandising timing"
+      >
+        <Layout>
+          <Layout.Section>
+            <ThemeSelector onThemeEnabled={() => loadThemes()} />
+          </Layout.Section>
+        </Layout>
       </Page>
     );
   }
