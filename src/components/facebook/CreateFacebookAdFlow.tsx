@@ -344,7 +344,7 @@ export default function CreateFacebookAdFlow({
       <Text as="h3" variant="headingMd">Select a Product</Text>
 
       {/* Always show search box */}
-      <div style={{ position: 'relative', minHeight: '100px' }}>
+      <div style={{ position: 'relative', minHeight: '100px' }} key="product-search-container">
         <TextField
           label="Search for a product"
           value={searchQuery}
@@ -353,6 +353,7 @@ export default function CreateFacebookAdFlow({
           autoComplete="off"
           onFocus={() => setShowProductList(true)}
           autoFocus
+          key="product-search-field"
         />
 
             {/* Product search results dropdown */}
