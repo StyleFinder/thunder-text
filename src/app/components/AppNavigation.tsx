@@ -1,154 +1,164 @@
-'use client'
+"use client";
 
-import { useState, Suspense, useRef } from 'react'
-import {
-  Navigation,
-  TopBar,
-  Frame,
-  Spinner,
-  Box,
-} from '@shopify/polaris'
+import { useState, Suspense, useRef } from "react";
+import { Navigation, TopBar, Frame, Spinner, Box } from "@shopify/polaris";
 import {
   HomeIcon,
   SettingsIcon,
   PlusCircleIcon,
   QuestionCircleIcon,
   EditIcon,
-  MarketsIcon,
   TextIcon,
   SocialAdIcon,
-} from '@shopify/polaris-icons'
-import { useNavigation } from '../hooks/useNavigation'
+  ChartVerticalIcon,
+} from "@shopify/polaris-icons";
+import { useNavigation } from "../hooks/useNavigation";
 
 interface AppNavigationProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 function NavigationContent({ children }: AppNavigationProps) {
-  const [mobileNavigationActive, setMobileNavigationActive] = useState(false)
-  const [userMenuActive, setUserMenuActive] = useState(false)
-  const skipToContentRef = useRef<HTMLAnchorElement>(null)
-  const { buildUrl, navigateTo, isActive, getAuthParams } = useNavigation()
+  const [mobileNavigationActive, setMobileNavigationActive] = useState(false);
+  const [userMenuActive, setUserMenuActive] = useState(false);
+  const skipToContentRef = useRef<HTMLAnchorElement>(null);
+  const { buildUrl, navigateTo, isActive, getAuthParams } = useNavigation();
 
-  const { hasAuth } = getAuthParams()
+  const { hasAuth } = getAuthParams();
 
   const navigationItems = [
     {
-      url: buildUrl('/dashboard'),
-      label: 'Dashboard',
+      url: buildUrl("/dashboard"),
+      label: "Dashboard",
       icon: HomeIcon,
-      onClick: () => navigateTo('/dashboard'),
-      matches: isActive({ 
-        label: 'Dashboard', 
-        url: buildUrl('/dashboard'), 
-        matchPaths: ['/dashboard'],
-        exactMatch: false 
+      onClick: () => navigateTo("/dashboard"),
+      matches: isActive({
+        label: "Dashboard",
+        url: buildUrl("/dashboard"),
+        matchPaths: ["/dashboard"],
+        exactMatch: false,
       }),
       exactMatch: false,
-      matchPaths: ['/dashboard']
+      matchPaths: ["/dashboard"],
     },
     {
-      url: buildUrl('/create'),
-      label: 'Create Description',
+      url: buildUrl("/create"),
+      label: "Create Description",
       icon: PlusCircleIcon,
-      onClick: () => navigateTo('/create'),
-      matches: isActive({ 
-        label: 'Create Description', 
-        url: buildUrl('/create'), 
-        matchPaths: ['/create', '/generate'],
-        exactMatch: false 
+      onClick: () => navigateTo("/create"),
+      matches: isActive({
+        label: "Create Description",
+        url: buildUrl("/create"),
+        matchPaths: ["/create", "/generate"],
+        exactMatch: false,
       }),
       exactMatch: false,
-      matchPaths: ['/create', '/generate']
+      matchPaths: ["/create", "/generate"],
     },
     {
-      url: buildUrl('/enhance'),
-      label: 'Enhance Product',
+      url: buildUrl("/enhance"),
+      label: "Enhance Product",
       icon: EditIcon,
-      onClick: () => navigateTo('/enhance'),
+      onClick: () => navigateTo("/enhance"),
       matches: isActive({
-        label: 'Enhance Product',
-        url: buildUrl('/enhance'),
-        matchPaths: ['/enhance'],
-        exactMatch: false
+        label: "Enhance Product",
+        url: buildUrl("/enhance"),
+        matchPaths: ["/enhance"],
+        exactMatch: false,
       }),
       exactMatch: false,
-      matchPaths: ['/enhance']
+      matchPaths: ["/enhance"],
     },
     {
-      url: buildUrl('/facebook-ads'),
-      label: 'Facebook Ads',
+      url: buildUrl("/facebook-ads"),
+      label: "Facebook Ads",
       icon: SocialAdIcon,
-      onClick: () => navigateTo('/facebook-ads'),
+      onClick: () => navigateTo("/facebook-ads"),
       matches: isActive({
-        label: 'Facebook Ads',
-        url: buildUrl('/facebook-ads'),
-        matchPaths: ['/facebook-ads', '/test-campaigns'],
-        exactMatch: false
+        label: "Facebook Ads",
+        url: buildUrl("/facebook-ads"),
+        matchPaths: ["/facebook-ads", "/test-campaigns"],
+        exactMatch: false,
       }),
       exactMatch: false,
-      matchPaths: ['/facebook-ads', '/test-campaigns']
+      matchPaths: ["/facebook-ads", "/test-campaigns"],
     },
     {
-      url: buildUrl('/content-center'),
-      label: 'Content Center',
+      url: buildUrl("/content-center"),
+      label: "Content Center",
       icon: TextIcon,
-      onClick: () => navigateTo('/content-center'),
+      onClick: () => navigateTo("/content-center"),
       matches: isActive({
-        label: 'Content Center',
-        url: buildUrl('/content-center'),
-        matchPaths: ['/content-center'],
-        exactMatch: false
+        label: "Content Center",
+        url: buildUrl("/content-center"),
+        matchPaths: ["/content-center"],
+        exactMatch: false,
       }),
       exactMatch: false,
-      matchPaths: ['/content-center']
+      matchPaths: ["/content-center"],
     },
     {
-      url: buildUrl('/settings'),
-      label: 'Settings',
+      url: buildUrl("/trends"),
+      label: "Seasonal Trends",
+      icon: ChartVerticalIcon,
+      onClick: () => navigateTo("/trends"),
+      matches: isActive({
+        label: "Seasonal Trends",
+        url: buildUrl("/trends"),
+        matchPaths: ["/trends"],
+        exactMatch: false,
+      }),
+      exactMatch: false,
+      matchPaths: ["/trends"],
+    },
+    {
+      url: buildUrl("/settings"),
+      label: "Settings",
       icon: SettingsIcon,
-      onClick: () => navigateTo('/settings'),
+      onClick: () => navigateTo("/settings"),
       matches: isActive({
-        label: 'Settings',
-        url: buildUrl('/settings'),
-        matchPaths: ['/settings'],
-        exactMatch: false
+        label: "Settings",
+        url: buildUrl("/settings"),
+        matchPaths: ["/settings"],
+        exactMatch: false,
       }),
       exactMatch: false,
-      matchPaths: ['/settings']
+      matchPaths: ["/settings"],
     },
     {
-      url: buildUrl('/help'),
-      label: 'Help',
+      url: buildUrl("/help"),
+      label: "Help",
       icon: QuestionCircleIcon,
-      onClick: () => navigateTo('/help'),
+      onClick: () => navigateTo("/help"),
       matches: isActive({
-        label: 'Help',
-        url: buildUrl('/help'),
-        matchPaths: ['/help'],
-        exactMatch: false
+        label: "Help",
+        url: buildUrl("/help"),
+        matchPaths: ["/help"],
+        exactMatch: false,
       }),
       exactMatch: false,
-      matchPaths: ['/help']
-    }
-  ]
+      matchPaths: ["/help"],
+    },
+  ];
 
   const toggleMobileNavigationActive = () =>
-    setMobileNavigationActive((mobileNavigationActive) => !mobileNavigationActive)
+    setMobileNavigationActive(
+      (mobileNavigationActive) => !mobileNavigationActive,
+    );
 
   const navigation = (
-    <Navigation location={buildUrl('/dashboard')}>
+    <Navigation location={buildUrl("/dashboard")}>
       <Navigation.Section
         items={navigationItems}
         title="Thunder Text"
         action={{
-          accessibilityLabel: 'Create new product description',
+          accessibilityLabel: "Create new product description",
           icon: PlusCircleIcon,
-          onClick: () => navigateTo('/create'),
+          onClick: () => navigateTo("/create"),
         }}
       />
     </Navigation>
-  )
+  );
 
   const topBarMarkup = (
     <TopBar
@@ -158,8 +168,11 @@ function NavigationContent({ children }: AppNavigationProps) {
           actions={[
             {
               items: [
-                { content: 'Settings', onAction: () => navigateTo('/settings') },
-                { content: 'Help Center', onAction: () => navigateTo('/help') },
+                {
+                  content: "Settings",
+                  onAction: () => navigateTo("/settings"),
+                },
+                { content: "Help Center", onAction: () => navigateTo("/help") },
               ],
             },
           ]}
@@ -172,30 +185,30 @@ function NavigationContent({ children }: AppNavigationProps) {
       }
       onNavigationToggle={toggleMobileNavigationActive}
     />
-  )
+  );
 
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div style={{ minHeight: "100vh" }}>
       <Frame
         topBar={topBarMarkup}
         navigation={navigation}
         showMobileNavigation={mobileNavigationActive}
         onNavigationDismiss={toggleMobileNavigationActive}
-        skipToContentTarget={skipToContentRef as React.RefObject<HTMLAnchorElement>}
+        skipToContentTarget={
+          skipToContentRef as React.RefObject<HTMLAnchorElement>
+        }
       >
-        <main id="main-content">
-          {children}
-        </main>
+        <main id="main-content">{children}</main>
       </Frame>
     </div>
-  )
+  );
 }
 
 function NavigationFallback() {
-  const skipToContentRef = useRef<HTMLAnchorElement>(null)
+  const skipToContentRef = useRef<HTMLAnchorElement>(null);
 
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div style={{ minHeight: "100vh" }}>
       <Frame
         topBar={
           <TopBar
@@ -204,9 +217,7 @@ function NavigationFallback() {
               <TopBar.UserMenu
                 actions={[
                   {
-                    items: [
-                      { content: 'Loading...', onAction: () => {} },
-                    ],
+                    items: [{ content: "Loading...", onAction: () => {} }],
                   },
                 ]}
                 name="Thunder Text"
@@ -220,24 +231,30 @@ function NavigationFallback() {
         }
         navigation={
           <Navigation location="/">
-            <Navigation.Section
-              items={[]}
-              title="Thunder Text"
-            />
+            <Navigation.Section items={[]} title="Thunder Text" />
           </Navigation>
         }
-        skipToContentTarget={skipToContentRef as React.RefObject<HTMLAnchorElement>}
+        skipToContentTarget={
+          skipToContentRef as React.RefObject<HTMLAnchorElement>
+        }
       >
         <main id="main-content">
           <Box padding="800" minHeight="400px">
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                minHeight: "200px",
+              }}
+            >
               <Spinner size="small" />
             </div>
           </Box>
         </main>
       </Frame>
     </div>
-  )
+  );
 }
 
 export function AppNavigation({ children }: AppNavigationProps) {
@@ -245,5 +262,5 @@ export function AppNavigation({ children }: AppNavigationProps) {
     <Suspense fallback={<NavigationFallback />}>
       <NavigationContent>{children}</NavigationContent>
     </Suspense>
-  )
+  );
 }
