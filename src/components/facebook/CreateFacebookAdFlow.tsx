@@ -354,7 +354,7 @@ export default function CreateFacebookAdFlow({
         </Banner>
       ) : (
         <>
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', minHeight: '100px' }}>
             <TextField
               label="Search for a product"
               value={searchQuery}
@@ -372,6 +372,7 @@ export default function CreateFacebookAdFlow({
                   top: '100%',
                   left: 0,
                   right: 0,
+                  minHeight: '400px',
                   maxHeight: '800px',
                   overflowY: 'auto',
                   backgroundColor: 'white',
