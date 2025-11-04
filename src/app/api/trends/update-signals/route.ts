@@ -113,10 +113,37 @@ async function updateThemeTrends(theme: Theme, serpApiKey: string) {
     };
   }
 
+  // Parse date from SerpAPI format (e.g., "Dec 22 – 28, 2024" or "Dec 29, 2024 – Jan 4, 2025")
+  // Extract the first date in the range and convert to ISO format
+  function parseSerpAPIDate(dateStr: string): string {
+    try {
+      // Split on en-dash or hyphen to get the start of the range
+      const startPart = dateStr.split(/\s*[–-]\s*/)[0].trim();
+
+      // Extract year from anywhere in the original string
+      const yearMatch = dateStr.match(/\d{4}/);
+      const year = yearMatch
+        ? yearMatch[0]
+        : new Date().getFullYear().toString();
+
+      // Parse the start date with year
+      const fullDate = startPart.includes(",")
+        ? startPart
+        : `${startPart}, ${year}`;
+      const date = new Date(fullDate);
+
+      // Return ISO format YYYY-MM-DD
+      return date.toISOString().split("T")[0];
+    } catch {
+      // Fallback: return current date if parsing fails
+      return new Date().toISOString().split("T")[0];
+    }
+  }
+
   // Convert to series points
   const series = timelineData
     .map((point) => ({
-      date: point.date,
+      date: parseSerpAPIDate(point.date),
       value: point.values?.[0]?.extracted_value || 0,
     }))
     .filter((point) => point.value > 0);
@@ -147,6 +174,8 @@ async function updateThemeTrends(theme: Theme, serpApiKey: string) {
   // Find peak in last 52 weeks
   const sortedByValue = [...series].sort((a, b) => b.value - a.value);
   const peakPoint = sortedByValue[0];
+
+  // peakPoint.date is already in ISO format from parseSerpAPIDate
   const peakDate = new Date(peakPoint.date);
   const now = new Date();
   const peakRecencyDays = Math.floor(
