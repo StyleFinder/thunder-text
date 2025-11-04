@@ -71,12 +71,18 @@ export async function POST() {
     }
 
     const results = [];
+    const themesList = themes as Theme[];
 
-    // Process each theme
-    for (const theme of themes as Theme[]) {
+    // Process each theme with delay to avoid SerpAPI rate limits
+    for (const [index, theme] of themesList.entries()) {
       try {
         const result = await updateThemeTrends(theme, serpApiKey, shopId);
         results.push(result);
+
+        // Add 2-second delay between requests (except after last theme)
+        if (index < themesList.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
       } catch (error) {
         console.error(`Error updating theme ${theme.slug}:`, error);
         results.push({
