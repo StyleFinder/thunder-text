@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase";
 
 /**
  * GET /api/trends/themes
@@ -7,12 +7,7 @@ import { createClient } from "@supabase/supabase-js";
  */
 export async function GET() {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { data: themes, error } = await supabase
+    const { data: themes, error } = await supabaseAdmin
       .from("themes")
       .select("id, slug, name, description, category, active_start, active_end")
       .eq("is_active", true)
