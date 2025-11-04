@@ -65,11 +65,10 @@ CREATE TABLE IF NOT EXISTS shop_themes (
   backfill_start_date DATE,
 
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-  UNIQUE(shop_id, theme_id, market, COALESCE(region,'_'))
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE UNIQUE INDEX idx_shop_themes_unique ON shop_themes(shop_id, theme_id, market, COALESCE(region, '_'));
 CREATE INDEX idx_shop_themes_shop ON shop_themes(shop_id);
 CREATE INDEX idx_shop_themes_enabled ON shop_themes(shop_id, is_enabled) WHERE is_enabled = true;
 CREATE INDEX idx_shop_themes_theme ON shop_themes(theme_id);
@@ -92,11 +91,10 @@ CREATE TABLE IF NOT EXISTS trend_series (
   points        JSONB NOT NULL,
 
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-  UNIQUE(shop_id, theme_id, market, COALESCE(region,'_'), source, granularity, start_date, end_date)
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE UNIQUE INDEX idx_trend_series_unique ON trend_series(shop_id, theme_id, market, COALESCE(region, '_'), source, granularity, start_date, end_date);
 CREATE INDEX idx_trend_series_shop ON trend_series(shop_id);
 CREATE INDEX idx_trend_series_theme ON trend_series(theme_id);
 CREATE INDEX idx_trend_series_dates ON trend_series(start_date, end_date);
@@ -124,11 +122,10 @@ CREATE TABLE IF NOT EXISTS trend_signals (
 
   -- Metadata
   notes         TEXT,
-  computed_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-  UNIQUE(shop_id, theme_id, market, COALESCE(region,'_'), source)
+  computed_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE UNIQUE INDEX idx_trend_signals_unique ON trend_signals(shop_id, theme_id, market, COALESCE(region, '_'), source);
 CREATE INDEX idx_trend_signals_shop ON trend_signals(shop_id);
 CREATE INDEX idx_trend_signals_status ON trend_signals(shop_id, status);
 CREATE INDEX idx_trend_signals_theme ON trend_signals(theme_id);
@@ -149,11 +146,10 @@ CREATE TABLE IF NOT EXISTS seasonal_profiles (
 
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-  UNIQUE(theme_id, market, COALESCE(region,'_')),
-
   CHECK (array_length(week_1_to_52, 1) = 52)
 );
 
+CREATE UNIQUE INDEX idx_seasonal_profiles_unique ON seasonal_profiles(theme_id, market, COALESCE(region, '_'));
 CREATE INDEX idx_seasonal_profiles_theme ON seasonal_profiles(theme_id);
 
 -- 7) TREND_REFRESH_LOG: Audit trail for refresh jobs
