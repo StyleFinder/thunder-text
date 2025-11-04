@@ -9,6 +9,7 @@ import {
   Badge,
   Spinner,
   Text,
+  Banner,
 } from "@shopify/polaris";
 import { TrendThermometer } from "../components/trends/TrendThermometer";
 import { ThemeSelector } from "../components/trends/ThemeSelector";
@@ -40,6 +41,7 @@ export default function TrendsPage() {
   const [signals, setSignals] = useState<Record<string, Signal>>({});
   const [series, setSeries] = useState<Record<string, SeriesPoint[]>>({});
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     loadThemes();
@@ -86,6 +88,29 @@ export default function TrendsPage() {
     }
   }
 
+  async function handleUpdateTrends() {
+    setUpdating(true);
+    try {
+      const res = await fetch("/api/trends/update-signals", {
+        method: "POST",
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        // Reload all themes and signals
+        await loadThemes();
+      } else {
+        console.error("Failed to update trends:", data.error);
+        alert(`Failed to update trends: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Error updating trends:", error);
+      alert("Error updating trends. Check console for details.");
+    } finally {
+      setUpdating(false);
+    }
+  }
+
   const inSeasonThemes = themes.filter((t) => t.inSeason);
 
   if (loading) {
@@ -117,8 +142,25 @@ export default function TrendsPage() {
     <Page
       title="Seasonal Trends"
       subtitle="Track search interest and optimize merchandising timing"
+      primaryAction={{
+        content: updating ? "Updating..." : "Update Trends",
+        onAction: handleUpdateTrends,
+        loading: updating,
+        disabled: updating,
+      }}
     >
       <Layout>
+        {/* Info Banner */}
+        <Layout.Section>
+          <Banner tone="info">
+            <p>
+              <strong>Manual Update:</strong> Click &quot;Update Trends&quot; to
+              fetch the latest Google Trends data via SerpAPI. This will update
+              all active themes with current trend signals and momentum.
+            </p>
+          </Banner>
+        </Layout.Section>
+
         {/* Trend Thermometers */}
         <Layout.Section>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

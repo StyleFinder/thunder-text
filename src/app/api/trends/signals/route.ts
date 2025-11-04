@@ -41,16 +41,45 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // TODO: Create RPC functions for trend_signals, trend_series, seasonal_profiles
-    // For now, return placeholder data indicating no signal exists yet
+    // Get signal data using RPC function
+    const shopId = "00000000-0000-0000-0000-000000000000"; // TODO: Get from authenticated shop
+
+    const { data: signalData, error: signalError } = await supabaseAdmin.rpc(
+      "get_trend_signal",
+      {
+        p_shop_id: shopId,
+        p_theme_id: theme.id,
+      },
+    );
+
+    if (signalError) {
+      console.error("Error fetching signal:", signalError);
+    }
+
+    const signal = signalData?.[0] || null;
+
+    // Get series data using RPC function
+    const { data: seriesData, error: seriesError } = await supabaseAdmin.rpc(
+      "get_trend_series",
+      {
+        p_shop_id: shopId,
+        p_theme_id: theme.id,
+        p_granularity: "weekly",
+      },
+    );
+
+    if (seriesError) {
+      console.error("Error fetching series:", seriesError);
+    }
+
+    const series = seriesData?.[0]?.points || [];
 
     return NextResponse.json({
       success: true,
       theme,
-      signal: null, // Will be populated by background job
-      series: [], // Will be populated by background job
-      seasonalProfile: null, // Will be populated by background job
-      message: "No signal data yet - background jobs will populate this",
+      signal,
+      series,
+      seasonalProfile: null, // TODO: implement seasonal profiles
     });
   } catch (error) {
     console.error("Unexpected error in GET /api/trends/signals:", error);
