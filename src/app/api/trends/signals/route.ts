@@ -41,9 +41,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get signal data using RPC function
-    const shopId = "00000000-0000-0000-0000-000000000000"; // TODO: Get from authenticated shop
+    // Get first active shop for testing purposes
+    // TODO: In production, get shop_id from authenticated session
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from("shops")
+      .select("id")
+      .eq("is_active", true)
+      .limit(1)
+      .single();
 
+    if (shopError || !shopData) {
+      console.error("Error fetching shop:", shopError);
+      return NextResponse.json(
+        { success: false, error: "No active shop found" },
+        { status: 404 },
+      );
+    }
+
+    const shopId = shopData.id;
+
+    // Get signal data using RPC function
     const { data: signalData, error: signalError } = await supabaseAdmin.rpc(
       "get_trend_signal",
       {
