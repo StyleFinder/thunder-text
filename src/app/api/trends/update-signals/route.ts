@@ -29,11 +29,16 @@ interface Theme {
  */
 export async function POST(request: NextRequest) {
   try {
+    console.log("🚀 [UPDATE-SIGNALS] Request received");
+
     // Parse request body
     const body = await request.json();
     const { themeSlug } = body;
 
+    console.log(`📋 [UPDATE-SIGNALS] Theme slug: ${themeSlug}`);
+
     if (!themeSlug) {
+      console.log("❌ [UPDATE-SIGNALS] No themeSlug provided");
       return NextResponse.json(
         { success: false, error: "themeSlug is required" },
         { status: 400 },
@@ -70,15 +75,30 @@ export async function POST(request: NextRequest) {
     }
 
     const shopId = shopData.id;
+    console.log(`🏪 [UPDATE-SIGNALS] Shop ID: ${shopId}`);
 
     // Get the specific theme using RPC function (bypasses PostgREST)
+    console.log(`🔍 [UPDATE-SIGNALS] Fetching theme: ${themeSlug}`);
     const { data: themes, error: themesError } = await supabaseAdmin.rpc(
       "get_theme_by_slug",
       { p_slug: themeSlug },
     );
 
-    if (themesError || !themes || themes.length === 0) {
-      console.error("Error fetching theme:", themesError);
+    if (themesError) {
+      console.error("❌ [UPDATE-SIGNALS] Error fetching theme:", themesError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Failed to fetch theme: ${themesError.message}`,
+        },
+        { status: 500 },
+      );
+    }
+
+    if (!themes || themes.length === 0) {
+      console.log(
+        `❌ [UPDATE-SIGNALS] Theme '${themeSlug}' not found or inactive`,
+      );
       return NextResponse.json(
         { success: false, error: `Theme '${themeSlug}' not found or inactive` },
         { status: 404 },
@@ -86,9 +106,12 @@ export async function POST(request: NextRequest) {
     }
 
     const theme = themes[0] as Theme;
+    console.log(`✅ [UPDATE-SIGNALS] Found theme: ${theme.name} (${theme.id})`);
 
     // Update the single theme
+    console.log(`🔄 [UPDATE-SIGNALS] Starting SerpAPI fetch for ${theme.name}`);
     const result = await updateThemeTrends(theme, serpApiKey, shopId);
+    console.log(`✅ [UPDATE-SIGNALS] Update result:`, result);
 
     if (!result.success) {
       return NextResponse.json(
