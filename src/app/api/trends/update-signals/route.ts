@@ -71,13 +71,11 @@ export async function POST(request: NextRequest) {
 
     const shopId = shopData.id;
 
-    // Get the specific theme
-    const { data: themes, error: themesError } = await supabaseAdmin
-      .from("themes")
-      .select("id, slug, name")
-      .eq("slug", themeSlug)
-      .eq("is_active", true)
-      .limit(1);
+    // Get the specific theme using RPC function (bypasses PostgREST)
+    const { data: themes, error: themesError } = await supabaseAdmin.rpc(
+      "get_theme_by_slug",
+      { p_slug: themeSlug },
+    );
 
     if (themesError || !themes || themes.length === 0) {
       console.error("Error fetching theme:", themesError);

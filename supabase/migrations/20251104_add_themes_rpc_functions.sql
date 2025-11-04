@@ -44,3 +44,42 @@ COMMENT ON FUNCTION get_active_themes IS 'Retrieves all active themes, bypassing
 GRANT EXECUTE ON FUNCTION get_active_themes() TO authenticated;
 GRANT EXECUTE ON FUNCTION get_active_themes() TO anon;
 GRANT EXECUTE ON FUNCTION get_active_themes() TO service_role;
+
+-- Function to get a specific theme by slug
+CREATE OR REPLACE FUNCTION get_theme_by_slug(p_slug TEXT)
+RETURNS TABLE (
+  id UUID,
+  slug TEXT,
+  name TEXT,
+  description TEXT,
+  category TEXT,
+  active_start TEXT,
+  active_end TEXT,
+  is_active BOOLEAN
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    t.id,
+    t.slug,
+    t.name,
+    t.description,
+    t.category,
+    t.active_start,
+    t.active_end,
+    t.is_active
+  FROM themes t
+  WHERE t.slug = p_slug
+    AND t.is_active = true;
+END;
+$$;
+
+COMMENT ON FUNCTION get_theme_by_slug IS 'Retrieves a theme by slug, bypassing PostgREST permission layer with SECURITY DEFINER';
+
+GRANT EXECUTE ON FUNCTION get_theme_by_slug(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_theme_by_slug(TEXT) TO anon;
+GRANT EXECUTE ON FUNCTION get_theme_by_slug(TEXT) TO service_role;
