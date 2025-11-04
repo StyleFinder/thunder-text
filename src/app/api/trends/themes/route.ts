@@ -7,6 +7,12 @@ import { supabaseAdmin } from "@/lib/supabase";
  */
 export async function GET() {
   try {
+    console.log("🔍 [THEMES] Fetching themes with supabaseAdmin");
+    console.log("🔍 [THEMES] supabaseAdmin client:", {
+      hasClient: !!supabaseAdmin,
+      clientType: typeof supabaseAdmin,
+    });
+
     const { data: themes, error } = await supabaseAdmin
       .from("themes")
       .select("id, slug, name, description, category, active_start, active_end")
