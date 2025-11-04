@@ -11,6 +11,7 @@ import {
   TextIcon,
   SocialAdIcon,
   ChartVerticalIcon,
+  ChartLineIcon,
 } from "@shopify/polaris-icons";
 import { useNavigation } from "../hooks/useNavigation";
 
@@ -110,6 +111,22 @@ function NavigationContent({ children }: AppNavigationProps) {
       }),
       exactMatch: false,
       matchPaths: ["/trends"],
+    },
+    {
+      url: "/admin/bhb-dashboard",
+      label: "BHB Dashboard",
+      icon: ChartLineIcon,
+      onClick: () => {
+        window.location.href = "/admin/bhb-dashboard";
+      },
+      matches: isActive({
+        label: "BHB Dashboard",
+        url: "/admin/bhb-dashboard",
+        matchPaths: ["/admin"],
+        exactMatch: false,
+      }),
+      exactMatch: false,
+      matchPaths: ["/admin"],
     },
     {
       url: buildUrl("/settings"),
