@@ -1,24 +1,27 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
+interface Theme {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  category: string;
+  active_start: string;
+  active_end: string;
+  is_active: boolean;
+}
+
 /**
  * GET /api/trends/themes
  * Returns all active themes available for tracking
  */
 export async function GET() {
   try {
-    console.log("🔍 [THEMES] Fetching themes with supabaseAdmin");
-    console.log("🔍 [THEMES] supabaseAdmin client:", {
-      hasClient: !!supabaseAdmin,
-      clientType: typeof supabaseAdmin,
-    });
-
-    const { data: themes, error } = await supabaseAdmin
-      .from("themes")
-      .select("id, slug, name, description, category, active_start, active_end")
-      .eq("is_active", true)
-      .order("category", { ascending: true })
-      .order("name", { ascending: true });
+    // Use RPC function to bypass PostgREST permission layer
+    // Direct table access fails even with service_role due to PostgREST restrictions
+    const { data: themes, error } =
+      await supabaseAdmin.rpc("get_active_themes");
 
     if (error) {
       console.error("Error fetching themes:", error);
@@ -30,7 +33,7 @@ export async function GET() {
 
     // Check which themes are currently in season
     const now = new Date();
-    const enrichedThemes = themes.map((theme) => ({
+    const enrichedThemes = themes.map((theme: Theme) => ({
       ...theme,
       inSeason: isThemeInSeason(theme.active_start, theme.active_end, now),
     }));
