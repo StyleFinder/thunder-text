@@ -1,0 +1,193 @@
+-- Fix RPC functions to match actual table schema
+-- Issue 1: trend_signals has "computed_at" not "updated_at"
+-- Issue 2: start_date and end_date are DATE type not TEXT
+
+-- Drop existing functions
+DROP FUNCTION IF EXISTS upsert_trend_signal(UUID, UUID, TEXT, NUMERIC, NUMERIC, TEXT, INTEGER);
+DROP FUNCTION IF EXISTS upsert_trend_series(UUID, UUID, TEXT, JSONB, TEXT, TEXT);
+DROP FUNCTION IF EXISTS get_trend_signal(UUID, UUID);
+DROP FUNCTION IF EXISTS get_trend_series(UUID, UUID, TEXT);
+
+-- Function to upsert trend signal (FIXED: use computed_at, last_peak_date is DATE)
+CREATE OR REPLACE FUNCTION upsert_trend_signal(
+  p_shop_id UUID,
+  p_theme_id UUID,
+  p_status TEXT,
+  p_momentum_pct NUMERIC,
+  p_latest_value NUMERIC,
+  p_last_peak_date DATE,
+  p_peak_recency_days INTEGER
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_signal_id UUID;
+BEGIN
+  INSERT INTO trend_signals (
+    shop_id,
+    theme_id,
+    status,
+    momentum_pct,
+    latest_value,
+    last_peak_date,
+    peak_recency_days,
+    computed_at
+  )
+  VALUES (
+    p_shop_id,
+    p_theme_id,
+    p_status,
+    p_momentum_pct,
+    p_latest_value,
+    p_last_peak_date,
+    p_peak_recency_days,
+    NOW()
+  )
+  ON CONFLICT (shop_id, theme_id, market, COALESCE(region, '_'), source)
+  DO UPDATE SET
+    status = EXCLUDED.status,
+    momentum_pct = EXCLUDED.momentum_pct,
+    latest_value = EXCLUDED.latest_value,
+    last_peak_date = EXCLUDED.last_peak_date,
+    peak_recency_days = EXCLUDED.peak_recency_days,
+    computed_at = NOW()
+  RETURNING id INTO v_signal_id;
+
+  RETURN v_signal_id;
+END;
+$$;
+
+-- Function to upsert trend series (FIXED: start_date and end_date are DATE not TEXT)
+CREATE OR REPLACE FUNCTION upsert_trend_series(
+  p_shop_id UUID,
+  p_theme_id UUID,
+  p_granularity TEXT,
+  p_points JSONB,
+  p_start_date DATE,
+  p_end_date DATE
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_series_id UUID;
+BEGIN
+  INSERT INTO trend_series (
+    shop_id,
+    theme_id,
+    granularity,
+    points,
+    start_date,
+    end_date,
+    updated_at
+  )
+  VALUES (
+    p_shop_id,
+    p_theme_id,
+    p_granularity,
+    p_points,
+    p_start_date,
+    p_end_date,
+    NOW()
+  )
+  ON CONFLICT (shop_id, theme_id, market, COALESCE(region, '_'), source, granularity, start_date, end_date)
+  DO UPDATE SET
+    points = EXCLUDED.points,
+    updated_at = NOW()
+  RETURNING id INTO v_series_id;
+
+  RETURN v_series_id;
+END;
+$$;
+
+-- Function to get trend signals for a shop and theme (FIXED: use computed_at)
+CREATE OR REPLACE FUNCTION get_trend_signal(
+  p_shop_id UUID,
+  p_theme_id UUID
+)
+RETURNS TABLE (
+  id UUID,
+  status TEXT,
+  momentum_pct NUMERIC,
+  latest_value NUMERIC,
+  last_peak_date DATE,
+  peak_recency_days INTEGER,
+  computed_at TIMESTAMPTZ
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    ts.id,
+    ts.status,
+    ts.momentum_pct,
+    ts.latest_value,
+    ts.last_peak_date,
+    ts.peak_recency_days,
+    ts.computed_at
+  FROM trend_signals ts
+  WHERE ts.shop_id = p_shop_id
+    AND ts.theme_id = p_theme_id;
+END;
+$$;
+
+-- Function to get trend series for a shop and theme (FIXED: return DATE types)
+CREATE OR REPLACE FUNCTION get_trend_series(
+  p_shop_id UUID,
+  p_theme_id UUID,
+  p_granularity TEXT DEFAULT 'weekly'
+)
+RETURNS TABLE (
+  id UUID,
+  points JSONB,
+  granularity TEXT,
+  start_date DATE,
+  end_date DATE,
+  updated_at TIMESTAMPTZ
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    ts.id,
+    ts.points,
+    ts.granularity,
+    ts.start_date,
+    ts.end_date,
+    ts.updated_at
+  FROM trend_series ts
+  WHERE ts.shop_id = p_shop_id
+    AND ts.theme_id = p_theme_id
+    AND ts.granularity = p_granularity
+  ORDER BY ts.updated_at DESC
+  LIMIT 1;
+END;
+$$;
+
+-- Grant execute permissions
+GRANT EXECUTE ON FUNCTION upsert_trend_signal(UUID, UUID, TEXT, NUMERIC, NUMERIC, DATE, INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION upsert_trend_signal(UUID, UUID, TEXT, NUMERIC, NUMERIC, DATE, INTEGER) TO anon;
+GRANT EXECUTE ON FUNCTION upsert_trend_signal(UUID, UUID, TEXT, NUMERIC, NUMERIC, DATE, INTEGER) TO service_role;
+
+GRANT EXECUTE ON FUNCTION upsert_trend_series(UUID, UUID, TEXT, JSONB, DATE, DATE) TO authenticated;
+GRANT EXECUTE ON FUNCTION upsert_trend_series(UUID, UUID, TEXT, JSONB, DATE, DATE) TO anon;
+GRANT EXECUTE ON FUNCTION upsert_trend_series(UUID, UUID, TEXT, JSONB, DATE, DATE) TO service_role;
+
+GRANT EXECUTE ON FUNCTION get_trend_signal(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_trend_signal(UUID, UUID) TO anon;
+GRANT EXECUTE ON FUNCTION get_trend_signal(UUID, UUID) TO service_role;
+
+GRANT EXECUTE ON FUNCTION get_trend_series(UUID, UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_trend_series(UUID, UUID, TEXT) TO anon;
+GRANT EXECUTE ON FUNCTION get_trend_series(UUID, UUID, TEXT) TO service_role;
