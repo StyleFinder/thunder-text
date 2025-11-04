@@ -44,7 +44,7 @@ export interface GeneratedContent {
 export interface GenerationParams {
   word_count: number
   tone_intensity: number // 1-5
-  cta_type: 'shop_now' | 'learn_more' | 'visit_website' | 'contact_us' | 'custom'
+  cta_type: 'shop_now' | 'learn_more' | 'visit_website' | 'contact_us' | 'sign_up' | 'limited_time' | 'custom' | 'none'
   custom_cta?: string
 }
 

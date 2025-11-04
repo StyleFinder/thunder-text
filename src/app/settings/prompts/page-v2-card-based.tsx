@@ -283,7 +283,7 @@ function PromptsSettingsContent() {
               <Box padding="600">
                 <InlineStack align="center">
                   <Spinner size="large" />
-                  <Text variant="bodyMd">Loading prompts...</Text>
+                  <Text as="p" variant="bodyMd">Loading prompts...</Text>
                 </InlineStack>
               </Box>
             </Card>
@@ -314,7 +314,7 @@ function PromptsSettingsContent() {
                 <InlineStack align="space-between">
                   <Box>
                     <Text as="h2" variant="headingMd">Master System Prompt</Text>
-                    <Text variant="bodySm" tone="subdued">
+                    <Text as="p" variant="bodySm" tone="subdued">
                       Universal copywriting principles applied to all product descriptions
                     </Text>
                   </Box>
@@ -347,8 +347,10 @@ function PromptsSettingsContent() {
                     background="bg-surface-secondary"
                     borderRadius="200"
                   >
-                    <Text variant="bodySm" as="pre" style={{ whiteSpace: 'pre-wrap' }}>
-                      {systemPrompt?.content || 'No system prompt configured'}
+                    <Text as="p" variant="bodySm">
+                      <pre style={{ whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit' }}>
+                        {systemPrompt?.content || 'No system prompt configured'}
+                      </pre>
                     </Text>
                   </Box>
                 )}
@@ -363,7 +365,7 @@ function PromptsSettingsContent() {
                 <InlineStack align="space-between">
                   <Box>
                     <Text as="h2" variant="headingMd">Product Description Templates</Text>
-                    <Text variant="bodySm" tone="subdued">
+                    <Text as="p" variant="bodySm" tone="subdued">
                       Create and manage custom templates for different product types
                     </Text>
                   </Box>
@@ -377,7 +379,7 @@ function PromptsSettingsContent() {
 
                 {templates.length === 0 ? (
                   <Box padding="400">
-                    <Text variant="bodyMd" tone="subdued">
+                    <Text as="p" variant="bodyMd" tone="subdued">
                       No templates created yet. Click "Create New Template" to get started.
                     </Text>
                   </Box>
@@ -398,11 +400,11 @@ function PromptsSettingsContent() {
                                     background="bg-fill-success"
                                     borderRadius="100"
                                   >
-                                    <Text variant="bodySm" tone="success">Default</Text>
+                                    <Text as="p" variant="bodySm" tone="success">Default</Text>
                                   </Box>
                                 )}
                               </InlineStack>
-                              <Text variant="bodySm" tone="subdued">
+                              <Text as="p" variant="bodySm" tone="subdued">
                                 Last updated: {new Date(template.updated_at).toLocaleDateString()}
                               </Text>
                             </Box>
@@ -466,8 +468,10 @@ function PromptsSettingsContent() {
                               background="bg-surface-secondary"
                               borderRadius="200"
                             >
-                              <Text variant="bodySm" as="pre" style={{ whiteSpace: 'pre-wrap' }}>
-                                {template.content}
+                              <Text as="p" variant="bodySm">
+                                <pre style={{ whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit' }}>
+                                  {template.content}
+                                </pre>
                               </Text>
                             </Box>
                           )}
@@ -570,7 +574,7 @@ export default function PromptsSettingsPage() {
               <Box padding="600">
                 <InlineStack align="center">
                   <Spinner size="large" />
-                  <Text variant="bodyMd">Loading...</Text>
+                  <Text as="p" variant="bodyMd">Loading...</Text>
                 </InlineStack>
               </Box>
             </Card>

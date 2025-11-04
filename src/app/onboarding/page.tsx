@@ -119,7 +119,7 @@ export default function OnboardingPage() {
           <Layout.Section>
             <Box padding="400">
               <InlineStack align="center">
-                <Button plain onClick={handleCompleteOnboarding}>
+                <Button variant="plain" onClick={handleCompleteOnboarding}>
                   Skip onboarding and go to dashboard
                 </Button>
               </InlineStack>

@@ -168,7 +168,7 @@ export default function CreateAdModal({
       open={open}
       onClose={handleClose}
       title="Create Facebook Ad"
-      large
+      size="large"
       primaryAction={
         step === 'select'
           ? {

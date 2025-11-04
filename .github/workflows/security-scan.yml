@@ -1,0 +1,99 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run weekly security scan every Monday at 9 AM UTC
+    - cron: "0 9 * * 1"
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: TypeScript type check
+        run: npm run type-check
+
+      - name: Security lint check
+        run: npm run security:lint
+        continue-on-error: true
+
+      - name: NPM audit
+        run: npm run security:audit
+        continue-on-error: true
+
+      - name: Snyk security scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Run tests
+        run: npm run test:ci
+
+      - name: Check for hardcoded secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+
+      - name: Upload security reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            audit-report.json
+          retention-days: 30
+
+      - name: Comment PR with security summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let summary = '## 🔒 Security Scan Summary\n\n';
+
+            try {
+              const auditReport = JSON.parse(fs.readFileSync('audit-report.json', 'utf8'));
+              const vulnerabilities = auditReport.metadata.vulnerabilities;
+
+              summary += `### NPM Audit\n`;
+              summary += `- Critical: ${vulnerabilities.critical || 0}\n`;
+              summary += `- High: ${vulnerabilities.high || 0}\n`;
+              summary += `- Moderate: ${vulnerabilities.moderate || 0}\n`;
+              summary += `- Low: ${vulnerabilities.low || 0}\n\n`;
+
+              if (vulnerabilities.critical > 0 || vulnerabilities.high > 0) {
+                summary += '⚠️ **Action required**: High or critical vulnerabilities found!\n';
+              } else {
+                summary += '✅ No high or critical vulnerabilities found\n';
+              }
+            } catch (error) {
+              summary += 'Could not parse audit report\n';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });

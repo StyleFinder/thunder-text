@@ -107,7 +107,7 @@ function SettingsContent() {
                 <Text as="p">
                   Please access this page through your Shopify admin panel.
                 </Text>
-                <Button primary onClick={() => router.push('/dashboard')}>
+                <Button variant="primary" onClick={() => router.push('/dashboard')}>
                   Back to Dashboard
                 </Button>
               </BlockStack>
@@ -212,13 +212,13 @@ function SettingsContent() {
                   <Text as="p" variant="bodySm" fontWeight="semibold">Current Settings:</Text>
                   <BlockStack gap="100">
                     <Text as="p" variant="bodySm">
-                      • Global Default Template: <Text as="span" tone="info" fontWeight="medium">Women's Clothing</Text>
+                      • Global Default Template: <Text as="span" fontWeight="medium">Women's Clothing</Text>
                     </Text>
                     <Text as="p" variant="bodySm">
-                      • System Prompt: <Text as="span" tone="success" fontWeight="medium">Active</Text>
+                      • System Prompt: <Text as="span" fontWeight="medium">Active</Text>
                     </Text>
                     <Text as="p" variant="bodySm">
-                      • Category Templates: <Text as="span" tone="success" fontWeight="medium">6 configured</Text>
+                      • Category Templates: <Text as="span" fontWeight="medium">6 configured</Text>
                     </Text>
                   </BlockStack>
                 </BlockStack>

@@ -1,0 +1,300 @@
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase";
+import { queryWithTenant } from "@/lib/postgres";
+import { getUserId } from "@/lib/auth/content-center-auth";
+import type {
+  ApiResponse,
+  SubmitAnswerRequest,
+  SubmitAnswerResponse,
+  BusinessProfileResponse,
+  InterviewPrompt,
+  ProfileProgress,
+} from "@/types/business-profile";
+
+/**
+ * POST /api/business-profile/answer
+ * Submit answer to interview question
+ */
+export async function POST(
+  request: NextRequest,
+): Promise<NextResponse<ApiResponse<SubmitAnswerResponse>>> {
+  try {
+    const userId = await getUserId(request);
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
+    const body: SubmitAnswerRequest = await request.json();
+    const { prompt_key, question_number, response_text } = body;
+
+    if (!prompt_key || !response_text || response_text.trim().length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Missing required fields" },
+        { status: 400 },
+      );
+    }
+
+    // Get current profile with explicit tenant validation
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("business_profiles")
+      .select("*")
+      .eq("store_id", userId)
+      .eq("is_current", true)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Business profile not found. Please start the interview first.",
+        },
+        { status: 404 },
+      );
+    }
+
+    // SECURITY: Double-check that profile belongs to authenticated tenant
+    if (profile.store_id !== userId) {
+      console.error("🚨 SECURITY VIOLATION: Profile store_id mismatch", {
+        authenticated_store: userId,
+        profile_store: profile.store_id,
+        profile_id: profile.id,
+      });
+      return NextResponse.json(
+        { success: false, error: "Unauthorized access" },
+        { status: 403 },
+      );
+    }
+
+    // Get the prompt to validate
+    const { data: prompt } = await supabaseAdmin
+      .from("interview_prompts")
+      .select("*")
+      .eq("prompt_key", prompt_key)
+      .single();
+
+    if (prompt) {
+      const wordCount = response_text.trim().split(/\s+/).length;
+      if (wordCount < prompt.min_words) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Response too short: ${wordCount} words (minimum ${prompt.min_words} required)`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    // Mark any existing response for this prompt as not current
+    await supabaseAdmin
+      .from("business_profile_responses")
+      .update({ is_current: false })
+      .eq("business_profile_id", profile.id)
+      .eq("prompt_key", prompt_key);
+
+    // Get current response count for order
+    const { data: existingResponses } = await supabaseAdmin
+      .from("business_profile_responses")
+      .select("response_order")
+      .eq("business_profile_id", profile.id)
+      .order("response_order", { ascending: false })
+      .limit(1);
+
+    const nextOrder =
+      existingResponses && existingResponses.length > 0
+        ? existingResponses[0].response_order + 1
+        : 1;
+
+    // Calculate word and character counts
+    const wordCount = response_text
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w.length > 0).length;
+    const characterCount = response_text.length;
+
+    // Insert new response using tenant-aware PostgreSQL connection
+    // This bypasses PostgREST cache issues while maintaining tenant isolation
+    let newResponse: BusinessProfileResponse | null = null;
+    let responseError: Error | null = null;
+
+    try {
+      console.log("🔵 Attempting tenant-scoped INSERT:", {
+        tenant_id: userId,
+        business_profile_id: profile.id,
+        prompt_key,
+        question_number,
+        word_count: wordCount,
+        character_count: characterCount,
+      });
+
+      // Use tenant-aware query function that logs and validates tenant access
+      const result = await queryWithTenant<BusinessProfileResponse>(
+        userId, // Tenant ID for audit logging
+        `INSERT INTO business_profile_responses (
+          business_profile_id, prompt_key, question_number, response_text,
+          word_count, character_count, response_order, is_current, original_response
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *`,
+        [
+          profile.id,
+          prompt_key,
+          question_number,
+          response_text,
+          wordCount,
+          characterCount,
+          nextOrder,
+          true,
+          response_text,
+        ],
+      );
+
+      newResponse = result.rows[0] as BusinessProfileResponse;
+      console.log("✅ Tenant-scoped INSERT successful:", {
+        id: newResponse?.id,
+        tenant: userId,
+      });
+
+      // VERIFY: Immediately query to confirm the record exists and belongs to correct tenant
+      const verifyResult = await queryWithTenant(
+        userId,
+        `SELECT bpr.id, bpr.question_number, bp.store_id
+         FROM business_profile_responses bpr
+         JOIN business_profiles bp ON bpr.business_profile_id = bp.id
+         WHERE bpr.id = $1`,
+        [newResponse?.id],
+      );
+
+      console.log("🔍 Verification query result:", {
+        found: verifyResult.rows.length > 0,
+        record: verifyResult.rows[0],
+        tenant_match: verifyResult.rows[0]?.store_id === userId,
+      });
+
+      if (verifyResult.rows.length === 0) {
+        throw new Error(
+          "CRITICAL: INSERT returned success but record cannot be found immediately after!",
+        );
+      }
+
+      // SECURITY: Verify the response belongs to the correct tenant
+      if (verifyResult.rows[0].store_id !== userId) {
+        console.error(
+          "🚨 SECURITY VIOLATION: Response created for wrong tenant",
+          {
+            authenticated_tenant: userId,
+            response_tenant: verifyResult.rows[0].store_id,
+          },
+        );
+        throw new Error("SECURITY: Tenant isolation violation detected");
+      }
+    } catch (error) {
+      responseError = error as Error;
+    }
+
+    if (responseError) {
+      console.error("❌ Error saving response:", {
+        error: responseError,
+        message: responseError.message,
+        stack: responseError.stack,
+      });
+      return NextResponse.json(
+        { success: false, error: "Failed to save response" },
+        { status: 500 },
+      );
+    }
+
+    // Update profile status to in_progress if this is the first answer
+    if (profile.interview_status === "not_started") {
+      await supabaseAdmin
+        .from("business_profiles")
+        .update({
+          interview_status: "in_progress",
+          interview_started_at: new Date().toISOString(),
+        })
+        .eq("id", profile.id);
+    }
+
+    // Update profile progress - direct table operation instead of RPC
+    const { data: allResponses } = await supabaseAdmin
+      .from("business_profile_responses")
+      .select("prompt_key")
+      .eq("business_profile_id", profile.id)
+      .eq("is_current", true);
+
+    const questionsCompleted = allResponses?.length || 0;
+    const totalQuestions = 21;
+    const percentageComplete = Math.round(
+      (questionsCompleted / totalQuestions) * 100,
+    );
+    const interviewComplete = questionsCompleted >= totalQuestions;
+
+    // Update profile with progress (replaces update_interview_progress RPC)
+    await supabaseAdmin
+      .from("business_profiles")
+      .update({
+        questions_completed: questionsCompleted,
+        current_question_number: questionsCompleted,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", profile.id);
+
+    // Get next prompt if not complete
+    let nextPrompt: InterviewPrompt | null = null;
+    if (!interviewComplete) {
+      const answeredKeys = allResponses?.map((r) => r.prompt_key) || [];
+
+      const { data: nextPromptData } = await supabaseAdmin
+        .from("interview_prompts")
+        .select("*")
+        .eq("is_active", true)
+        .not("prompt_key", "in", `(${answeredKeys.join(",")})`)
+        .order("display_order", { ascending: true })
+        .limit(1)
+        .single();
+
+      if (nextPromptData) {
+        nextPrompt = nextPromptData as InterviewPrompt;
+      }
+    } else {
+      // Mark interview as completed
+      await supabaseAdmin
+        .from("business_profiles")
+        .update({
+          interview_completed_at: new Date().toISOString(),
+        })
+        .eq("id", profile.id);
+    }
+
+    const progress: ProfileProgress = {
+      current_question: questionsCompleted + 1,
+      total_questions: totalQuestions,
+      percentage_complete: percentageComplete,
+      is_complete: interviewComplete,
+      next_prompt: nextPrompt,
+    };
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          response: newResponse as BusinessProfileResponse,
+          progress,
+          next_prompt: nextPrompt,
+          interview_complete: interviewComplete,
+        },
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Error in POST /api/business-profile/answer:", error);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}

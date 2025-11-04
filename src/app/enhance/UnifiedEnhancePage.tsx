@@ -1,10 +1,10 @@
-'use client'
+"use client";
 
 // Force dynamic rendering for this page
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
-import { useState, useCallback, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Page,
   Layout,
@@ -19,417 +19,527 @@ import {
   Modal,
   ProgressBar,
   Checkbox,
-  Badge,
-  Select,
-  Divider
-} from '@shopify/polaris'
-import { ProductImageUpload, type UploadedFile } from '@/app/components/shared/ProductImageUpload'
-import { ProductDetailsForm } from '@/app/components/shared/ProductDetailsForm'
-import { AdditionalInfoForm } from '@/app/components/shared/AdditionalInfoForm'
-import EnhancedContentComparison from '@/app/components/shared/EnhancedContentComparison'
-import { type ProductCategory } from '@/lib/prompts'
-import { fetchProductDataForEnhancement, type EnhancementProductData } from '@/lib/shopify/product-enhancement'
-import { useShopifyAuth } from '@/app/components/ShopifyAuthProvider'
-import { ProductSelector } from './components/ProductSelector'
+  Divider,
+} from "@shopify/polaris";
+import {
+  ProductImageUpload,
+  type UploadedFile,
+} from "@/app/components/shared/ProductImageUpload";
+import { ProductDetailsForm } from "@/app/components/shared/ProductDetailsForm";
+import { AdditionalInfoForm } from "@/app/components/shared/AdditionalInfoForm";
+import EnhancedContentComparison from "@/app/components/shared/EnhancedContentComparison";
+import { type ProductCategory } from "@/lib/prompts";
+import {
+  fetchProductDataForEnhancement,
+  type EnhancementProductData,
+} from "@/lib/shopify/product-enhancement";
+import { useShopifyAuth } from "@/app/components/ShopifyAuthProvider";
+import { ProductSelector } from "./components/ProductSelector";
 
 interface EnhancementOptions {
-  generateTitle: boolean
-  enhanceDescription: boolean
-  generateSEO: boolean
-  createPromo: boolean
-  updateImages: boolean
+  generateTitle: boolean;
+  enhanceDescription: boolean;
+  generateSEO: boolean;
+  createPromo: boolean;
+  updateImages: boolean;
 }
 
 export default function UnifiedEnhancePage() {
-  const searchParams = useSearchParams()
-  const { isAuthenticated, shop: authShop, authenticatedFetch } = useShopifyAuth()
+  const searchParams = useSearchParams();
+  const { shop: authShop, authenticatedFetch } = useShopifyAuth();
 
-  const productId = searchParams?.get('productId') || ''
-  const source = searchParams?.get('source')
+  const productId = searchParams?.get("productId") || "";
   // Get shop from URL params first, fallback to auth shop
-  const shop = searchParams?.get('shop') || authShop || 'zunosai-staging-test-store.myshopify.com'
+  const shop =
+    searchParams?.get("shop") ||
+    authShop ||
+    "zunosai-staging-test-store.myshopify.com";
 
   // Product data states
-  const [productData, setProductData] = useState<EnhancementProductData | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [updateResult, setUpdateResult] = useState<Record<string, unknown> | null>(null)
+  const [productData, setProductData] = useState<EnhancementProductData | null>(
+    null,
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [updateResult, setUpdateResult] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
 
   // Image states
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
-  const [useExistingImages, setUseExistingImages] = useState(true)
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [useExistingImages, setUseExistingImages] = useState(true);
 
   // Form states
-  const [parentCategory, setParentCategory] = useState('')
-  const [availableSizing, setAvailableSizing] = useState('')
-  const [selectedTemplate, setSelectedTemplate] = useState<ProductCategory>('general')
-  const [templatePreview, setTemplatePreview] = useState<Record<string, unknown> | null>(null)
+  const [parentCategory, setParentCategory] = useState("");
+  const [availableSizing, setAvailableSizing] = useState("");
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<ProductCategory>("general");
+  const [templatePreview, setTemplatePreview] = useState<
+    | {
+        name: string;
+        description: string;
+        sections?: string[];
+      }
+    | undefined
+  >(undefined);
 
-  const [fabricMaterial, setFabricMaterial] = useState('')
-  const [occasionUse, setOccasionUse] = useState('')
-  const [targetAudience, setTargetAudience] = useState('')
-  const [keyFeatures, setKeyFeatures] = useState('')
-  const [additionalNotes, setAdditionalNotes] = useState('')
+  const [fabricMaterial, setFabricMaterial] = useState("");
+  const [occasionUse, setOccasionUse] = useState("");
+  const [targetAudience, setTargetAudience] = useState("");
+  const [keyFeatures, setKeyFeatures] = useState("");
+  const [additionalNotes, setAdditionalNotes] = useState("");
 
   // Enhancement options
-  const [enhancementOptions, setEnhancementOptions] = useState<EnhancementOptions>({
-    generateTitle: false,
-    enhanceDescription: true,
-    generateSEO: true,
-    createPromo: false,
-    updateImages: false
-  })
+  const [enhancementOptions, setEnhancementOptions] =
+    useState<EnhancementOptions>({
+      generateTitle: false,
+      enhanceDescription: true,
+      generateSEO: true,
+      createPromo: false,
+      updateImages: false,
+    });
 
   // Generation states
-  const [generating, setGenerating] = useState(false)
-  const [generatedContent, setGeneratedContent] = useState<Record<string, unknown> | null>(null)
-  const [showPreviewModal, setShowPreviewModal] = useState(false)
-  const [applying, setApplying] = useState(false)
-  const [progress, setProgress] = useState(0)
+  const [generating, setGenerating] = useState(false);
+  const [generatedContent, setGeneratedContent] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   // Load product data function
   const loadProduct = useCallback(async () => {
     // Only require productId and shop - authentication handled by the page wrapper
-    if (!productId || productId.trim() === '' || !shop) {
-      console.log('Missing required params:', { productId, shop })
-      return
+    if (!productId || productId.trim() === "" || !shop) {
+      console.log("Missing required params:", { productId, shop });
+      return;
     }
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
-      console.log('Loading product data for:', { productId, shop })
+      console.log("Loading product data for:", { productId, shop });
       // Determine fetch method based on context
-      const isTestStore = shop.includes('zunosai-staging-test-store')
-      const isEmbedded = typeof window !== 'undefined' && window.top !== window.self
+      const isTestStore = shop.includes("zunosai-staging-test-store");
+      const isEmbedded =
+        typeof window !== "undefined" && window.top !== window.self;
 
       // Pass authenticatedFetch only for embedded context
-      const fetchMethod = (isTestStore && !isEmbedded) ? undefined : authenticatedFetch
-      const data = await fetchProductDataForEnhancement(productId, shop, null, fetchMethod)
+      const fetchMethod =
+        isTestStore && !isEmbedded ? undefined : authenticatedFetch;
+      const data = await fetchProductDataForEnhancement(
+        productId,
+        shop,
+        null,
+        fetchMethod,
+      );
       if (data) {
-        setProductData(data)
+        setProductData(data);
 
         // Pre-fill form fields
         if (data.productType) {
-          setParentCategory(data.productType.toLowerCase())
+          setParentCategory(data.productType.toLowerCase());
         }
         // Don't pre-fill target audience with vendor
 
         // Pre-populate sizing from variants
         if (data.variants && data.variants.length > 0) {
           const sizes = data.variants
-            .filter(v => v.selectedOptions && Array.isArray(v.selectedOptions) &&
-                     v.selectedOptions.some(opt => opt && opt.name && opt.name.toLowerCase() === 'size'))
-            .map(v => {
-              const sizeOption = v.selectedOptions?.find(opt => opt && opt.name && opt.name.toLowerCase() === 'size')
-              return sizeOption?.value
+            .filter(
+              (v) =>
+                "selectedOptions" in v &&
+                v.selectedOptions &&
+                Array.isArray(v.selectedOptions) &&
+                v.selectedOptions.some(
+                  (opt) => opt && opt.name && opt.name.toLowerCase() === "size",
+                ),
+            )
+            .map((v) => {
+              if ("selectedOptions" in v && Array.isArray(v.selectedOptions)) {
+                const sizeOption = v.selectedOptions.find(
+                  (opt) => opt && opt.name && opt.name.toLowerCase() === "size",
+                );
+                return sizeOption?.value;
+              }
+              return undefined;
             })
-            .filter(Boolean)
+            .filter(Boolean);
 
           if (sizes.length > 0) {
             // Detect sizing pattern
-            const uniqueSizes = [...new Set(sizes)]
-            if (uniqueSizes.includes('XS') && uniqueSizes.includes('XL')) {
-              setAvailableSizing('xs-xl')
-            } else if (uniqueSizes.includes('XS') && uniqueSizes.includes('XXL')) {
-              setAvailableSizing('xs-xxl')
-            } else if (uniqueSizes.includes('S') && uniqueSizes.includes('XXXL')) {
-              setAvailableSizing('s-xxxl')
-            } else if (uniqueSizes.length === 1 && uniqueSizes[0] === 'One Size') {
-              setAvailableSizing('onesize')
+            const uniqueSizes = [...new Set(sizes)];
+            if (uniqueSizes.includes("XS") && uniqueSizes.includes("XL")) {
+              setAvailableSizing("xs-xl");
+            } else if (
+              uniqueSizes.includes("XS") &&
+              uniqueSizes.includes("XXL")
+            ) {
+              setAvailableSizing("xs-xxl");
+            } else if (
+              uniqueSizes.includes("S") &&
+              uniqueSizes.includes("XXXL")
+            ) {
+              setAvailableSizing("s-xxxl");
+            } else if (
+              uniqueSizes.length === 1 &&
+              uniqueSizes[0] === "One Size"
+            ) {
+              setAvailableSizing("onesize");
             }
           }
         }
 
         // Extract and pre-fill material info from tags/metafields
         if (data.tags) {
-          const tagsArray = Array.isArray(data.tags) ? data.tags : data.tags.split(',').map(t => t.trim())
-          const materials = tagsArray.filter(tag =>
-            tag.toLowerCase().includes('cotton') ||
-            tag.toLowerCase().includes('polyester') ||
-            tag.toLowerCase().includes('wool') ||
-            tag.toLowerCase().includes('silk')
-          ).join(', ')
-          if (materials) setFabricMaterial(materials)
+          const tags = data.tags;
+          const tagsArray: string[] = Array.isArray(tags)
+            ? tags
+            : typeof tags === "string"
+              ? (tags as string).split(",").map((t) => t.trim())
+              : [];
+          const materials = tagsArray
+            .filter(
+              (tag) =>
+                tag.toLowerCase().includes("cotton") ||
+                tag.toLowerCase().includes("polyester") ||
+                tag.toLowerCase().includes("wool") ||
+                tag.toLowerCase().includes("silk"),
+            )
+            .join(", ");
+          if (materials) setFabricMaterial(materials);
         }
 
         // Pre-fill key features from existing description
-        if (data.description) {
-          const features = data.description
-            .split('\n')
-            .filter(line => line.trim().startsWith('•') || line.trim().startsWith('-'))
-            .map(line => line.replace(/^[•\-]\s*/, ''))
-            .join('\n')
-          if (features) setKeyFeatures(features)
+        if (data.originalDescription) {
+          const features = data.originalDescription
+            .split("\n")
+            .filter(
+              (line) =>
+                line.trim().startsWith("•") || line.trim().startsWith("-"),
+            )
+            .map((line) => line.replace(/^[•\-]\s*/, ""))
+            .join("\n");
+          if (features) setKeyFeatures(features);
         }
 
         // Set appropriate template based on product type
         if (data.productType) {
-          const type = data.productType.toLowerCase()
-          if (type.includes('cloth') || type.includes('apparel') || type.includes('shirt') || type.includes('dress')) {
-            setSelectedTemplate('clothing')
-          } else if (type.includes('jewelry') || type.includes('accessory')) {
-            setSelectedTemplate('jewelry')
-          } else if (type.includes('home') || type.includes('decor')) {
-            setSelectedTemplate('home')
+          const type = data.productType.toLowerCase();
+          if (
+            type.includes("cloth") ||
+            type.includes("apparel") ||
+            type.includes("shirt") ||
+            type.includes("dress")
+          ) {
+            setSelectedTemplate("womens_clothing");
+          } else if (type.includes("jewelry") || type.includes("accessory")) {
+            setSelectedTemplate("jewelry_accessories");
           } else {
-            setSelectedTemplate('general')
+            setSelectedTemplate("general");
           }
         }
       }
     } catch (err) {
-      console.error('Error loading product:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load product')
+      console.error("Error loading product:", err);
+      setError(err instanceof Error ? err.message : "Failed to load product");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [productId, shop, authenticatedFetch])
+  }, [productId, shop, authenticatedFetch]);
 
   // Load product data on mount and when dependencies change
   useEffect(() => {
-    loadProduct()
-  }, [loadProduct])
+    loadProduct();
+  }, [loadProduct]);
 
   // Category options
   const parentCategoryOptions = [
-    { label: 'Select a parent category', value: '' },
-    { label: 'Clothing', value: 'clothing' },
-    { label: 'Accessories', value: 'accessories' },
-    { label: 'Home & Living', value: 'home' },
-    { label: 'Beauty', value: 'beauty' },
-    { label: 'Electronics', value: 'electronics' }
-  ]
+    { label: "Select a parent category", value: "" },
+    { label: "Clothing", value: "clothing" },
+    { label: "Accessories", value: "accessories" },
+    { label: "Home & Living", value: "home" },
+    { label: "Beauty", value: "beauty" },
+    { label: "Electronics", value: "electronics" },
+  ];
 
   // Sizing options
   const sizingOptions = [
-    { label: 'Select sizing range', value: '' },
-    { label: 'XS - XL (XS, S, M, L, XL)', value: 'xs-xl' },
-    { label: 'XS - XXL (XS, S, M, L, XL, XXL)', value: 'xs-xxl' },
-    { label: 'S - XXXL (S, M, L, XL, XXL, XXXL)', value: 's-xxxl' },
-    { label: 'One Size', value: 'onesize' },
-    { label: 'Numeric (28-44)', value: 'numeric-28-44' },
-    { label: 'Children (2T-14)', value: 'children' }
-  ]
+    { label: "Select sizing range", value: "" },
+    { label: "XS - XL (XS, S, M, L, XL)", value: "xs-xl" },
+    { label: "XS - XXL (XS, S, M, L, XL, XXL)", value: "xs-xxl" },
+    { label: "S - XXXL (S, M, L, XL, XXL, XXXL)", value: "s-xxxl" },
+    { label: "One Size", value: "onesize" },
+    { label: "Numeric (28-44)", value: "numeric-28-44" },
+    { label: "Children (2T-14)", value: "children" },
+  ];
 
   const handleGenerate = async () => {
-    setGenerating(true)
-    setProgress(0)
+    setGenerating(true);
+    setProgress(0);
 
     // Simulate progress
     const progressInterval = setInterval(() => {
-      setProgress(prev => Math.min(prev + 10, 90))
-    }, 500)
+      setProgress((prev) => Math.min(prev + 10, 90));
+    }, 500);
 
     try {
-      const formData = new FormData()
+      const formData = new FormData();
 
       // Add images
-      if (useExistingImages && productData?.images && productData.images.length > 0) {
-        productData.images.forEach(img => {
+      if (
+        useExistingImages &&
+        productData?.images &&
+        productData.images.length > 0
+      ) {
+        productData.images.forEach((img) => {
           // Images have 'url' property, validate before adding
-          if (img.url && img.url.length > 0 && (img.url.startsWith('http') || img.url.startsWith('//'))) {
-            formData.append('existingImages', img.url)
-            console.log('✅ Adding existing image:', img.url)
+          if (
+            img.url &&
+            img.url.length > 0 &&
+            (img.url.startsWith("http") || img.url.startsWith("//"))
+          ) {
+            formData.append("existingImages", img.url);
+            console.log("✅ Adding existing image:", img.url);
           } else {
-            console.warn('⚠️ Skipping invalid image URL:', img)
+            console.warn("⚠️ Skipping invalid image URL:", img);
           }
-        })
+        });
       } else {
-        console.log('📸 No existing images to add or useExistingImages is false')
+        console.log(
+          "📸 No existing images to add or useExistingImages is false",
+        );
       }
-      uploadedFiles.forEach(file => formData.append('images', file.file))
+      uploadedFiles.forEach((file) => formData.append("images", file.file));
 
       // Extract sizing information from existing variants
-      let detectedSizing = ''
+      let detectedSizing = "";
       if (productData?.variants && productData.variants.length > 0) {
         const sizes = productData.variants
-          .filter(v => v.selectedOptions && Array.isArray(v.selectedOptions) &&
-                   v.selectedOptions.some(opt => opt && opt.name && opt.name.toLowerCase() === 'size'))
-          .map(v => {
-            const sizeOption = v.selectedOptions?.find(opt => opt && opt.name && opt.name.toLowerCase() === 'size')
-            return sizeOption?.value
+          .filter(
+            (v) =>
+              "selectedOptions" in v &&
+              v.selectedOptions &&
+              Array.isArray(v.selectedOptions) &&
+              v.selectedOptions.some(
+                (opt) => opt && opt.name && opt.name.toLowerCase() === "size",
+              ),
+          )
+          .map((v) => {
+            if ("selectedOptions" in v && Array.isArray(v.selectedOptions)) {
+              const sizeOption = v.selectedOptions.find(
+                (opt) => opt && opt.name && opt.name.toLowerCase() === "size",
+              );
+              return sizeOption?.value;
+            }
+            return undefined;
           })
-          .filter(Boolean)
+          .filter(Boolean);
 
         if (sizes.length > 0) {
-          detectedSizing = [...new Set(sizes)].join(', ')
+          detectedSizing = [...new Set(sizes)].join(", ");
         }
       }
 
       // Add form data
-      formData.append('productId', productId || '')
-      formData.append('shop', shop || '')
-      formData.append('template', selectedTemplate)
-      formData.append('parentCategory', productData?.productType || parentCategory || 'general')
-      formData.append('availableSizing', detectedSizing || 'Not specified')
-      formData.append('fabricMaterial', fabricMaterial)
-      formData.append('occasionUse', occasionUse)
-      formData.append('targetAudience', targetAudience)
-      formData.append('keyFeatures', keyFeatures)
-      formData.append('additionalNotes', additionalNotes)
-      formData.append('enhancementOptions', JSON.stringify(enhancementOptions))
+      formData.append("productId", productId || "");
+      formData.append("shop", shop || "");
+      formData.append("template", selectedTemplate);
+      formData.append(
+        "parentCategory",
+        productData?.productType || parentCategory || "general",
+      );
+      formData.append("availableSizing", detectedSizing || "Not specified");
+      formData.append("fabricMaterial", fabricMaterial);
+      formData.append("occasionUse", occasionUse);
+      formData.append("targetAudience", targetAudience);
+      formData.append("keyFeatures", keyFeatures);
+      formData.append("additionalNotes", additionalNotes);
+      formData.append("enhancementOptions", JSON.stringify(enhancementOptions));
 
       // Determine if we should use authenticatedFetch or regular fetch
-      const isTestStore = shop?.includes('zunosai-staging-test-store')
-      const isEmbedded = typeof window !== 'undefined' && window.top !== window.self
+      const isTestStore = shop?.includes("zunosai-staging-test-store");
+      const isEmbedded =
+        typeof window !== "undefined" && window.top !== window.self;
 
-      let response
+      let response;
       if (isTestStore && !isEmbedded) {
         // Direct fetch for test store in non-embedded mode
-        response = await fetch('/api/enhance', {
-          method: 'POST',
-          body: formData
-        })
+        response = await fetch("/api/enhance", {
+          method: "POST",
+          body: formData,
+        });
       } else {
         // Use authenticatedFetch for embedded context
-        response = await authenticatedFetch('/api/enhance', {
-          method: 'POST',
-          body: formData
-        })
+        response = await authenticatedFetch("/api/enhance", {
+          method: "POST",
+          body: formData,
+        });
       }
 
       if (!response.ok) {
-        const errorData = await response.json()
-        console.error('Enhancement API error:', errorData)
-        throw new Error(errorData.error || `Failed to generate content: ${response.status}`)
+        const errorData = await response.json();
+        console.error("Enhancement API error:", errorData);
+        throw new Error(
+          errorData.error || `Failed to generate content: ${response.status}`,
+        );
       }
 
-      const result = await response.json()
-      setGeneratedContent(result.data)
-      setProgress(100)
-      setShowPreviewModal(true)
-
+      const result = await response.json();
+      console.log("🎯 Generated content received:", {
+        resultData: result.data,
+        "result.data.description": result.data?.description,
+        "description length": result.data?.description?.length || 0,
+        "description preview": result.data?.description?.substring(0, 100),
+      });
+      setGeneratedContent(result.data);
+      setProgress(100);
+      setShowPreviewModal(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Generation failed')
+      setError(err instanceof Error ? err.message : "Generation failed");
     } finally {
-      clearInterval(progressInterval)
-      setGenerating(false)
+      clearInterval(progressInterval);
+      setGenerating(false);
     }
-  }
+  };
 
   const handleApplyChanges = async (editedContent: {
-    title?: string
-    description?: string
-    seoTitle?: string
-    seoDescription?: string
-    bulletPoints?: string[]
+    title?: string;
+    description?: string;
+    seoTitle?: string;
+    seoDescription?: string;
+    bulletPoints?: string[];
   }) => {
-    setApplying(true)
-    setError(null)
+    setApplying(true);
+    setError(null);
 
     try {
-      console.log('🔧 Applying changes:', {
+      console.log("🔧 Applying changes:", {
         productId,
         shop,
-        updates: editedContent
-      })
+        updates: editedContent,
+      });
+
+      // Debug: Log the exact description being sent
+      if (editedContent.description) {
+        console.log(
+          "📝 Description preview (first 200 chars):",
+          editedContent.description.substring(0, 200),
+        );
+        console.log("📏 Description length:", editedContent.description.length);
+      }
 
       // Use the new endpoint structure with productId in the body
       // For non-embedded context with test store, use regular fetch with test store auth
-      const isTestStore = shop?.includes('zunosai-staging-test-store')
-      const isEmbedded = typeof window !== 'undefined' && window.top !== window.self
+      const isTestStore = shop?.includes("zunosai-staging-test-store");
+      const isEmbedded =
+        typeof window !== "undefined" && window.top !== window.self;
 
-      let response
+      let response;
       if (isTestStore && !isEmbedded) {
         // Direct fetch for test store in non-embedded mode
         response = await fetch(`/api/products/update`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            shop: shop || 'zunosai-staging-test-store.myshopify.com',
+            shop: shop || "zunosai-staging-test-store.myshopify.com",
             productId: productId,
-            updates: editedContent
-          })
-        })
+            updates: editedContent,
+          }),
+        });
       } else {
         // Use authenticatedFetch for embedded context
         response = await authenticatedFetch(`/api/products/update`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            shop: shop || 'zunosai-staging-test-store.myshopify.com',
+            shop: shop || "zunosai-staging-test-store.myshopify.com",
             productId: productId,
-            updates: editedContent
-          })
-        })
+            updates: editedContent,
+          }),
+        });
       }
 
       // Parse the response body once
-      const result = await response.json()
-      console.log('✅ Update response:', result)
+      const result = await response.json();
+      console.log("✅ Update response:", result);
 
       // Check for errors after parsing
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to apply changes')
+        throw new Error(result.error || "Failed to apply changes");
       }
 
       // Always update the local state with the new data
       // This ensures the UI reflects the changes immediately
       if (productData) {
-        const updatedData = { ...productData }
+        const updatedData = { ...productData };
 
         // Update fields that were provided
         if (editedContent.title !== undefined && editedContent.title !== null) {
-          updatedData.title = editedContent.title
+          updatedData.title = editedContent.title;
         }
-        if (editedContent.description !== undefined && editedContent.description !== null) {
-          updatedData.description = editedContent.description
-          updatedData.descriptionHtml = `<p>${editedContent.description.replace(/\n/g, '</p><p>')}</p>`
+        if (
+          editedContent.description !== undefined &&
+          editedContent.description !== null
+        ) {
+          updatedData.originalDescription = editedContent.description;
         }
 
         // Update SEO fields if they exist
-        if (editedContent.seoTitle !== undefined || editedContent.seoDescription !== undefined) {
-          updatedData.seo = {
-            ...updatedData.seo,
-            title: editedContent.seoTitle !== undefined ? editedContent.seoTitle : updatedData.seo?.title,
-            description: editedContent.seoDescription !== undefined ? editedContent.seoDescription : updatedData.seo?.description
-          }
+        if (editedContent.seoTitle !== undefined) {
+          updatedData.seoTitle = editedContent.seoTitle;
+        }
+        if (editedContent.seoDescription !== undefined) {
+          updatedData.seoDescription = editedContent.seoDescription;
         }
 
-        console.log('📝 Updating local product data from:', productData)
-        console.log('📝 To updated data:', updatedData)
-        setProductData(updatedData)
+        console.log("📝 Updating local product data from:", productData);
+        console.log("📝 To updated data:", updatedData);
+        setProductData(updatedData);
       }
 
       // Set success message
-      const message = 'Updates have been successfully applied to the product.'
+      const message = "Updates have been successfully applied to the product.";
 
-      setSuccessMessage(message)
-      setUpdateResult(result)
-      setShowPreviewModal(false)
-      setGeneratedContent(null)
-      setShowSuccessModal(true)
+      setSuccessMessage(message);
+      setUpdateResult(result);
+      setShowPreviewModal(false);
+      setGeneratedContent(null);
+      setShowSuccessModal(true);
 
       // Clear error if any
-      setError(null)
-
+      setError(null);
     } catch (err) {
-      console.error('Error applying changes:', err)
-      setError(err instanceof Error ? err.message : 'Failed to apply changes')
+      console.error("Error applying changes:", err);
+      setError(err instanceof Error ? err.message : "Failed to apply changes");
     } finally {
-      setApplying(false)
+      setApplying(false);
     }
-  }
+  };
 
   const isFormValid = () => {
     // Form is valid as long as we have product data
     // Images are optional - can use existing, upload new, or generate without images
-    return !!productData
-  }
+    return !!productData;
+  };
 
   if (!productId) {
-    return <ProductSelector
-      shop={shop || 'zunosai-staging-test-store'}
-      onProductSelect={(id) => {
-        // Navigate to enhance page with selected product
-        const params = new URLSearchParams(window.location.search)
-        params.set('productId', id)
-        window.location.href = `/enhance?${params}`
-      }}
-    />
+    return (
+      <ProductSelector
+        shop={shop || "zunosai-staging-test-store"}
+        onProductSelect={(id) => {
+          // Navigate to enhance page with selected product
+          const params = new URLSearchParams(window.location.search);
+          params.set("productId", id);
+          window.location.href = `/enhance?${params}`;
+        }}
+      />
+    );
   }
 
   if (loading) {
@@ -440,297 +550,361 @@ export default function UnifiedEnhancePage() {
             <Card>
               <BlockStack gap="400" inlineAlign="center">
                 <Spinner size="large" />
-                <Text as="p" variant="bodyMd">Loading product data...</Text>
+                <Text as="p" variant="bodyMd">
+                  Loading product data...
+                </Text>
               </BlockStack>
             </Card>
           </Layout.Section>
         </Layout>
       </Page>
-    )
+    );
   }
 
   return (
     <Page
       title="Enhance Product Description"
-      subtitle={productData ? productData.title : 'AI-powered enhancement'}
-      backAction={{ content: 'Back to Dashboard', url: `/dashboard?shop=${shop}` }}
+      subtitle={productData ? productData.title : "AI-powered enhancement"}
+      backAction={{
+        content: "Back to Dashboard",
+        url: `/dashboard?shop=${shop}`,
+      }}
     >
       <Layout>
-          {error && (
-            <Layout.Section>
-              <Banner tone="critical" onDismiss={() => setError(null)}>
-                <p>{error}</p>
-              </Banner>
-            </Layout.Section>
-          )}
-
-          {/* Success Modal */}
-          {showSuccessModal && (
-            <Modal
-              open={true}
-              onClose={() => {
-                setShowSuccessModal(false)
-                setSuccessMessage(null)
-                setUpdateResult(null)
-              }}
-              title="Product Updated Successfully"
-              primaryAction={{
-                content: 'View Product',
-                onAction: () => {
-                  // Build the Shopify admin URL
-                  const shopDomain = shop?.replace('.myshopify.com', '')
-                  const adminUrl = `https://admin.shopify.com/store/${shopDomain}/products/${productId?.split('/').pop()}`
-                  window.open(adminUrl, '_blank')
-                }
-              }}
-              secondaryActions={[
-                {
-                  content: 'Continue Editing',
-                  onAction: () => {
-                    setShowSuccessModal(false)
-                    setSuccessMessage(null)
-                    setUpdateResult(null)
-                  }
-                }
-              ]}
-            >
-              <Modal.Section>
-                <BlockStack gap="400">
-                  <Banner tone="success">
-                    <p>{successMessage}</p>
-                  </Banner>
-                  {updateResult?.shopifyResult && (
-                    <Box>
-                      <Text variant="bodySm" as="p">
-                        The following changes have been applied:
-                      </Text>
-                      <Box paddingBlockStart="200">
-                        {updateResult.updates.title && (
-                          <Text variant="bodySm" as="p">• Title updated</Text>
-                        )}
-                        {updateResult.updates.description && (
-                          <Text variant="bodySm" as="p">• Description updated</Text>
-                        )}
-                        {updateResult.updates.seoTitle && (
-                          <Text variant="bodySm" as="p">• SEO title updated</Text>
-                        )}
-                        {updateResult.updates.seoDescription && (
-                          <Text variant="bodySm" as="p">• SEO meta description updated</Text>
-                        )}
-                        {updateResult.updates.bulletPoints && (
-                          <Text variant="bodySm" as="p">• Bullet points added</Text>
-                        )}
-                      </Box>
-                    </Box>
-                  )}
-                  <Text variant="bodySm" as="p" tone="subdued">
-                    Click "View Product" to see the updated product in your Shopify admin, or "Continue Editing" to make more changes.
-                  </Text>
-                </BlockStack>
-              </Modal.Section>
-            </Modal>
-          )}
-
-          {productData && (
-            <Layout.Section>
-              <Card>
-                <BlockStack gap="200">
-                  <InlineStack gap="200" align="space-between">
-                    <Text as="h3" variant="headingMd">{productData.title}</Text>
-                    <Badge tone="info">{productData.status}</Badge>
-                  </InlineStack>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    SKU: {productData.variants[0]?.sku || 'N/A'} |
-                    Type: {productData.productType || 'N/A'} |
-                    Vendor: {productData.vendor || 'N/A'}
-                  </Text>
-                </BlockStack>
-              </Card>
-            </Layout.Section>
-          )}
-
+        {error && (
           <Layout.Section>
-            <ProductImageUpload
-              title="Product Images"
-              description="Add new images or use existing ones for AI analysis"
-              existingImages={productData?.images?.map(img => img.url) || []}
-              useExistingImages={useExistingImages}
-              onFilesAdded={setUploadedFiles}
-              onExistingImagesToggle={setUseExistingImages}
-              maxFiles={5}
-            />
+            <Banner tone="critical" onDismiss={() => setError(null)}>
+              <p>{error}</p>
+            </Banner>
           </Layout.Section>
+        )}
 
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <Modal
+            open={true}
+            onClose={() => {
+              setShowSuccessModal(false);
+              setSuccessMessage(null);
+              setUpdateResult(null);
+            }}
+            title="Product Updated Successfully"
+            primaryAction={{
+              content: "View Product",
+              onAction: () => {
+                // Build the Shopify admin URL
+                const shopDomain = shop?.replace(".myshopify.com", "");
+                const adminUrl = `https://admin.shopify.com/store/${shopDomain}/products/${productId?.split("/").pop()}`;
+                window.open(adminUrl, "_blank");
+              },
+            }}
+            secondaryActions={[
+              {
+                content: "Continue Editing",
+                onAction: () => {
+                  setShowSuccessModal(false);
+                  setSuccessMessage(null);
+                  setUpdateResult(null);
+                },
+              },
+            ]}
+          >
+            <Modal.Section>
+              <BlockStack gap="400">
+                <Banner tone="success">
+                  <p>{successMessage}</p>
+                </Banner>
+                {updateResult?.shopifyResult ? (
+                  <Box>
+                    <Text variant="bodySm" as="p">
+                      The following changes have been applied:
+                    </Text>
+                    <Box paddingBlockStart="200">
+                      {updateResult.updates &&
+                      typeof updateResult.updates === "object" ? (
+                        <>
+                          {"title" in updateResult.updates &&
+                          updateResult.updates.title ? (
+                            <Text variant="bodySm" as="p">
+                              • Title updated
+                            </Text>
+                          ) : null}
+                          {"description" in updateResult.updates &&
+                          updateResult.updates.description ? (
+                            <Text variant="bodySm" as="p">
+                              • Description updated
+                            </Text>
+                          ) : null}
+                          {"seoTitle" in updateResult.updates &&
+                          updateResult.updates.seoTitle ? (
+                            <Text variant="bodySm" as="p">
+                              • SEO title updated
+                            </Text>
+                          ) : null}
+                          {"seoDescription" in updateResult.updates &&
+                          updateResult.updates.seoDescription ? (
+                            <Text variant="bodySm" as="p">
+                              • SEO meta description updated
+                            </Text>
+                          ) : null}
+                          {"bulletPoints" in updateResult.updates &&
+                          updateResult.updates.bulletPoints ? (
+                            <Text variant="bodySm" as="p">
+                              • Bullet points added
+                            </Text>
+                          ) : null}
+                        </>
+                      ) : null}
+                    </Box>
+                  </Box>
+                ) : null}
+                <Text variant="bodySm" as="p" tone="subdued">
+                  Click &ldquo;View Product&rdquo; to see the updated product in
+                  your Shopify admin, or &ldquo;Continue Editing&rdquo; to make
+                  more changes.
+                </Text>
+              </BlockStack>
+            </Modal.Section>
+          </Modal>
+        )}
+
+        {productData && (
           <Layout.Section>
             <Card>
-              <BlockStack gap="600">
-                {/* Enhancement Options Section */}
-                <Box>
-                  <BlockStack gap="400">
-                    <InlineStack align="space-between" blockAlign="center">
-                      <Text as="h2" variant="headingMd">Enhancement Options</Text>
-                      <Button
-                        size="slim"
-                        onClick={() => {
-                          const allSelected = enhancementOptions.generateTitle &&
-                            enhancementOptions.enhanceDescription &&
-                            enhancementOptions.generateSEO &&
-                            enhancementOptions.createPromo
-
-                          setEnhancementOptions({
-                            generateTitle: !allSelected,
-                            enhanceDescription: !allSelected,
-                            generateSEO: !allSelected,
-                            createPromo: !allSelected,
-                            updateImages: false
-                          })
-                        }}
-                      >
-                        {enhancementOptions.generateTitle &&
-                         enhancementOptions.enhanceDescription &&
-                         enhancementOptions.generateSEO &&
-                         enhancementOptions.createPromo ? 'Deselect All' : 'Select All'}
-                      </Button>
-                    </InlineStack>
-                    <BlockStack gap="200">
-                      <Checkbox
-                        label="Generate new title"
-                        checked={enhancementOptions.generateTitle}
-                        onChange={(value) => setEnhancementOptions(prev => ({ ...prev, generateTitle: value }))}
-                      />
-                      <Checkbox
-                        label="Enhance description"
-                        checked={enhancementOptions.enhanceDescription}
-                        onChange={(value) => setEnhancementOptions(prev => ({ ...prev, enhanceDescription: value }))}
-                      />
-                      <Checkbox
-                        label="Generate SEO metadata"
-                        checked={enhancementOptions.generateSEO}
-                        onChange={(value) => setEnhancementOptions(prev => ({ ...prev, generateSEO: value }))}
-                      />
-                      <Checkbox
-                        label="Create promotional copy"
-                        checked={enhancementOptions.createPromo}
-                        onChange={(value) => setEnhancementOptions(prev => ({ ...prev, createPromo: value }))}
-                      />
-                    </BlockStack>
-                  </BlockStack>
-                </Box>
-
-                <Divider />
-
-                {/* Product Details Section */}
-                <Box>
-                  <ProductDetailsForm
-                    mode="enhance"
-                    parentCategory={parentCategory}
-                    setParentCategory={setParentCategory}
-                    parentCategoryOptions={parentCategoryOptions}
-                    availableSizing={availableSizing}
-                    setAvailableSizing={setAvailableSizing}
-                    sizingOptions={sizingOptions}
-                    selectedTemplate={selectedTemplate}
-                    setSelectedTemplate={setSelectedTemplate}
-                    templatePreview={templatePreview}
-                    setTemplatePreview={setTemplatePreview}
-                  />
-                </Box>
-
-                <Divider />
-
-                {/* Additional Information Section */}
-                <Box>
-                  <AdditionalInfoForm
-                    mode="enhance"
-                    fabricMaterial={fabricMaterial}
-                    setFabricMaterial={setFabricMaterial}
-                    occasionUse={occasionUse}
-                    setOccasionUse={setOccasionUse}
-                    targetAudience={targetAudience}
-                    setTargetAudience={setTargetAudience}
-                    keyFeatures={keyFeatures}
-                    setKeyFeatures={setKeyFeatures}
-                    additionalNotes={additionalNotes}
-                    setAdditionalNotes={setAdditionalNotes}
-                    prefilled={!!productData}
-                  />
-                </Box>
+              <BlockStack gap="200">
+                <Text as="h3" variant="headingMd">
+                  {productData.title}
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  SKU: {productData.variants[0]?.sku || "N/A"} | Type:{" "}
+                  {productData.productType || "N/A"} | Vendor:{" "}
+                  {productData.vendor || "N/A"}
+                </Text>
               </BlockStack>
             </Card>
           </Layout.Section>
+        )}
 
-          <Layout.Section>
-            <Box paddingBlockEnd="800">
-              <InlineStack gap="300" align="end">
-                <Button
-                  size="large"
-                  onClick={() => window.location.href = `/dashboard?shop=${shop}`}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="primary"
-                  size="large"
-                  onClick={handleGenerate}
-                  disabled={!isFormValid() || generating}
-                  loading={generating}
-                >
-                  {generating ? 'Generating...' :
-                   !productData ? 'Loading Product Data...' :
-                   'Generate Enhanced Description'}
-                </Button>
-              </InlineStack>
-            </Box>
-          </Layout.Section>
+        <Layout.Section>
+          <ProductImageUpload
+            title="Product Images"
+            description="Add new images or use existing ones for AI analysis"
+            existingImages={productData?.images?.map((img) => img.url) || []}
+            useExistingImages={useExistingImages}
+            onFilesAdded={setUploadedFiles}
+            onExistingImagesToggle={setUseExistingImages}
+            maxFiles={5}
+          />
+        </Layout.Section>
 
-          {/* Progress Modal */}
-          {generating && (
-            <Modal
-              open={true}
-              onClose={() => {}}
-              title="Generating Enhanced Content"
-              titleHidden={false}
-              noScroll
-            >
-              <Modal.Section>
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="600">
+              {/* Enhancement Options Section */}
+              <Box>
                 <BlockStack gap="400">
-                  <Box paddingBlockEnd="200">
-                    <Text as="p" variant="bodyMd" alignment="center">
-                      AI is analyzing your product and generating enhanced content...
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="h2" variant="headingMd">
+                      Enhancement Options
                     </Text>
-                  </Box>
-                  <ProgressBar progress={progress} size="medium" />
-                  <Box paddingBlockStart="200">
-                    <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-                      {progress < 30 ? '🔍 Preparing images for analysis...' :
-                       progress < 60 ? '🤖 Analyzing with GPT-4 Vision...' :
-                       progress < 90 ? '✍️ Generating enhanced descriptions...' :
-                       '✨ Finalizing your content...'}
-                    </Text>
-                  </Box>
-                </BlockStack>
-              </Modal.Section>
-            </Modal>
-          )}
-        </Layout>
+                    <Button
+                      size="slim"
+                      onClick={() => {
+                        const allSelected =
+                          enhancementOptions.generateTitle &&
+                          enhancementOptions.enhanceDescription &&
+                          enhancementOptions.generateSEO &&
+                          enhancementOptions.createPromo;
 
-        <EnhancedContentComparison
-          active={showPreviewModal}
-          onClose={() => {
-            setShowPreviewModal(false)
-            setError(null)
-          }}
-          onApply={handleApplyChanges}
-          originalContent={{
-            title: productData?.title || '',
-            description: productData?.descriptionHtml || '',
-            seoTitle: productData?.seo?.title || '',
-            seoDescription: productData?.seo?.description || '',
-            promoText: ''  // Products don't have existing promo text
-          }}
-          enhancedContent={generatedContent || {}}
-          loading={applying}
-        />
+                        setEnhancementOptions({
+                          generateTitle: !allSelected,
+                          enhanceDescription: !allSelected,
+                          generateSEO: !allSelected,
+                          createPromo: !allSelected,
+                          updateImages: false,
+                        });
+                      }}
+                    >
+                      {enhancementOptions.generateTitle &&
+                      enhancementOptions.enhanceDescription &&
+                      enhancementOptions.generateSEO &&
+                      enhancementOptions.createPromo
+                        ? "Deselect All"
+                        : "Select All"}
+                    </Button>
+                  </InlineStack>
+                  <BlockStack gap="200">
+                    <Checkbox
+                      label="Generate new title"
+                      checked={enhancementOptions.generateTitle}
+                      onChange={(value) =>
+                        setEnhancementOptions((prev) => ({
+                          ...prev,
+                          generateTitle: value,
+                        }))
+                      }
+                    />
+                    <Checkbox
+                      label="Enhance description"
+                      checked={enhancementOptions.enhanceDescription}
+                      onChange={(value) =>
+                        setEnhancementOptions((prev) => ({
+                          ...prev,
+                          enhanceDescription: value,
+                        }))
+                      }
+                    />
+                    <Checkbox
+                      label="Generate SEO metadata"
+                      checked={enhancementOptions.generateSEO}
+                      onChange={(value) =>
+                        setEnhancementOptions((prev) => ({
+                          ...prev,
+                          generateSEO: value,
+                        }))
+                      }
+                    />
+                    <Checkbox
+                      label="Create promotional copy"
+                      checked={enhancementOptions.createPromo}
+                      onChange={(value) =>
+                        setEnhancementOptions((prev) => ({
+                          ...prev,
+                          createPromo: value,
+                        }))
+                      }
+                    />
+                  </BlockStack>
+                </BlockStack>
+              </Box>
+
+              <Divider />
+
+              {/* Product Details Section */}
+              <Box>
+                <ProductDetailsForm
+                  mode="enhance"
+                  parentCategory={parentCategory}
+                  setParentCategory={setParentCategory}
+                  parentCategoryOptions={parentCategoryOptions}
+                  availableSizing={availableSizing}
+                  setAvailableSizing={setAvailableSizing}
+                  sizingOptions={sizingOptions}
+                  selectedTemplate={selectedTemplate}
+                  setSelectedTemplate={setSelectedTemplate}
+                  templatePreview={templatePreview}
+                  setTemplatePreview={setTemplatePreview}
+                />
+              </Box>
+
+              <Divider />
+
+              {/* Additional Information Section */}
+              <Box>
+                <AdditionalInfoForm
+                  mode="enhance"
+                  fabricMaterial={fabricMaterial}
+                  setFabricMaterial={setFabricMaterial}
+                  occasionUse={occasionUse}
+                  setOccasionUse={setOccasionUse}
+                  targetAudience={targetAudience}
+                  setTargetAudience={setTargetAudience}
+                  keyFeatures={keyFeatures}
+                  setKeyFeatures={setKeyFeatures}
+                  additionalNotes={additionalNotes}
+                  setAdditionalNotes={setAdditionalNotes}
+                  prefilled={!!productData}
+                />
+              </Box>
+            </BlockStack>
+          </Card>
+        </Layout.Section>
+
+        <Layout.Section>
+          <Box paddingBlockEnd="800">
+            <InlineStack gap="300" align="end">
+              <Button
+                size="large"
+                onClick={() =>
+                  (window.location.href = `/dashboard?shop=${shop}`)
+                }
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="large"
+                onClick={handleGenerate}
+                disabled={!isFormValid() || generating}
+                loading={generating}
+              >
+                {generating
+                  ? "Generating..."
+                  : !productData
+                    ? "Loading Product Data..."
+                    : "Generate Enhanced Description"}
+              </Button>
+            </InlineStack>
+          </Box>
+        </Layout.Section>
+
+        {/* Progress Modal */}
+        {generating && (
+          <Modal
+            open={true}
+            onClose={() => {}}
+            title="Generating Enhanced Content"
+            titleHidden={false}
+            noScroll
+          >
+            <Modal.Section>
+              <BlockStack gap="400">
+                <Box paddingBlockEnd="200">
+                  <Text as="p" variant="bodyMd" alignment="center">
+                    AI is analyzing your product and generating enhanced
+                    content...
+                  </Text>
+                </Box>
+                <ProgressBar progress={progress} size="medium" />
+                <Box paddingBlockStart="200">
+                  <Text
+                    as="p"
+                    variant="bodySm"
+                    tone="subdued"
+                    alignment="center"
+                  >
+                    {progress < 30
+                      ? "🔍 Preparing images for analysis..."
+                      : progress < 60
+                        ? "🤖 Analyzing with GPT-4 Vision..."
+                        : progress < 90
+                          ? "✍️ Generating enhanced descriptions..."
+                          : "✨ Finalizing your content..."}
+                  </Text>
+                </Box>
+              </BlockStack>
+            </Modal.Section>
+          </Modal>
+        )}
+      </Layout>
+
+      <EnhancedContentComparison
+        active={showPreviewModal}
+        onClose={() => {
+          setShowPreviewModal(false);
+          setError(null);
+        }}
+        onApply={handleApplyChanges}
+        originalContent={{
+          title: productData?.title || "",
+          description: productData?.originalDescription || "",
+          seoTitle: productData?.seoTitle || "",
+          seoDescription: productData?.seoDescription || "",
+          promoText: "", // Products don't have existing promo text
+        }}
+        enhancedContent={generatedContent || {}}
+        loading={applying}
+      />
     </Page>
-  )
+  );
 }

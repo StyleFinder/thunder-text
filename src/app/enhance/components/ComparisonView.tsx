@@ -132,7 +132,7 @@ export function ComparisonView({
     const originalLength = comparisonData.original.description?.length || 0
     const enhancedLength = comparisonData.enhanced.description?.length || 0
     const lengthChange = enhancedLength - originalLength
-    
+
     const originalSeo = comparisonData.original.seoScore || 0
     const enhancedSeo = comparisonData.enhanced.seoScore || 0
     const seoImprovement = enhancedSeo - originalSeo
@@ -141,7 +141,7 @@ export function ComparisonView({
       lengthChange,
       lengthPercentage: originalLength > 0 ? Math.round((lengthChange / originalLength) * 100) : 0,
       seoImprovement,
-      wordCount: enhancedLength > 0 ? enhancedLength.split(/\s+/).length : 0
+      wordCount: comparisonData.enhanced.description ? comparisonData.enhanced.description.split(/\s+/).length : 0
     }
   }
 
@@ -150,12 +150,13 @@ export function ComparisonView({
   const renderSideBySide = () => (
     <InlineStack gap="400" align="start">
       {/* Original Version */}
-      <Box style={{ flex: 1 }}>
+      <div style={{ flex: 1 }}>
+        <Box>
         <Card background="bg-surface-secondary">
           <BlockStack gap="300">
             <InlineStack align="space-between">
               <Text variant="headingSm" as="h3">Original</Text>
-              <Badge tone="subdued">Current</Badge>
+              <Badge>Current</Badge>
             </InlineStack>
             
             <Text variant="headingMd" as="h4">
@@ -163,18 +164,18 @@ export function ComparisonView({
             </Text>
             
             <Box>
-              <Text variant="bodyMd">
+              <Text variant="bodyMd" as="p">
                 {comparisonData.original.description}
               </Text>
             </Box>
             
             {showMetrics && (
               <BlockStack gap="200">
-                <Text variant="bodySm" tone="subdued">
+                <Text variant="bodySm" tone="subdued" as="p">
                   Length: {comparisonData.original.description?.length || 0} characters
                 </Text>
                 {comparisonData.original.seoScore && (
-                  <Text variant="bodySm" tone="subdued">
+                  <Text variant="bodySm" tone="subdued" as="p">
                     SEO Score: {comparisonData.original.seoScore}/100
                   </Text>
                 )}
@@ -182,11 +183,13 @@ export function ComparisonView({
             )}
           </BlockStack>
         </Card>
-      </Box>
+        </Box>
+      </div>
 
       {/* Enhanced Version */}
-      <Box style={{ flex: 1 }}>
-        <Card background="bg-surface-success-subdued">
+      <div style={{ flex: 1 }}>
+        <Box>
+        <Card background="bg-surface-success">
           <BlockStack gap="300">
             <InlineStack align="space-between">
               <Text variant="headingSm" as="h3">Enhanced</Text>
@@ -198,7 +201,7 @@ export function ComparisonView({
             </Text>
             
             <Box>
-              <Text variant="bodyMd">
+              <Text variant="bodyMd" as="p">
                 {comparisonData.enhanced.description}
               </Text>
             </Box>
@@ -206,24 +209,24 @@ export function ComparisonView({
             {showMetrics && (
               <BlockStack gap="200">
                 <InlineStack gap="200">
-                  <Text variant="bodySm" tone="subdued">
+                  <Text variant="bodySm" tone="subdued" as="p">
                     Length: {comparisonData.enhanced.description?.length || 0} characters
                   </Text>
                   {improvements.lengthChange !== 0 && (
                     <Badge tone={improvements.lengthChange > 0 ? 'success' : 'attention'}>
-                      {improvements.lengthChange > 0 ? '+' : ''}{improvements.lengthPercentage}%
+                      {`${improvements.lengthChange > 0 ? '+' : ''}${improvements.lengthPercentage}%`}
                     </Badge>
                   )}
                 </InlineStack>
-                
+
                 {comparisonData.enhanced.seoScore && (
                   <InlineStack gap="200">
-                    <Text variant="bodySm" tone="subdued">
+                    <Text variant="bodySm" tone="subdued" as="p">
                       SEO Score: {comparisonData.enhanced.seoScore}/100
                     </Text>
                     {improvements.seoImprovement > 0 && (
                       <Badge tone="success">
-                        +{improvements.seoImprovement} points
+                        {`+${improvements.seoImprovement} points`}
                       </Badge>
                     )}
                   </InlineStack>
@@ -232,7 +235,8 @@ export function ComparisonView({
             )}
           </BlockStack>
         </Card>
-      </Box>
+        </Box>
+      </div>
     </InlineStack>
   )
 
@@ -243,7 +247,7 @@ export function ComparisonView({
         <BlockStack gap="300">
           <Text variant="headingSm" as="h3">Changes Overview</Text>
           <Box padding="300" background="bg-surface-secondary">
-            <Text variant="bodyMd">
+            <Text variant="bodyMd" as="p">
               {renderDiffText(generateDiff)}
             </Text>
           </Box>
@@ -251,7 +255,7 @@ export function ComparisonView({
       </Card>
 
       {/* Enhanced Version Full */}
-      <Card background="bg-surface-success-subdued">
+      <Card background="bg-surface-success">
         <BlockStack gap="300">
           <InlineStack align="space-between">
             <Text variant="headingSm" as="h3">Enhanced Version</Text>
@@ -261,8 +265,8 @@ export function ComparisonView({
           <Text variant="headingMd" as="h4">
             {comparisonData.enhanced.title}
           </Text>
-          
-          <Text variant="bodyMd">
+
+          <Text variant="bodyMd" as="p">
             {comparisonData.enhanced.description}
           </Text>
         </BlockStack>
@@ -278,7 +282,7 @@ export function ComparisonView({
           <Text variant="headingMd" as="h2">Description Comparison</Text>
           
           <InlineStack gap="200">
-            <ButtonGroup segmented>
+            <ButtonGroup variant="segmented">
               <Button
                 pressed={currentViewMode === 'side-by-side'}
                 onClick={() => setCurrentViewMode('side-by-side')}
@@ -293,7 +297,7 @@ export function ComparisonView({
               </Button>
             </ButtonGroup>
             
-            <ButtonGroup segmented>
+            <ButtonGroup variant="segmented">
               <Button
                 pressed={previewMode === 'preview'}
                 onClick={() => setPreviewMode('preview')}
@@ -314,14 +318,14 @@ export function ComparisonView({
 
         {/* Improvements Summary */}
         {comparisonData.enhanced.improvements && comparisonData.enhanced.improvements.length > 0 && (
-          <Card background="bg-surface-info-subdued">
+          <Card background="bg-surface-info">
             <BlockStack gap="300">
               <Text variant="headingSm" as="h3">Key Improvements</Text>
               <BlockStack gap="100">
                 {comparisonData.enhanced.improvements.map((improvement, index) => (
                   <InlineStack key={index} gap="200">
-                    <Text variant="bodyMd">✅</Text>
-                    <Text variant="bodyMd">{improvement}</Text>
+                    <Text variant="bodyMd" as="span">✅</Text>
+                    <Text variant="bodyMd" as="span">{improvement}</Text>
                   </InlineStack>
                 ))}
               </BlockStack>

@@ -1,19 +1,19 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { ContentLoader } from '@/components/ui/loading/ContentLoader'
-import Link from 'next/link'
+} from "@/components/ui/select";
+import { ContentLoader } from "@/components/ui/loading/ContentLoader";
+import Link from "next/link";
 import {
   Search,
   Filter,
@@ -26,176 +26,191 @@ import {
   MoreVertical,
   ArrowUpDown,
   BookmarkPlus,
-  Bookmark
-} from 'lucide-react'
+  Bookmark,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { GeneratedContent, ContentType } from '@/types/content-center'
+} from "@/components/ui/dropdown-menu";
+import { GeneratedContent, ContentType } from "@/types/content-center";
+import { useShopifyAuth } from "@/app/components/UnifiedShopifyAuth";
 
-type SortField = 'created_at' | 'word_count' | 'topic'
-type SortOrder = 'asc' | 'desc'
+type SortField = "created_at" | "word_count" | "topic";
+type SortOrder = "asc" | "desc";
 
 const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
-  blog: 'Blog Post',
-  ad: 'Ad Copy',
-  store_copy: 'Store Copy',
-  social_facebook: 'Facebook',
-  social_instagram: 'Instagram',
-  social_tiktok: 'TikTok'
-}
+  blog: "Blog Post",
+  ad: "Ad Copy",
+  store_copy: "Store Copy",
+  social_facebook: "Facebook",
+  social_instagram: "Instagram",
+  social_tiktok: "TikTok",
+};
 
 export default function LibraryPage() {
-  const [content, setContent] = useState<GeneratedContent[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedType, setSelectedType] = useState<ContentType | 'all'>('all')
-  const [showSavedOnly, setShowSavedOnly] = useState(false)
-  const [sortField, setSortField] = useState<SortField>('created_at')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
-
-  useEffect(() => {
-    fetchContent()
-  }, [selectedType, showSavedOnly, sortField, sortOrder])
+  const { shop: shopDomain } = useShopifyAuth();
+  const [content, setContent] = useState<GeneratedContent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedType, setSelectedType] = useState<ContentType | "all">("all");
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
+  const [sortField, setSortField] = useState<SortField>("created_at");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   const fetchContent = async () => {
-    setIsLoading(true)
+    if (!shopDomain) return;
+
+    setIsLoading(true);
     try {
-      const params = new URLSearchParams()
-      if (selectedType !== 'all') params.append('content_type', selectedType)
-      if (showSavedOnly) params.append('saved_only', 'true')
-      params.append('sort_by', sortField)
-      params.append('sort_order', sortOrder)
+      const params = new URLSearchParams();
+      if (selectedType !== "all") params.append("content_type", selectedType);
+      if (showSavedOnly) params.append("saved_only", "true");
+      params.append("sort_by", sortField);
+      params.append("sort_order", sortOrder);
 
       const response = await fetch(
         `/api/content-center/content?${params.toString()}`,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-          }
-        }
-      )
+            Authorization: `Bearer ${shopDomain}`,
+          },
+        },
+      );
 
-      if (!response.ok) throw new Error('Failed to fetch content')
+      if (!response.ok) throw new Error("Failed to fetch content");
 
-      const data = await response.json()
+      const data = await response.json();
       if (data.success) {
-        setContent(data.data)
+        setContent(data.data.content || []);
       }
     } catch (error) {
-      console.error('Error fetching content:', error)
+      console.error("Error fetching content:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  useEffect(() => {
+    if (shopDomain) {
+      fetchContent();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedType, showSavedOnly, sortField, sortOrder, shopDomain]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this content?')) return
+    if (!confirm("Are you sure you want to delete this content?")) return;
+    if (!shopDomain) return;
 
     try {
       const response = await fetch(`/api/content-center/content/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-        }
-      })
+          Authorization: `Bearer ${shopDomain}`,
+        },
+      });
 
-      if (!response.ok) throw new Error('Failed to delete')
+      if (!response.ok) throw new Error("Failed to delete");
 
-      setContent(content.filter(c => c.id !== id))
+      setContent(content.filter((c) => c.id !== id));
     } catch (error) {
-      console.error('Error deleting content:', error)
-      alert('Failed to delete content')
+      console.error("Error deleting content:", error);
+      alert("Failed to delete content");
     }
-  }
+  };
 
   const handleToggleSave = async (item: GeneratedContent) => {
+    if (!shopDomain) return;
+
     try {
       const response = await fetch(`/api/content-center/content/${item.id}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${shopDomain}`,
         },
-        body: JSON.stringify({ is_saved: !item.is_saved })
-      })
+        body: JSON.stringify({ is_saved: !item.is_saved }),
+      });
 
-      if (!response.ok) throw new Error('Failed to update')
+      if (!response.ok) throw new Error("Failed to update");
 
       setContent(
-        content.map(c =>
-          c.id === item.id ? { ...c, is_saved: !item.is_saved } : c
-        )
-      )
+        content.map((c) =>
+          c.id === item.id ? { ...c, is_saved: !item.is_saved } : c,
+        ),
+      );
     } catch (error) {
-      console.error('Error toggling save:', error)
+      console.error("Error toggling save:", error);
     }
-  }
+  };
 
-  const handleExport = async (item: GeneratedContent, format: 'txt' | 'html' | 'md') => {
+  const handleExport = async (
+    item: GeneratedContent,
+    format: "txt" | "html" | "md",
+  ) => {
+    if (!shopDomain) return;
+
     try {
       const response = await fetch(
         `/api/content-center/export/${item.id}?format=${format}`,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-          }
-        }
-      )
+            Authorization: `Bearer ${shopDomain}`,
+          },
+        },
+      );
 
-      if (!response.ok) throw new Error('Export failed')
+      if (!response.ok) throw new Error("Export failed");
 
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `content-${item.id}.${format}`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `content-${item.id}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error exporting:', error)
-      alert('Failed to export content')
+      console.error("Error exporting:", error);
+      alert("Failed to export content");
     }
-  }
+  };
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
-      setSortField(field)
-      setSortOrder('desc')
+      setSortField(field);
+      setSortOrder("desc");
     }
-  }
+  };
 
-  const filteredContent = content.filter(item => {
+  const filteredContent = content.filter((item) => {
     if (searchQuery) {
-      const query = searchQuery.toLowerCase()
+      const query = searchQuery.toLowerCase();
       return (
         item.topic.toLowerCase().includes(query) ||
         item.generated_text.toLowerCase().includes(query)
-      )
+      );
     }
-    return true
-  })
+    return true;
+  });
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-    const diffDays = Math.floor(diffHours / 24)
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
 
-    if (diffHours < 1) return 'Just now'
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
-    return date.toLocaleDateString()
-  }
+    if (diffHours < 1) return "Just now";
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -227,7 +242,9 @@ export default function LibraryPage() {
             {/* Content Type Filter */}
             <Select
               value={selectedType}
-              onValueChange={(value) => setSelectedType(value as ContentType | 'all')}
+              onValueChange={(value) =>
+                setSelectedType(value as ContentType | "all")
+              }
             >
               <SelectTrigger className="w-full lg:w-[200px]">
                 <Filter className="h-4 w-4 mr-2" />
@@ -246,7 +263,7 @@ export default function LibraryPage() {
 
             {/* Saved Only Toggle */}
             <Button
-              variant={showSavedOnly ? 'default' : 'outline'}
+              variant={showSavedOnly ? "default" : "outline"}
               onClick={() => setShowSavedOnly(!showSavedOnly)}
               className="w-full lg:w-auto"
             >
@@ -260,30 +277,27 @@ export default function LibraryPage() {
       {/* Content Count and Sort */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-muted-foreground">
-          {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'}
+          {filteredContent.length}{" "}
+          {filteredContent.length === 1 ? "item" : "items"}
         </p>
         <div className="flex gap-2">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => toggleSort('created_at')}
+            onClick={() => toggleSort("created_at")}
             className="gap-1"
           >
             Date
-            {sortField === 'created_at' && (
-              <ArrowUpDown className="h-3 w-3" />
-            )}
+            {sortField === "created_at" && <ArrowUpDown className="h-3 w-3" />}
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => toggleSort('word_count')}
+            onClick={() => toggleSort("word_count")}
             className="gap-1"
           >
             Length
-            {sortField === 'word_count' && (
-              <ArrowUpDown className="h-3 w-3" />
-            )}
+            {sortField === "word_count" && <ArrowUpDown className="h-3 w-3" />}
           </Button>
         </div>
       </div>
@@ -299,9 +313,9 @@ export default function LibraryPage() {
             <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-xl font-semibold mb-2">No content found</h3>
             <p className="text-muted-foreground mb-6">
-              {searchQuery || selectedType !== 'all' || showSavedOnly
-                ? 'Try adjusting your filters or search query'
-                : 'Start generating content to see it here'}
+              {searchQuery || selectedType !== "all" || showSavedOnly
+                ? "Try adjusting your filters or search query"
+                : "Start generating content to see it here"}
             </p>
             <Link href="/content-center/generate">
               <Button>Generate Content</Button>
@@ -355,13 +369,17 @@ export default function LibraryPage() {
                               View
                             </DropdownMenuItem>
                           </Link>
-                          <Link href={`/content-center/library/${item.id}/edit`}>
+                          <Link
+                            href={`/content-center/library/${item.id}/edit`}
+                          >
                             <DropdownMenuItem>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
                           </Link>
-                          <DropdownMenuItem onClick={() => handleToggleSave(item)}>
+                          <DropdownMenuItem
+                            onClick={() => handleToggleSave(item)}
+                          >
                             {item.is_saved ? (
                               <>
                                 <BookmarkPlus className="h-4 w-4 mr-2" />
@@ -375,15 +393,21 @@ export default function LibraryPage() {
                             )}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleExport(item, 'txt')}>
+                          <DropdownMenuItem
+                            onClick={() => handleExport(item, "txt")}
+                          >
                             <Download className="h-4 w-4 mr-2" />
                             Export as TXT
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleExport(item, 'html')}>
+                          <DropdownMenuItem
+                            onClick={() => handleExport(item, "html")}
+                          >
                             <Download className="h-4 w-4 mr-2" />
                             Export as HTML
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleExport(item, 'md')}>
+                          <DropdownMenuItem
+                            onClick={() => handleExport(item, "md")}
+                          >
                             <Download className="h-4 w-4 mr-2" />
                             Export as Markdown
                           </DropdownMenuItem>
@@ -401,7 +425,10 @@ export default function LibraryPage() {
 
                     {/* Preview Text */}
                     <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                      {item.generated_text.replace(/<[^>]*>/g, '').substring(0, 200)}...
+                      {item.generated_text
+                        .replace(/<[^>]*>/g, "")
+                        .substring(0, 200)}
+                      ...
                     </p>
 
                     {/* Metadata */}
@@ -423,5 +450,5 @@ export default function LibraryPage() {
         </div>
       )}
     </div>
-  )
+  );
 }
