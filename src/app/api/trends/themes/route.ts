@@ -8,9 +8,9 @@ import { createClient } from "@supabase/supabase-js";
 export async function GET() {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { data: themes, error } = await supabase
       .from("themes")
