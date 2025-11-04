@@ -101,9 +101,67 @@ const PRODUCT_QUERY = `
   }
 `
 
+interface MetafieldNode {
+  namespace: string
+  key: string
+  value: string
+  type: string
+}
+
+interface CollectionNode {
+  title: string
+}
+
+interface ImageNode {
+  id: string
+  url: string
+  altText: string | null
+}
+
+interface VariantNode {
+  id: string
+  title: string
+  price: string
+  compareAtPrice?: string
+  inventoryQuantity?: number
+  weight?: number
+  weightUnit?: string
+}
+
+interface ProductQueryResponse {
+  product: {
+    id: string
+    title: string
+    description: string
+    handle: string
+    productType: string
+    vendor: string
+    tags: string[]
+    status: string
+    createdAt: string
+    updatedAt: string
+    metafields: {
+      edges: Array<{ node: MetafieldNode }>
+    }
+    collections: {
+      edges: Array<{ node: CollectionNode }>
+    }
+    images: {
+      edges: Array<{ node: ImageNode }>
+    }
+    variants: {
+      edges: Array<{ node: VariantNode }>
+    }
+    seo: {
+      title: string
+      description: string
+    }
+  }
+}
+
 export async function importProductData(productId: string, shopDomain: string, accessToken: string): Promise<ProductData> {
   try {
-    const response = await shopifyGraphQL(PRODUCT_QUERY, {
+    const response = await shopifyGraphQL<ProductQueryResponse>(PRODUCT_QUERY, {
       id: productId
     }, shopDomain)
 
@@ -112,33 +170,6 @@ export async function importProductData(productId: string, shopDomain: string, a
     }
 
     const product = response.data.product
-
-    interface MetafieldNode {
-      namespace: string
-      key: string
-      value: string
-      type: string
-    }
-
-    interface CollectionNode {
-      title: string
-    }
-
-    interface ImageNode {
-      id: string
-      url: string
-      altText: string | null
-    }
-
-    interface VariantNode {
-      id: string
-      title: string
-      price: string
-      compareAtPrice?: string
-      inventoryQuantity?: number
-      weight?: number
-      weightUnit?: string
-    }
 
     // Process metafields into a more usable format
     const metafields: Record<string, { value: string; type: string }> = {}
@@ -161,7 +192,7 @@ export async function importProductData(productId: string, shopDomain: string, a
       images: product.images.edges.map(({ node }: { node: ImageNode }) => ({
         id: node.id,
         url: node.url,
-        altText: node.altText
+        altText: node.altText ?? undefined
       })),
       variants: product.variants.edges.map(({ node }: { node: VariantNode }) => ({
         id: node.id,

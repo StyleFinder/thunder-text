@@ -112,7 +112,7 @@ export default function InstallPage() {
 
               <InlineStack gap="300">
                 <Button
-                  primary
+                  variant="primary"
                   onClick={handleInstall}
                   loading={installing}
                   disabled={!shop || installing}
@@ -127,7 +127,7 @@ export default function InstallPage() {
                 )}
               </InlineStack>
 
-              <Box paddingBlockStart="400" borderBlockStartWidth="025" borderColor="border-subdued">
+              <Box paddingBlockStart="400" borderBlockStartWidth="025">
                 <BlockStack gap="200">
                   <Text as="h3" variant="headingSm">
                     What permissions will Thunder Text request?

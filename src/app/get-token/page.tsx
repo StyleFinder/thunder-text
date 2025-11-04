@@ -50,7 +50,7 @@ export default function GetToken() {
               <Text variant="headingMd" as="h2">
                 Generate Shopify Access Token
               </Text>
-              <Text as="p" color="subdued">
+              <Text as="p" tone="subdued">
                 This will generate a fresh access token for your development store.
               </Text>
               <LegacyStack distribution="leading">
@@ -63,13 +63,13 @@ export default function GetToken() {
                 </Button>
               </LegacyStack>
               {error && (
-                <Banner status="critical">
+                <Banner tone="critical">
                   <p>{error}</p>
                 </Banner>
               )}
               {token && (
                 <>
-                  <Banner status="success">
+                  <Banner tone="success">
                     <p>Access token generated successfully!</p>
                   </Banner>
                   
@@ -90,7 +90,7 @@ export default function GetToken() {
                     </Button>
                   </LegacyStack>
                   
-                  <Card sectioned>
+                  <Card>
                     <Text variant="headingMd" as="h3">Next Steps:</Text>
                     <LegacyStack vertical spacing="tight">
                       <Text as="p">1. Copy the token above</Text>

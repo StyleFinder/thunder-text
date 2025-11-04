@@ -43,7 +43,7 @@ interface ProductsResponse {
 function ProductsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { shop, isAuthenticated, authenticatedFetch, sessionToken } = useShopifyAuth()
+  const { shop, isAuthenticated, sessionToken } = useShopifyAuth()
 
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -54,10 +54,10 @@ function ProductsContent() {
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    if (shop && isAuthenticated && authenticatedFetch) {
+    if (shop && isAuthenticated && sessionToken) {
       fetchProducts()
     }
-  }, [shop, isAuthenticated, authenticatedFetch])
+  }, [shop, isAuthenticated, sessionToken])
 
   const fetchProducts = async (nextCursor?: string) => {
     try {
@@ -70,21 +70,14 @@ function ProductsContent() {
         params.append('cursor', nextCursor)
       }
 
-      // Use the authenticatedFetch provided by ShopifyAuthProvider
-      // This automatically includes the session token for proper authentication
-      let response
-      if (authenticatedFetch) {
-        response = await authenticatedFetch(`/api/shopify/products?${params}`)
-      } else {
-        // Fallback to regular fetch with session token if available
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-        }
-        if (sessionToken) {
-          headers['Authorization'] = `Bearer ${sessionToken}`
-        }
-        response = await fetch(`/api/shopify/products?${params}`, { headers })
+      // Use regular fetch with session token for authentication
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
       }
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`
+      }
+      const response = await fetch(`/api/shopify/products?${params}`, { headers })
       const data = await response.json()
 
       if (!data.success) {
@@ -290,19 +283,15 @@ function ProductsContent() {
           gap: '1.5rem',
           marginBottom: '2rem'
         }}>
-          {products.map((product: {
-            id: string
-            title: string
-            status: string
-            images?: Array<{ url: string; altText?: string | null }>
-          }) => {
-            // Products are now flat objects, not nested in node
-            const primaryImage = product.images?.[0]
-            const isGenerating = generatingIds.has(product.id)
-            
+          {products.map((product) => {
+            // Products use GraphQL node structure
+            const productData = product.node
+            const primaryImage = productData.images.edges[0]?.node
+            const isGenerating = generatingIds.has(productData.id)
+
             return (
               <div
-                key={product.id}
+                key={productData.id}
                 style={{
                   backgroundColor: 'white',
                   border: '1px solid #e5e7eb',
@@ -332,7 +321,7 @@ function ProductsContent() {
                   {primaryImage ? (
                     <img
                       src={primaryImage.url}
-                      alt={primaryImage.altText || product.title}
+                      alt={primaryImage.altText || productData.title}
                       style={{
                         width: '100%',
                         height: '100%',
@@ -360,17 +349,17 @@ function ProductsContent() {
                     margin: '0 0 0.5rem 0',
                     lineHeight: '1.3'
                   }}>
-                    {truncateText(product.title, 60)}
+                    {truncateText(productData.title, 60)}
                   </h3>
-                  
-                  {product.description && (
-                    <p style={{ 
-                      color: '#6b7280', 
-                      fontSize: '0.9rem', 
+
+                  {productData.description && (
+                    <p style={{
+                      color: '#6b7280',
+                      fontSize: '0.9rem',
                       margin: '0 0 1rem 0',
                       lineHeight: '1.4'
                     }}>
-                      {truncateText(stripHtml(product.description), 100)}
+                      {truncateText(stripHtml(productData.description), 100)}
                     </p>
                   )}
 
@@ -388,7 +377,7 @@ function ProductsContent() {
                         cursor: isGenerating ? 'not-allowed' : 'pointer',
                         transition: 'background-color 0.2s ease'
                       }}
-                      onClick={() => handleGenerateDescription(product.id)}
+                      onClick={() => handleGenerateDescription(productData.id)}
                       disabled={isGenerating}
                       onMouseEnter={(e) => {
                         if (!isGenerating) {

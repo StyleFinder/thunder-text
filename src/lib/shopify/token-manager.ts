@@ -186,7 +186,9 @@ export async function getShopToken(
       return { success: false, error: error.message }
     }
 
-    if (!data || !data.access_token) {
+    const shopData = data as { access_token?: string; scope?: string } | null
+
+    if (!shopData || !shopData.access_token) {
       console.log('⚠️ No token found for shop:', fullShopDomain)
       console.log('💡 Hint: Make sure the app is installed through Shopify OAuth flow')
       console.log('📝 Query attempted for:', fullShopDomain)
@@ -194,10 +196,10 @@ export async function getShopToken(
     }
 
     // Cache the token for future use
-    setCachedToken(fullShopDomain, data.access_token, data.scope)
+    setCachedToken(fullShopDomain, shopData.access_token, shopData.scope)
 
     console.log('✅ Token retrieved successfully for shop:', fullShopDomain)
-    return { success: true, accessToken: data.access_token }
+    return { success: true, accessToken: shopData.access_token }
 
   } catch (error) {
     console.error('❌ Unexpected error retrieving token:', error)
@@ -227,7 +229,8 @@ export async function getShopDetails(
       ? shopDomain
       : `${shopDomain}.myshopify.com`
 
-    const { data, error } = await supabase
+    const client = getSupabaseClient()
+    const { data, error } = await client
       .from('shops')
       .select('*')
       .eq('shop_domain', fullShopDomain)
@@ -279,7 +282,8 @@ export async function deactivateShopToken(
       ? shopDomain
       : `${shopDomain}.myshopify.com`
 
-    const { error } = await supabase
+    const client = getSupabaseClient()
+    const { error } = await client
       .from('shops')
       .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq('shop_domain', fullShopDomain)

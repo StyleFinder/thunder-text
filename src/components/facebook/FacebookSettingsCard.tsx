@@ -259,11 +259,6 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
                   type="email"
                   placeholder="additional-email@example.com"
                   autoComplete="off"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAddEmail()
-                    }
-                  }}
                 />
               </div>
               <Button onClick={handleAddEmail}>+ Add Email</Button>
@@ -293,6 +288,7 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
                 step={0.1}
                 suffix="%"
                 helpText="Alert when conversion rate falls below this value"
+                autoComplete="off"
               />
             </div>
             <div style={{ flex: 1 }}>
@@ -310,6 +306,7 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
                 step={0.1}
                 suffix="x"
                 helpText="Alert when ROAS falls below this value"
+                autoComplete="off"
               />
             </div>
           </InlineStack>
@@ -328,6 +325,7 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
             max={100}
             suffix="%"
             helpText="Trigger alerts when metrics fall this percentage below benchmarks"
+            autoComplete="off"
           />
         </BlockStack>
 

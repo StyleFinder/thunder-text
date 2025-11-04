@@ -1,9 +1,116 @@
 # Thunder Text - SuperClaude Development Framework
 
 ## Project Overview
+
 Thunder Text is an AI-powered Shopify application that generates SEO-optimized product descriptions from images using GPT-4 Vision API. This configuration optimizes SuperClaude for efficient development across all project phases.
 
+## 🔴 CRITICAL: Shop/Store ID Architecture (READ THIS FIRST)
+
+**THE RECURRING ISSUE**: Confusion between shop domain, shop ID, and store_id causes authentication failures.
+
+### Database Schema - The Single Source of Truth
+
+```typescript
+// shops table (Supabase)
+type Shop = {
+  id: UUID                    // ← This is the PRIMARY KEY
+  shop_domain: string         // e.g., "zunosai-staging-test-store.myshopify.com"
+  access_token: string
+  scope: string
+  is_active: boolean
+  created_at: timestamp
+  updated_at: timestamp
+}
+
+// ALL other tables reference shops via:
+store_id: UUID REFERENCES shops(id)  // ← ALWAYS uses shops.id, NOT shop_domain
+```
+
+### The Authentication Flow (MEMORIZE THIS)
+
+```typescript
+// 1. Frontend sends shop domain in Authorization header
+Authorization: Bearer zunosai-staging-test-store.myshopify.com
+
+// 2. getUserId() extracts shop domain and looks up shop
+const { data: shopData } = await supabaseAdmin
+  .from('shops')
+  .select('id, shop_domain')
+  .eq('shop_domain', shop)      // Match by domain
+  .single()
+
+// 3. Returns shops.id as userId (THIS IS THE UUID)
+return shopData.id  // e.g., "38b6c917-c23d-4fa6-9fa3-165f7ca959d2"
+
+// 4. Use userId as store_id in ALL database queries
+.eq('store_id', userId)  // ← userId IS the shops.id UUID
+```
+
+### NEVER Do This (Common Mistakes)
+
+```typescript
+// ❌ WRONG: Using shop_domain as store_id
+.eq('store_id', 'zunosai-staging-test-store.myshopify.com')
+
+// ❌ WRONG: Confusing business_profiles.id with store_id
+const profileId = '9693764b-...'  // This is business_profiles.id
+.eq('store_id', profileId)  // Wrong! Should be shops.id
+
+// ❌ WRONG: Assuming store_id is TEXT (it's UUID)
+store_id = auth.uid()::text  // Wrong type casting
+
+// ✅ CORRECT: Always use shops.id as store_id
+const userId = await getUserId(request)  // Returns shops.id UUID
+.eq('store_id', userId)
+```
+
+### Debugging Shop/Store Issues - The Checklist
+
+When you encounter authentication or "profile not found" errors:
+
+```sql
+-- 1. Find the shop by domain
+SELECT id, shop_domain FROM shops
+WHERE shop_domain = 'your-shop.myshopify.com';
+-- Note the `id` - this is what store_id should be
+
+-- 2. Check if related records use correct store_id
+SELECT * FROM business_profiles
+WHERE store_id = '<shops.id from step 1>';
+
+-- 3. If mismatch, check what store_id is being used
+SELECT bp.id, bp.store_id, s.shop_domain
+FROM business_profiles bp
+LEFT JOIN shops s ON s.id = bp.store_id
+WHERE bp.store_id = '<incorrect-uuid>';
+-- If shop_domain is NULL, store_id is wrong
+
+-- 4. If shop doesn't exist, create it
+INSERT INTO shops (shop_domain, access_token, scope, is_active)
+VALUES ('your-shop.myshopify.com', 'placeholder', 'write_products', true)
+RETURNING id, shop_domain;
+```
+
+### Key Files That Handle Shop/Store Logic
+
+- `/src/lib/auth/content-center-auth.ts` - `getUserId()` returns shops.id
+- `/src/app/api/*/route.ts` - All API routes use `getUserId()` for store_id
+- `/supabase/migrations/*` - All tables reference shops(id) as store_id
+
+### When Creating New Features
+
+**ALWAYS:**
+
+1. Use `getUserId(request)` to get the shop's UUID
+2. Store that UUID in `store_id` columns
+3. Query by `.eq('store_id', userId)` where userId is shops.id
+4. NEVER store shop_domain in store_id columns
+5. NEVER confuse record.id with store_id
+
+**The Rule**: `store_id` ALWAYS = `shops.id` (UUID), NEVER = `shops.shop_domain` (TEXT)
+
 ### Development Environment
+
 - **Production URL**: https://thunder-text.onrender.com
 - **Dev Shop**: zunosai-staging-test-store
 - **Settings URL**: https://thunder-text.onrender.com/settings?shop=zunosai-staging-test-store&authenticated=true
@@ -16,6 +123,7 @@ Thunder Text is an AI-powered Shopify application that generates SEO-optimized p
 ## 🚨 CRITICAL: Production Quality Standards
 
 **MANDATORY READING**: Before proposing ANY solution, Claude MUST:
+
 1. Read `/PRODUCTION_READY_GUIDELINES.md` in full
 2. Answer the 5 Critical Questions (Root Cause, Solution Type, Technical Debt, Future Problems, Observability)
 3. Complete the Production-Ready Checklist
@@ -23,7 +131,9 @@ Thunder Text is an AI-powered Shopify application that generates SEO-optimized p
 5. Explicitly state: **"This is PRODUCTION READY"** or **"This is TEMPORARY FIX"** with complete explanation
 
 ### The Consequences Rule
+
 Before implementing any solution, Claude MUST answer:
+
 1. **What happens if this breaks in production?**
 2. **How will we know if it breaks?** (User feedback + Developer visibility)
 3. **What's the impact on users?**
@@ -34,6 +144,7 @@ Before implementing any solution, Claude MUST answer:
 **If Claude cannot answer these questions confidently, the solution is NOT ready.**
 
 ### Zero Tolerance For:
+
 - ❌ Silent failures (errors hidden from users and developers)
 - ❌ Assumption-based code (no validation of preconditions)
 - ❌ Magic fallbacks (unexplained default values)
@@ -42,6 +153,7 @@ Before implementing any solution, Claude MUST answer:
 - ❌ Technical debt without explicit approval and payoff plan
 
 ### Required For Every Solution:
+
 - ✅ Users see clear feedback (loading, success, error states)
 - ✅ Developers can debug (console logs with context, error messages)
 - ✅ Errors fail gracefully (never crash, always degrade)
@@ -51,6 +163,7 @@ Before implementing any solution, Claude MUST answer:
 ## SuperClaude Framework Integration
 
 ### Core Framework Components
+
 @FLAGS.md - Behavioral flags for execution modes and tool selection
 @PRINCIPLES.md - Software engineering principles and decision framework
 @RULES.md - Actionable development rules and quality standards
@@ -62,54 +175,67 @@ Before implementing any solution, Claude MUST answer:
 ### Default Flags for Thunder Text Development
 
 **--shopify** - Enable Shopify-specific development patterns
+
 - Trigger: OAuth flows, webhook handling, metafield operations, Polaris UI components
 - Behavior: Use Shopify MCP server, follow Partner Program guidelines, Shopify API best practices
 
 **--c7** - Enable Context7 for documentation lookup
+
 - Trigger: Supabase, Next.js, React, OpenAI API integration
 - Behavior: Access official docs, pattern guidance, best practices
 
 **--task-manage** - Enable hierarchical task management
+
 - Trigger: Multi-phase development, complex integrations, bulk processing features
 - Behavior: Use memory system, TodoWrite coordination, progress tracking
 
 **--orchestrate** - Optimize tool selection for Shopify development
+
 - Trigger: Multi-tool operations, API integrations, performance constraints
 - Behavior: Smart routing to specialized agents, parallel execution optimization
 
 ### Phase-Specific Flag Patterns
 
 #### Phase 1: MVP Development (--mvp-mode)
+
 ```
 --shopify --c7 --task-manage --safe-mode
 ```
+
 - Focus: Stability, OAuth implementation, basic AI integration
 - Priority: Security, Shopify compliance, clean architecture
 
 #### Phase 2: Bulk Processing (--scale-mode)
-```  
+
+```
 --orchestrate --task-manage --think-hard --performance
 ```
+
 - Focus: Queue management, bulk operations, performance optimization
 - Priority: Scalability, error handling, monitoring
 
 #### Phase 3: Enterprise Features (--enterprise-mode)
+
 ```
 --delegate --think-hard --all-mcp --validate --loop
 ```
+
 - Focus: Multi-store management, APIs, team collaboration
 - Priority: Architecture quality, documentation, enterprise patterns
 
 #### Phase 4: Innovation (--innovation-mode)
+
 ```
 --ultrathink --all-mcp --brainstorm --loop
 ```
+
 - Focus: Advanced AI features, multi-platform expansion
 - Priority: Innovation, strategic architecture, competitive advantage
 
 ## Variable and Concept Consistency Protocol
 
 ### The Duplication Problem
+
 **Core Issue**: Claude may create new variables, types, or table names without understanding that equivalent concepts already exist in the codebase, leading to confusion like the `shops` vs `stores` incident.
 
 **Impact**: Hours of debugging, authentication failures, data lookup errors, foreign key inconsistencies, and architectural confusion.
@@ -119,6 +245,7 @@ Before implementing any solution, Claude MUST answer:
 **BEFORE creating ANY new variable, type, table, function, or concept, Claude MUST:**
 
 #### 1. Search for Existing Patterns
+
 ```bash
 # Search for similar variable names
 grep -r "shop" --include="*.ts" --include="*.tsx" --include="*.sql"
@@ -133,12 +260,15 @@ grep -r "CREATE TABLE" supabase/migrations/
 ```
 
 #### 2. Ask Clarifying Questions
+
 **When in doubt, ALWAYS ask:**
+
 - "I see you have `shops` table. Should I use that, or do you need a separate `stores` concept?"
 - "I found `ShopData` type. Should I use that or create `StoreData`?"
 - "There's a `getShopById` function. Should I create `getStoreById` or use the existing one?"
 
 #### 3. Show Comparison Before Creating
+
 **Present this analysis BEFORE creating anything new:**
 
 ```markdown
@@ -148,13 +278,15 @@ grep -r "CREATE TABLE" supabase/migrations/
 **Similar existing**: `shops` table
 
 ### Comparison:
-| Aspect | shops (existing) | stores (proposed) |
-|--------|------------------|-------------------|
-| Purpose | Shopify installations | [unclear - same?] |
+
+| Aspect  | shops (existing)       | stores (proposed)  |
+| ------- | ---------------------- | ------------------ |
+| Purpose | Shopify installations  | [unclear - same?]  |
 | Columns | id, shop_domain, token | id, name, settings |
-| Usage | OAuth, authentication | [unclear] |
+| Usage   | OAuth, authentication  | [unclear]          |
 
 ### Questions:
+
 1. Are these genuinely different concepts?
 2. Can `shops` be extended instead?
 3. What's the long-term distinction?
@@ -163,6 +295,7 @@ grep -r "CREATE TABLE" supabase/migrations/
 ```
 
 #### 4. Maintain Active Glossary
+
 **Create and UPDATE `/docs/GLOSSARY.md` for every new concept:**
 
 ```markdown
@@ -171,6 +304,7 @@ grep -r "CREATE TABLE" supabase/migrations/
 ## Core Concepts
 
 ### shop (noun) - Table: `shops`
+
 **Definition**: A Shopify store installation that has installed Thunder Text
 **Database**: shops table (id, shop_domain, access_token, scope, plan, settings)
 **Code references**: getShopById(), ShopData type, shop_id foreign keys
@@ -178,6 +312,7 @@ grep -r "CREATE TABLE" supabase/migrations/
 **DO NOT confuse with**: ~~stores~~ (DEPRECATED - use "shop" instead)
 
 ### system_prompt (noun) - Table: `system_prompts`
+
 **Definition**: Master AI instructions defining ThunderText's behavior
 **Database**: system_prompts table (id, name, content, is_default, store_id)
 **Code references**: getSystemPrompt(), SystemPrompt type
@@ -185,6 +320,7 @@ grep -r "CREATE TABLE" supabase/migrations/
 **DO NOT confuse with**: category_templates (category-specific guidance)
 
 ### category_template (noun) - Table: `category_templates`
+
 **Definition**: Category-specific product description templates
 **Database**: category_templates table (id, name, category, content, is_default, store_id)
 **Code references**: getCategoryTemplate(), CategoryTemplate type
@@ -195,21 +331,25 @@ grep -r "CREATE TABLE" supabase/migrations/
 #### 5. Naming Convention Rules
 
 **Database Tables:**
+
 - ✅ Singular nouns: `shop`, `product`, `user` (not shops, products, users)
 - ✅ One concept = one table (no `shop` AND `store` for same thing)
 - ❌ Never create table if similar concept exists
 
 **TypeScript Types:**
+
 - ✅ Match table names: `Shop`, `Product`, `User`
 - ✅ Descriptive suffixes: `ShopData`, `ShopWithToken`, `ShopCredentials`
 - ❌ Never create `StoreData` when `ShopData` exists
 
 **Function Names:**
+
 - ✅ Consistent prefixes: `getShop()`, `createShop()`, `updateShop()`
 - ✅ Same root word: All shop-related functions use "shop" not "store"
 - ❌ Never mix: `getShop()` with `updateStore()`
 
 **Foreign Keys:**
+
 - ✅ Always `{table_name}_id`: `shop_id`, `product_id`, `user_id`
 - ✅ Consistent across all tables
 - ❌ Never mix: `shop_id` in one table, `store_id` in another
@@ -217,7 +357,9 @@ grep -r "CREATE TABLE" supabase/migrations/
 ### Detection and Prevention Tools
 
 #### Automated Consistency Checks
+
 **Add to package.json scripts:**
+
 ```json
 {
   "scripts": {
@@ -229,20 +371,24 @@ grep -r "CREATE TABLE" supabase/migrations/
 ```
 
 #### Consistency Check Script
+
 **Create `/scripts/check-naming-consistency.js`:**
+
 ```javascript
 // Detects potential naming conflicts like shops vs stores
 const concepts = {
-  'shop': ['shops', 'store', 'stores'],
-  'user': ['users', 'account', 'accounts'],
-  'product': ['products', 'item', 'items']
-}
+  shop: ["shops", "store", "stores"],
+  user: ["users", "account", "accounts"],
+  product: ["products", "item", "items"],
+};
 
 // Searches codebase for mixed usage and reports conflicts
 ```
 
 #### Git Pre-Commit Hook
+
 **Prevent inconsistent naming from being committed:**
+
 ```bash
 #!/bin/bash
 # .git/hooks/pre-commit
@@ -259,6 +405,7 @@ fi
 ### Real-World Example: shops vs stores
 
 **What went wrong:**
+
 1. Created `shops` table for Shopify OAuth credentials
 2. Later created `stores` table for billing/subscription data
 3. Code used both interchangeably
@@ -267,6 +414,7 @@ fi
 6. Hours of debugging to consolidate back to `shops`
 
 **What should have happened:**
+
 1. Before creating `stores`, search for "shop"
 2. Find `shops` table exists
 3. Ask: "Should I extend `shops` or create separate `stores`?"
@@ -287,6 +435,7 @@ fi
 ```
 
 **If Claude skips this protocol:**
+
 - User should immediately stop and ask for analysis
 - Review what similar concepts exist
 - Decide: extend existing vs create new
@@ -294,6 +443,7 @@ fi
 ### Documentation Requirements
 
 **For every new concept, create:**
+
 1. **Glossary entry** - Definition, purpose, database/code references
 2. **Schema documentation** - Why this table/type exists, what it stores
 3. **Comparison notes** - How it differs from similar concepts
@@ -302,6 +452,7 @@ fi
 ### Success Metrics
 
 ✅ **Good state:**
+
 - All shop-related code uses "shop" consistently
 - GLOSSARY.md defines every major concept
 - No orphaned tables or unused types
@@ -309,6 +460,7 @@ fi
 - Developers understand purpose of each table
 
 ❌ **Bad state:**
+
 - Mixed usage of "shop" and "store" for same concept
 - Undocumented tables with unclear purpose
 - Foreign keys with inconsistent naming
@@ -319,13 +471,15 @@ fi
 ## Development Patterns
 
 ### Shopify Integration Patterns
+
 - **OAuth Flow**: Secure token management, proper scope handling
-- **Webhook Processing**: Signature verification, idempotent operations  
+- **Webhook Processing**: Signature verification, idempotent operations
 - **API Rate Limiting**: Intelligent queuing, exponential backoff
 - **Metafield Management**: Google Shopping compliance, structured data
 - **Polaris UI**: Native Shopify admin experience, accessibility compliance
 
 ### AI Integration Patterns
+
 - **Master Key Management**: Centralized OpenAI API key, usage tracking
 - **Image Processing**: Temporary storage, automatic cleanup
 - **Content Generation**: Template systems, brand voice consistency
@@ -333,6 +487,7 @@ fi
 - **Cost Optimization**: Batching, caching, intelligent retry logic
 
 ### Supabase Architecture Patterns
+
 - **Row Level Security**: Multi-tenant data isolation
 - **Edge Functions**: Serverless AI processing, webhook handling
 - **Real-time Subscriptions**: Live progress updates, notifications
@@ -342,20 +497,23 @@ fi
 ## Task Templates
 
 ### Feature Development Template
+
 1. **Analysis Phase** - Understand requirements, existing patterns
-2. **Design Phase** - API design, UI mockups, data modeling  
+2. **Design Phase** - API design, UI mockups, data modeling
 3. **Implementation Phase** - Core logic, UI components, tests
 4. **Integration Phase** - Shopify APIs, external services
 5. **Validation Phase** - Testing, performance, security review
 
 ### Bug Investigation Template
+
 1. **Reproduction** - Consistent reproduction steps
 2. **Root Cause Analysis** - Systematic debugging approach
 3. **Impact Assessment** - User impact, business risk evaluation
 4. **Fix Implementation** - Minimal, targeted solution
 5. **Prevention** - Tests, monitoring, documentation updates
 
-### Performance Optimization Template  
+### Performance Optimization Template
+
 1. **Measurement** - Baseline metrics, bottleneck identification
 2. **Analysis** - Performance profiling, resource utilization
 3. **Optimization** - Targeted improvements, caching strategies
@@ -365,6 +523,7 @@ fi
 ## Quality Gates
 
 ### Code Quality Standards
+
 - **Test Coverage**: 90%+ for business logic, 100% for API endpoints
 - **Performance**: <30s AI processing, <2s page loads, 99.9% uptime
 - **Security**: OWASP compliance, Shopify security guidelines
@@ -372,8 +531,9 @@ fi
 - **Documentation**: API docs, user guides, developer onboarding
 
 ### Review Checklists
+
 - [ ] Shopify Partner Program compliance
-- [ ] GDPR and privacy compliance  
+- [ ] GDPR and privacy compliance
 - [ ] Performance benchmarks met
 - [ ] Security scan passed (no high/critical issues)
 - [ ] Accessibility testing completed
@@ -383,6 +543,7 @@ fi
 ## Memory Management
 
 ### Project Memory Keys
+
 - `thunder_text_context` - Core project information and architecture
 - `development_phases` - Phase-specific requirements and patterns
 - `shopify_integration` - OAuth flows, API patterns, webhook handling
@@ -391,6 +552,7 @@ fi
 - `performance_benchmarks` - SLA targets, optimization strategies
 
 ### Session Management
+
 - **Session Start**: `list_memories()` → Resume project context
 - **Checkpoint**: Save progress every 30 minutes during development
 - **Phase Transitions**: Update memory with new requirements, lessons learned
@@ -399,9 +561,11 @@ fi
 ## Server Management Rules
 
 ### Render Deployment Protocol
+
 **Thunder Text is deployed on Render, not local development servers**
 
 #### Deployment Environment Setup
+
 1. **Production Environment**: https://thunder-text.onrender.com
 2. **Auto-deployment**: Render deploys automatically from git commits
 3. **Local development**: Use `npm run dev` on port 3050 for local testing
@@ -409,6 +573,7 @@ fi
 5. **Testing**: Use production URL with development store
 
 #### Render vs Local Development
+
 - **Current Setup**: Render-hosted production environment
 - **Local development**: Available on localhost:3050 (turbopack enabled)
 - **Instant deployment**: Code changes deploy automatically via git to Render
@@ -416,18 +581,21 @@ fi
 - **Solution**: Use Render URLs for production testing, localhost for rapid iteration
 
 #### Server Coordination Questions
+
 - "Do you have `shopify app dev` running? If not, should I start it?"
 - "Is there an active development server for this task?"
 - "Should I start [specific server] or do you prefer to manage it?"
 - "I see servers running - are these the ones we should use?"
 
 #### Server Management Approach
+
 - **Collaborative**: Ask before starting, respect user preference
 - **Conflict-Aware**: Prevent duplicate instances that cause URL issues
 - **Task-Oriented**: Start servers only when needed for specific tasks
 - **Transparent**: Always show server status and explain server needs
 
 #### Quick Commands for Server Management
+
 ```bash
 # Quick status check (for Claude automation)
 ./status.sh
@@ -443,6 +611,7 @@ pkill -f "shopify app dev" 2>/dev/null
 ```
 
 #### Claude Automation Rules
+
 - **ALWAYS run `./status.sh` before starting any servers**
 - **Exit code 0**: Safe to proceed with server operations
 - **Exit code 1**: Server conflict detected - inform user, do NOT start servers
@@ -451,6 +620,7 @@ pkill -f "shopify app dev" 2>/dev/null
 ## Development Workflow
 
 ### Daily Development Pattern
+
 1. **Server Status Check** - Run `./check-servers.sh` before any operations
 2. **Context Loading** - Review project memories, current phase status
 3. **Task Planning** - Use TodoWrite for session organization
@@ -460,6 +630,7 @@ pkill -f "shopify app dev" 2>/dev/null
 7. **Session Summary** - Store outcomes, blockers, next priorities
 
 ### Cross-Session Continuity
+
 - Maintain development context through memory system
 - Track architectural decisions and technical debt
 - Preserve learning and optimization insights
@@ -468,11 +639,12 @@ pkill -f "shopify app dev" 2>/dev/null
 ## Integration Commands
 
 ### Quick Setup Commands
+
 ```bash
 # Initialize Thunder Text development session
 /sc:load thunder_text_context
 
-# Start MVP phase development  
+# Start MVP phase development
 --mvp-mode --shopify --c7 --task-manage
 
 # Switch to bulk processing phase
@@ -483,13 +655,15 @@ pkill -f "shopify app dev" 2>/dev/null
 ```
 
 ### Common Development Workflows
+
 - `/shopify-oauth` - Shopify OAuth setup and testing
 - `/ai-integration` - GPT-4 Vision API integration
-- `/bulk-processing` - Queue management and batch operations  
+- `/bulk-processing` - Queue management and batch operations
 - `/performance-optimization` - Speed and scalability improvements
 - `/quality-review` - Comprehensive code and security review
 
 ### Development URLs (zunosai-staging-test-store)
+
 ```bash
 # Main pages with authentication parameters (Render-hosted)
 https://thunder-text.onrender.com/?shop=zunosai-staging-test-store&authenticated=true
@@ -565,6 +739,7 @@ When encountering database access errors (permission denied, column does not exi
    - **Branch**: Confirm Render is deploying the branch you're pushing to
 
 4. **Database schema reality check** (5 min)
+
    ```sql
    -- Don't trust Dashboard UI - query directly
    SELECT column_name, data_type
@@ -581,18 +756,21 @@ When encountering database access errors (permission denied, column does not exi
 ### Common Render Deployment Issues
 
 **Next.js Cache Persistence**
+
 - Next.js `.next` directory caches between builds
 - Old imports, old schemas, old function signatures persist
 - **Symptom**: Code looks correct but errors reference old column names
 - **Fix**: Force clean build with `rm -rf .next`
 
 **Environment Variable Mismatch**
+
 - Local `.env.local` ≠ Render environment variables
 - May be pointing to different Supabase projects
 - **Symptom**: Changes work locally but fail on Render
 - **Fix**: Check Render dashboard → Environment → verify all vars
 
 **Branch Confusion**
+
 - Render auto-deploys specific branch (check service settings)
 - You may be pushing to wrong branch
 - **Symptom**: Commits pushed but not deployed
@@ -600,10 +778,11 @@ When encountering database access errors (permission denied, column does not exi
 
 ### Pattern Recognition: Déjà Vu Signal
 
-**If user says:** *"This happened before with [other feature]"*
+**If user says:** _"This happened before with [other feature]"_
 **Then:** It's almost certainly a deployment/infrastructure issue, NOT a code logic bug.
 
 **Immediate actions:**
+
 1. Ask: "What fixed it last time?"
 2. Check: Build cache, deployment logs, environment vars
 3. Avoid: Deep diving into schema/permissions before ruling out deployment issues
@@ -620,6 +799,7 @@ When encountering database access errors (permission denied, column does not exi
 ### Historical Issues (Learn from these)
 
 **2025-10-17: Content Center Upload Failure (4 hours wasted)**
+
 - **Symptom**: "column user_id does not exist" but database had correct schema
 - **Root cause**: Next.js build cache on Render contained old code
 - **False leads**: Spent hours on schema migrations, RLS policies, column renaming
@@ -627,6 +807,7 @@ When encountering database access errors (permission denied, column does not exi
 - **Lesson**: Check build cache FIRST before investigating schema issues
 
 **2025-10-09: Shop Sizes Module Issue (similar pattern)**
+
 - **Symptom**: Similar "column does not exist" errors
 - **Root cause**: Likely same build cache issue
 - **Pattern**: When user reports déjà vu, it's infrastructure not logic
@@ -634,6 +815,7 @@ When encountering database access errors (permission denied, column does not exi
 ### Completed Features
 
 ✅ **Facebook Ads Integration** (2025-10-16)
+
 - OAuth flow with Facebook Business
 - Campaign and ad account selection
 - AI-powered ad content generation

@@ -29,6 +29,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+build.log
+*.tmp
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -43,3 +45,7 @@ next-env.d.ts
 
 # Preview environment credentials
 .env.preview
+
+# Security scan reports
+audit-report.json
+.snyk

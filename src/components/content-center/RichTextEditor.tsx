@@ -159,9 +159,9 @@ export function RichTextEditor({
       label: isCopied ? 'Copied!' : 'Copy to clipboard',
       customHandler: handleCopy,
       disabled: false,
-      variant: (isCopied ? 'default' : 'outline') as const
+      variant: isCopied ? 'default' : 'outline'
     }
-  ] as const
+  ]
 
   return (
     <Card className={className}>
@@ -216,7 +216,7 @@ export function RichTextEditor({
                       <TooltipTrigger asChild>
                         <Button
                           size="sm"
-                          variant={button.variant || 'ghost'}
+                          variant={(button.variant || 'ghost') as "default" | "link" | "secondary" | "destructive" | "outline" | "ghost"}
                           onClick={() => {
                             if (button.customHandler) {
                               button.customHandler()

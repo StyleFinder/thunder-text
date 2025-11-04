@@ -301,8 +301,8 @@ export async function createMetafieldDefinitions(shopifyClient: ShopifyGraphQLCl
           definition: formattedDefinition
         }
       })
-      
-      if (response.data?.metafieldDefinitionCreate?.userErrors?.length > 0) {
+
+      if (response.data?.metafieldDefinitionCreate?.userErrors && response.data.metafieldDefinitionCreate.userErrors.length > 0) {
         const errors = response.data.metafieldDefinitionCreate.userErrors
         // Ignore "already exists" errors
         const nonExistenceErrors = errors.filter((error: { field: string[]; message: string }) =>
