@@ -8,6 +8,7 @@ import {
   DataTable,
   Badge,
   Spinner,
+  Text,
 } from "@shopify/polaris";
 import { TrendThermometer } from "../components/trends/TrendThermometer";
 import { ThemeSelector } from "../components/trends/ThemeSelector";
@@ -26,6 +27,7 @@ interface Signal {
   latest_value: number;
   last_peak_date?: string;
   peak_recency_days?: number;
+  placeholder?: boolean; // Indicates no data exists yet
 }
 
 interface SeriesPoint {
@@ -71,9 +73,13 @@ export default function TrendsPage() {
       const res = await fetch(`/api/trends/signals?themeSlug=${themeSlug}`);
       const data = await res.json();
 
-      if (data.success && data.signal) {
-        setSignals((prev) => ({ ...prev, [themeSlug]: data.signal }));
-        setSeries((prev) => ({ ...prev, [themeSlug]: data.series }));
+      if (data.success) {
+        // Set signal even if null (indicates data doesn't exist yet)
+        setSignals((prev) => ({
+          ...prev,
+          [themeSlug]: data.signal || { placeholder: true },
+        }));
+        setSeries((prev) => ({ ...prev, [themeSlug]: data.series || [] }));
       }
     } catch (error) {
       console.error(`Failed to load signal for ${themeSlug}:`, error);
@@ -132,6 +138,25 @@ export default function TrendsPage() {
                 );
               }
 
+              // Check if this is a placeholder (no data yet)
+              if (signal.placeholder) {
+                return (
+                  <Card key={theme.id}>
+                    <div className="p-4 space-y-2">
+                      <Text variant="headingMd" as="h3">
+                        {theme.name}
+                      </Text>
+                      <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                        <Text variant="bodySm" as="p">
+                          📊 Trend data not yet available. Background jobs will
+                          fetch Google Trends data for this theme.
+                        </Text>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              }
+
               return (
                 <TrendThermometer
                   key={theme.id}
@@ -155,10 +180,11 @@ export default function TrendsPage() {
               headings={["Theme", "Category", "Status", "Momentum", "Season"]}
               rows={inSeasonThemes.map((theme, index) => {
                 const signal = signals[theme.slug];
+                const isPlaceholder = signal?.placeholder;
                 return [
                   theme.name,
                   theme.category,
-                  signal ? (
+                  signal && !isPlaceholder ? (
                     <Badge
                       key={`status-${index}`}
                       tone={
@@ -172,11 +198,15 @@ export default function TrendsPage() {
                       {signal.status}
                     </Badge>
                   ) : (
-                    "-"
+                    <Text variant="bodySm" as="span" tone="subdued">
+                      {isPlaceholder ? "Pending" : "-"}
+                    </Text>
                   ),
-                  signal
+                  signal && !isPlaceholder
                     ? `${signal.momentum_pct >= 0 ? "+" : ""}${signal.momentum_pct.toFixed(1)}%`
-                    : "-",
+                    : isPlaceholder
+                      ? "—"
+                      : "-",
                   <Badge key={`active-${index}`} tone="info">
                     Active
                   </Badge>,
