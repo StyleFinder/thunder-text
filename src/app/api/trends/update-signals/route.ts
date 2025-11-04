@@ -36,6 +36,28 @@ export async function POST() {
       );
     }
 
+    // Get first active shop for testing purposes
+    // TODO: In production, get shop_id from authenticated session
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from("shops")
+      .select("id")
+      .eq("is_active", true)
+      .limit(1)
+      .single();
+
+    if (shopError || !shopData) {
+      console.error("Error fetching shop:", shopError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "No active shop found. Please install the app first.",
+        },
+        { status: 404 },
+      );
+    }
+
+    const shopId = shopData.id;
+
     // Get all active themes
     const { data: themes, error: themesError } =
       await supabaseAdmin.rpc("get_active_themes");
@@ -53,7 +75,7 @@ export async function POST() {
     // Process each theme
     for (const theme of themes as Theme[]) {
       try {
-        const result = await updateThemeTrends(theme, serpApiKey);
+        const result = await updateThemeTrends(theme, serpApiKey, shopId);
         results.push(result);
       } catch (error) {
         console.error(`Error updating theme ${theme.slug}:`, error);
@@ -84,7 +106,11 @@ export async function POST() {
   }
 }
 
-async function updateThemeTrends(theme: Theme, serpApiKey: string) {
+async function updateThemeTrends(
+  theme: Theme,
+  serpApiKey: string,
+  shopId: string,
+) {
   // Fetch Google Trends data from SerpAPI
   const trendsUrl = new URL("https://serpapi.com/search.json");
   trendsUrl.searchParams.set("engine", "google_trends");
@@ -183,8 +209,6 @@ async function updateThemeTrends(theme: Theme, serpApiKey: string) {
   );
 
   // Store trend signal using RPC function (bypasses PostgREST)
-  const shopId = "00000000-0000-0000-0000-000000000000"; // TODO: Get from authenticated shop
-
   const { error: signalError } = await supabaseAdmin.rpc(
     "upsert_trend_signal",
     {
