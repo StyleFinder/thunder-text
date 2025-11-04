@@ -42,6 +42,7 @@ export default function TrendsPage() {
   const [series, setSeries] = useState<Record<string, SeriesPoint[]>>({});
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [selectedTheme, setSelectedTheme] = useState<string>("");
 
   useEffect(() => {
     loadThemes();
@@ -89,16 +90,23 @@ export default function TrendsPage() {
   }
 
   async function handleUpdateTrends() {
+    if (!selectedTheme) {
+      alert("Please select a theme to update");
+      return;
+    }
+
     setUpdating(true);
     try {
       const res = await fetch("/api/trends/update-signals", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ themeSlug: selectedTheme }),
       });
       const data = await res.json();
 
       if (data.success) {
-        // Reload all themes and signals
-        await loadThemes();
+        // Reload signal for updated theme
+        await loadSignalForTheme(selectedTheme);
       } else {
         console.error("Failed to update trends:", data.error);
         alert(`Failed to update trends: ${data.error}`);
@@ -142,23 +150,53 @@ export default function TrendsPage() {
     <Page
       title="Seasonal Trends"
       subtitle="Track search interest and optimize merchandising timing"
-      primaryAction={{
-        content: updating ? "Updating..." : "Update Trends",
-        onAction: handleUpdateTrends,
-        loading: updating,
-        disabled: updating,
-      }}
     >
       <Layout>
-        {/* Info Banner */}
+        {/* Manual Update Controls */}
         <Layout.Section>
-          <Banner tone="info">
-            <p>
-              <strong>Manual Update:</strong> Click &quot;Update Trends&quot; to
-              fetch the latest Google Trends data via SerpAPI. This will update
-              all active themes with current trend signals and momentum.
-            </p>
-          </Banner>
+          <Card>
+            <div className="p-4 space-y-4">
+              <Banner tone="info">
+                <p>
+                  <strong>Manual Update:</strong> Select a theme and click
+                  &quot;Update Trends&quot; to fetch the latest Google Trends
+                  data via SerpAPI.
+                </p>
+              </Banner>
+
+              <div className="flex gap-4 items-end">
+                <div className="flex-1">
+                  <label
+                    htmlFor="theme-select"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Select Theme
+                  </label>
+                  <select
+                    id="theme-select"
+                    value={selectedTheme}
+                    onChange={(e) => setSelectedTheme(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={updating}
+                  >
+                    <option value="">Choose a theme...</option>
+                    {inSeasonThemes.map((theme) => (
+                      <option key={theme.id} value={theme.slug}>
+                        {theme.name} ({theme.category})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={handleUpdateTrends}
+                  disabled={updating || !selectedTheme}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {updating ? "Updating..." : "Update Trends"}
+                </button>
+              </div>
+            </div>
+          </Card>
         </Layout.Section>
 
         {/* Trend Thermometers */}

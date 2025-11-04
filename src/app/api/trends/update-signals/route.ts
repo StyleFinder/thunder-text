@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
 interface SerpAPITrendsResponse {
@@ -22,11 +22,24 @@ interface Theme {
 
 /**
  * POST /api/trends/update-signals
- * Manually trigger trend data updates for all active themes
+ * Manually trigger trend data update for a specific theme
  * Fetches Google Trends data via SerpAPI and calculates signals
+ *
+ * Body: { themeSlug: string }
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    // Parse request body
+    const body = await request.json();
+    const { themeSlug } = body;
+
+    if (!themeSlug) {
+      return NextResponse.json(
+        { success: false, error: "themeSlug is required" },
+        { status: 400 },
+      );
+    }
+
     const serpApiKey = process.env.SERPAPI_KEY;
 
     if (!serpApiKey) {
@@ -58,47 +71,42 @@ export async function POST() {
 
     const shopId = shopData.id;
 
-    // Get all active themes
-    const { data: themes, error: themesError } =
-      await supabaseAdmin.rpc("get_active_themes");
+    // Get the specific theme
+    const { data: themes, error: themesError } = await supabaseAdmin
+      .from("themes")
+      .select("id, slug, name")
+      .eq("slug", themeSlug)
+      .eq("is_active", true)
+      .limit(1);
 
-    if (themesError || !themes) {
-      console.error("Error fetching themes:", themesError);
+    if (themesError || !themes || themes.length === 0) {
+      console.error("Error fetching theme:", themesError);
       return NextResponse.json(
-        { success: false, error: "Failed to fetch themes" },
+        { success: false, error: `Theme '${themeSlug}' not found or inactive` },
+        { status: 404 },
+      );
+    }
+
+    const theme = themes[0] as Theme;
+
+    // Update the single theme
+    const result = await updateThemeTrends(theme, serpApiKey, shopId);
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error,
+          themeSlug: result.themeSlug,
+        },
         { status: 500 },
       );
     }
 
-    const results = [];
-    const themesList = themes as Theme[];
-
-    // Process each theme with delay to avoid SerpAPI rate limits
-    for (const [index, theme] of themesList.entries()) {
-      try {
-        const result = await updateThemeTrends(theme, serpApiKey, shopId);
-        results.push(result);
-
-        // Add 2-second delay between requests (except after last theme)
-        if (index < themesList.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        }
-      } catch (error) {
-        console.error(`Error updating theme ${theme.slug}:`, error);
-        results.push({
-          themeSlug: theme.slug,
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
-      }
-    }
-
-    const successCount = results.filter((r) => r.success).length;
-
     return NextResponse.json({
       success: true,
-      message: `Updated ${successCount}/${themes.length} themes`,
-      results,
+      message: `Updated ${theme.name}`,
+      result,
     });
   } catch (error) {
     console.error("Error in update-signals:", error);
