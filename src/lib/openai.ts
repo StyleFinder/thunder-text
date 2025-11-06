@@ -33,6 +33,7 @@ export interface ProductDescriptionResponse {
 
 export interface ProductEnhancementResponse {
   title?: string;
+  titleOptions?: string[];
   description?: string;
   seoTitle?: string;
   metaDescription?: string;
@@ -291,6 +292,10 @@ CRITICAL: The "description" field must strictly follow the custom prompt guideli
       keyFeatures: string;
       additionalNotes: string;
     };
+    existingContent?: {
+      title?: string;
+      description?: string;
+    };
     enhancementOptions: {
       generateTitle: boolean;
       enhanceDescription: boolean;
@@ -358,7 +363,9 @@ REQUIRED SECTIONS:
       // Build enhancement prompt with detailed template requirements
       const outputFields = [];
       if (request.enhancementOptions.generateTitle) {
-        outputFields.push('"title": "New compelling product title"');
+        outputFields.push(
+          '"titleOptions": ["Title variation 1", "Title variation 2", "Title variation 3"]',
+        );
       }
       if (request.enhancementOptions.enhanceDescription) {
         outputFields.push(
@@ -382,20 +389,26 @@ REQUIRED SECTIONS:
 
 === ENHANCEMENT TASK ===
 
-You are enhancing an EXISTING product. Analyze the provided product images and details to create a COMPLETE, DETAILED description following the template structure above.
+You are enhancing an EXISTING product. Analyze the provided product images, existing content, and additional details to create a COMPLETE, DETAILED description following the template structure above.
+
+EXISTING PRODUCT CONTENT:
+${request.existingContent?.title ? `- Current Title: ${request.existingContent.title}` : ""}
+${request.existingContent?.description ? `- Current Description:\n${request.existingContent.description}\n` : ""}
 
 PRODUCT DETAILS:
 - Category: ${request.productDetails.parentCategory}
 - Template Type: ${request.template}
-- Fabric/Material: ${request.productDetails.fabricMaterial || "Not specified"}
-- Occasion/Use: ${request.productDetails.occasionUse || "Not specified"}
-- Target Audience: ${request.productDetails.targetAudience || "General"}
-- Available Sizing: ${request.productDetails.availableSizing || "Not specified"}
-- Key Features: ${request.productDetails.keyFeatures || "To be determined from images"}
+- Fabric/Material: ${request.productDetails.fabricMaterial || "Extract from existing description above"}
+- Occasion/Use: ${request.productDetails.occasionUse || "Extract from existing description above"}
+- Target Audience: ${request.productDetails.targetAudience || "Extract from existing description above"}
+- Available Sizing: ${request.productDetails.availableSizing || "Extract from existing description above"}
+- Key Features: ${request.productDetails.keyFeatures || "Extract from existing description above"}
 - Additional Notes: ${request.productDetails.additionalNotes || "None"}
 
+IMPORTANT: Use information from the EXISTING DESCRIPTION above as your primary source. The "Additional Notes" fields are OPTIONAL - only use them if they provide NEW information not already in the existing description. Do NOT ask the user to re-enter information that already exists in the current product description.
+
 ENHANCEMENT OPTIONS:
-${request.enhancementOptions.generateTitle ? "- Generate a compelling product title" : ""}
+${request.enhancementOptions.generateTitle ? "- Generate THREE (3) different compelling product title variations with different styles (descriptive, benefit-focused, and creative)" : ""}
 ${request.enhancementOptions.enhanceDescription ? "- Create a DETAILED product description with ALL template sections (200-400 words)" : ""}
 ${request.enhancementOptions.generateSEO ? "- Generate SEO title and meta description" : ""}
 ${request.enhancementOptions.createPromo ? "- Create promotional copy for marketing" : ""}
@@ -467,6 +480,15 @@ More plain text here describing what it's perfect for.`;
         } else {
           parsed = JSON.parse(content);
         }
+
+        // Debug log to verify titleOptions is present
+        console.log("🤖 AI Response parsed:", {
+          hasTitleOptions: !!parsed.titleOptions,
+          titleOptionsCount: parsed.titleOptions?.length || 0,
+          hasTitle: !!parsed.title,
+          titleOptionsPreview:
+            parsed.titleOptions?.map((t: string) => t.substring(0, 50)) || [],
+        });
       } catch (e) {
         console.error("Failed to parse enhanced content:", e);
         // Fallback structure

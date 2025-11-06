@@ -7,7 +7,6 @@ import {
   BlockStack,
   InlineGrid,
   Text,
-  Button,
   Badge,
   Divider,
   InlineStack,
@@ -16,19 +15,15 @@ import {
   Banner,
   Icon,
   Checkbox,
-  Tabs,
+  RadioButton,
 } from "@shopify/polaris";
-import {
-  EditIcon,
-  CheckIcon,
-  XIcon,
-  DuplicateIcon,
-  MagicIcon,
-} from "@shopify/polaris-icons";
+import { DuplicateIcon, MagicIcon } from "@shopify/polaris-icons";
 import styles from "./EnhancedContentComparison.module.css";
+import { RichTextEditor } from "./RichTextEditor";
 
 interface ContentData {
   title?: string;
+  titleOptions?: string[];
   description?: string;
   seoTitle?: string;
   seoDescription?: string;
@@ -49,6 +44,7 @@ interface EnhancedContentComparisonProps {
   };
   enhancedContent: {
     title?: string;
+    titleOptions?: string[];
     description?: string;
     seoTitle?: string;
     seoDescription?: string;
@@ -67,13 +63,22 @@ export default function EnhancedContentComparison({
   enhancedContent,
   loading = false,
 }: EnhancedContentComparisonProps) {
+  const [mounted, setMounted] = useState(false);
   const [editedContent, setEditedContent] = useState(enhancedContent);
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [selectedTab, setSelectedTab] = useState(0);
+  const [selectedTitleIndex, setSelectedTitleIndex] = useState(0);
+
+  // Prevent hydration mismatch by only rendering modal on client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Track which fields to apply
   const [fieldsToApply, setFieldsToApply] = useState({
-    title: !!enhancedContent.title,
+    title: !!(
+      (enhancedContent.titleOptions &&
+        enhancedContent.titleOptions.length > 0) ||
+      enhancedContent.title
+    ),
     description: !!enhancedContent.description,
     seoTitle: !!enhancedContent.seoTitle,
     seoDescription: !!enhancedContent.seoDescription,
@@ -89,12 +94,20 @@ export default function EnhancedContentComparison({
         enhancedContent.description?.length || 0,
       "enhancedContent.description preview":
         enhancedContent.description?.substring(0, 100),
+      "enhancedContent.titleOptions": enhancedContent.titleOptions,
+      "enhancedContent.title": enhancedContent.title,
+      "has titleOptions": !!enhancedContent.titleOptions,
+      "titleOptions count": enhancedContent.titleOptions?.length || 0,
     });
     setEditedContent(enhancedContent);
 
     // Also update fieldsToApply based on new content
     setFieldsToApply({
-      title: !!enhancedContent.title,
+      title: !!(
+        (enhancedContent.titleOptions &&
+          enhancedContent.titleOptions.length > 0) ||
+        enhancedContent.title
+      ),
       description: !!enhancedContent.description,
       seoTitle: !!enhancedContent.seoTitle,
       seoDescription: !!enhancedContent.seoDescription,
@@ -159,23 +172,6 @@ export default function EnhancedContentComparison({
     }
   }, [active]);
 
-  const handleEdit = (field: string) => {
-    setEditingField(field);
-  };
-
-  const handleSave = (field: string, value: string) => {
-    setEditedContent((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-    setEditingField(null);
-  };
-
-  const handleCancel = () => {
-    setEditingField(null);
-    setEditedContent(enhancedContent);
-  };
-
   const handleApplyChanges = () => {
     // Only apply fields that are checked
     const contentToApply: ContentData = {};
@@ -191,8 +187,15 @@ export default function EnhancedContentComparison({
       ),
     });
 
-    if (fieldsToApply.title && editedContent.title) {
-      contentToApply.title = editedContent.title;
+    if (fieldsToApply.title) {
+      if (editedContent.titleOptions && editedContent.titleOptions.length > 0) {
+        // New format: use selected title from options
+        // eslint-disable-next-line security/detect-object-injection
+        contentToApply.title = editedContent.titleOptions[selectedTitleIndex];
+      } else if (editedContent.title) {
+        // Old format: use single title
+        contentToApply.title = editedContent.title;
+      }
     }
     if (fieldsToApply.description && editedContent.description) {
       contentToApply.description = editedContent.description;
@@ -222,25 +225,25 @@ export default function EnhancedContentComparison({
     multiline: boolean = false,
     isHtml: boolean = false,
   ) => {
-    const isEditing = editingField === fieldName;
     const currentValue =
       (editedContent[fieldName as keyof typeof editedContent] as string) ||
       enhanced ||
       "";
     const hasChanged = original !== enhanced && enhanced;
 
+    const fieldKey = fieldName as keyof typeof fieldsToApply;
+
     return (
       <Card roundedAbove="sm">
         <Box padding="400">
           <BlockStack gap="400">
-            {/* Header with checkbox and edit button */}
+            {/* Header with checkbox - always editable, no edit button */}
             <InlineStack align="space-between" blockAlign="center">
               <InlineStack gap="300" blockAlign="center">
                 <Checkbox
                   label=""
-                  checked={
-                    fieldsToApply[fieldName as keyof typeof fieldsToApply]
-                  }
+                  // eslint-disable-next-line security/detect-object-injection
+                  checked={fieldsToApply[fieldKey]}
                   onChange={(checked) =>
                     setFieldsToApply((prev) => ({
                       ...prev,
@@ -259,22 +262,14 @@ export default function EnhancedContentComparison({
                       </Badge>
                     )}
                   </InlineStack>
-                  {fieldsToApply[fieldName as keyof typeof fieldsToApply] && (
+                  {/* eslint-disable-next-line security/detect-object-injection */}
+                  {fieldsToApply[fieldKey] && (
                     <Text variant="bodySm" as="p" tone="success">
                       ✓ Will be applied to product
                     </Text>
                   )}
                 </BlockStack>
               </InlineStack>
-              {!isEditing && enhanced && (
-                <Button
-                  size="slim"
-                  icon={EditIcon}
-                  onClick={() => handleEdit(fieldName)}
-                >
-                  Edit
-                </Button>
-              )}
             </InlineStack>
 
             {/* Content comparison */}
@@ -313,16 +308,15 @@ export default function EnhancedContentComparison({
                 </BlockStack>
               </Box>
 
-              {/* Enhanced Content */}
+              {/* Enhanced Content - Always Editable */}
               <Box
                 background="bg-surface"
                 padding="400"
                 borderRadius="200"
                 borderWidth="025"
                 borderColor={
-                  fieldsToApply[fieldName as keyof typeof fieldsToApply]
-                    ? "border-success"
-                    : "border"
+                  // eslint-disable-next-line security/detect-object-injection
+                  fieldsToApply[fieldKey] ? "border-success" : "border"
                 }
               >
                 <BlockStack gap="200">
@@ -336,8 +330,18 @@ export default function EnhancedContentComparison({
                   </InlineStack>
                   <Divider />
                   <Box paddingBlockStart="200">
-                    {isEditing ? (
-                      <BlockStack gap="300">
+                    {enhanced ? (
+                      fieldName === "description" ? (
+                        <RichTextEditor
+                          value={currentValue}
+                          onChange={(value) =>
+                            setEditedContent((prev) => ({
+                              ...prev,
+                              [fieldName]: value,
+                            }))
+                          }
+                        />
+                      ) : (
                         <TextField
                           label=""
                           value={currentValue}
@@ -350,31 +354,6 @@ export default function EnhancedContentComparison({
                           multiline={multiline ? 5 : false}
                           autoComplete="off"
                         />
-                        <InlineStack gap="200">
-                          <Button
-                            size="slim"
-                            variant="primary"
-                            icon={CheckIcon}
-                            onClick={() => handleSave(fieldName, currentValue)}
-                          >
-                            Save Changes
-                          </Button>
-                          <Button
-                            size="slim"
-                            icon={XIcon}
-                            onClick={handleCancel}
-                          >
-                            Cancel
-                          </Button>
-                        </InlineStack>
-                      </BlockStack>
-                    ) : enhanced ? (
-                      isHtml || fieldName === "description" ? (
-                        renderFormattedHTML(currentValue)
-                      ) : (
-                        <Text as="p" breakWord>
-                          {currentValue}
-                        </Text>
                       )
                     ) : (
                       <Text as="p" tone="subdued">
@@ -391,70 +370,171 @@ export default function EnhancedContentComparison({
     );
   };
 
-  const renderBulletPoints = () => {
-    if (!editedContent.bulletPoints || editedContent.bulletPoints.length === 0)
+  const renderTitleOptions = () => {
+    if (!editedContent.titleOptions || editedContent.titleOptions.length === 0)
       return null;
+
+    // eslint-disable-next-line security/detect-object-injection
+    const hasChanged =
+      originalContent.title !== editedContent.titleOptions[selectedTitleIndex];
 
     return (
       <Card roundedAbove="sm">
         <Box padding="400">
           <BlockStack gap="400">
-            <InlineStack gap="200" blockAlign="center">
-              <Icon source={MagicIcon} tone="magic" />
-              <Text variant="headingMd" as="h3">
-                Key Features
-              </Text>
-              <Badge tone="info">{`${editedContent.bulletPoints.length} points`}</Badge>
+            {/* Header with checkbox */}
+            <InlineStack align="space-between" blockAlign="center">
+              <InlineStack gap="300" blockAlign="center">
+                <Checkbox
+                  label=""
+                  checked={fieldsToApply.title}
+                  onChange={(checked) =>
+                    setFieldsToApply((prev) => ({
+                      ...prev,
+                      title: checked,
+                    }))
+                  }
+                />
+                <BlockStack gap="100">
+                  <InlineStack gap="200" blockAlign="center">
+                    <Text variant="headingMd" as="h3">
+                      Product Title
+                    </Text>
+                    {hasChanged && (
+                      <Badge tone="success" icon={MagicIcon}>
+                        AI Enhanced
+                      </Badge>
+                    )}
+                  </InlineStack>
+                  {fieldsToApply.title && (
+                    <Text variant="bodySm" as="p" tone="success">
+                      ✓ Will be applied to product
+                    </Text>
+                  )}
+                </BlockStack>
+              </InlineStack>
             </InlineStack>
-            <Box background="bg-surface" padding="400" borderRadius="200">
-              <ul
-                style={{
-                  paddingLeft: "24px",
-                  margin: 0,
-                  lineHeight: "1.8",
-                }}
+
+            {/* Content comparison */}
+            <InlineGrid columns={2} gap="400">
+              {/* Original Title */}
+              <Box
+                background="bg-surface-secondary"
+                padding="400"
+                borderRadius="200"
               >
-                {editedContent.bulletPoints.map((point, index) => (
-                  <li
-                    key={index}
-                    style={{
-                      marginBottom: "12px",
-                      color: "#202223",
-                      fontSize: "14px",
-                    }}
-                  >
-                    {point}
-                  </li>
-                ))}
-              </ul>
-            </Box>
+                <BlockStack gap="200">
+                  <InlineStack gap="200" blockAlign="center">
+                    <Box>
+                      <Icon source={DuplicateIcon} tone="subdued" />
+                    </Box>
+                    <Text variant="headingSm" as="h4" tone="subdued">
+                      Current Version
+                    </Text>
+                  </InlineStack>
+                  <Divider />
+                  <Box paddingBlockStart="200">
+                    {originalContent.title ? (
+                      <Text as="p" breakWord>
+                        {originalContent.title}
+                      </Text>
+                    ) : (
+                      <Text as="p" tone="subdued">
+                        No current title
+                      </Text>
+                    )}
+                  </Box>
+                </BlockStack>
+              </Box>
+
+              {/* AI-Generated Title Options */}
+              <Box
+                background="bg-surface"
+                padding="400"
+                borderRadius="200"
+                borderWidth="025"
+                borderColor={fieldsToApply.title ? "border-success" : "border"}
+              >
+                <BlockStack gap="300">
+                  <InlineStack gap="200" blockAlign="center">
+                    <Box>
+                      <Icon source={MagicIcon} tone="magic" />
+                    </Box>
+                    <Text variant="headingSm" as="h4" tone="magic">
+                      AI Enhanced Variations
+                    </Text>
+                  </InlineStack>
+                  <Divider />
+                  <BlockStack gap="200">
+                    {editedContent.titleOptions.map((title, index) => (
+                      <Box
+                        key={index}
+                        padding="200"
+                        background={
+                          selectedTitleIndex === index
+                            ? "bg-surface-selected"
+                            : "bg-surface-secondary"
+                        }
+                        borderRadius="100"
+                        borderWidth="025"
+                        borderColor={
+                          selectedTitleIndex === index
+                            ? "border-success"
+                            : "border"
+                        }
+                      >
+                        <InlineStack gap="200" blockAlign="start">
+                          <Box paddingBlockStart="050">
+                            <RadioButton
+                              label=""
+                              checked={selectedTitleIndex === index}
+                              onChange={() => setSelectedTitleIndex(index)}
+                            />
+                          </Box>
+                          <div style={{ flex: 1 }}>
+                            <BlockStack gap="100">
+                              <TextField
+                                label=""
+                                value={title}
+                                onChange={(value) => {
+                                  const newTitleOptions = [
+                                    ...editedContent.titleOptions!,
+                                  ];
+                                  // eslint-disable-next-line security/detect-object-injection
+                                  newTitleOptions[index] = value;
+                                  setEditedContent((prev) => ({
+                                    ...prev,
+                                    titleOptions: newTitleOptions,
+                                  }));
+                                }}
+                                autoComplete="off"
+                              />
+                              <Text variant="bodySm" as="p" tone="subdued">
+                                {index === 0
+                                  ? "Descriptive"
+                                  : index === 1
+                                    ? "Benefit-Focused"
+                                    : "Creative"}
+                              </Text>
+                            </BlockStack>
+                          </div>
+                        </InlineStack>
+                      </Box>
+                    ))}
+                  </BlockStack>
+                </BlockStack>
+              </Box>
+            </InlineGrid>
           </BlockStack>
         </Box>
       </Card>
     );
   };
 
-  // Define tabs for content organization
-  const tabs = [
-    {
-      id: "main",
-      content: "Main Content",
-      badge: `${enhancedContent.title ? 1 : 0} + ${enhancedContent.description ? 1 : 0}`,
-      panelID: "main-content",
-    },
-    {
-      id: "seo",
-      content: "SEO & Marketing",
-      badge: `${enhancedContent.seoTitle ? 1 : 0} + ${enhancedContent.seoDescription ? 1 : 0} + ${enhancedContent.promoText ? 1 : 0}`,
-      panelID: "seo-content",
-    },
-    {
-      id: "features",
-      content: "Key Features",
-      badge: `${editedContent.bulletPoints?.length || 0}`,
-      panelID: "features-content",
-    },
-  ];
+  // Don't render Modal during SSR to prevent hydration mismatch
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className={styles.wideModalWrapper}>
@@ -478,194 +558,50 @@ export default function EnhancedContentComparison({
       >
         <Modal.Section>
           <BlockStack gap="400">
-            {/* Quick Actions Bar */}
+            {/* Main Content */}
             <Card>
-              <Box padding="300">
-                <InlineStack align="space-between" blockAlign="center">
-                  <InlineStack gap="300" blockAlign="center">
-                    <Icon source={MagicIcon} tone="magic" />
-                    <Text variant="headingSm" as="h3">
-                      AI-Generated Content Ready
-                    </Text>
-                  </InlineStack>
-                  <InlineStack gap="200">
-                    <Button
-                      size="slim"
-                      onClick={() =>
-                        setFieldsToApply({
-                          title: true,
-                          description: true,
-                          seoTitle: true,
-                          seoDescription: true,
-                          promoText: true,
-                          bulletPoints: true,
-                        })
-                      }
-                    >
-                      Select All
-                    </Button>
-                    <Button
-                      size="slim"
-                      onClick={() =>
-                        setFieldsToApply({
-                          title: false,
-                          description: false,
-                          seoTitle: false,
-                          seoDescription: false,
-                          promoText: false,
-                          bulletPoints: false,
-                        })
-                      }
-                    >
-                      Deselect All
-                    </Button>
-                  </InlineStack>
-                </InlineStack>
+              <Box padding="400">
+                <BlockStack gap="600">
+                  {/* Show title variations if available (new format) */}
+                  {enhancedContent.titleOptions &&
+                    enhancedContent.titleOptions.length > 0 &&
+                    renderTitleOptions()}
+
+                  {/* Fallback to single title if titleOptions not available (old format) */}
+                  {!enhancedContent.titleOptions &&
+                    enhancedContent.title &&
+                    renderModernField(
+                      "Product Title",
+                      "title",
+                      originalContent.title,
+                      enhancedContent.title,
+                      false,
+                      false,
+                    )}
+
+                  {enhancedContent.description &&
+                    renderModernField(
+                      "Product Description",
+                      "description",
+                      originalContent.description,
+                      enhancedContent.description,
+                      true,
+                      true,
+                    )}
+
+                  {!enhancedContent.titleOptions &&
+                    !enhancedContent.title &&
+                    !enhancedContent.description && (
+                      <Banner tone="info">
+                        <Text as="p">
+                          No main content was generated. Try enabling title or
+                          description generation in enhancement options.
+                        </Text>
+                      </Banner>
+                    )}
+                </BlockStack>
               </Box>
             </Card>
-
-            {/* Tabbed Content */}
-            <Card>
-              <Tabs
-                tabs={tabs}
-                selected={selectedTab}
-                onSelect={setSelectedTab}
-              >
-                {/* Main Content Tab */}
-                {selectedTab === 0 && (
-                  <div style={{ minHeight: "600px" }}>
-                    <Box padding="400">
-                      <BlockStack gap="600">
-                        {enhancedContent.title &&
-                          renderModernField(
-                            "Product Title",
-                            "title",
-                            originalContent.title,
-                            enhancedContent.title,
-                            false,
-                            false,
-                          )}
-
-                        {enhancedContent.description &&
-                          renderModernField(
-                            "Product Description",
-                            "description",
-                            originalContent.description,
-                            enhancedContent.description,
-                            true,
-                            true,
-                          )}
-
-                        {!enhancedContent.title &&
-                          !enhancedContent.description && (
-                            <Banner tone="info">
-                              <Text as="p">
-                                No main content was generated. Try enabling
-                                title or description generation in enhancement
-                                options.
-                              </Text>
-                            </Banner>
-                          )}
-                      </BlockStack>
-                    </Box>
-                  </div>
-                )}
-
-                {/* SEO & Marketing Tab */}
-                {selectedTab === 1 && (
-                  <div style={{ minHeight: "600px" }}>
-                    <Box padding="400">
-                      <BlockStack gap="600">
-                        {enhancedContent.seoTitle &&
-                          renderModernField(
-                            "SEO Title",
-                            "seoTitle",
-                            originalContent.seoTitle,
-                            enhancedContent.seoTitle,
-                            false,
-                            false,
-                          )}
-
-                        {enhancedContent.seoDescription &&
-                          renderModernField(
-                            "SEO Meta Description",
-                            "seoDescription",
-                            originalContent.seoDescription,
-                            enhancedContent.seoDescription,
-                            true,
-                            false,
-                          )}
-
-                        {enhancedContent.promoText &&
-                          renderModernField(
-                            "Promotional Copy",
-                            "promoText",
-                            originalContent.promoText,
-                            enhancedContent.promoText,
-                            true,
-                            true,
-                          )}
-
-                        {!enhancedContent.seoTitle &&
-                          !enhancedContent.seoDescription &&
-                          !enhancedContent.promoText && (
-                            <Banner tone="info">
-                              <Text as="p">
-                                No SEO or marketing content was generated.
-                                Enable these options in enhancement settings to
-                                generate them.
-                              </Text>
-                            </Banner>
-                          )}
-                      </BlockStack>
-                    </Box>
-                  </div>
-                )}
-
-                {/* Key Features Tab */}
-                {selectedTab === 2 && (
-                  <div style={{ minHeight: "600px" }}>
-                    <Box padding="400">
-                      {editedContent.bulletPoints &&
-                      editedContent.bulletPoints.length > 0 ? (
-                        renderBulletPoints()
-                      ) : (
-                        <Banner tone="info">
-                          <Text as="p">
-                            No key features were generated. The AI will extract
-                            features when analyzing product images.
-                          </Text>
-                        </Banner>
-                      )}
-                    </Box>
-                  </div>
-                )}
-              </Tabs>
-            </Card>
-
-            {/* Selected Fields Summary */}
-            {(() => {
-              const selectedCount =
-                Object.values(fieldsToApply).filter(Boolean).length;
-              if (selectedCount > 0) {
-                return (
-                  <Box
-                    background="bg-surface-success"
-                    padding="300"
-                    borderRadius="200"
-                  >
-                    <InlineStack gap="200" blockAlign="center">
-                      <Icon source={CheckIcon} tone="success" />
-                      <Text variant="bodySm" as="p" tone="success">
-                        {selectedCount} field{selectedCount !== 1 ? "s" : ""}{" "}
-                        selected for update
-                      </Text>
-                    </InlineStack>
-                  </Box>
-                );
-              }
-              return null;
-            })()}
           </BlockStack>
         </Modal.Section>
       </Modal>
