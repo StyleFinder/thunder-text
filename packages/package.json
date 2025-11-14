@@ -4,10 +4,10 @@
   "private": true,
   "description": "Monorepo for Thunder Text Platform (ThunderText + ACE)",
   "workspaces": [
-    "packages/shared-backend",
-    "packages/shared-ui",
-    "packages/thundertext-app",
-    "packages/ace-app"
+    "shared-backend",
+    "shared-ui",
+    "thundertext-app",
+    "ace-app"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=@thunder-text/thundertext-app",
