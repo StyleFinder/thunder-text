@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@thunder-text/shared-backend": ["./packages/shared-backend/src/index.ts"],
+      "@thunder-text/shared-backend/*": ["./packages/shared-backend/src/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

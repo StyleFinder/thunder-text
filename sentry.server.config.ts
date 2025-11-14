@@ -52,8 +52,8 @@ Sentry.init({
     tags: {
       app: "thunder-text",
       runtime: "server",
-      separation_phase: "phase-0", // Track app separation progress
-      migration_status: "pre-separation", // Current migration state
+      separation_phase: "phase-1", // Track app separation progress
+      migration_status: "extracting-shared-backend", // Current migration state
     },
   },
 });
