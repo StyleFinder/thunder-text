@@ -26,7 +26,7 @@ import { SocialAdIcon } from '@shopify/polaris-icons'
 import CampaignSelector from '@/components/facebook/CampaignSelector'
 import CreateFacebookAdFlow from '@/components/facebook/CreateFacebookAdFlow'
 import CampaignMetricsCard from '@/components/facebook/CampaignMetricsCard'
-import { useShopifyAuth } from '@/app/components/UnifiedShopifyAuth'
+import { useShopifyAuth } from '@/components/UnifiedShopifyAuth'
 
 interface IntegrationInfo {
   connected: boolean

@@ -8,7 +8,7 @@
 import jwt from 'jsonwebtoken'
 
 // JWT Configuration
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET
+const JWT_SECRET = (process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET) as string
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET or NEXTAUTH_SECRET must be set')
 }
@@ -78,9 +78,7 @@ export function createJWT(
     exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days
   }
 
-  return jwt.sign(claims, JWT_SECRET, {
-    expiresIn: options?.expiresIn || JWT_EXPIRATION,
-  })
+  return jwt.sign(claims, JWT_SECRET)
 }
 
 /**
@@ -97,8 +95,12 @@ export function createJWT(
  */
 export function verifyJWT(token: string): JWTClaims | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTClaims
-    return decoded
+    const decoded = jwt.verify(token, JWT_SECRET)
+    // Validate that decoded has required JWTClaims shape
+    if (typeof decoded === 'object' && decoded !== null && 'apps' in decoded) {
+      return decoded as JWTClaims
+    }
+    return null
   } catch (error) {
     console.error('JWT verification failed:', error)
     return null

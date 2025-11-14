@@ -14,7 +14,6 @@ import type {
   CampaignInsight,
   FacebookAPIResponse,
   FacebookInsightData,
-  FacebookTokenResponse
 } from '@/types/facebook'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -216,7 +215,7 @@ export async function getCampaigns(
 
     // Filter by status client-side if specified
     if (status) {
-      campaigns = campaigns.filter(campaign => campaign.status === status)
+      campaigns = campaigns.filter((campaign: Campaign) => campaign.status === status)
     }
 
     return campaigns
@@ -282,7 +281,7 @@ export async function getIntegrationInfo(shopId: string): Promise<{
     connected: true,
     accountName: integration.provider_account_name,
     adAccountsCount: adAccounts.length,
-    adAccounts: adAccounts.map((acc) => ({
+    adAccounts: adAccounts.map((acc: { id: string; name: string }) => ({
       id: acc.id,
       name: acc.name
     }))
@@ -345,8 +344,8 @@ export async function getCampaignInsights(
       const actions = insight.actions || []
       const actionValues = insight.action_values || []
 
-      const purchaseAction = actions.find((a) => a.action_type === 'purchase')
-      const purchaseValue = actionValues.find((a) => a.action_type === 'purchase')
+      const purchaseAction = actions.find((a: { action_type: string; value: string }) => a.action_type === 'purchase')
+      const purchaseValue = actionValues.find((a: { action_type: string; value: string }) => a.action_type === 'purchase')
 
       const purchases = purchaseAction ? parseInt(purchaseAction.value) : 0
       const purchaseValueAmount = purchaseValue ? parseFloat(purchaseValue.value) : 0
