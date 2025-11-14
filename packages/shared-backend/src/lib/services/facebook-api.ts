@@ -7,15 +7,61 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { decryptToken, encryptToken } from './encryption'
-import type {
-  FacebookIntegration,
-  AdAccount,
-  Campaign,
-  CampaignInsight,
-  FacebookAPIResponse,
-  FacebookInsightData,
-  FacebookTokenResponse
-} from '@/types/facebook'
+
+// Types
+export interface FacebookIntegration {
+  id: string;
+  shop_id: string;
+  access_token: string;
+  encrypted_access_token?: string;
+  token_encrypted: boolean;
+  expires_at: string | null;
+  token_expires_at?: string | null;
+  provider_account_id?: string;
+  provider_account_name?: string;
+  is_active?: boolean;
+  additional_metadata?: any;
+}
+
+export interface AdAccount {
+  id: string;
+  account_id: string;
+  name: string;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  status: string;
+}
+
+export interface CampaignInsight {
+  impressions: string;
+  clicks: string;
+  spend: string;
+  ctr: string;
+  cpc: string;
+}
+
+export interface FacebookAPIResponse<T> {
+  data: T;
+  paging?: any;
+}
+
+export interface FacebookInsightData {
+  impressions: string;
+  clicks: string;
+  spend: string;
+  actions?: any[];
+  action_values?: any[];
+  campaign_id?: string;
+  campaign_name?: string;
+}
+
+export interface FacebookTokenResponse {
+  access_token: string;
+  expires_in: number;
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!

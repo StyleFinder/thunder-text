@@ -11,12 +11,17 @@
  * 6. AI Engine (Custom Instructions)
  */
 
-import { callChatCompletion } from "./openai-client";
-import type { BusinessProfileResponse } from "@/types/business-profile";
+import { callChatCompletion } from "../openai-client";
 
 // ============================================================================
 // TYPES
 // ============================================================================
+
+export interface BusinessProfileResponse {
+  question_id: string;
+  response_text: string;
+  prompt_key?: string;
+}
 
 export interface ProfileGenerationResult {
   masterProfile: MasterBusinessProfile;
