@@ -1,11 +1,11 @@
 # Privacy Policy for Thunder Text
 
 **Effective Date:** October 14, 2025
-**Last Updated:** October 14, 2025
+**Last Updated:** November 16, 2025
 
 ## Introduction
 
-Thunder Text ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Shopify application and Facebook integration features.
+Thunder Text ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Shopify application.
 
 ## Information We Collect
 
@@ -15,18 +15,14 @@ Thunder Text ("we," "our," or "us") is committed to protecting your privacy. Thi
 - Order and sales data for analytics purposes
 - Store settings and preferences
 
-### 2. Facebook/Meta Integration Data
-- Facebook Business Account ID and name
-- Facebook Ad Account ID and name
-- Facebook User ID (for authentication)
-- Facebook campaign information
-- Permissions granted to our application
-- OAuth access tokens (encrypted and stored securely)
+### 2. User Account Information
+- Email address (for support and notifications)
+- User preferences and settings
+- Subscription and billing information
 
 ### 3. Generated Content
 - AI-generated product descriptions
 - Product images uploaded for processing
-- Ad creative content and drafts
 - Usage metrics and generation history
 
 ### 4. Technical Information
@@ -38,17 +34,11 @@ Thunder Text ("we," "our," or "us") is committed to protecting your privacy. Thi
 ## How We Use Your Information
 
 ### Primary Uses
-1. **Service Delivery**: Generate AI-powered product descriptions and manage Facebook ad campaigns
-2. **Integration Management**: Maintain connections with Shopify and Facebook/Meta platforms
+1. **Service Delivery**: Generate AI-powered product descriptions for your Shopify store
+2. **Integration Management**: Maintain secure connection with Shopify platform
 3. **Analytics**: Track usage, improve AI models, and provide insights
 4. **Support**: Respond to inquiries and troubleshoot issues
 5. **Billing**: Process subscription payments and track usage limits
-
-### Facebook-Specific Uses
-- Create and manage Facebook ad campaigns on your behalf
-- Retrieve Facebook campaign data for ad creation
-- Submit ad creatives to your selected Facebook campaigns
-- Monitor ad submission status and handle errors
 
 ## Data Sharing and Disclosure
 
@@ -56,10 +46,9 @@ Thunder Text ("we," "our," or "us") is committed to protecting your privacy. Thi
 We share data with the following third-party services:
 
 1. **OpenAI**: Product images and data for AI-powered description generation
-2. **Facebook/Meta**: Ad creative content when you create Facebook ads
-3. **Shopify**: Product updates and store integration
-4. **Supabase**: Secure database hosting and authentication
-5. **Render**: Application hosting and deployment
+2. **Shopify**: Product updates and store integration
+3. **Supabase**: Secure database hosting and authentication
+4. **Render**: Application hosting and deployment
 
 ### Legal Requirements
 We may disclose your information if required by law, court order, or governmental authority.
@@ -76,9 +65,9 @@ We may disclose your information if required by law, court order, or governmenta
 ### Data Retention
 - **Active Data**: Maintained while your account is active
 - **Product Descriptions**: Retained for 90 days after generation
-- **Facebook Ad Drafts**: Retained until manually deleted or 1 year
-- **OAuth Tokens**: Refreshed regularly, expired tokens deleted
-- **Account Deletion**: All data deleted within 30 days of account closure
+- **GDPR Logs**: Retained for 2 years for compliance purposes
+- **OAuth Tokens**: Refreshed regularly, expired tokens deleted immediately
+- **Account Deletion**: All data deleted within 30 days of uninstallation
 
 ## Your Data Rights
 
@@ -88,31 +77,28 @@ You have the right to:
 - Correct inaccurate information
 - Delete your account and all associated data
 - Export your data in a machine-readable format
-- Revoke Facebook/Meta integration permissions
+- Request data deletion (GDPR Right to Erasure)
 - Opt-out of analytics tracking (where applicable)
 
 ### How to Exercise Rights
 Contact us at [privacy@thundertext.com] or use the in-app settings to manage your data preferences.
 
-## Facebook Integration Specifics
+## GDPR Compliance
 
-### Permissions We Request
-- **ads_management**: Create and manage ads in your Facebook campaigns
-- **ads_read**: Read your Facebook ad campaigns and performance data
-- **business_management**: Access your Facebook Business account information
+### Data Deletion Requests
+Thunder Text fully complies with GDPR requirements:
+- **Shop/Redact**: When you uninstall the app or request deletion, all shop data is automatically deleted within 48 hours
+- **Customer Data**: We do NOT store customer-specific data - only merchant/shop owner data
+- **Audit Trail**: All GDPR deletion requests are logged for 2 years for compliance purposes
+- **Right to Access**: You can request a copy of all data we store about your shop
 
-### What We Do NOT Access
-- Personal Facebook profile information
-- Facebook friends or social connections
-- Private messages or communications
-- Payment methods or billing information
-- Ad performance data (we only create ads, not analyze results)
-
-### Revoking Facebook Access
-You can revoke Thunder Text's access to your Facebook account at any time:
-1. Go to Facebook Settings > Business Integrations
-2. Find "Thunder Text" and click Remove
-3. Alternatively, disconnect within Thunder Text app settings
+### What Data is Deleted
+Upon app uninstallation or deletion request:
+- Shop settings and preferences
+- Generated product descriptions
+- Usage analytics and metrics
+- OAuth tokens and authentication data
+- All database records associated with your shop
 
 ## Children's Privacy
 
@@ -161,13 +147,9 @@ For EU users, we comply with GDPR requirements:
 
 For privacy-related questions or requests:
 
-**Email**: privacy@thundertext.com
-**Support Portal**: https://thunder-text.onrender.com/support
-**Mailing Address**:
-Thunder Text
-[Your Business Address]
-[City, State, ZIP]
-United States
+**Email**: support@thundertext.com
+**Support Portal**: https://shopify-product-generator.onrender.com/help
+**Data Deletion Requests**: Uninstall the app or email support@thundertext.com
 
 ## Data Processing Agreement
 
