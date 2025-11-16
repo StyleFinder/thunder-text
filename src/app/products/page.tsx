@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useShopifyAuth } from '../components/UnifiedShopifyAuth'
+import Image from 'next/image'
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic'
@@ -27,19 +28,6 @@ interface Product {
   }
 }
 
-interface ProductsResponse {
-  success: boolean
-  data: {
-    products: {
-      edges: Product[]
-      pageInfo: {
-        hasNextPage: boolean
-        endCursor: string | null
-      }
-    }
-  }
-}
-
 function ProductsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -52,14 +40,9 @@ function ProductsContent() {
   const [cursor, setCursor] = useState<string | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set())
+  const [sortBy, setSortBy] = useState<string>('recent-created')
 
-  useEffect(() => {
-    if (shop && isAuthenticated && sessionToken) {
-      fetchProducts()
-    }
-  }, [shop, isAuthenticated, sessionToken])
-
-  const fetchProducts = async (nextCursor?: string) => {
+  const fetchProducts = useCallback(async (nextCursor?: string) => {
     try {
       const params = new URLSearchParams()
       params.append('limit', '12')
@@ -68,6 +51,26 @@ function ProductsContent() {
       }
       if (nextCursor) {
         params.append('cursor', nextCursor)
+      }
+
+      // Add sorting parameters based on selected filter
+      switch (sortBy) {
+        case 'recent-created':
+          params.append('sortKey', 'CREATED_AT')
+          params.append('reverse', 'true')
+          break
+        case 'recent-updated':
+          params.append('sortKey', 'UPDATED_AT')
+          params.append('reverse', 'true')
+          break
+        case 'a-to-z':
+          params.append('sortKey', 'TITLE')
+          params.append('reverse', 'false')
+          break
+        case 'z-to-a':
+          params.append('sortKey', 'TITLE')
+          params.append('reverse', 'true')
+          break
       }
 
       // Use regular fetch with session token for authentication
@@ -85,10 +88,35 @@ function ProductsContent() {
       }
 
       // The API returns products directly, not nested in data.products.edges
+      let productsToSet = data.products || []
+
+      // Apply client-side sorting as additional insurance
+      // Shopify's API sorting should work, but this ensures consistency
+      if (productsToSet.length > 0) {
+        const sorted = [...productsToSet].sort((a, b) => {
+          const aNode = a.node
+          const bNode = b.node
+
+          switch (sortBy) {
+            case 'a-to-z':
+              return aNode.title.localeCompare(bNode.title)
+            case 'z-to-a':
+              return bNode.title.localeCompare(aNode.title)
+            case 'recent-created':
+            case 'recent-updated':
+              // API handles date sorting, don't override
+              return 0
+            default:
+              return 0
+          }
+        })
+        productsToSet = sorted
+      }
+
       if (nextCursor) {
-        setProducts(prev => [...prev, ...data.products])
+        setProducts(prev => [...prev, ...productsToSet])
       } else {
-        setProducts(data.products || [])
+        setProducts(productsToSet)
       }
 
       setHasNextPage(data.pageInfo?.hasNextPage || false)
@@ -101,7 +129,13 @@ function ProductsContent() {
       setLoading(false)
       setLoadingMore(false)
     }
-  }
+  }, [shop, sessionToken, sortBy])
+
+  useEffect(() => {
+    if (shop && isAuthenticated && sessionToken) {
+      fetchProducts()
+    }
+  }, [shop, isAuthenticated, sessionToken, sortBy, fetchProducts])
 
   const handleLoadMore = () => {
     if (cursor && hasNextPage) {
@@ -240,7 +274,7 @@ function ProductsContent() {
               {products.length} products from {shop}
             </p>
           </div>
-          <button 
+          <button
             style={{
               backgroundColor: '#6b7280',
               color: 'white',
@@ -254,6 +288,56 @@ function ProductsContent() {
           >
             Back to Dashboard
           </button>
+        </div>
+
+        {/* Sort Filter */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          marginBottom: '1rem',
+          padding: '1rem',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <label htmlFor="sort-filter" style={{
+            color: '#374151',
+            fontWeight: '500',
+            fontSize: '0.9rem'
+          }}>
+            Sort by:
+          </label>
+          <select
+            id="sort-filter"
+            value={sortBy}
+            onChange={(e) => {
+              setSortBy(e.target.value)
+              setProducts([])
+              setLoading(true)
+            }}
+            style={{
+              padding: '8px 32px 8px 12px',
+              borderRadius: '6px',
+              border: '1px solid #d1d5db',
+              backgroundColor: 'white',
+              color: '#374151',
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              fontWeight: '500',
+              outline: 'none',
+              appearance: 'none',
+              backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")',
+              backgroundPosition: 'right 0.5rem center',
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: '1.5em 1.5em'
+            }}
+          >
+            <option value="recent-created">Recently Created</option>
+            <option value="recent-updated">Recently Updated</option>
+            <option value="a-to-z">A to Z</option>
+            <option value="z-to-a">Z to A</option>
+          </select>
         </div>
         
         <div style={{ 
@@ -273,7 +357,7 @@ function ProductsContent() {
         <div style={{ textAlign: 'center', padding: '3rem' }}>
           <h2 style={{ color: '#6b7280', marginBottom: '1rem' }}>No products found</h2>
           <p style={{ color: '#9ca3af' }}>
-            It looks like your store doesn't have any products yet, or there was an issue loading them.
+            It looks like your store doesn&apos;t have any products yet, or there was an issue loading them.
           </p>
         </div>
       ) : (
@@ -319,9 +403,11 @@ function ProductsContent() {
                   overflow: 'hidden'
                 }}>
                   {primaryImage ? (
-                    <img
+                    <Image
                       src={primaryImage.url}
                       alt={primaryImage.altText || productData.title}
+                      width={300}
+                      height={200}
                       style={{
                         width: '100%',
                         height: '100%',

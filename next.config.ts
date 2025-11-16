@@ -15,6 +15,15 @@ const nextConfig: NextConfig = {
     SHOPIFY_API_KEY: process.env.SHOPIFY_API_KEY || '',
     SHOPIFY_API_SECRET: process.env.SHOPIFY_API_SECRET || '',
   },
+  // Configure image optimization for Shopify CDN
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'cdn.shopify.com',
+      },
+    ],
+  },
   // Configure for embedded Shopify app
   // assetPrefix: process.env.NODE_ENV === 'production' ? 'https://thunder-text-nine.vercel.app' : undefined,
   // Enable serving static files correctly in embedded context

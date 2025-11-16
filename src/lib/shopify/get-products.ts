@@ -37,10 +37,30 @@ interface ShopifyProductsResponse {
 }
 
 /**
+ * Valid Shopify product sort keys
+ * Reference: https://shopify.dev/docs/api/admin-graphql/2025-01/enums/ProductSortKeys
+ */
+export type ProductSortKey =
+  | 'TITLE'
+  | 'CREATED_AT'
+  | 'UPDATED_AT'
+  | 'PRODUCT_TYPE'
+  | 'VENDOR'
+  | 'INVENTORY_TOTAL'
+  | 'PUBLISHED_AT'
+  | 'RELEVANCE'
+
+/**
  * Simple function to get products directly from Shopify
  * Uses the access token stored after app installation
  */
-export async function getProducts(shop: string, accessToken: string, searchQuery?: string) {
+export async function getProducts(
+  shop: string,
+  accessToken: string,
+  searchQuery?: string,
+  sortKey: ProductSortKey = 'CREATED_AT',
+  reverse: boolean = true
+) {
   const client = new GraphQLClient(
     `https://${shop}/admin/api/2025-01/graphql.json`,
     {
@@ -51,11 +71,10 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     }
   )
 
-  // Modified query to fetch more products when searching
-  // to ensure we don't miss products due to pagination
+  // Modified query to support sorting
   const query = `
-    query getProducts($first: Int!, $query: String) {
-      products(first: $first, query: $query) {
+    query getProducts($first: Int!, $query: String, $sortKey: ProductSortKeys!, $reverse: Boolean!) {
+      products(first: $first, query: $query, sortKey: $sortKey, reverse: $reverse) {
         edges {
           node {
             id
@@ -63,6 +82,8 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
             handle
             description
             status
+            createdAt
+            updatedAt
             images(first: 5) {
               edges {
                 node {
@@ -105,10 +126,12 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     willFilter: !!searchQuery
   })
 
-  // Fetch products with optional search query
+  // Fetch products with optional search query and sorting
   const variables = {
     first: 100, // Fetch more products to ensure we get all matches
-    query: formattedQuery // Will be null if no search, or formatted query if searching
+    query: formattedQuery, // Will be null if no search, or formatted query if searching
+    sortKey,
+    reverse
   }
 
   try {

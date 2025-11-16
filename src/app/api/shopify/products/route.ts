@@ -10,6 +10,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const shop = searchParams.get('shop') || 'zunosai-staging-test-store.myshopify.com'
     const query = searchParams.get('query') || undefined
+    const sortKeyParam = searchParams.get('sortKey') || 'CREATED_AT'
+    const sortKey = sortKeyParam as 'TITLE' | 'CREATED_AT' | 'UPDATED_AT'
+    const reverse = searchParams.get('reverse') === 'false' ? false : true
 
     // Get session token from Authorization header
     const authHeader = request.headers.get('authorization')
@@ -21,6 +24,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Products API - fetching for:', fullShop)
     console.log('🔐 Has session token:', !!sessionToken)
     console.log('🔍 Search query:', query || 'none')
+    console.log('🔢 Sort:', sortKey, 'reverse:', reverse)
 
     // Get access token using proper Token Exchange
     let accessToken: string
@@ -37,10 +41,10 @@ export async function GET(request: NextRequest) {
       }, { status: 401, headers: corsHeaders })
     }
 
-    // Get products using the obtained access token
-    const { products, pageInfo } = await getProducts(fullShop, accessToken, query)
+    // Get products using the obtained access token with sorting
+    const { products, pageInfo } = await getProducts(fullShop, accessToken, query, sortKey, reverse)
 
-    console.log(`✅ Found ${products.length} products${query ? ` matching "${query}"` : ''}`)
+    console.log(`✅ Found ${products.length} products${query ? ` matching "${query}"` : ''} (sorted by ${sortKey}${reverse ? ' desc' : ' asc'})`)
 
     return NextResponse.json({
       success: true,
