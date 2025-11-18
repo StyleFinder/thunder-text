@@ -1,57 +1,114 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase";
 
 /**
- * POST /api/trends/shop-themes
- * Enable a theme for the authenticated shop
- *
- * Body: { themeSlug: string, market?: string, region?: string, priority?: number }
+ * GET /api/trends/shop-themes?shop=store.myshopify.com
+ * Get all enabled themes for a shop
  */
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const { searchParams } = new URL(request.url);
+    const shopDomain = searchParams.get("shop");
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-    const body = await request.json();
-    const { themeSlug, market = "US", region = null, priority = 5 } = body;
-
-    if (!themeSlug) {
+    if (!shopDomain) {
       return NextResponse.json(
-        { success: false, error: "themeSlug required" },
+        { success: false, error: "shop parameter required" },
         { status: 400 },
       );
     }
 
-    // Get authenticated shop ID
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 },
-      );
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 },
-      );
-    }
-    const shopId = user.id;
-
-    // Get theme ID
-    const { data: theme, error: themeError } = await supabase
-      .from("themes")
+    // Get shop ID from shop domain
+    const { data: shop, error: shopError } = await supabaseAdmin
+      .from("shops")
       .select("id")
-      .eq("slug", themeSlug)
+      .eq("shop_domain", shopDomain)
+      .single();
+
+    if (shopError || !shop) {
+      return NextResponse.json(
+        { success: false, error: "Shop not found" },
+        { status: 404 },
+      );
+    }
+    const shopId = shop.id;
+
+    // Get all enabled themes for this shop
+    const { data: shopThemes, error: themesError } = await supabaseAdmin
+      .from("shop_themes")
+      .select("id, theme_id, market, region, priority, is_enabled, created_at, updated_at")
+      .eq("shop_id", shopId)
+      .eq("is_enabled", true)
+      .order("priority", { ascending: true });
+
+    if (themesError) {
+      console.error("Error fetching shop themes:", themesError);
+      return NextResponse.json(
+        { success: false, error: "Failed to fetch shop themes" },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      shopThemes: shopThemes || [],
+    });
+  } catch (error) {
+    console.error("Unexpected error in GET /api/trends/shop-themes:", error);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * POST /api/trends/shop-themes?shop=store.myshopify.com
+ * Enable a theme for the authenticated shop
+ *
+ * Body: { themeId: string, market?: string, region?: string, priority?: number }
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const shopDomain = searchParams.get("shop");
+
+    if (!shopDomain) {
+      return NextResponse.json(
+        { success: false, error: "shop parameter required" },
+        { status: 400 },
+      );
+    }
+
+    const body = await request.json();
+    const { themeId, market = "US", region = null, priority = 5 } = body;
+
+    if (!themeId) {
+      return NextResponse.json(
+        { success: false, error: "themeId required" },
+        { status: 400 },
+      );
+    }
+
+    // Get shop ID from shop domain
+    const { data: shop, error: shopError } = await supabaseAdmin
+      .from("shops")
+      .select("id")
+      .eq("shop_domain", shopDomain)
+      .single();
+
+    if (shopError || !shop) {
+      return NextResponse.json(
+        { success: false, error: "Shop not found" },
+        { status: 404 },
+      );
+    }
+    const shopId = shop.id;
+
+    // Verify theme exists and is active
+    const { data: theme, error: themeError } = await supabaseAdmin
+      .from("themes")
+      .select("id, slug, name")
+      .eq("id", themeId)
       .eq("is_active", true)
       .single();
 
@@ -62,30 +119,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert or update shop_themes (use service role for write)
-    const serviceSupabase = createClient(
-      supabaseUrl,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
-
-    const { data: shopTheme, error: insertError } = await serviceSupabase
+    // Check if shop_theme already exists
+    const { data: existingShopTheme } = await supabaseAdmin
       .from("shop_themes")
-      .upsert(
-        {
+      .select("id")
+      .eq("shop_id", shopId)
+      .eq("theme_id", theme.id)
+      .eq("market", market)
+      .is("region", region) // Handle NULL properly
+      .single();
+
+    let shopTheme;
+    let insertError;
+
+    if (existingShopTheme) {
+      // Update existing
+      const { data, error } = await supabaseAdmin
+        .from("shop_themes")
+        .update({
+          priority,
+          is_enabled: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingShopTheme.id)
+        .select()
+        .single();
+      shopTheme = data;
+      insertError = error;
+    } else {
+      // Insert new
+      const { data, error } = await supabaseAdmin
+        .from("shop_themes")
+        .insert({
           shop_id: shopId,
           theme_id: theme.id,
           market,
           region,
           priority,
           is_enabled: true,
-        },
-        {
-          onConflict: "shop_id,theme_id,market,region",
-          ignoreDuplicates: false,
-        },
-      )
-      .select()
-      .single();
+        })
+        .select()
+        .single();
+      shopTheme = data;
+      insertError = error;
+    }
 
     if (insertError) {
       console.error("Error enabling theme:", insertError);
@@ -117,18 +194,21 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * DELETE /api/trends/shop-themes
+ * DELETE /api/trends/shop-themes?shop=store.myshopify.com&id=shopThemeId
  * Disable a theme for shop
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
     const { searchParams } = new URL(request.url);
+    const shopDomain = searchParams.get("shop");
     const shopThemeId = searchParams.get("id");
+
+    if (!shopDomain) {
+      return NextResponse.json(
+        { success: false, error: "shop parameter required" },
+        { status: 400 },
+      );
+    }
 
     if (!shopThemeId) {
       return NextResponse.json(
@@ -137,41 +217,27 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Get authenticated shop ID
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
+    // Get shop ID from shop domain
+    const { data: shop, error: shopError } = await supabaseAdmin
+      .from("shops")
+      .select("id")
+      .eq("shop_domain", shopDomain)
+      .single();
+
+    if (shopError || !shop) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 },
+        { success: false, error: "Shop not found" },
+        { status: 404 },
       );
     }
-
-    const token = authHeader.replace("Bearer ", "");
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 },
-      );
-    }
-    const shopId = user.id;
-
-    // Use service role for write
-    const serviceSupabase = createClient(
-      supabaseUrl,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
+    const shopId = shop.id;
 
     // Soft delete (set is_enabled = false) - preserves historical data
-    const { error: updateError } = await serviceSupabase
+    const { error: updateError } = await supabaseAdmin
       .from("shop_themes")
       .update({ is_enabled: false })
       .eq("id", shopThemeId)
-      .eq("shop_id", shopId); // RLS safety
+      .eq("shop_id", shopId); // Safety check
 
     if (updateError) {
       console.error("Error disabling theme:", updateError);

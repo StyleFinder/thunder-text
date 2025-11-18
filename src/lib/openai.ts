@@ -188,13 +188,23 @@ CORE PRINCIPLES:
 - Use sensory, descriptive language appropriate to the product type
 - Balance emotional appeal with practical information
 - Include all relevant product specifications provided in the context
-- Format with clear section headers (no special characters like *, #, or -)
+- Use structured formatting with bold section headers
 
-FORMATTING RULES:
-- Section headers should be in bold TypeCase
-- No markdown formatting or special characters
+FORMATTING RULES - CRITICAL:
+- Section headers MUST be wrapped in <b></b> HTML tags (e.g., <b>Product Details</b>)
+- Body text should be plain text with NO HTML tags or formatting
+- Use double line breaks (\\n\\n) between sections for visual separation
+- NEVER use markdown (* or **) for formatting
 - Keep paragraphs concise (3-5 sentences max)
-- Use line breaks between sections for clarity
+- Example format:
+
+Opening engaging paragraph with no header.
+
+<b>Product Details</b>
+Plain text description of product specifications and features.
+
+<b>Perfect For</b>
+Plain text describing occasions and use cases.
 `.trim();
 
     return `
@@ -221,7 +231,20 @@ Please provide a JSON response with the following structure:
   "confidence": 0.95
 }
 
-CRITICAL: The "description" field must strictly follow the custom prompt guidelines above, especially the formatting rules and section structure provided in the category template.
+CRITICAL FORMATTING REQUIREMENTS FOR "description" FIELD:
+The description MUST be structured with HTML bold tags for section headers. Here is the EXACT format to follow:
+
+EXAMPLE (copy this format exactly):
+{
+  "description": "Opening engaging paragraph about the product goes here.\\n\\n<b>Product Details</b>\\nPlain text describing product specifications and features.\\n\\n<b>Perfect For</b>\\nPlain text describing occasions and use cases.\\n\\n<b>Styling Tips</b>\\nPlain text with styling suggestions.\\n\\n<b>Materials & Details</b>\\nPlain text about materials and construction."
+}
+
+MANDATORY RULES:
+- Section headers MUST be wrapped in <b>tags</b> (e.g., <b>Product Details</b>)
+- Use \\n\\n (escaped newlines) between sections in the JSON string
+- Body text is plain text with NO HTML tags
+- NEVER use markdown (**) or asterisks for formatting
+- Include multiple sections from the category template (Product Details, Perfect For, Styling Tips, Materials & Details, etc.)
 `.trim();
   }
 

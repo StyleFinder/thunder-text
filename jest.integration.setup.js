@@ -5,9 +5,10 @@
  * (no mocking) to test actual database interactions and RLS policies.
  */
 
-// Load environment variables from .env.local
+// Load environment variables from .env.test for integration tests
+// IMPORTANT: Use override: true to replace any existing env vars from .env.local
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-require("dotenv").config({ path: ".env.local" });
+require("dotenv").config({ path: ".env.test", override: true });
 
 // Verify required environment variables are set
 const requiredEnvVars = [
@@ -24,7 +25,7 @@ const missingEnvVars = requiredEnvVars.filter(
 if (missingEnvVars.length > 0) {
   throw new Error(
     `Missing required environment variables for integration tests: ${missingEnvVars.join(", ")}\n` +
-      "Please ensure .env.local contains these values.",
+      "Please ensure .env.test contains these values.",
   );
 }
 

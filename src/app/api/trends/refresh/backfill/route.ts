@@ -87,6 +87,10 @@ export async function POST(request: NextRequest) {
       const chunkEnd = new Date();
       chunkEnd.setDate(chunkEnd.getDate() + chunk.end);
 
+      console.log(
+        `📊 Fetching ${chunkStart.toISOString().split("T")[0]} to ${chunkEnd.toISOString().split("T")[0]}...`,
+      );
+
       const series = await provider.getSeries({
         keywords: keywords.map((k) => ({
           term: k.keyword,
@@ -99,27 +103,94 @@ export async function POST(request: NextRequest) {
         granularity: "weekly",
       });
 
-      // Save series
-      await serviceSupabase.from("trend_series").upsert(
-        {
-          shop_id: shopTheme.shop_id,
-          theme_id: shopTheme.theme_id,
-          market: shopTheme.market,
-          region: shopTheme.region,
-          source: series.source,
-          granularity: series.granularity,
-          start_date: chunkStart.toISOString().split("T")[0],
-          end_date: chunkEnd.toISOString().split("T")[0],
-          points: series.points,
-        },
-        {
-          onConflict:
-            "shop_id,theme_id,market,region,source,granularity,start_date,end_date",
-        },
+      console.log(
+        `✅ Fetched ${series.points.length} data points from ${series.source}`,
       );
+
+      // Save series
+      const { error: upsertError } = await serviceSupabase
+        .from("trend_series")
+        .upsert(
+          {
+            shop_id: shopTheme.shop_id,
+            theme_id: shopTheme.theme_id,
+            market: shopTheme.market,
+            region: shopTheme.region,
+            source: series.source,
+            granularity: series.granularity,
+            start_date: chunkStart.toISOString().split("T")[0],
+            end_date: chunkEnd.toISOString().split("T")[0],
+            points: series.points,
+          },
+          {
+            onConflict:
+              "shop_id,theme_id,market,region,source,granularity,start_date,end_date",
+          },
+        );
+
+      if (upsertError) {
+        console.error("❌ Error saving trend_series:", upsertError);
+      } else {
+        console.log("💾 Saved trend series to database");
+      }
 
       // Rate limiting pause (SerpAPI: ~1 req/sec)
       await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+
+    // Compute and save signal from latest series data
+    console.log("🧮 Computing signal from series data...");
+
+    const { data: latestSeries, error: seriesError } = await serviceSupabase
+      .from("trend_series")
+      .select("*")
+      .eq("shop_id", shopTheme.shop_id)
+      .eq("theme_id", shopTheme.theme_id)
+      .eq("market", shopTheme.market)
+      .order("start_date", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (seriesError || !latestSeries) {
+      console.error("❌ Failed to fetch latest series for signal computation");
+    } else {
+      // Import compute function
+      const { computeMomentum } = await import("@/lib/trends/compute");
+
+      const signal = computeMomentum({
+        points: latestSeries.points,
+        granularity: latestSeries.granularity,
+        source: latestSeries.source,
+      });
+
+      const { error: signalError } = await serviceSupabase
+        .from("trend_signals")
+        .upsert(
+          {
+            shop_id: shopTheme.shop_id,
+            theme_id: shopTheme.theme_id,
+            market: shopTheme.market,
+            region: shopTheme.region,
+            source: latestSeries.source,
+            window_days: signal.status === "Rising" ? 84 : 56,
+            momentum_pct: signal.momentumPct.toFixed(2),
+            status: signal.status,
+            latest_value: signal.latestValue.toString(),
+            last_peak_date: signal.lastPeakDate,
+            peak_recency_days: signal.peakRecencyDays,
+          },
+          {
+            onConflict: "shop_id,theme_id,market,region,source",
+          },
+        );
+
+      if (signalError) {
+        console.error("❌ Error saving signal:", signalError);
+      } else {
+        console.log(
+          `✅ Signal computed: ${signal.status} (${signal.momentumPct.toFixed(1)}% momentum)`,
+        );
+      }
     }
 
     // Mark backfill complete

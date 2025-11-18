@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase";
 
 /**
- * GET /api/trends/signals?themeSlug=game-day
+ * GET /api/trends/signals?themeSlug=game-day&shop=store.myshopify.com
  * Returns trend signal + series + seasonal profile for a specific theme
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
     const { searchParams } = new URL(request.url);
     const themeSlug = searchParams.get("themeSlug");
+    const shopDomain = searchParams.get("shop");
 
     if (!themeSlug) {
       return NextResponse.json(
@@ -22,31 +18,30 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get authenticated shop ID from session token
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
+    if (!shopDomain) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 },
+        { success: false, error: "shop parameter required" },
+        { status: 400 },
       );
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(token);
+    // Get shop ID from shop domain
+    const { data: shop, error: shopError } = await supabaseAdmin
+      .from("shops")
+      .select("id")
+      .eq("shop_domain", shopDomain)
+      .single();
 
-    if (authError || !user) {
+    if (shopError || !shop) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 },
+        { success: false, error: "Shop not found" },
+        { status: 404 },
       );
     }
-    const shopId = user.id;
+    const shopId = shop.id;
 
     // 1. Get theme details
-    const { data: theme, error: themeError } = await supabase
+    const { data: theme, error: themeError } = await supabaseAdmin
       .from("themes")
       .select("id, slug, name, description, category, active_start, active_end")
       .eq("slug", themeSlug)
@@ -61,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Get trend signal
-    const { data: signal, error: signalError } = await supabase
+    const { data: signal, error: signalError } = await supabaseAdmin
       .from("trend_signals")
       .select("*")
       .eq("shop_id", shopId)
@@ -73,7 +68,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. Get trend series (last 12 weeks)
-    const { data: seriesRecords, error: seriesError } = await supabase
+    const { data: seriesRecords, error: seriesError } = await supabaseAdmin
       .from("trend_series")
       .select("points, granularity, start_date, end_date, updated_at")
       .eq("shop_id", shopId)
@@ -88,7 +83,7 @@ export async function GET(request: NextRequest) {
     const series = seriesRecords?.[0]?.points || [];
 
     // 4. Get seasonal profile (optional)
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("seasonal_profiles")
       .select("week_1_to_52, years_included, updated_at")
       .eq("theme_id", theme.id)

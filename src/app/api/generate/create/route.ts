@@ -2,6 +2,52 @@ import { NextRequest, NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
 import { getCombinedPrompt, type ProductCategory } from "@/lib/prompts";
 
+// Map Shopify product types to backend category template keys
+function mapProductTypeToCategory(productType: string): ProductCategory {
+  const normalizedType = productType.toLowerCase().trim();
+
+  const mapping: Record<string, ProductCategory> = {
+    // Women's Clothing
+    'tops': 'womens_clothing',
+    'blouses': 'womens_clothing',
+    'shirts': 'womens_clothing',
+    'sweaters': 'womens_clothing',
+    'dresses': 'womens_clothing',
+    'skirts': 'womens_clothing',
+    'pants': 'womens_clothing',
+    'jeans': 'womens_clothing',
+    'activewear': 'womens_clothing',
+
+    // Jewelry & Accessories
+    'jewelry': 'jewelry_accessories',
+    'necklaces': 'jewelry_accessories',
+    'earrings': 'jewelry_accessories',
+    'bracelets': 'jewelry_accessories',
+    'rings': 'jewelry_accessories',
+    'watches': 'jewelry_accessories',
+    'bags': 'jewelry_accessories',
+    'scarves': 'jewelry_accessories',
+    'sunglasses': 'jewelry_accessories',
+
+    // Home & Living
+    'home decor': 'home_living',
+    'furniture': 'home_living',
+    'bedding': 'home_living',
+    'kitchenware': 'home_living',
+    'home accessories': 'home_living',
+
+    // Beauty & Personal Care
+    'beauty': 'beauty_personal_care',
+    'skincare': 'beauty_personal_care',
+    'makeup': 'beauty_personal_care',
+    'haircare': 'beauty_personal_care',
+    'fragrance': 'beauty_personal_care',
+    'cosmetics': 'beauty_personal_care'
+  };
+
+  return mapping[normalizedType] || 'general';
+}
+
 interface CreateProductRequest {
   images: string[]; // base64 encoded images
   category: string;
@@ -94,28 +140,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get store ID from shop domain
-    const storeId = shopDomain;
+    // Map frontend product type to backend category template key BEFORE UUID conversion
+    // Frontend sends Shopify product types (tops, dresses, jewelry)
+    // Backend uses category keys (womens_clothing, jewelry_accessories, etc.)
+    const productCategory = mapProductTypeToCategory(template);
 
-    // Frontend already sends the correct backend category key (e.g. 'womens_clothing')
-    // No mapping needed - use the template value directly
-    const productCategory = (template as ProductCategory) || "general";
+    console.log("🗺️ Product type mapping:", {
+      frontendProductType: template,
+      backendCategoryKey: productCategory,
+      fallbackIfNotFound: productCategory === 'general' ? 'YES' : 'NO'
+    });
+
+    // CRITICAL: Convert shop domain to UUID for database queries
+    // This is required for store-specific prompt loading
+    const { getStoreId } = await import("@/lib/prompts");
+    const storeId = await getStoreId(shopDomain);
+
+    if (!storeId) {
+      console.warn("⚠️ Could not convert shop domain to UUID, using domain as fallback:", shopDomain);
+      // This will cause getCombinedPrompt to fail finding store-specific prompts
+      // but we continue with generic fallback rather than blocking generation
+    }
+
+    console.log("🔄 UUID Conversion Result:", {
+      shopDomain,
+      storeUUID: storeId,
+      conversionSuccessful: !!storeId
+    });
 
     // Get custom prompts for the store and category
     console.log("🎯 AI Generation - Building custom prompt for:", {
       parentCategory: category,
       productTemplate: template,
       mappedCategory: productCategory,
-      storeId,
+      storeIdType: storeId ? 'UUID' : 'domain_fallback',
+      storeId: storeId || shopDomain,
     });
 
     let customPrompts = null;
     let systemPrompt = "";
 
     try {
-      customPrompts = await getCombinedPrompt(storeId, productCategory);
-      console.log("✅ Custom prompts loaded:", {
+      // Use storeId (UUID) if available, otherwise fallback to shopDomain
+      // Store-specific prompts require UUID, generic prompts work with either
+      customPrompts = await getCombinedPrompt(storeId || shopDomain, productCategory);
+      console.log("✅ Custom prompts loaded (ALL 3 COMPONENTS):", {
+        usedStoreId: !!storeId,
+        identifierUsed: storeId || shopDomain,
         hasSystemPrompt: !!customPrompts?.system_prompt,
+        hasBrandVoice: !!customPrompts?.brand_voice,
         hasCategoryTemplate: !!customPrompts?.category_template,
         hasCombo: !!customPrompts?.combined,
       });
@@ -314,7 +387,7 @@ ${additionalNotes ? `Special Instructions: ${additionalNotes}` : ""}`;
       "keywords",
     ] as const;
     // Safe: requiredFields is a const array we control, not user input
-    // eslint-disable-next-line security/detect-object-injection
+     
     const missingFields = requiredFields.filter(
       (field) => !parsedContent[field],
     );

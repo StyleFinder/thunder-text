@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
+  // Fix workspace root detection for multiple lockfiles
+  experimental: {
+    outputFileTracingRoot: path.join(__dirname, '../../'),
+  },
   // SECURITY: Enable type checking and linting in production builds
   // All TypeScript and ESLint errors must be fixed before deployment
   eslint: {

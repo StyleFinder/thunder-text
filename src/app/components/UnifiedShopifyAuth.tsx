@@ -96,7 +96,8 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       setHost(hostParam);
 
       // Check if test store (allow non-embedded access)
-      const isTestStore = shopParam.includes("zunosai-staging-test-store");
+      const isTestStore = shopParam.includes("zunosai-staging-test-store") ||
+                          shopParam.includes("coach-ellie-test-store");
 
       if (!isEmbedded && !isTestStore) {
         console.error(

@@ -759,7 +759,7 @@ function CreateProductContent() {
       if (shop) {
         url.searchParams.append('shop', shop)
       }
-      
+
       console.log('🔍 DEBUG Frontend: Creating product with sizing:', {
         availableSizing,
         sizingType: typeof availableSizing,
@@ -778,41 +778,70 @@ function CreateProductContent() {
         finalCategory,
         reason: suggestedCategory && suggestedCategory.confidence >= 0.6 ? 'Using AI suggestion' : 'Using manual selection'
       })
-      
-      const response = await fetch(url.toString(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          generatedContent,
-          productData: {
-            category: finalCategory,
-            productType,
-            sizing: availableSizing,
-            template: selectedTemplate,
-            fabricMaterial,
-            occasionUse,
-            targetAudience,
-            keyFeatures,
-            additionalNotes,
-            colorVariants: detectedVariants
-          },
-          uploadedImages: uploadedImagesData
+
+      let response: Response
+
+      try {
+        console.log('🔄 Attempting authenticatedFetch to:', url.toString())
+
+        response = await authenticatedFetch(url.toString(), {
+          method: 'POST',
+          body: JSON.stringify({
+            generatedContent,
+            productData: {
+              category: finalCategory,
+              productType,
+              sizing: availableSizing,
+              template: selectedTemplate,
+              fabricMaterial,
+              occasionUse,
+              targetAudience,
+              keyFeatures,
+              additionalNotes,
+              colorVariants: detectedVariants
+            },
+            uploadedImages: uploadedImagesData
+          })
         })
+
+        console.log('🔍 DEBUG: Response received:', {
+          status: response.status,
+          ok: response.ok,
+          statusText: response.statusText,
+          type: response.type,
+          url: response.url
+        })
+      } catch (fetchError) {
+        console.error('❌ Fetch failed before getting response:', fetchError)
+        throw new Error(`Network request failed: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`)
+      }
+
+      let data: any
+      try {
+        const responseText = await response.text()
+        console.log('🔍 DEBUG: Response body text:', responseText.substring(0, 200))
+        data = JSON.parse(responseText)
+      } catch (parseError) {
+        console.error('❌ Failed to parse response as JSON:', parseError)
+        throw new Error('Invalid response from server')
+      }
+
+      console.log('🔍 DEBUG: Parsed response data:', {
+        success: data.success,
+        hasError: !!data.error,
+        hasDetails: !!data.details,
+        keys: Object.keys(data)
       })
 
-      const data = await response.json()
-      
-      console.log('🔍 DEBUG: Frontend received response:', {
-        status: response.status,
-        ok: response.ok,
-        data: data
-      })
-
-      if (!data.success) {
-        console.error('❌ Backend returned error:', data)
-        throw new Error(data.error || 'Failed to create product in Shopify')
+      if (!response.ok || !data.success) {
+        const errorMessage = data.error || data.details || 'Failed to create product in Shopify'
+        console.error('❌ Backend returned error:', {
+          status: response.status,
+          statusText: response.statusText,
+          data,
+          errorMessage
+        })
+        throw new Error(errorMessage)
       }
 
       console.log('Product created successfully:', data.data)

@@ -15,7 +15,7 @@ const serviceRoleKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
 if (!serviceRoleKey || serviceRoleKey === "placeholder-service-key") {
-  console.error("❌ CRITICAL: No valid Supabase service role key found!", {
+  console.warn("⚠️ No Supabase service role key found - using fallback", {
     hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
     hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
     env: process.env.NODE_ENV,

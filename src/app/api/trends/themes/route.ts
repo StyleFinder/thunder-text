@@ -1,37 +1,80 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
 /**
- * GET /api/trends/themes
- * Returns all active themes available for tracking
+ * GET /api/trends/themes?shop=store.myshopify.com
+ * Get all available themes (global + custom themes for this shop)
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const { data: themes, error } = await supabaseAdmin
-      .from("themes")
-      .select("id, slug, name, description, category, active_start, active_end")
-      .eq("is_active", true)
-      .order("category", { ascending: true })
-      .order("name", { ascending: true });
+    const { searchParams } = new URL(request.url);
+    const shopDomain = searchParams.get("shop");
 
-    if (error) {
-      console.error("Error fetching themes:", error);
+    if (!shopDomain) {
+      return NextResponse.json(
+        { success: false, error: "shop parameter required" },
+        { status: 400 },
+      );
+    }
+
+    // Get shop ID
+    const { data: shop, error: shopError } = await supabaseAdmin
+      .from("shops")
+      .select("id")
+      .eq("shop_domain", shopDomain)
+      .single();
+
+    if (shopError || !shop) {
+      return NextResponse.json(
+        { success: false, error: "Shop not found" },
+        { status: 404 },
+      );
+    }
+
+    // Get all active themes (global themes + custom themes for this shop)
+    const { data: themes, error: themesError } = await supabaseAdmin
+      .from("themes")
+      .select(`
+        id,
+        slug,
+        name,
+        description,
+        category,
+        active_start,
+        active_end,
+        created_by_shop_id,
+        theme_keywords (keyword, weight)
+      `)
+      .eq("is_active", true)
+      .or(`created_by_shop_id.is.null,created_by_shop_id.eq.${shop.id}`)
+      .order("name");
+
+    if (themesError) {
+      console.error("Error fetching themes:", themesError);
       return NextResponse.json(
         { success: false, error: "Failed to fetch themes" },
         { status: 500 },
       );
     }
 
-    // Check which themes are currently in season
-    const now = new Date();
-    const enrichedThemes = themes.map((theme) => ({
-      ...theme,
-      inSeason: isThemeInSeason(theme.active_start, theme.active_end, now),
+    // Classify themes and format response
+    const formattedThemes = themes.map((theme) => ({
+      id: theme.id,
+      slug: theme.slug,
+      name: theme.name,
+      description: theme.description || "",
+      category: theme.category,
+      activeStart: theme.active_start,
+      activeEnd: theme.active_end,
+      isCustom: theme.created_by_shop_id === shop.id,
+      isGlobal: theme.created_by_shop_id === null,
+      keywordCount: theme.theme_keywords?.length || 0,
+      keywords: theme.theme_keywords || [],
     }));
 
     return NextResponse.json({
       success: true,
-      themes: enrichedThemes,
+      themes: formattedThemes,
     });
   } catch (error) {
     console.error("Unexpected error in GET /api/trends/themes:", error);
@@ -40,29 +83,4 @@ export async function GET() {
       { status: 500 },
     );
   }
-}
-
-// Helper: check if theme is in season
-function isThemeInSeason(
-  activeStart: string | null,
-  activeEnd: string | null,
-  checkDate: Date,
-): boolean {
-  if (!activeStart || !activeEnd) return true; // Always active
-
-  const checkMD = formatMonthDay(checkDate);
-
-  if (activeStart <= activeEnd) {
-    // Normal season (e.g., "08-01" to "12-31")
-    return checkMD >= activeStart && checkMD <= activeEnd;
-  } else {
-    // Wrapping season (e.g., "11-15" to "01-31")
-    return checkMD >= activeStart || checkMD <= activeEnd;
-  }
-}
-
-function formatMonthDay(date: Date): string {
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  return `${mm}-${dd}`;
 }

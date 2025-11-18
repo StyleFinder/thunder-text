@@ -1,5 +1,5 @@
-import React from "react";
-import { Card, Text, Tooltip, Icon } from "@shopify/polaris";
+import React, { useState } from "react";
+import { Card, Text, Tooltip, Icon, Button } from "@shopify/polaris";
 import { InfoIcon } from "@shopify/polaris-icons";
 import { TrendStatusBadge } from "./TrendStatusBadge";
 import { TrendSparkline } from "./TrendSparkline";
@@ -12,6 +12,7 @@ interface TrendThermometerProps {
   peakRecencyDays?: number;
   series: Array<{ date: string; value: number }>;
   onViewDetails?: () => void;
+  onHide?: () => void | Promise<void>;
 }
 
 export function TrendThermometer({
@@ -22,16 +23,31 @@ export function TrendThermometer({
   peakRecencyDays,
   series,
   onViewDetails,
+  onHide,
 }: TrendThermometerProps) {
+  const [isHiding, setIsHiding] = useState(false);
+
   // Playbook recommendations
   const playbook = getPlaybookForStatus(status);
+
+  async function handleHide() {
+    if (!onHide) return;
+
+    setIsHiding(true);
+    try {
+      await onHide();
+    } catch (error) {
+      console.error("Failed to hide theme:", error);
+      setIsHiding(false);
+    }
+  }
 
   return (
     <Card>
       <div className="p-4 space-y-3">
         {/* Header */}
         <div className="flex items-start justify-between">
-          <div>
+          <div className="flex-1">
             <Text variant="headingMd" as="h3">
               {themeName}
             </Text>
@@ -39,9 +55,22 @@ export function TrendThermometer({
               Seasonal Trend
             </Text>
           </div>
-          <Tooltip content="Based on Google search interest data">
-            <Icon source={InfoIcon} tone="base" />
-          </Tooltip>
+          <div className="flex items-center gap-2">
+            <Tooltip content="Based on Google search interest data">
+              <Icon source={InfoIcon} tone="base" />
+            </Tooltip>
+            {onHide && (
+              <Button
+                size="slim"
+                onClick={handleHide}
+                loading={isHiding}
+                tone="critical"
+                variant="plain"
+              >
+                Hide
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Status Badge */}

@@ -21,7 +21,7 @@ export default function PrivacyPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Introduction</h2>
               <p className="text-gray-700">
-                Thunder Text ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Shopify application and Facebook integration features.
+                Thunder Text ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Shopify application.
               </p>
             </section>
 
@@ -36,25 +36,14 @@ export default function PrivacyPage() {
                 <li>Store settings and preferences</li>
               </ul>
 
-              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">2. Facebook/Meta Integration Data</h3>
-              <ul className="list-disc pl-6 text-gray-700 space-y-2">
-                <li>Facebook Business Account ID and name</li>
-                <li>Facebook Ad Account ID and name</li>
-                <li>Facebook User ID (for authentication)</li>
-                <li>Facebook campaign information</li>
-                <li>Permissions granted to our application</li>
-                <li>OAuth access tokens (encrypted and stored securely)</li>
-              </ul>
-
-              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">3. Generated Content</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">2. Generated Content</h3>
               <ul className="list-disc pl-6 text-gray-700 space-y-2">
                 <li>AI-generated product descriptions</li>
                 <li>Product images uploaded for processing</li>
-                <li>Ad creative content and drafts</li>
                 <li>Usage metrics and generation history</li>
               </ul>
 
-              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">4. Technical Information</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">3. Technical Information</h3>
               <ul className="list-disc pl-6 text-gray-700 space-y-2">
                 <li>IP addresses and device information</li>
                 <li>Browser type and version</li>
@@ -66,22 +55,13 @@ export default function PrivacyPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">How We Use Your Information</h2>
 
-              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Primary Uses</h3>
               <ol className="list-decimal pl-6 text-gray-700 space-y-2">
-                <li><strong>Service Delivery:</strong> Generate AI-powered product descriptions and manage Facebook ad campaigns</li>
-                <li><strong>Integration Management:</strong> Maintain connections with Shopify and Facebook/Meta platforms</li>
+                <li><strong>Service Delivery:</strong> Generate AI-powered product descriptions</li>
+                <li><strong>Integration Management:</strong> Maintain connections with Shopify platform</li>
                 <li><strong>Analytics:</strong> Track usage, improve AI models, and provide insights</li>
                 <li><strong>Support:</strong> Respond to inquiries and troubleshoot issues</li>
                 <li><strong>Billing:</strong> Process subscription payments and track usage limits</li>
               </ol>
-
-              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Facebook-Specific Uses</h3>
-              <ul className="list-disc pl-6 text-gray-700 space-y-2">
-                <li>Create and manage Facebook ad campaigns on your behalf</li>
-                <li>Retrieve Facebook campaign data for ad creation</li>
-                <li>Submit ad creatives to your selected Facebook campaigns</li>
-                <li>Monitor ad submission status and handle errors</li>
-              </ul>
             </section>
 
             <section className="mb-8">
@@ -91,7 +71,6 @@ export default function PrivacyPage() {
               <p className="text-gray-700 mb-3">We share data with the following third-party services:</p>
               <ol className="list-decimal pl-6 text-gray-700 space-y-2">
                 <li><strong>OpenAI:</strong> Product images and data for AI-powered description generation</li>
-                <li><strong>Facebook/Meta:</strong> Ad creative content when you create Facebook ads</li>
                 <li><strong>Shopify:</strong> Product updates and store integration</li>
                 <li><strong>Supabase:</strong> Secure database hosting and authentication</li>
                 <li><strong>Render:</strong> Application hosting and deployment</li>
@@ -119,7 +98,6 @@ export default function PrivacyPage() {
               <ul className="list-disc pl-6 text-gray-700 space-y-2">
                 <li><strong>Active Data:</strong> Maintained while your account is active</li>
                 <li><strong>Product Descriptions:</strong> Retained for 90 days after generation</li>
-                <li><strong>Facebook Ad Drafts:</strong> Retained until manually deleted or 1 year</li>
                 <li><strong>OAuth Tokens:</strong> Refreshed regularly, expired tokens deleted</li>
                 <li><strong>Account Deletion:</strong> All data deleted within 30 days of account closure</li>
               </ul>
@@ -135,7 +113,6 @@ export default function PrivacyPage() {
                 <li>Correct inaccurate information</li>
                 <li>Delete your account and all associated data</li>
                 <li>Export your data in a machine-readable format</li>
-                <li>Revoke Facebook/Meta integration permissions</li>
                 <li>Opt-out of analytics tracking (where applicable)</li>
               </ul>
 
@@ -143,34 +120,6 @@ export default function PrivacyPage() {
               <p className="text-gray-700">
                 Contact us at privacy@thundertext.com or use the in-app settings to manage your data preferences.
               </p>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Facebook Integration Specifics</h2>
-
-              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Permissions We Request</h3>
-              <ul className="list-disc pl-6 text-gray-700 space-y-2">
-                <li><strong>ads_management:</strong> Create and manage ads in your Facebook campaigns</li>
-                <li><strong>ads_read:</strong> Read your Facebook ad campaigns and performance data</li>
-                <li><strong>business_management:</strong> Access your Facebook Business account information</li>
-              </ul>
-
-              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">What We Do NOT Access</h3>
-              <ul className="list-disc pl-6 text-gray-700 space-y-2">
-                <li>Personal Facebook profile information</li>
-                <li>Facebook friends or social connections</li>
-                <li>Private messages or communications</li>
-                <li>Payment methods or billing information</li>
-                <li>Ad performance data (we only create ads, not analyze results)</li>
-              </ul>
-
-              <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Revoking Facebook Access</h3>
-              <p className="text-gray-700 mb-3">You can revoke Thunder Text's access to your Facebook account at any time:</p>
-              <ol className="list-decimal pl-6 text-gray-700 space-y-2">
-                <li>Go to Facebook Settings → Business Integrations</li>
-                <li>Find "Thunder Text" and click Remove</li>
-                <li>Alternatively, disconnect within Thunder Text app settings</li>
-              </ol>
             </section>
 
             <section className="mb-8">

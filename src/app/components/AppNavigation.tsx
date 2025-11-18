@@ -9,7 +9,6 @@ import {
   QuestionCircleIcon,
   EditIcon,
   TextIcon,
-  SocialAdIcon,
   ChartVerticalIcon,
 } from "@shopify/polaris-icons";
 import { useNavigation } from "../hooks/useNavigation";
@@ -68,20 +67,6 @@ function NavigationContent({ children }: AppNavigationProps) {
       }),
       exactMatch: false,
       matchPaths: ["/enhance"],
-    },
-    {
-      url: buildUrl("/facebook-ads"),
-      label: "Facebook Ads",
-      icon: SocialAdIcon,
-      onClick: () => navigateTo("/facebook-ads"),
-      matches: isActive({
-        label: "Facebook Ads",
-        url: buildUrl("/facebook-ads"),
-        matchPaths: ["/facebook-ads", "/test-campaigns"],
-        exactMatch: false,
-      }),
-      exactMatch: false,
-      matchPaths: ["/facebook-ads", "/test-campaigns"],
     },
     {
       url: buildUrl("/content-center"),
@@ -177,7 +162,7 @@ function NavigationContent({ children }: AppNavigationProps) {
             },
           ]}
           name="Thunder Text"
-          detail={hasAuth ? "Connected to Shopify" : "Not Connected"}
+          detail="Connected to Shopify"
           initials="TT"
           open={userMenuActive}
           onToggle={() => setUserMenuActive(!userMenuActive)}

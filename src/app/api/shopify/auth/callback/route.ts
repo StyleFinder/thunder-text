@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     // IMPORTANT: Use 'shops' table to match token-manager.ts expectations
     const fullShopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
 
-    const { error: storeError } = await supabaseAdmin
+    const { data: shopData, error: storeError } = await supabaseAdmin
       .from('shops')
       .upsert({
         shop_domain: fullShopDomain,
@@ -72,6 +72,8 @@ export async function GET(request: NextRequest) {
       }, {
         onConflict: 'shop_domain',
       })
+      .select()
+      .single()
 
     if (storeError) {
       console.error('Failed to store shop data:', storeError)
@@ -79,6 +81,15 @@ export async function GET(request: NextRequest) {
         { error: 'Failed to store shop information' },
         { status: 500 }
       )
+    }
+
+    // Initialize default prompts and templates for new installations
+    if (shopData?.id) {
+      const { initializeStorePrompts } = await import('@/lib/prompts')
+      const initialized = await initializeStorePrompts(shopData.id)
+      if (!initialized) {
+        console.warn('Failed to initialize prompts for new store, will use fallback defaults')
+      }
     }
 
     // Redirect to the app with success

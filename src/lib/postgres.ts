@@ -17,8 +17,13 @@ if (!connectionString) {
 // Log connection details IMMEDIATELY
 const dbHost = connectionString.split("@")[1]?.split(":")[0];
 const dbName = connectionString.split("/").pop()?.split("?")[0];
-const projectIdMatch = connectionString.match(/db\.([a-z]+)\.supabase\.co/);
-const projectId = projectIdMatch ? projectIdMatch[1] : "unknown";
+
+// Extract project ID from either:
+// - Direct connection: db.{project_id}.supabase.co
+// - Pooler connection: postgres.{project_id}:password@aws-{region}.pooler.supabase.com
+const directMatch = connectionString.match(/db\.([a-z0-9]+)\.supabase\.co/);
+const poolerMatch = connectionString.match(/postgres\.([a-z0-9]+):/);
+const projectId = directMatch?.[1] || poolerMatch?.[1] || "unknown";
 
 console.log("=".repeat(80));
 console.log("🔗 PostgreSQL Direct Connection Initialized");

@@ -1,15 +1,65 @@
 import '@testing-library/jest-dom'
+import { TextEncoder, TextDecoder } from 'util'
 
-// Mock Next.js router
+// Polyfill Node.js encoding APIs (required for pg and crypto modules)
+global.TextEncoder = TextEncoder
+global.TextDecoder = TextDecoder
+
+// Polyfill Web APIs (required for Next.js middleware and Request/Response)
+const fetch = require('node-fetch')
+global.Request = fetch.Request
+global.Headers = fetch.Headers
+global.fetch = fetch
+
+// Extend Response with static json() method (required for Next.js API routes)
+const OriginalResponse = fetch.Response
+global.Response = class Response extends OriginalResponse {
+  static json(data, init) {
+    return new Response(JSON.stringify(data), {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...init?.headers,
+      },
+    })
+  }
+}
+
+// Mock Next.js router with all required hooks
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({
+  useRouter: jest.fn(() => ({
     push: jest.fn(),
     replace: jest.fn(),
     prefetch: jest.fn(),
-  }),
-  useSearchParams: () => ({
-    get: jest.fn(),
-  }),
+    back: jest.fn(),
+    forward: jest.fn(),
+    refresh: jest.fn(),
+  })),
+  usePathname: jest.fn(() => '/'),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
+}))
+
+// Mock custom useNavigation hook
+jest.mock('@/app/hooks/useNavigation', () => ({
+  useNavigation: jest.fn(() => ({
+    buildUrl: jest.fn((path) => path),
+    navigateTo: jest.fn(),
+    isActive: jest.fn(() => false),
+    getAuthParams: jest.fn(() => ({
+      shop: null,
+      authenticated: null,
+      host: null,
+      embedded: null,
+      isEmbedded: false,
+      hasAuth: false,
+    })),
+    currentPath: '/',
+    shop: null,
+    authenticated: null,
+    host: null,
+    embedded: null,
+    isEmbedded: false,
+  })),
 }))
 
 // Mock NextAuth
@@ -32,6 +82,9 @@ jest.mock('@shopify/polaris', () => ({
   Card: ({ children }) => <div data-testid="card">{children}</div>,
   Button: ({ children, ...props }) => <button data-testid="button" {...props}>{children}</button>,
   Text: ({ children, as: Component = 'span', ...props }) => <Component data-testid="text" {...props}>{children}</Component>,
+  Box: ({ children, ...props }) => <div data-testid="box" {...props}>{children}</div>,
+  InlineStack: ({ children, ...props }) => <div data-testid="inline-stack" {...props}>{children}</div>,
+  BlockStack: ({ children, ...props }) => <div data-testid="block-stack" {...props}>{children}</div>,
   Stack: ({ children, vertical }) => <div data-testid="stack" data-vertical={vertical}>{children}</div>,
   'Stack.Item': ({ children }) => <div data-testid="stack-item">{children}</div>,
   TextField: (props) => <input data-testid="text-field" {...props} />,

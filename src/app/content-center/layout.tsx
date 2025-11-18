@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sparkles, FileText, User, Building2, Home } from "lucide-react";
+import { useNavigation } from "@/app/hooks/useNavigation";
 
 interface NavItem {
   href: string;
@@ -31,12 +32,13 @@ const NAV_ITEMS: NavItem[] = [
     icon: FileText,
     description: "Saved content",
   },
-  {
-    href: "/content-center/store-profile",
-    label: "Store Profile",
-    icon: Building2,
-    description: "Business identity & foundation",
-  },
+  // Hidden - Store Profile page still exists but not shown in nav
+  // {
+  //   href: "/content-center/store-profile",
+  //   label: "Store Profile",
+  //   icon: Building2,
+  //   description: "Business identity & foundation",
+  // },
   {
     href: "/content-center/voice",
     label: "Brand Voice",
@@ -51,6 +53,7 @@ export default function ContentCenterLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { buildUrl } = useNavigation();
 
   const isActive = (href: string) => {
     if (href === "/content-center") {
@@ -87,7 +90,7 @@ export default function ContentCenterLayout({
               const active = isActive(item.href);
 
               return (
-                <Link key={item.href} href={item.href}>
+                <Link key={item.href} href={buildUrl(item.href)}>
                   <Button
                     variant="ghost"
                     className={`

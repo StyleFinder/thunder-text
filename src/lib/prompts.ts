@@ -26,6 +26,7 @@ export interface CategoryTemplate {
 
 export interface CombinedPrompt {
   system_prompt: string
+  brand_voice: string | null
   category_template: string
   combined: string
 }
@@ -52,6 +53,7 @@ export type ProductCategory = typeof PRODUCT_CATEGORIES[number]['value']
  */
 export async function getStoreId(shopDomain: string): Promise<string | null> {
   try {
+    console.log('🔍 getStoreId called with shopDomain:', shopDomain)
     // Query the shops table (not stores - that table is empty)
     const { data, error } = await supabaseAdmin
       .from('shops')
@@ -60,13 +62,14 @@ export async function getStoreId(shopDomain: string): Promise<string | null> {
       .single()
 
     if (error || !data) {
-      console.error('Error finding store:', error)
+      console.error('❌ Error finding store for domain:', shopDomain, 'Error:', error)
       return null
     }
 
+    console.log('✅ Found store UUID:', data.id, 'for domain:', shopDomain)
     return data.id
   } catch (error) {
-    console.error('Error in getStoreId:', error)
+    console.error('❌ Exception in getStoreId for domain:', shopDomain, 'Error:', error)
     return null
   }
 }
@@ -142,7 +145,7 @@ export async function getCategoryTemplates(storeId: string): Promise<CategoryTem
  * Get a specific category template
  */
 export async function getCategoryTemplate(
-  storeId: string, 
+  storeId: string,
   category: ProductCategory
 ): Promise<CategoryTemplate | null> {
   try {
@@ -174,13 +177,165 @@ export async function getCategoryTemplate(
 }
 
 /**
- * Combine system prompt and category template for AI generation
+ * Get brand voice from business_profiles table
+ * Now includes all wizard fields for comprehensive brand voice instructions
+ */
+export async function getBrandVoice(storeId: string): Promise<string | null> {
+  try {
+    console.log('🔍 getBrandVoice called with storeId:', storeId)
+
+    // If storeId looks like a shop domain, convert it to UUID
+    let actualStoreId = storeId
+    if (storeId.includes('.myshopify.com') || !storeId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      console.log('📍 Converting shop domain to UUID...')
+      actualStoreId = await getStoreId(storeId) || storeId
+      console.log('✅ Converted storeId to:', actualStoreId)
+    }
+
+    console.log('🔎 Querying business_profiles table with store_id:', actualStoreId)
+    const { data, error } = await supabaseAdmin
+      .from('business_profiles')
+      .select(`
+        ai_engine_instructions,
+        voice_tone,
+        voice_style,
+        voice_personality,
+        tone_playful_serious,
+        tone_casual_elevated,
+        tone_trendy_classic,
+        tone_friendly_professional,
+        tone_simple_detailed,
+        tone_bold_soft,
+        voice_vocabulary,
+        customer_term,
+        signature_sentence,
+        value_pillars,
+        audience_description,
+        wizard_completed
+      `)
+      .eq('store_id', actualStoreId)
+      .single()
+
+    if (error) {
+      console.error('❌ Error fetching brand voice:', error)
+      return null
+    }
+
+    if (!data) {
+      console.warn('⚠️ No business profile found for store:', actualStoreId)
+      return null
+    }
+
+    // Priority 1: Use ai_engine_instructions if available
+    if (data.ai_engine_instructions) {
+      console.log('✅ Brand voice loaded from ai_engine_instructions')
+      return data.ai_engine_instructions
+    }
+
+    // Priority 2: Build comprehensive brand voice from wizard fields if wizard is completed
+    if (data.wizard_completed) {
+      console.log('✅ Building comprehensive brand voice from wizard data')
+
+      const sections: string[] = []
+
+      // Tone Profile Section
+      if (data.tone_playful_serious !== null || data.tone_casual_elevated !== null) {
+        const toneLines = [
+          '--- TONE PROFILE ---',
+          ''
+        ]
+        if (data.tone_playful_serious !== null)
+          toneLines.push(`Playful ↔ Serious: ${data.tone_playful_serious}/10 (${data.tone_playful_serious < 5 ? 'More Playful' : data.tone_playful_serious > 5 ? 'More Serious' : 'Balanced'})`)
+        if (data.tone_casual_elevated !== null)
+          toneLines.push(`Casual ↔ Elevated: ${data.tone_casual_elevated}/10 (${data.tone_casual_elevated < 5 ? 'More Casual' : data.tone_casual_elevated > 5 ? 'More Elevated' : 'Balanced'})`)
+        if (data.tone_trendy_classic !== null)
+          toneLines.push(`Trendy ↔ Classic: ${data.tone_trendy_classic}/10 (${data.tone_trendy_classic < 5 ? 'More Trendy' : data.tone_trendy_classic > 5 ? 'More Classic' : 'Balanced'})`)
+        if (data.tone_friendly_professional !== null)
+          toneLines.push(`Friendly ↔ Professional: ${data.tone_friendly_professional}/10 (${data.tone_friendly_professional < 5 ? 'More Friendly' : data.tone_friendly_professional > 5 ? 'More Professional' : 'Balanced'})`)
+        if (data.tone_simple_detailed !== null)
+          toneLines.push(`Simple ↔ Detailed: ${data.tone_simple_detailed}/10 (${data.tone_simple_detailed < 5 ? 'More Simple' : data.tone_simple_detailed > 5 ? 'More Detailed' : 'Balanced'})`)
+        if (data.tone_bold_soft !== null)
+          toneLines.push(`Bold ↔ Soft: ${data.tone_bold_soft}/10 (${data.tone_bold_soft < 5 ? 'More Bold' : data.tone_bold_soft > 5 ? 'More Soft' : 'Balanced'})`)
+
+        sections.push(toneLines.join('\n'))
+      }
+
+      // Vocabulary Section
+      const vocab = data.voice_vocabulary as { words_love?: string[], words_avoid?: string[] } | null
+      if (vocab?.words_love?.length || vocab?.words_avoid?.length || data.customer_term) {
+        const vocabLines = [
+          '--- VOCABULARY & LINGUISTICS ---',
+          ''
+        ]
+        if (vocab?.words_love?.length)
+          vocabLines.push(`Words to use frequently: ${vocab.words_love.join(', ')}`)
+        if (vocab?.words_avoid?.length)
+          vocabLines.push(`Words to NEVER use: ${vocab.words_avoid.join(', ')}`)
+        if (data.customer_term)
+          vocabLines.push(`Always refer to customers as: "${data.customer_term}"`)
+
+        sections.push(vocabLines.join('\n'))
+      }
+
+      // Brand Identity Section
+      if (data.signature_sentence || (data.value_pillars as string[] | null)?.length) {
+        const identityLines = [
+          '--- BRAND IDENTITY ---',
+          ''
+        ]
+        if (data.signature_sentence)
+          identityLines.push(`Brand Tagline/Motto: "${data.signature_sentence}"`)
+        if ((data.value_pillars as string[] | null)?.length)
+          identityLines.push(`Customer Priorities (emphasize these): ${(data.value_pillars as string[]).join(', ')}`)
+
+        sections.push(identityLines.join('\n'))
+      }
+
+      // Audience Section
+      if (data.audience_description) {
+        sections.push([
+          '--- TARGET AUDIENCE ---',
+          '',
+          data.audience_description
+        ].join('\n'))
+      }
+
+      if (sections.length > 0) {
+        return '--- BRAND VOICE ---\n\n' + sections.join('\n\n')
+      }
+    }
+
+    // Priority 3: Fallback to legacy voice components
+    if (data.voice_tone || data.voice_style || data.voice_personality) {
+      const brandVoice = `
+--- BRAND VOICE ---
+
+${data.voice_tone ? `Tone: ${data.voice_tone}` : ''}
+${data.voice_style ? `Style: ${data.voice_style}` : ''}
+${data.voice_personality ? `Personality: ${data.voice_personality}` : ''}
+`.trim()
+      console.log('✅ Brand voice constructed from legacy voice components')
+      return brandVoice
+    }
+
+    console.warn('⚠️ No brand voice data found in business profile')
+    return null
+  } catch (error) {
+    console.error('❌ Error in getBrandVoice:', error)
+    return null
+  }
+}
+
+/**
+ * Combine system prompt, brand voice, and category template for AI generation
  */
 export function combinePrompts(
-  systemPrompt: string, 
+  systemPrompt: string,
+  brandVoice: string | null,
   categoryTemplate: string
 ): string {
-  return `${systemPrompt}\n\n--- CATEGORY TEMPLATE ---\n\n${categoryTemplate}`
+  const brandVoiceSection = brandVoice ? `\n\n--- BRAND VOICE ---\n\n${brandVoice}` : ''
+  return `${systemPrompt}${brandVoiceSection}\n\n--- CATEGORY TEMPLATE ---\n\n${categoryTemplate}`
 }
 
 /**
@@ -234,10 +389,10 @@ function getDefaultCategoryTemplate(category: ProductCategory): string {
 }
 
 /**
- * Get combined prompt for AI generation
+ * Get combined prompt for AI generation (ALL 3 COMPONENTS)
  */
 export async function getCombinedPrompt(
-  storeId: string, 
+  storeId: string,
   category: ProductCategory = 'general'
 ): Promise<CombinedPrompt | null> {
   try {
@@ -245,39 +400,49 @@ export async function getCombinedPrompt(
     if (storeId === 'shopify-extension-demo') {
       const defaultSystemPrompt = "You are a professional product description writer. Create compelling, accurate, and engaging product descriptions that convert browsers into buyers."
       const defaultCategoryTemplate = getDefaultCategoryTemplate(category)
-      const combined = combinePrompts(defaultSystemPrompt, defaultCategoryTemplate)
-      
+      const combined = combinePrompts(defaultSystemPrompt, null, defaultCategoryTemplate)
+
       return {
         system_prompt: defaultSystemPrompt,
+        brand_voice: null,
         category_template: defaultCategoryTemplate,
         combined
       }
     }
 
-    const [systemPrompt, categoryTemplate] = await Promise.all([
+    console.log('🔄 Fetching ALL 3 prompt components in parallel...')
+    const [systemPrompt, brandVoice, categoryTemplate] = await Promise.all([
       getSystemPrompt(storeId),
+      getBrandVoice(storeId),
       getCategoryTemplate(storeId, category)
     ])
 
     if (!systemPrompt) {
-      console.error('No system prompt found for store:', storeId)
+      console.error('❌ No system prompt found for store:', storeId)
       return null
     }
 
     if (!categoryTemplate) {
-      console.error('No category template found for:', category)
+      console.error('❌ No category template found for:', category)
       return null
     }
 
-    const combined = combinePrompts(systemPrompt.content, categoryTemplate.content)
+    console.log('✅ Combining prompts:', {
+      hasSystemPrompt: !!systemPrompt,
+      hasBrandVoice: !!brandVoice,
+      hasCategoryTemplate: !!categoryTemplate
+    })
+
+    const combined = combinePrompts(systemPrompt.content, brandVoice, categoryTemplate.content)
 
     return {
       system_prompt: systemPrompt.content,
+      brand_voice: brandVoice,
       category_template: categoryTemplate.content,
       combined
     }
   } catch (error) {
-    console.error('Error in getCombinedPrompt:', error)
+    console.error('❌ Error in getCombinedPrompt:', error)
     return null
   }
 }
@@ -297,15 +462,19 @@ export async function updateSystemPrompt(
       actualStoreId = await getStoreId(storeId) || storeId
     }
 
+    // Use upsert to handle both new and existing records
     const { data, error } = await supabaseAdmin
       .from('system_prompts')
-      .update({
+      .upsert({
+        store_id: actualStoreId,
         content,
         name: name || 'Custom System Prompt',
+        is_default: true,
         updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'store_id,is_default',
+        ignoreDuplicates: false
       })
-      .eq('store_id', actualStoreId)
-      .eq('is_default', true)
       .select()
       .single()
 
@@ -359,6 +528,39 @@ export async function updateCategoryTemplate(
 /**
  * Reset system prompt to original default
  */
+/**
+ * Initialize default prompts and templates for a new store installation
+ * This should be called when a shop is first installed
+ */
+export async function initializeStorePrompts(storeId: string): Promise<boolean> {
+  try {
+    console.log(`Initializing prompts for store: ${storeId}`)
+
+    // Initialize master system prompt
+    const systemPrompt = await resetSystemPrompt(storeId)
+    if (!systemPrompt) {
+      console.error('Failed to initialize system prompt')
+      return false
+    }
+
+    // Initialize default category template (general)
+    const categoryTemplate = await resetCategoryTemplate(storeId, 'general')
+    if (!categoryTemplate) {
+      console.error('Failed to initialize category template')
+      return false
+    }
+
+    console.log(`✅ Successfully initialized prompts for store: ${storeId}`)
+    return true
+  } catch (error) {
+    console.error('Error initializing store prompts:', error)
+    return false
+  }
+}
+
+/**
+ * Reset system prompt to default
+ */
 export async function resetSystemPrompt(storeId: string): Promise<SystemPrompt | null> {
   const defaultPrompt = `You are ThunderText, an expert AI copywriting assistant specialized in creating compelling, conversion-focused product descriptions for e-commerce stores. Your role is to transform basic product information into engaging, SEO-optimized descriptions that drive sales while maintaining the authentic voice of boutique retail.
 
@@ -391,11 +593,16 @@ Quality Standards
 - Maintain professional tone while being approachable and relatable
 
 Structural Clarity
-- Organize content with clear section headers in bold text
+- Organize content with clear section headers using HTML bold tags: <b>Section Name</b>
 - Keep paragraphs concise (3-5 sentences maximum)
-- Use line breaks between sections for visual clarity
-- Plain text formatting only - no markdown symbols (*, #, etc.)
+- Use double line breaks between sections for visual separation
+- Body text must be plain text with NO HTML tags or formatting
+- NEVER use markdown symbols (*, **, #, etc.) for formatting
 - Never use icons, emojis, or special characters in product descriptions
+
+CRITICAL FORMATTING EXAMPLES:
+Correct: <b>Product Details</b>
+Incorrect: **Product Details** or Product Details (without tags)
 
 CATEGORY-SPECIFIC GUIDELINES
 
@@ -492,153 +699,126 @@ export async function resetCategoryTemplate(
 
 Start with an opening hook (1-2 sentences) that helps the customer visualize wearing this item. Use aspirational language that connects to their desired lifestyle.
 
-Product Details
+<b>Product Details</b>
 Describe the item's design, highlighting what makes it special. Use sensory language (soft, flowing, structured, etc.) and fashion-forward terminology. Include:
 - Style details (neckline, sleeves, hemline, silhouette)
 - Fabric content and feel (exact percentages when visible/known)
 - Fit description (relaxed, fitted, true to size, etc.)
 - Special features (pockets, adjustable elements, etc.)
 
-Styling Tips
+<b>Styling Tips</b>
 Provide specific outfit ideas for different occasions. Mention complementary pieces and accessories. Include both casual and dressed-up options when applicable.
 
-Care and Sizing
+<b>Care and Sizing</b>
 - Care instructions (if visible on labels)
 - Available in: [INSERT THE EXACT SIZES FROM "Available Sizes" IN THE PRODUCT CONTEXT]
 - Fit notes (runs large/small/true to size)
 
-Why You'll Love It
+<b>Why You'll Love It</b>
 End with 1-2 sentences about the key benefits and lifestyle appeal of this piece.`,
 
     jewelry_accessories: `Structure your description following this format:
 
 Create an opening statement that captures the emotional significance or style impact of this piece.
 
-Craftsmanship Details
+<b>Craftsmanship Details</b>
 Focus on materials, construction quality, and design elements. Include:
 - Metal type, gemstones, or primary materials
 - Size/dimensions when relevant
 - Special techniques or finishes
 - Quality indicators (plating, settings, etc.)
 
-Styling Occasions
+<b>Styling Occasions</b>
 Describe when and how to wear this piece:
 - Suitable occasions (everyday, special events, professional)
 - Layering suggestions for jewelry
 - Complementary pieces or outfits
 
-Care and Specifications
+<b>Care and Specifications</b>
 - Care instructions for maintaining quality
 - Size specifications or adjustability
 - Packaging details if gift-worthy
 
-Why It's Special
+<b>Why It's Special</b>
 Highlight the unique value proposition and emotional appeal of owning this piece.`,
 
     home_living: `Structure your description following this format:
 
 Begin with how this item transforms or enhances the living space.
 
-Design and Quality
+<b>Design and Quality</b>
 Describe the aesthetic and construction details:
 - Style, color, and visual appeal
 - Materials and craftsmanship quality
 - Size, dimensions, and scale
 - Finish quality and durability
 
-Functionality and Use
+<b>Functionality and Use</b>
 Explain practical applications:
 - Primary function and benefits
 - Versatility in different spaces
 - Setup or installation requirements
 - Compatibility with existing decor
 
-Care and Specifications
+<b>Care and Specifications</b>
 - Maintenance requirements
 - Warranty or quality guarantees
 - Available sizes, colors, or variants
 
-Home Enhancement Value
+<b>Home Enhancement Value</b>
 Conclude with how this piece improves daily life and living spaces.`,
 
     beauty_personal_care: `Structure your description following this format:
 
 Start with the primary benefit or transformation this product provides.
 
-Key Ingredients and Benefits
+<b>Key Ingredients and Benefits</b>
 Focus on what makes this product effective:
 - Active ingredients and their benefits
 - Skin/hair type suitability
 - Expected results and timeline
 - Unique formulation features
 
-Application and Usage
+<b>Application and Usage</b>
 Provide clear usage instructions:
 - How to apply or use
 - Frequency of use
 - Best practices for optimal results
 - Integration with existing routines
 
-Product Details
+<b>Product Details</b>
 - Size, packaging, and value
 - Suitable for which skin/hair types
 - Certifications (cruelty-free, organic, etc.)
 - Shelf life and storage
 
-Why Choose This
+<b>Why Choose This</b>
 Highlight what sets this product apart and the lifestyle benefits.`,
-
-    electronics: `Structure your description following this format:
-
-Lead with the primary function and key innovation of this device.
-
-Technical Specifications
-Outline the important technical details:
-- Core performance specifications
-- Compatibility requirements
-- Connectivity options
-- Power requirements and battery life
-
-Features and Capabilities
-Explain what users can accomplish:
-- Key features and their benefits
-- Use cases and applications
-- Software or app integration
-- Ease of use and learning curve
-
-Setup and Support
-- Installation or setup requirements
-- Warranty and support information
-- Available accessories or add-ons
-- System requirements if applicable
-
-Value and Benefits
-Conclude with how this device improves productivity, entertainment, or daily life.`,
 
     general: `Structure your description following this format:
 
 Begin with a compelling opening that highlights the primary benefit or appeal of this product.
 
-Key Features
+<b>Key Features</b>
 Describe the most important aspects of the product:
 - Primary function and benefits
 - Quality indicators and materials
 - Size, dimensions, or capacity
 - Special features or technology
 
-Usage and Applications
+<b>Usage and Applications</b>
 Explain how the customer will use this product:
 - Primary use cases
 - Versatility and additional applications
 - Setup or usage requirements
 - Compatibility considerations
 
-Specifications and Care
+<b>Specifications and Care</b>
 - Important specifications or technical details
 - Care, maintenance, or warranty information
 - Available options (colors, sizes, variants)
 
-Value Proposition
+<b>Value Proposition</b>
 Conclude with why this product is the right choice and what makes it worth purchasing.`
   }
 
