@@ -31,6 +31,7 @@ export const FacebookOAuthStateSchema = z.object({
   ),
   host: z.string().nullable().optional(),
   embedded: z.string().nullable().optional(),
+  return_to: z.enum(['welcome', 'facebook-ads']).optional(),
   timestamp: z.number().int().positive('Timestamp must be positive'),
   nonce: z.string().min(32, 'Nonce must be at least 32 characters')
 })
@@ -53,6 +54,44 @@ export const ShopifyOAuthStateSchema = z.object({
 export type ShopifyOAuthState = z.infer<typeof ShopifyOAuthStateSchema>
 
 /**
+ * Google OAuth State Schema
+ * Used for Google Ads OAuth flow state parameter validation
+ */
+export const GoogleOAuthStateSchema = z.object({
+  shop_id: z.string().uuid('Invalid shop_id format'),
+  shop_domain: z.string().regex(
+    /^[a-z0-9-]+\.myshopify\.com$/,
+    'Invalid shop domain format'
+  ),
+  host: z.string().nullable().optional(),
+  embedded: z.string().nullable().optional(),
+  return_to: z.string().nullable().optional(),
+  timestamp: z.number().int().positive('Timestamp must be positive'),
+  nonce: z.string().min(32, 'Nonce must be at least 32 characters')
+})
+
+export type GoogleOAuthState = z.infer<typeof GoogleOAuthStateSchema>
+
+/**
+ * TikTok OAuth State Schema
+ * Used for TikTok for Business OAuth flow state parameter validation
+ */
+export const TikTokOAuthStateSchema = z.object({
+  shop_id: z.string().uuid('Invalid shop_id format'),
+  shop_domain: z.string().regex(
+    /^[a-z0-9-]+\.myshopify\.com$/,
+    'Invalid shop domain format'
+  ),
+  host: z.string().nullable().optional(),
+  embedded: z.string().nullable().optional(),
+  return_to: z.string().nullable().optional(),
+  timestamp: z.number().int().positive('Timestamp must be positive'),
+  nonce: z.string().min(32, 'Nonce must be at least 32 characters')
+})
+
+export type TikTokOAuthState = z.infer<typeof TikTokOAuthStateSchema>
+
+/**
  * Generate a cryptographically secure nonce for CSRF protection
  * Uses crypto.randomBytes for secure random generation
  */
@@ -67,6 +106,7 @@ export function generateNonce(): string {
  * @param shop_domain - Shop domain (e.g., store.myshopify.com)
  * @param host - Optional Shopify host parameter
  * @param embedded - Optional Shopify embedded parameter
+ * @param return_to - Optional redirect destination after OAuth (welcome or facebook-ads)
  * @returns Base64url encoded state string
  */
 export function createFacebookOAuthState(params: {
@@ -74,12 +114,14 @@ export function createFacebookOAuthState(params: {
   shop_domain: string
   host?: string | null
   embedded?: string | null
+  return_to?: 'welcome' | 'facebook-ads'
 }): string {
   const state: FacebookOAuthState = {
     shop_id: params.shop_id,
     shop_domain: params.shop_domain,
     host: params.host || null,
     embedded: params.embedded || null,
+    return_to: params.return_to,
     timestamp: Date.now(),
     nonce: generateNonce()
   }
@@ -186,6 +228,154 @@ export function validateShopifyOAuthState(
   if (validated.shop !== expectedShop) {
     throw new Error(`Shop mismatch: expected ${expectedShop}, got ${validated.shop}`)
   }
+
+  // Check timestamp to prevent replay attacks
+  const stateAge = Date.now() - validated.timestamp
+  if (stateAge > MAX_STATE_AGE_MS) {
+    throw new Error(`State parameter expired (age: ${Math.round(stateAge / 1000)}s, max: ${MAX_STATE_AGE_MS / 1000}s)`)
+  }
+
+  if (stateAge < 0) {
+    throw new Error('State parameter from the future - possible clock skew or tampering')
+  }
+
+  return validated
+}
+
+/**
+ * Create Google OAuth state parameter
+ *
+ * @param shop_id - UUID of the shop
+ * @param shop_domain - Shop domain (e.g., store.myshopify.com)
+ * @param host - Optional Shopify host parameter
+ * @param embedded - Optional Shopify embedded parameter
+ * @param return_to - Optional return path after OAuth
+ * @returns Base64url encoded state string
+ */
+export function createGoogleOAuthState(params: {
+  shop_id: string
+  shop_domain: string
+  host?: string | null
+  embedded?: string | null
+  return_to?: string | null
+}): string {
+  const state: GoogleOAuthState = {
+    shop_id: params.shop_id,
+    shop_domain: params.shop_domain,
+    host: params.host || null,
+    embedded: params.embedded || null,
+    return_to: params.return_to || null,
+    timestamp: Date.now(),
+    nonce: generateNonce()
+  }
+
+  // Validate the state before encoding
+  GoogleOAuthStateSchema.parse(state)
+
+  return Buffer.from(JSON.stringify(state)).toString('base64url')
+}
+
+/**
+ * Validate and parse Google OAuth state parameter
+ *
+ * @param stateParam - Base64url encoded state string
+ * @returns Parsed and validated state data
+ * @throws ZodError if validation fails
+ * @throws Error if state is expired or invalid
+ */
+export function validateGoogleOAuthState(stateParam: string): GoogleOAuthState {
+  // Decode base64url
+  let decoded: string
+  try {
+    decoded = Buffer.from(stateParam, 'base64url').toString('utf-8')
+  } catch (error) {
+    throw new Error('Invalid state encoding')
+  }
+
+  // Parse JSON
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(decoded)
+  } catch (error) {
+    throw new Error('Invalid state JSON')
+  }
+
+  // Validate with Zod schema
+  const validated = GoogleOAuthStateSchema.parse(parsed)
+
+  // Check timestamp to prevent replay attacks
+  const stateAge = Date.now() - validated.timestamp
+  if (stateAge > MAX_STATE_AGE_MS) {
+    throw new Error(`State parameter expired (age: ${Math.round(stateAge / 1000)}s, max: ${MAX_STATE_AGE_MS / 1000}s)`)
+  }
+
+  if (stateAge < 0) {
+    throw new Error('State parameter from the future - possible clock skew or tampering')
+  }
+
+  return validated
+}
+
+/**
+ * Create TikTok OAuth state parameter
+ *
+ * @param shop_id - UUID of the shop
+ * @param shop_domain - Shop domain (e.g., store.myshopify.com)
+ * @param host - Optional Shopify host parameter
+ * @param embedded - Optional Shopify embedded parameter
+ * @param return_to - Optional return path after OAuth
+ * @returns Base64url encoded state string
+ */
+export function createTikTokOAuthState(params: {
+  shop_id: string
+  shop_domain: string
+  host?: string | null
+  embedded?: string | null
+  return_to?: string | null
+}): string {
+  const state: TikTokOAuthState = {
+    shop_id: params.shop_id,
+    shop_domain: params.shop_domain,
+    host: params.host || null,
+    embedded: params.embedded || null,
+    return_to: params.return_to || null,
+    timestamp: Date.now(),
+    nonce: generateNonce()
+  }
+
+  // Validate the state before encoding
+  TikTokOAuthStateSchema.parse(state)
+
+  return Buffer.from(JSON.stringify(state)).toString('base64url')
+}
+
+/**
+ * Validate and parse TikTok OAuth state parameter
+ *
+ * @param stateParam - Base64url encoded state string
+ * @returns Parsed and validated state data
+ * @throws ZodError if validation fails
+ * @throws Error if state is expired or invalid
+ */
+export function validateTikTokOAuthState(stateParam: string): TikTokOAuthState {
+  // Decode base64url
+  let decoded: string
+  try {
+    decoded = Buffer.from(stateParam, 'base64url').toString('utf-8')
+  } catch (error) {
+    throw new Error('Invalid state encoding')
+  }
+
+  // Parse JSON
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(decoded)
+  } catch (error) {
+    throw new Error('Invalid state JSON')
+  }
+
+  // Validate with Zod schema
+  const validated = TikTokOAuthStateSchema.parse(parsed)
 
   // Check timestamp to prevent replay attacks
   const stateAge = Date.now() - validated.timestamp
