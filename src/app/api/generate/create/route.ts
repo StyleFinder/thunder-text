@@ -17,47 +17,70 @@ interface CreateProductRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check for session token in Authorization header
+    // Check for authentication token in Authorization header
     const authHeader = request.headers.get("authorization");
-    const sessionToken = authHeader?.startsWith("Bearer ")
+    const authToken = authHeader?.startsWith("Bearer ")
       ? authHeader.substring(7)
       : undefined;
 
-    if (!sessionToken) {
-      console.error("❌ No session token provided for generate/create API");
+    if (!authToken) {
+      console.error("❌ No auth token provided for generate/create API");
       return NextResponse.json(
         { success: false, error: "Authentication required" },
         { status: 401 },
       );
     }
 
-    console.log("✅ Session token present for generate/create API");
+    console.log("✅ Auth token present for generate/create API");
 
-    // Decode session token to get shop domain
-    let shopDomain: string | null = null;
-    try {
-      const parts = sessionToken.split(".");
-      if (parts.length === 3) {
-        const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
-        const shopMatch = payload.dest?.match(/https:\/\/([^\/]+)/);
-        shopDomain = shopMatch ? shopMatch[1] : null;
-        console.log("🔍 Decoded shop from session token:", shopDomain);
+    // Get shop domain from X-Shop-Domain header or decode from token
+    let shopDomain: string | null = request.headers.get("x-shop-domain");
+
+    // If no header, try to decode token
+    if (!shopDomain) {
+      // Check if it's a dev token (for development/testing with authenticated=true)
+      if (authToken === "dev-token") {
+        // Dev token - shop domain must be in header
+        console.log("ℹ️ Dev token detected, X-Shop-Domain header required");
+        // Continue - shop domain will be validated below
       }
-    } catch (error) {
-      console.error("❌ Failed to decode session token:", error);
-      return NextResponse.json(
-        { success: false, error: "Invalid session token" },
-        { status: 401 },
-      );
+      // Check if it's an OAuth token (starts with shpat_) or JWT session token
+      else if (authToken.startsWith("shpat_")) {
+        // OAuth token - shop domain must be in header
+        console.error("❌ OAuth token provided but no X-Shop-Domain header");
+        return NextResponse.json(
+          { success: false, error: "Shop domain required for OAuth authentication" },
+          { status: 401 },
+        );
+      } else {
+        // Try to decode as JWT session token
+        try {
+          const parts = authToken.split(".");
+          if (parts.length === 3) {
+            const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
+            const shopMatch = payload.dest?.match(/https:\/\/([^\/]+)/);
+            shopDomain = shopMatch ? shopMatch[1] : null;
+            console.log("🔍 Decoded shop from session token:", shopDomain);
+          }
+        } catch (error) {
+          console.error("❌ Failed to decode session token:", error);
+          return NextResponse.json(
+            { success: false, error: "Invalid authentication token" },
+            { status: 401 },
+          );
+        }
+      }
     }
 
     if (!shopDomain) {
-      console.error("❌ No shop domain found in session token");
+      console.error("❌ No shop domain found in token or headers");
       return NextResponse.json(
-        { success: false, error: "Invalid session token - no shop domain" },
+        { success: false, error: "Shop domain required" },
         { status: 401 },
       );
     }
+
+    console.log("🔍 Authenticated request for shop:", shopDomain)
 
     const body: CreateProductRequest = await request.json();
 
@@ -172,17 +195,42 @@ OUTPUT FORMAT - Return a JSON object with these exact fields:
   "tags": ["Array of product tags for organization"]
 }
 
-CRITICAL: The "description" field must strictly follow the custom prompt guidelines above, especially the formatting rules and section structure provided in the category template.
+CRITICAL: The "description" field must EXACTLY follow the section structure from the category template above. This is non-negotiable.
+
+MANDATORY SECTION STRUCTURE:
+You MUST use the EXACT section headers specified in the category template above. For Women's Clothing, use:
+1. Opening paragraph (NO HEADER - start directly with compelling content)
+2. <b>Product Details</b> - NOT "Product Details Section" or any variation
+3. <b>Styling Tips</b> - NOT "Styling" or "Perfect For" or any variation
+4. <b>Care and Sizing</b> - NOT "Materials & Details" or any variation
+5. <b>Why You'll Love It</b> - NOT "Why Choose This" or any variation
 
 FORMATTING REQUIREMENTS:
-- Use HTML formatting, not Markdown
-- Section headers should be bold using <b>Header Name</b> tags
+- The "description" field in your JSON response MUST contain HTML tags
+- Use HTML formatting for the description, not Markdown
+- ONLY section headers should be bold using <b>Header Name</b> tags
+- Body text and paragraphs must be plain text (NOT bold, no HTML tags)
 - Never use **markdown bold** or asterisks for formatting
-- Use <br> for line breaks when needed
-- Keep paragraphs as plain text without HTML paragraph tags
-- NEVER use "Opening Hook" as a section label or header in the output
-- The first paragraph should begin directly without any label or header
-- Other section headers like "Product Details", "Styling Tips", "Care and Sizing", "Why You'll Love It" should be included as specified in the template`;
+- Use <br><br> for line breaks between sections (these HTML tags must be in the JSON string)
+- Do NOT wrap paragraphs in <p> tags or any other HTML tags
+- NEVER use "Opening Hook" as a section label - start directly with engaging content
+- Include ALL required sections: Product Details, Styling Tips, Care and Sizing, Why You'll Love It
+- IMPORTANT: The <b> and <br> tags are part of the description text and must be included in the JSON
+
+EXAMPLE FORMAT:
+Opening paragraph goes here as plain text without any tags.
+
+<b>Product Details</b>
+This section has plain text describing product details. No bold tags on this text.
+
+<b>Styling Tips</b>
+More plain text here describing styling suggestions.
+
+<b>Care and Sizing</b>
+Care instructions and sizing information in plain text. Available in: XS, S, M, L, XL, XXL.
+
+<b>Why You'll Love It</b>
+Closing content in plain text highlighting key benefits.`;
       } else {
         throw new Error("No custom prompts available");
       }
@@ -236,15 +284,39 @@ OUTPUT FORMAT - Return a JSON object with these exact fields:
   "tags": ["Array of product tags for organization"]
 }
 
+MANDATORY SECTION STRUCTURE FOR DESCRIPTION (General Products):
+Use these EXACT section headers in order:
+1. Opening paragraph (NO HEADER - start directly with compelling content)
+2. <b>Key Features</b>
+3. <b>Usage and Applications</b>
+4. <b>Specifications and Care</b>
+5. <b>Value Proposition</b>
+
 FORMATTING REQUIREMENTS:
-- Use HTML formatting, not Markdown
-- Section headers should be bold using <b>Header Name</b> tags
+- The "description" field in your JSON response MUST contain HTML tags
+- Use HTML formatting for the description, not Markdown
+- ONLY section headers should be bold using <b>Header Name</b> tags
+- Body text and paragraphs must be plain text (NOT bold, no HTML tags)
 - Never use **markdown bold** or asterisks for formatting
-- Use <br> for line breaks when needed
-- Keep paragraphs as plain text without HTML paragraph tags
-- NEVER use "Opening Hook" as a section label or header in the output
-- The first paragraph should begin directly without any label or header
-- Other section headers like "Product Details", "Styling Tips", "Care and Sizing", "Why You'll Love It" should be included as specified in the template`;
+- Use <br><br> for line breaks between sections (these HTML tags must be in the JSON string)
+- Do NOT wrap paragraphs in <p> tags or any other HTML tags
+- Include ALL required sections: Key Features, Usage and Applications, Specifications and Care, Value Proposition
+- IMPORTANT: The <b> and <br> tags are part of the description text and must be included in the JSON
+
+EXAMPLE FORMAT:
+Opening paragraph goes here as plain text without any tags.
+
+<b>Key Features</b>
+This section has plain text describing key features and specifications.
+
+<b>Usage and Applications</b>
+More plain text here describing how to use the product.
+
+<b>Specifications and Care</b>
+Technical details and care instructions in plain text.
+
+<b>Value Proposition</b>
+Closing content in plain text explaining why to purchase.`;
     }
 
     const userPrompt = `Analyze these product images and create compelling e-commerce content. Focus on what makes this product unique and valuable to customers.
@@ -297,6 +369,9 @@ ${additionalNotes ? `Special Instructions: ${additionalNotes}` : ""}`;
     let parsedContent;
     try {
       parsedContent = JSON.parse(generatedContent);
+      console.log("🔍 OpenAI Response - Description preview (first 200 chars):", parsedContent.description?.substring(0, 200));
+      console.log("🔍 Has <b> tags:", parsedContent.description?.includes("<b>"));
+      console.log("🔍 Has <br> tags:", parsedContent.description?.includes("<br>"));
     } catch (parseError) {
       console.error("Failed to parse OpenAI response:", parseError);
       return NextResponse.json(
