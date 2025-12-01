@@ -1,46 +1,46 @@
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin } from "@/lib/supabase";
 
 // Types for prompt system
 export interface SystemPrompt {
-  id: string
-  name: string
-  content: string
-  is_default: boolean
-  is_active: boolean
-  created_at: string
-  updated_at: string
-  store_id: string
+  id: string;
+  name: string;
+  content: string;
+  is_default: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  store_id: string;
 }
 
 export interface CategoryTemplate {
-  id: string
-  name: string
-  category: string
-  content: string
-  is_default: boolean
-  is_active: boolean
-  created_at: string
-  updated_at: string
-  store_id: string
+  id: string;
+  name: string;
+  category: string;
+  content: string;
+  is_default: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  store_id: string;
 }
 
 export interface CombinedPrompt {
-  system_prompt: string
-  category_template: string
-  combined: string
+  system_prompt: string;
+  category_template: string;
+  combined: string;
 }
 
 // Product categories - keeping for backward compatibility with existing components
 export const PRODUCT_CATEGORIES = [
-  { value: 'womens_clothing', label: "Women's Clothing" },
-  { value: 'jewelry_accessories', label: 'Jewelry & Accessories' },
-  { value: 'home_living', label: 'Home & Living' },
-  { value: 'beauty_personal_care', label: 'Beauty & Personal Care' },
-  { value: 'electronics', label: 'Electronics' },
-  { value: 'general', label: 'General Products' }
-] as const
+  { value: "womens_clothing", label: "Women's Clothing" },
+  { value: "jewelry_accessories", label: "Jewelry & Accessories" },
+  { value: "home_living", label: "Home & Living" },
+  { value: "beauty_personal_care", label: "Beauty & Personal Care" },
+  { value: "electronics", label: "Electronics" },
+  { value: "general", label: "General Products" },
+] as const;
 
-export type ProductCategory = typeof PRODUCT_CATEGORIES[number]['value']
+export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number]["value"];
 
 // Product categories are now user-defined via template names
 // The category field in the database is auto-generated from template names
@@ -54,87 +54,107 @@ export async function getStoreId(shopDomain: string): Promise<string | null> {
   try {
     // Query the shops table (not stores - that table is empty)
     const { data, error } = await supabaseAdmin
-      .from('shops')
-      .select('id')
-      .eq('shop_domain', shopDomain)
-      .single()
+      .from("shops")
+      .select("id")
+      .eq("shop_domain", shopDomain)
+      .single();
 
     if (error || !data) {
-      console.error('Error finding store:', error)
-      return null
+      console.error("Error finding store:", error);
+      return null;
     }
 
-    return data.id
+    return data.id;
   } catch (error) {
-    console.error('Error in getStoreId:', error)
-    return null
+    console.error("Error in getStoreId:", error);
+    return null;
   }
 }
 
 /**
  * Get the active system prompt for a store
  */
-export async function getSystemPrompt(storeId: string): Promise<SystemPrompt | null> {
+export async function getSystemPrompt(
+  storeId: string,
+): Promise<SystemPrompt | null> {
   try {
-    console.log('🔍 getSystemPrompt called with storeId:', storeId)
+    console.log("🔍 getSystemPrompt called with storeId:", storeId);
 
     // If storeId looks like a shop domain, convert it to UUID
-    let actualStoreId = storeId
-    if (storeId.includes('.myshopify.com') || !storeId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-      console.log('📍 Converting shop domain to UUID...')
-      actualStoreId = await getStoreId(storeId) || storeId
-      console.log('✅ Converted storeId to:', actualStoreId)
+    let actualStoreId = storeId;
+    if (
+      storeId.includes(".myshopify.com") ||
+      !storeId.match(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      )
+    ) {
+      console.log("📍 Converting shop domain to UUID...");
+      actualStoreId = (await getStoreId(storeId)) || storeId;
+      console.log("✅ Converted storeId to:", actualStoreId);
     }
 
-    console.log('🔎 Querying system_prompts table with store_id:', actualStoreId)
+    console.log(
+      "🔎 Querying system_prompts table with store_id:",
+      actualStoreId,
+    );
     const { data, error } = await supabaseAdmin
-      .from('system_prompts')
-      .select('*')
-      .eq('store_id', actualStoreId)
-      .eq('is_active', true)
-      .eq('is_default', true)
-      .single()
+      .from("system_prompts")
+      .select("*")
+      .eq("store_id", actualStoreId)
+      .eq("is_active", true)
+      .eq("is_default", true)
+      .single();
 
     if (error) {
-      console.error('❌ Error fetching system prompt:', error)
-      return null
+      console.error("❌ Error fetching system prompt:", error);
+      return null;
     }
 
-    console.log('✅ System prompt found:', data ? `${data.name} (${data.content.length} chars)` : 'null')
-    return data
+    console.log(
+      "✅ System prompt found:",
+      data ? `${data.name} (${data.content.length} chars)` : "null",
+    );
+    return data;
   } catch (error) {
-    console.error('❌ Error in getSystemPrompt:', error)
-    return null
+    console.error("❌ Error in getSystemPrompt:", error);
+    return null;
   }
 }
 
 /**
  * Get all active category templates for a store
  */
-export async function getCategoryTemplates(storeId: string): Promise<CategoryTemplate[]> {
+export async function getCategoryTemplates(
+  storeId: string,
+): Promise<CategoryTemplate[]> {
   try {
     // If storeId looks like a shop domain, convert it to UUID
-    let actualStoreId = storeId
-    if (storeId.includes('.myshopify.com') || !storeId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-      actualStoreId = await getStoreId(storeId) || storeId
+    let actualStoreId = storeId;
+    if (
+      storeId.includes(".myshopify.com") ||
+      !storeId.match(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      )
+    ) {
+      actualStoreId = (await getStoreId(storeId)) || storeId;
     }
 
     const { data, error } = await supabaseAdmin
-      .from('category_templates')
-      .select('*')
-      .eq('store_id', actualStoreId)
-      .eq('is_active', true)
-      .order('category', { ascending: true })
+      .from("category_templates")
+      .select("*")
+      .eq("store_id", actualStoreId)
+      .eq("is_active", true)
+      .order("category", { ascending: true });
 
     if (error) {
-      console.error('Error fetching category templates:', error)
-      return []
+      console.error("Error fetching category templates:", error);
+      return [];
     }
 
-    return data || []
+    return data || [];
   } catch (error) {
-    console.error('Error in getCategoryTemplates:', error)
-    return []
+    console.error("Error in getCategoryTemplates:", error);
+    return [];
   }
 }
 
@@ -142,34 +162,39 @@ export async function getCategoryTemplates(storeId: string): Promise<CategoryTem
  * Get a specific category template
  */
 export async function getCategoryTemplate(
-  storeId: string, 
-  category: ProductCategory
+  storeId: string,
+  category: ProductCategory,
 ): Promise<CategoryTemplate | null> {
   try {
     // If storeId looks like a shop domain, convert it to UUID
-    let actualStoreId = storeId
-    if (storeId.includes('.myshopify.com') || !storeId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-      actualStoreId = await getStoreId(storeId) || storeId
+    let actualStoreId = storeId;
+    if (
+      storeId.includes(".myshopify.com") ||
+      !storeId.match(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      )
+    ) {
+      actualStoreId = (await getStoreId(storeId)) || storeId;
     }
 
     const { data, error } = await supabaseAdmin
-      .from('category_templates')
-      .select('*')
-      .eq('store_id', actualStoreId)
-      .eq('category', category)
-      .eq('is_active', true)
-      .eq('is_default', true)
-      .single()
+      .from("category_templates")
+      .select("*")
+      .eq("store_id", actualStoreId)
+      .eq("category", category)
+      .eq("is_active", true)
+      .eq("is_default", true)
+      .single();
 
     if (error) {
-      console.error('Error fetching category template:', error)
-      return null
+      console.error("Error fetching category template:", error);
+      return null;
     }
 
-    return data
+    return data;
   } catch (error) {
-    console.error('Error in getCategoryTemplate:', error)
-    return null
+    console.error("Error in getCategoryTemplate:", error);
+    return null;
   }
 }
 
@@ -177,43 +202,50 @@ export async function getCategoryTemplate(
  * Combine system prompt and category template for AI generation
  */
 export function combinePrompts(
-  systemPrompt: string, 
-  categoryTemplate: string
+  systemPrompt: string,
+  categoryTemplate: string,
 ): string {
-  return `${systemPrompt}\n\n--- CATEGORY TEMPLATE ---\n\n${categoryTemplate}`
+  return `${systemPrompt}\n\n--- CATEGORY TEMPLATE ---\n\n${categoryTemplate}`;
 }
 
 /**
  * Get the global default category template for a store
  */
-export async function getGlobalDefaultTemplate(storeId: string): Promise<ProductCategory | null> {
+export async function getGlobalDefaultTemplate(
+  storeId: string,
+): Promise<ProductCategory | null> {
   try {
     // If storeId looks like a shop domain, convert it to UUID
-    let actualStoreId = storeId
-    if (storeId.includes('.myshopify.com') || !storeId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-      actualStoreId = await getStoreId(storeId) || storeId
+    let actualStoreId = storeId;
+    if (
+      storeId.includes(".myshopify.com") ||
+      !storeId.match(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      )
+    ) {
+      actualStoreId = (await getStoreId(storeId)) || storeId;
     }
 
     // Get the first default template (should be the global default)
     const { data, error } = await supabaseAdmin
-      .from('category_templates')
-      .select('category')
-      .eq('store_id', actualStoreId)
-      .eq('is_active', true)
-      .eq('is_default', true)
-      .order('created_at', { ascending: true })
+      .from("category_templates")
+      .select("category")
+      .eq("store_id", actualStoreId)
+      .eq("is_active", true)
+      .eq("is_default", true)
+      .order("created_at", { ascending: true })
       .limit(1)
-      .single()
+      .single();
 
     if (error || !data) {
-      console.log('No global default template found, using general')
-      return 'general'
+      console.log("No global default template found, using general");
+      return "general";
     }
 
-    return data.category as ProductCategory
+    return data.category as ProductCategory;
   } catch (error) {
-    console.error('Error in getGlobalDefaultTemplate:', error)
-    return 'general'
+    console.error("Error in getGlobalDefaultTemplate:", error);
+    return "general";
   }
 }
 
@@ -222,144 +254,233 @@ export async function getGlobalDefaultTemplate(storeId: string): Promise<Product
  */
 function getDefaultCategoryTemplate(category: ProductCategory): string {
   const templates: Record<ProductCategory, string> = {
-    'womens_clothing': "Focus on style, comfort, and versatility. Highlight fabric quality, fit, and how the piece can be styled for different occasions.",
-    'jewelry_accessories': "Emphasize craftsmanship, materials, and the emotional connection. Describe how the piece enhances personal style and makes the wearer feel special.",
-    'home_living': "Focus on functionality, aesthetic appeal, and how the item improves daily life. Highlight quality, design, and the ambiance it creates.",
-    'beauty_personal_care': "Emphasize benefits, ingredients, and results. Focus on how the product makes the user look and feel better.",
-    'electronics': "Highlight key features, performance, and value. Focus on how the technology improves the user's life or work.",
-    'general': "Focus on key benefits, quality, and value proposition. Highlight what makes this product special and worth purchasing."
-  }
-  
-  return templates[category] || templates.general
+    womens_clothing:
+      "Focus on style, comfort, and versatility. Highlight fabric quality, fit, and how the piece can be styled for different occasions.",
+    jewelry_accessories:
+      "Emphasize craftsmanship, materials, and the emotional connection. Describe how the piece enhances personal style and makes the wearer feel special.",
+    home_living:
+      "Focus on functionality, aesthetic appeal, and how the item improves daily life. Highlight quality, design, and the ambiance it creates.",
+    beauty_personal_care:
+      "Emphasize benefits, ingredients, and results. Focus on how the product makes the user look and feel better.",
+    electronics:
+      "Highlight key features, performance, and value. Focus on how the technology improves the user's life or work.",
+    general:
+      "Focus on key benefits, quality, and value proposition. Highlight what makes this product special and worth purchasing.",
+  };
+
+  // eslint-disable-next-line security/detect-object-injection
+  return templates[category] || templates.general;
 }
 
 /**
  * Get combined prompt for AI generation
  */
 export async function getCombinedPrompt(
-  storeId: string, 
-  category: ProductCategory = 'general'
+  storeId: string,
+  category: ProductCategory = "general",
 ): Promise<CombinedPrompt | null> {
   try {
     // For Shopify extensions, use default fallback prompts
-    if (storeId === 'shopify-extension-demo') {
-      const defaultSystemPrompt = "You are a professional product description writer. Create compelling, accurate, and engaging product descriptions that convert browsers into buyers."
-      const defaultCategoryTemplate = getDefaultCategoryTemplate(category)
-      const combined = combinePrompts(defaultSystemPrompt, defaultCategoryTemplate)
-      
+    if (storeId === "shopify-extension-demo") {
+      const defaultSystemPrompt =
+        "You are a professional product description writer. Create compelling, accurate, and engaging product descriptions that convert browsers into buyers.";
+      const defaultCategoryTemplate = getDefaultCategoryTemplate(category);
+      const combined = combinePrompts(
+        defaultSystemPrompt,
+        defaultCategoryTemplate,
+      );
+
       return {
         system_prompt: defaultSystemPrompt,
         category_template: defaultCategoryTemplate,
-        combined
-      }
+        combined,
+      };
     }
 
     const [systemPrompt, categoryTemplate] = await Promise.all([
       getSystemPrompt(storeId),
-      getCategoryTemplate(storeId, category)
-    ])
+      getCategoryTemplate(storeId, category),
+    ]);
 
     if (!systemPrompt) {
-      console.error('No system prompt found for store:', storeId)
-      return null
+      console.error("No system prompt found for store:", storeId);
+      return null;
     }
 
     if (!categoryTemplate) {
-      console.error('No category template found for:', category)
-      return null
+      console.error("No category template found for:", category);
+      return null;
     }
 
-    const combined = combinePrompts(systemPrompt.content, categoryTemplate.content)
+    const combined = combinePrompts(
+      systemPrompt.content,
+      categoryTemplate.content,
+    );
 
     return {
       system_prompt: systemPrompt.content,
       category_template: categoryTemplate.content,
-      combined
-    }
+      combined,
+    };
   } catch (error) {
-    console.error('Error in getCombinedPrompt:', error)
-    return null
+    console.error("Error in getCombinedPrompt:", error);
+    return null;
   }
 }
 
 /**
- * Update system prompt
+ * Update system prompt (or create if doesn't exist)
  */
 export async function updateSystemPrompt(
   storeId: string,
   content: string,
-  name?: string
+  name?: string,
 ): Promise<SystemPrompt | null> {
   try {
     // If storeId looks like a shop domain, convert it to UUID
-    let actualStoreId = storeId
-    if (storeId.includes('.myshopify.com') || !storeId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-      actualStoreId = await getStoreId(storeId) || storeId
+    let actualStoreId = storeId;
+    if (
+      storeId.includes(".myshopify.com") ||
+      !storeId.match(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      )
+    ) {
+      actualStoreId = (await getStoreId(storeId)) || storeId;
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('system_prompts')
-      .update({
-        content,
-        name: name || 'Custom System Prompt',
-        updated_at: new Date().toISOString()
-      })
-      .eq('store_id', actualStoreId)
-      .eq('is_default', true)
-      .select()
-      .single()
+    // Check if exists first
+    const { data: existing } = await supabaseAdmin
+      .from("system_prompts")
+      .select("id")
+      .eq("store_id", actualStoreId)
+      .eq("is_default", true)
+      .single();
 
-    if (error) {
-      console.error('Error updating system prompt:', error)
-      return null
+    if (existing) {
+      // Update existing
+      const { data, error } = await supabaseAdmin
+        .from("system_prompts")
+        .update({
+          content,
+          name: name || "Custom System Prompt",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating system prompt:", error);
+        return null;
+      }
+      return data;
+    } else {
+      // Insert new
+      const { data, error } = await supabaseAdmin
+        .from("system_prompts")
+        .insert({
+          store_id: actualStoreId,
+          content,
+          name: name || "Custom System Prompt",
+          is_default: true,
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error inserting system prompt:", error);
+        return null;
+      }
+      return data;
     }
-
-    return data
   } catch (error) {
-    console.error('Error in updateSystemPrompt:', error)
-    return null
+    console.error("Error in updateSystemPrompt:", error);
+    return null;
   }
 }
 
 /**
- * Update category template
+ * Update category template (or create if doesn't exist)
  */
 export async function updateCategoryTemplate(
   storeId: string,
   category: ProductCategory,
   content: string,
-  name?: string
+  name?: string,
 ): Promise<CategoryTemplate | null> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('category_templates')
-      .update({ 
-        content, 
-        name: name || `Custom ${category} Template`,
-        updated_at: new Date().toISOString()
-      })
-      .eq('store_id', storeId)
-      .eq('category', category)
-      .eq('is_default', true)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error updating category template:', error)
-      return null
+    // If storeId looks like a shop domain, convert it to UUID
+    let actualStoreId = storeId;
+    if (
+      storeId.includes(".myshopify.com") ||
+      !storeId.match(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      )
+    ) {
+      actualStoreId = (await getStoreId(storeId)) || storeId;
     }
 
-    return data
+    // Check if exists first
+    const { data: existing } = await supabaseAdmin
+      .from("category_templates")
+      .select("id")
+      .eq("store_id", actualStoreId)
+      .eq("category", category)
+      .eq("is_default", true)
+      .single();
+
+    if (existing) {
+      // Update existing
+      const { data, error } = await supabaseAdmin
+        .from("category_templates")
+        .update({
+          content,
+          name: name || `Custom ${category} Template`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating category template:", error);
+        return null;
+      }
+      return data;
+    } else {
+      // Insert new
+      const { data, error } = await supabaseAdmin
+        .from("category_templates")
+        .insert({
+          store_id: actualStoreId,
+          category,
+          content,
+          name: name || `Custom ${category} Template`,
+          is_default: true,
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error inserting category template:", error);
+        return null;
+      }
+      return data;
+    }
   } catch (error) {
-    console.error('Error in updateCategoryTemplate:', error)
-    return null
+    console.error("Error in updateCategoryTemplate:", error);
+    return null;
   }
 }
 
 /**
  * Reset system prompt to original default
  */
-export async function resetSystemPrompt(storeId: string): Promise<SystemPrompt | null> {
+export async function resetSystemPrompt(
+  storeId: string,
+): Promise<SystemPrompt | null> {
   const defaultPrompt = `You are ThunderText, an expert AI copywriting assistant specialized in creating compelling, conversion-focused product descriptions for e-commerce stores. Your role is to transform basic product information into engaging, SEO-optimized descriptions that drive sales while maintaining the authentic voice of boutique retail.
 
 YOUR ROLE AND RESPONSIBILITIES
@@ -475,17 +596,80 @@ INTERACTION STYLE
 - Adapt tone and style based on user preferences
 - Offer alternative phrasings or approaches when helpful
 
-Remember: Your goal is to create descriptions that not only inform but inspire action. Every word should earn its place by either providing value to the customer or moving them closer to a purchase decision.`
+Remember: Your goal is to create descriptions that not only inform but inspire action. Every word should earn its place by either providing value to the customer or moving them closer to a purchase decision.`;
 
-  return updateSystemPrompt(storeId, defaultPrompt, 'Thunder Text Default Master Prompt')
+  return updateSystemPrompt(
+    storeId,
+    defaultPrompt,
+    "Thunder Text Master Prompt (HTML Formatting)",
+  );
+}
+
+/**
+ * Initialize default prompts and templates for a new shop
+ */
+export async function initializeDefaultPrompts(storeId: string): Promise<void> {
+  try {
+    // If storeId looks like a shop domain, convert it to UUID
+    let actualStoreId = storeId;
+    if (
+      storeId.includes(".myshopify.com") ||
+      !storeId.match(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      )
+    ) {
+      actualStoreId = (await getStoreId(storeId)) || storeId;
+    }
+
+    // Check if already initialized
+    const { data: existingPrompt } = await supabaseAdmin
+      .from("system_prompts")
+      .select("id")
+      .eq("store_id", actualStoreId)
+      .eq("is_default", true)
+      .single();
+
+    if (existingPrompt) {
+      console.log(
+        "Default prompts already initialized for store:",
+        actualStoreId,
+      );
+      return;
+    }
+
+    // Initialize system prompt
+    await resetSystemPrompt(actualStoreId);
+
+    // Initialize all 6 default category templates
+    const categories: ProductCategory[] = [
+      "womens_clothing",
+      "jewelry_accessories",
+      "home_living",
+      "beauty_personal_care",
+      "electronics",
+      "general",
+    ];
+
+    for (const category of categories) {
+      await resetCategoryTemplate(actualStoreId, category);
+    }
+
+    console.log(
+      "✅ Successfully initialized default prompts for store:",
+      actualStoreId,
+    );
+  } catch (error) {
+    console.error("❌ Error initializing default prompts:", error);
+    throw error;
+  }
 }
 
 /**
  * Reset category template to original default
  */
 export async function resetCategoryTemplate(
-  storeId: string, 
-  category: ProductCategory
+  storeId: string,
+  category: ProductCategory,
 ): Promise<CategoryTemplate | null> {
   const defaultTemplates: Record<ProductCategory, string> = {
     womens_clothing: `Structure your description following this format:
@@ -639,16 +823,18 @@ Specifications and Care
 - Available options (colors, sizes, variants)
 
 Value Proposition
-Conclude with why this product is the right choice and what makes it worth purchasing.`
-  }
+Conclude with why this product is the right choice and what makes it worth purchasing.`,
+  };
 
-  const defaultContent = defaultTemplates[category]
-  const templateName = PRODUCT_CATEGORIES.find(cat => cat.value === category)?.label || category
+  // eslint-disable-next-line security/detect-object-injection
+  const defaultContent = defaultTemplates[category];
+  const templateName =
+    PRODUCT_CATEGORIES.find((cat) => cat.value === category)?.label || category;
 
   return updateCategoryTemplate(
-    storeId, 
-    category, 
-    defaultContent, 
-    `${templateName} Default Template`
-  )
+    storeId,
+    category,
+    defaultContent,
+    `${templateName} Default Template`,
+  );
 }
