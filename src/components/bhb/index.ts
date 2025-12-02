@@ -10,3 +10,4 @@ export { Badge } from './Badge';
 export { Table } from './Table';
 export { PageLayout } from './PageLayout';
 export { Text } from './Typography';
+export { Icon } from './Icon';
