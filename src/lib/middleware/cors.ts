@@ -20,8 +20,12 @@ export function createCorsHeaders(request: Request): HeadersInit {
     process.env.RENDER_EXTERNAL_URL
       ? process.env.RENDER_EXTERNAL_URL
       : null,
-    // Development
-    process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null
+    // Development (allow localhost on any port and ngrok tunnels)
+    process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null,
+    process.env.NODE_ENV === 'development' ? 'http://localhost:3050' : null,
+    process.env.NODE_ENV === 'development' ? /^https:\/\/[a-zA-Z0-9-]+\.ngrok\.io$/ : null,
+    process.env.NODE_ENV === 'development' ? /^https:\/\/[a-zA-Z0-9-]+\.ngrok-free\.app$/ : null,
+    process.env.NODE_ENV === 'development' ? /^https:\/\/[a-zA-Z0-9-]+\.ngrok\.app$/ : null
   ].filter(Boolean)
 
   // Check if origin is allowed
