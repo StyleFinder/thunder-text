@@ -1,31 +1,34 @@
 'use client'
 
-import { Page, Layout, Card, Text, Button, Banner, LegacyStack } from '@shopify/polaris'
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { CheckCircle2, AlertCircle, Copy } from 'lucide-react'
 
 export default function GetToken() {
   const [loading, setLoading] = useState(false)
   const [token, setToken] = useState('')
   const [error, setError] = useState('')
-  
+
   const generateToken = async () => {
     setLoading(true)
     setError('')
-    
+
     try {
       const response = await fetch('/api/auth/generate-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           shop: 'zunosai-staging-test-store.myshopify.com',
           scopes: 'write_products,read_products,write_product_images,read_metaobjects,write_metaobjects'
         })
       })
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`)
       }
-      
+
       const data = await response.json()
       setToken(data.token)
     } catch (err) {
@@ -34,86 +37,84 @@ export default function GetToken() {
       setLoading(false)
     }
   }
-  
+
   const copyToken = async () => {
     if (token) {
       await navigator.clipboard.writeText(token)
     }
   }
-  
+
   return (
-    <Page title="Generate Access Token">
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <LegacyStack vertical spacing="loose">
-              <Text variant="headingMd" as="h2">
-                Generate Shopify Access Token
-              </Text>
-              <Text as="p" tone="subdued">
-                This will generate a fresh access token for your development store.
-              </Text>
-              <LegacyStack distribution="leading">
-                <Button 
-                  variant="primary" 
-                  onClick={generateToken}
-                  loading={loading}
+    <div className="container mx-auto py-8 max-w-4xl">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-oxford-navy mb-2">Generate Access Token</h1>
+      </div>
+
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-oxford-navy">Generate Shopify Access Token</CardTitle>
+            <CardDescription>
+              This will generate a fresh access token for your development store.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button
+              onClick={generateToken}
+              disabled={loading}
+              className="bg-smart-blue-500 hover:bg-smart-blue-600 text-white"
+            >
+              {loading ? 'Generating...' : 'Generate Token'}
+            </Button>
+
+            {error && (
+              <Alert variant="destructive" className="border-berry bg-berry/10">
+                <AlertCircle className="h-4 w-4 text-berry" />
+                <AlertDescription className="text-berry">{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {token && (
+              <div className="space-y-4">
+                <Alert className="border-green-500 bg-green-50">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-700">
+                    Access token generated successfully!
+                  </AlertDescription>
+                </Alert>
+
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 font-mono text-sm break-all">
+                  {token}
+                </div>
+
+                <Button
+                  onClick={copyToken}
+                  variant="outline"
+                  className="border-smart-blue-500 text-smart-blue-500 hover:bg-smart-blue-50"
                 >
-                  Generate Token
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy Token
                 </Button>
-              </LegacyStack>
-              {error && (
-                <Banner tone="critical">
-                  <p>{error}</p>
-                </Banner>
-              )}
-              {token && (
-                <>
-                  <Banner tone="success">
-                    <p>Access token generated successfully!</p>
-                  </Banner>
-                  
-                  <div style={{ 
-                    background: '#f6f6f7', 
-                    padding: '12px', 
-                    borderRadius: '8px', 
-                    fontFamily: 'monospace',
-                    wordBreak: 'break-all',
-                    border: '1px solid #e1e3e5'
-                  }}>
-                    {token}
-                  </div>
-                  
-                  <LegacyStack distribution="leading">
-                    <Button onClick={copyToken}>
-                      Copy Token
-                    </Button>
-                  </LegacyStack>
-                  
-                  <Card>
-                    <Text variant="headingMd" as="h3">Next Steps:</Text>
-                    <LegacyStack vertical spacing="tight">
-                      <Text as="p">1. Copy the token above</Text>
-                      <Text as="p">2. Update .env.local:</Text>
-                      <div style={{ 
-                        background: '#f6f6f7', 
-                        padding: '8px', 
-                        borderRadius: '4px', 
-                        fontFamily: 'monospace',
-                        fontSize: '12px'
-                      }}>
-                        SHOPIFY_ACCESS_TOKEN={token}
-                      </div>
-                      <Text as="p">3. Restart your dev server</Text>
-                      <Text as="p">4. Test product creation</Text>
-                    </LegacyStack>
-                  </Card>
-                </>
-              )}
-            </LegacyStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
+
+                <Card className="border-smart-blue-200 bg-smart-blue-50/50">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-oxford-navy">Next Steps:</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-oxford-navy">1. Copy the token above</p>
+                    <p className="text-oxford-navy">2. Update .env.local:</p>
+                    <div className="bg-white p-3 rounded border border-gray-200 font-mono text-xs">
+                      SHOPIFY_ACCESS_TOKEN={token}
+                    </div>
+                    <p className="text-oxford-navy">3. Restart your dev server</p>
+                    <p className="text-oxford-navy">4. Test product creation</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }

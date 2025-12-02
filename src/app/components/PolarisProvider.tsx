@@ -1,17 +1,14 @@
 'use client'
 
-import { AppProvider } from '@shopify/polaris'
-import '@shopify/polaris/build/esm/styles.css'
 import { ReactNode } from 'react'
 
-interface PolarisProviderProps {
+interface ModernUIProviderProps {
   children: ReactNode
 }
 
-export function PolarisProvider({ children }: PolarisProviderProps) {
-  return (
-    <AppProvider i18n={{}}>
-      {children}
-    </AppProvider>
-  )
+export function ModernUIProvider({ children }: ModernUIProviderProps) {
+  return <>{children}</>
 }
+
+// Legacy export for backwards compatibility during migration
+export const PolarisProvider = ModernUIProvider

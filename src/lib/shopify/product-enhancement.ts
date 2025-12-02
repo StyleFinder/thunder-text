@@ -1,7 +1,8 @@
-import { 
-  fetchProductDataForPrePopulation, 
-  PrePopulatedProductData 
+import {
+  fetchProductDataForPrePopulation,
+  PrePopulatedProductData
 } from './product-prepopulation'
+import { logger } from '@/lib/logger'
 
 export interface EnhancementProductData extends PrePopulatedProductData {
   // Enhancement-specific fields
@@ -55,14 +56,6 @@ export async function fetchProductDataForEnhancement(
   authenticatedFetch?: typeof fetch
 ): Promise<EnhancementProductData | null> {
   try {
-    console.log('🔄 Fetching product data for enhancement:', {
-      productId,
-      shop,
-      idFormat: productId.startsWith('gid://') ? 'GraphQL' : 'Numeric',
-      hasProvidedToken: !!providedSessionToken,
-      hasAuthenticatedFetch: !!authenticatedFetch
-    })
-
     // Use authenticatedFetch if provided (from EmbeddedAuthProvider)
     const fetchFn = authenticatedFetch || fetch
 
@@ -78,12 +71,9 @@ export async function fetchProductDataForEnhancement(
 
       if (sessionToken) {
         headers['Authorization'] = `Bearer ${sessionToken}`
-        console.log('🔑 Including session token in API request')
       } else {
-        console.log('⚠️ No session token available, will use database token')
       }
     } else {
-      console.log('✅ Using authenticatedFetch (token handled automatically)')
     }
 
     // Get base product data using API endpoint (server-side for env vars)
@@ -94,13 +84,24 @@ export async function fetchProductDataForEnhancement(
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('❌ Failed to fetch product data:', response.status, errorText)
+      logger.error('Failed to fetch product data', new Error(errorText), {
+        component: 'product-enhancement',
+        operation: 'fetchProductDataForEnhancement',
+        status: response.status,
+        productId,
+        shop
+      })
 
       // Check if it's a JSON error response
       try {
         const errorData = JSON.parse(errorText)
         if (errorData.error === 'Product not found') {
-          console.error('❌ Product not found in Shopify:', productId)
+          logger.error('Product not found in Shopify', new Error('Product not found'), {
+            component: 'product-enhancement',
+            operation: 'fetchProductDataForEnhancement',
+            productId,
+            shop
+          })
           throw new Error('Product not found in Shopify')
         }
         throw new Error(errorData.error || `Server error: ${response.status}`)
@@ -116,17 +117,15 @@ export async function fetchProductDataForEnhancement(
     const baseData = await response.json()
 
     if (!baseData || Object.keys(baseData).length === 0) {
-      console.error('❌ Empty or invalid product data received')
-      console.error('📝 Response data:', baseData)
+      logger.error('Empty or invalid product data received', new Error('Invalid product data'), {
+        component: 'product-enhancement',
+        operation: 'fetchProductDataForEnhancement',
+        productId,
+        shop,
+        responseData: baseData
+      })
       throw new Error('Invalid product data received from server')
     }
-
-    console.log('✅ Received base product data:', {
-      id: baseData.id,
-      title: baseData.title,
-      hasImages: baseData.images?.length > 0,
-      hasVariants: baseData.variants?.length > 0
-    })
 
     // Enhance with additional data needed for enhancement workflows
     const enhancementData: EnhancementProductData = {
@@ -147,11 +146,15 @@ export async function fetchProductDataForEnhancement(
       enhancementHistory: []
     }
 
-    console.log('✅ Enhancement product data fetched successfully')
     return enhancementData
 
   } catch (error) {
-    console.error('❌ Error fetching product data for enhancement:', error)
+    logger.error('Error fetching product data for enhancement', error as Error, {
+      component: 'product-enhancement',
+      operation: 'fetchProductDataForEnhancement',
+      productId,
+      shop
+    })
     return null
   }
 }
@@ -472,7 +475,12 @@ export async function updateProductWithEnhancement(
     const accessToken = process.env.SHOPIFY_ACCESS_TOKEN || ''
 
     if (!accessToken) {
-      console.error('⚠️ No access token available - using mock update')
+      logger.error('No access token available - using mock update', new Error('Missing access token'), {
+        component: 'product-enhancement',
+        operation: 'updateProductWithEnhancement',
+        productId,
+        isDevelopment: process.env.NODE_ENV === 'development'
+      })
       // Return mock success for development
       return {
         success: true,
@@ -507,7 +515,11 @@ export async function updateProductWithEnhancement(
       }
     }
   } catch (error) {
-    console.error('❌ Error updating product with enhancement:', error)
+    logger.error('Error updating product with enhancement', error as Error, {
+      component: 'product-enhancement',
+      operation: 'updateProductWithEnhancement',
+      productId
+    })
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update product'

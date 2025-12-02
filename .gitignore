@@ -49,3 +49,4 @@ next-env.d.ts
 # Security scan reports
 audit-report.json
 .snyk
+backups/

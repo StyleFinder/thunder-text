@@ -1,5 +1,5 @@
 import React from "react";
-import { Badge } from "@shopify/polaris";
+import { Badge } from "@/components/ui/badge";
 
 type TrendStatus = "Rising" | "Stable" | "Waning";
 
@@ -14,30 +14,30 @@ export function TrendStatusBadge({
 }: TrendStatusBadgeProps) {
   const config = {
     Rising: {
-      tone: "success" as const,
+      className: "bg-ace-green/10 text-ace-green hover:bg-ace-green/20 border-ace-green/20",
       icon: "↗",
       tooltip: "Search interest is ≥ +20% vs previous period",
     },
     Stable: {
-      tone: "info" as const,
+      className: "bg-ace-blue/10 text-ace-blue hover:bg-ace-blue/20 border-ace-blue/20",
       icon: "→",
       tooltip: "Within ±10% of prior period",
     },
     Waning: {
-      tone: "warning" as const,
+      className: "bg-ace-orange/10 text-ace-orange hover:bg-ace-orange/20 border-ace-orange/20",
       icon: "↘",
       tooltip: "Search interest is ≤ −20% vs previous period",
     },
   };
 
   // eslint-disable-next-line security/detect-object-injection
-  const { tone, icon, tooltip } = config[status];
+  const { className, icon, tooltip } = config[status];
   const sign = momentumPct >= 0 ? "+" : "";
 
   return (
     <div className="flex items-center gap-2">
-      <Badge tone={tone}>{`${icon} ${status}`}</Badge>
-      <span className="text-sm font-semibold" title={tooltip}>
+      <Badge className={className}>{`${icon} ${status}`}</Badge>
+      <span className="text-sm font-semibold text-ace-black" title={tooltip}>
         {sign}
         {momentumPct.toFixed(1)}%
       </span>

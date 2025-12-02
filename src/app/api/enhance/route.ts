@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors'
+import { logger } from '@/lib/logger'
 
 export async function OPTIONS(request: NextRequest) {
   return handleCorsPreflightRequest(request)
@@ -46,14 +47,13 @@ export async function POST(request: NextRequest) {
     // Thunder Text uses Shopify OAuth authentication, not session-based auth
     // Authentication is handled via shop parameter and access token from database
     if (!isShopifyRequest && !referer.includes('vercel.app') && !isAuthenticatedDev) {
-      console.error('❌ Authentication required - not a Shopify request')
+      logger.error('❌ Authentication required - not a Shopify request', undefined, { component: 'enhance' })
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401, headers: corsHeaders }
       )
     }
 
-    console.log('✅ Processing enhancement request (Shopify/Embedded mode)')
     storeId = 'shopify-embedded-app'
 
     // Parse FormData (since we're using FormData for image uploads)
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
     }, { headers: corsHeaders })
 
   } catch (error) {
-    console.error('Enhancement API error:', error)
+    logger.error('Enhancement API error:', error as Error, { component: 'enhance' })
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500, headers: corsHeaders }

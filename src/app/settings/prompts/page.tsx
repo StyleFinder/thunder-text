@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 
 // Force dynamic rendering for this page
 export const dynamic = "force-dynamic";
@@ -85,7 +86,11 @@ function PromptsSettingsContent() {
           setSelectedTemplateId(firstTemplate.id);
         }
       } catch (err) {
-        console.error("Error loading prompts:", err);
+        logger.error("Error loading prompts", err as Error, {
+          component: "prompts-settings-page",
+          operation: "loadPrompts",
+          shop
+        });
         setError("Failed to load prompts");
       } finally {
         setLoading(false);
@@ -133,7 +138,11 @@ function PromptsSettingsContent() {
         description: "System prompt saved successfully!",
       });
     } catch (err) {
-      console.error("Error saving system prompt:", err);
+      logger.error("Error saving system prompt", err as Error, {
+        component: "prompts-settings-page",
+        operation: "handleSaveSystemPrompt",
+        shop
+      });
       setError("Failed to save system prompt");
     } finally {
       setSaving(false);
@@ -179,7 +188,12 @@ function PromptsSettingsContent() {
         description: "Template saved successfully!",
       });
     } catch (err) {
-      console.error("Error saving template:", err);
+      logger.error("Error saving template", err as Error, {
+        component: "prompts-settings-page",
+        operation: "handleSaveTemplate",
+        templateId: selectedTemplateId,
+        shop
+      });
       setError("Failed to save template");
     } finally {
       setSaving(false);
@@ -222,7 +236,12 @@ function PromptsSettingsContent() {
         description: "Template created successfully!",
       });
     } catch (err) {
-      console.error("Error creating template:", err);
+      logger.error("Error creating template", err as Error, {
+        component: "prompts-settings-page",
+        operation: "handleCreateTemplate",
+        templateName: newTemplateName,
+        shop
+      });
       setError("Failed to create template");
     } finally {
       setSaving(false);
@@ -267,7 +286,12 @@ function PromptsSettingsContent() {
         description: "Template deleted successfully!",
       });
     } catch (err) {
-      console.error("Error deleting template:", err);
+      logger.error("Error deleting template", err as Error, {
+        component: "prompts-settings-page",
+        operation: "handleDeleteTemplate",
+        templateId: selectedTemplateId,
+        shop
+      });
       setError("Failed to delete template");
     } finally {
       setSaving(false);
@@ -306,7 +330,12 @@ function PromptsSettingsContent() {
         description: "Default template updated!",
       });
     } catch (err) {
-      console.error("Error setting default:", err);
+      logger.error("Error setting default template", err as Error, {
+        component: "prompts-settings-page",
+        operation: "handleSetDefault",
+        templateId: selectedTemplateId,
+        shop
+      });
       setError("Failed to set template as default");
     } finally {
       setSaving(false);
@@ -339,7 +368,11 @@ function PromptsSettingsContent() {
         description: "System prompt reset to default!",
       });
     } catch (err) {
-      console.error("Error resetting system prompt:", err);
+      logger.error("Error resetting system prompt", err as Error, {
+        component: "prompts-settings-page",
+        operation: "handleResetSystemPrompt",
+        shop
+      });
       setError("Failed to reset system prompt");
     } finally {
       setSaving(false);
@@ -386,7 +419,12 @@ function PromptsSettingsContent() {
         description: "Template restored to default!",
       });
     } catch (err) {
-      console.error("Error resetting template:", err);
+      logger.error("Error resetting template", err as Error, {
+        component: "prompts-settings-page",
+        operation: "handleResetTemplate",
+        templateId: selectedTemplateId,
+        shop
+      });
       setError("Failed to reset template");
     } finally {
       setSaving(false);

@@ -8,6 +8,7 @@ import { useSearchParams } from 'next/navigation'
 import dynamicImport from 'next/dynamic'
 import 'react-quill-new/dist/quill.snow.css'
 import { Button } from '@/components/ui/button'
+import { logger } from '@/lib/logger'
 
 // Dynamically import ReactQuill to avoid SSR issues
 const ReactQuill = dynamicImport(() => import('react-quill-new'), { ssr: false })
@@ -152,19 +153,9 @@ function CreateProductContent() {
         setDataLoadError(null)
 
         try {
-          console.log('🚀 Thunder Text: Fetching comprehensive product data', {
-            productId, shop, source
-          })
-
           const data = await fetchProductDataForPrePopulation(productId, shop)
 
           if (data) {
-            console.log('✅ Product data loaded successfully:', {
-              title: data.title,
-              imageCount: data.images.length,
-              variantCount: data.variants.length
-            })
-
             setPrePopulatedData(data)
 
             // Auto-populate form fields
@@ -206,11 +197,15 @@ function CreateProductContent() {
           }
 
         } catch (error) {
-          console.error('❌ Error fetching product data:', error)
+          logger.error('Error fetching product data', error as Error, {
+            component: 'create-pd-page',
+            operation: 'fetchProductData',
+            productId,
+            shop
+          })
           setDataLoadError(`Failed to load product data: ${error instanceof Error ? error.message : 'Unknown error'}`)
 
           // Fallback to basic admin extension data if comprehensive fetch fails
-          console.log('🔄 Falling back to basic admin extension data')
           if (productTypeParam) {
             // Set both the Shopify product type and the template
             setProductType(productTypeParam)
@@ -261,7 +256,12 @@ function CreateProductContent() {
       // Check for HTTP errors (401, 404, 500, etc.)
       if (!response.ok) {
         const errorMsg = `Categories API error: ${response.status} ${response.statusText}`
-        console.error(errorMsg)
+        logger.error(errorMsg, new Error(errorMsg), {
+          component: 'create-pd-page',
+          operation: 'fetchCustomCategories',
+          status: response.status,
+          shop
+        })
         setCategoriesError(errorMsg)
         return
       }
@@ -277,7 +277,11 @@ function CreateProductContent() {
       }
     } catch (err) {
       const errorMsg = `Failed to load categories: ${err instanceof Error ? err.message : 'Unknown error'}`
-      console.error(errorMsg, err)
+      logger.error(errorMsg, err as Error, {
+        component: 'create-pd-page',
+        operation: 'fetchCustomCategories',
+        shop
+      })
       setCategoriesError(errorMsg)
     } finally {
       setCategoriesLoading(false)
@@ -293,7 +297,11 @@ function CreateProductContent() {
         setParentCategories(data.data)
       }
     } catch (err) {
-      console.error('Error fetching parent categories:', err)
+      logger.error('Error fetching parent categories', err as Error, {
+        component: 'create-pd-page',
+        operation: 'fetchParentCategories',
+        shop
+      })
     }
   }
 
@@ -334,7 +342,11 @@ function CreateProductContent() {
         ])
       }
     } catch (err) {
-      console.error('Error fetching shop sizes:', err)
+      logger.error('Error fetching shop sizes', err as Error, {
+        component: 'create-pd-page',
+        operation: 'fetchShopSizes',
+        shop
+      })
       // Fallback to hardcoded defaults on error
       setSizingOptions([
         { label: 'One Size', value: 'One Size' },
@@ -357,7 +369,12 @@ function CreateProductContent() {
         setSubCategories(data.data)
       }
     } catch (err) {
-      console.error('Error fetching sub-categories:', err)
+      logger.error('Error fetching sub-categories', err as Error, {
+        component: 'create-pd-page',
+        operation: 'fetchSubCategories',
+        shop,
+        parentId
+      })
     }
   }
 
@@ -369,11 +386,14 @@ function CreateProductContent() {
       const data = await response.json()
 
       if (data.default_template) {
-        console.log('🎯 Global default template loaded:', data.default_template)
         setSelectedTemplate(data.default_template)
       }
     } catch (err) {
-      console.error('Error fetching global default template:', err)
+      logger.error('Error fetching global default template', err as Error, {
+        component: 'create-pd-page',
+        operation: 'fetchGlobalDefaultTemplate',
+        storeId: shop
+      })
       // Fall back to 'general' if there's an error
     }
   }
@@ -384,7 +404,6 @@ function CreateProductContent() {
     keywords: string[]
   }) => {
     try {
-      console.log('🎯 Requesting category suggestion for generated content')
 
       const response = await authenticatedFetch('/api/categories/suggest', {
         method: 'POST',
@@ -400,35 +419,35 @@ function CreateProductContent() {
       if (data.success && data.suggestion) {
         const { category, confidence, shouldAutoAssign } = data.suggestion
 
-        console.log('🎯 Category suggestion received:', { category, confidence, shouldAutoAssign })
 
         // Store the suggestion for display
         setSuggestedCategory({ category, confidence })
 
         // Auto-assign if confidence is high enough
         if (shouldAutoAssign && confidence >= 0.6) {
-          console.log('🎯 Auto-assigning category:', category, 'from current:', selectedTemplate)
 
           // If no category is selected, auto-assign
           if (!selectedTemplate || selectedTemplate === 'general') {
             setSelectedTemplate(category)
             setCategoryDetected(true)
-            console.log('🎯 Category auto-assigned (no previous selection):', category)
           }
           // If category is different and confidence is very high, suggest replacement
           else if (selectedTemplate !== category && confidence >= 0.8) {
-            console.log('🎯 Suggesting category replacement:', selectedTemplate, '→', category)
             // For now, just log - could add UI notification later
             // Future: show user a suggestion to replace category
           }
           // If same category, confirm it's correct
           else if (selectedTemplate === category) {
-            console.log('🎯 Category confirmed correct:', category)
           }
         }
       }
     } catch (err) {
-      console.error('Error getting category suggestion:', err)
+      logger.error('Error getting category suggestion', err as Error, {
+        component: 'create-pd-page',
+        operation: 'suggestCategoryFromContent',
+        title: generatedContent.title,
+        shop
+      })
       // Don't show error to user - this is a background enhancement
     }
   }
@@ -469,17 +488,19 @@ function CreateProductContent() {
 
       if (result.success && result.data) {
         const { subCategory, confidence } = result.data
-        console.log('🎯 AI detected category:', subCategory, 'confidence:', confidence)
 
         // Auto-assign category if confidence is high and no category is selected
         if (confidence === 'high' && (!selectedTemplate || selectedTemplate === 'general')) {
           setSelectedTemplate(subCategory.toLowerCase() as ProductCategory)
           setCategoryDetected(true)
-          console.log('🎯 Category auto-assigned from image:', subCategory)
         }
       }
     } catch (error) {
-      console.error('Error detecting category from image:', error)
+      logger.error('Error detecting category from image', error as Error, {
+        component: 'create-pd-page',
+        operation: 'detectCategoryFromImage',
+        shop
+      })
       // Don't show error to user - this is a background enhancement
     }
   }, [selectedTemplate])
@@ -519,13 +540,22 @@ function CreateProductContent() {
 
       if (result.success && result.variants) {
         setDetectedVariants(result.variants)
-        console.log(`✅ Detected ${result.variants.length} color variants`)
       } else {
-        console.error('Color detection failed:', result.error)
+        logger.error('Color detection failed', new Error(result.error || 'Unknown error'), {
+          component: 'create-pd-page',
+          operation: 'detectColorsFromPrimaryPhotos',
+          photosCount: photos.length,
+          shop
+        })
         setDetectedVariants([])
       }
     } catch (error) {
-      console.error('Error detecting colors:', error)
+      logger.error('Error detecting colors', error as Error, {
+        component: 'create-pd-page',
+        operation: 'detectColorsFromPrimaryPhotos',
+        photosCount: photos.length,
+        shop
+      })
       setDetectedVariants([])
     } finally {
       setColorDetectionLoading(false)
@@ -641,7 +671,6 @@ function CreateProductContent() {
       return
     }
 
-    console.log('🚀 Starting generation with shop:', shop)
 
     setGenerating(true)
     setError(null)
@@ -708,20 +737,26 @@ function CreateProductContent() {
 
       // Auto-suggest category based on generated content
       if (data.data.generatedContent) {
-        console.log('🎯 Starting category suggestion for:', data.data.generatedContent.title)
-        console.log('🎯 Current category before suggestion:', selectedTemplate)
         try {
           await suggestCategoryFromContent(data.data.generatedContent)
-          console.log('🎯 Category suggestion completed successfully')
         } catch (suggestionError) {
-          console.error('🎯 Category suggestion failed:', suggestionError)
+          logger.error('Category suggestion failed', suggestionError as Error, {
+            component: 'create-pd-page',
+            operation: 'handleGenerateDescription-suggestCategory',
+            shop
+          })
         }
       } else {
-        console.log('🎯 No generated content found for category suggestion')
       }
 
     } catch (err) {
-      console.error('Error generating content:', err)
+      logger.error('Error generating content', err as Error, {
+        component: 'create-pd-page',
+        operation: 'handleGenerateDescription',
+        category: selectedTemplate,
+        photosCount: allPhotos.length,
+        shop
+      })
       setError('Failed to generate product description. Please try again.')
     } finally {
       // Cleanup progress timer
@@ -763,24 +798,10 @@ function CreateProductContent() {
         url.searchParams.append('shop', shop)
       }
 
-      console.log('🔍 DEBUG Frontend: Creating product with sizing:', {
-        availableSizing,
-        sizingType: typeof availableSizing,
-        sizingLength: availableSizing?.length
-      })
-
       // Determine which category to use
       const finalCategory = suggestedCategory && suggestedCategory.confidence >= 0.6
         ? suggestedCategory.category
         : selectedTemplate
-
-      console.log('🎯 Category selection for Shopify:', {
-        manualCategory: selectedTemplate,
-        suggestedCategory: suggestedCategory?.category,
-        confidence: suggestedCategory?.confidence,
-        finalCategory,
-        reason: suggestedCategory && suggestedCategory.confidence >= 0.6 ? 'Using AI suggestion' : 'Using manual selection'
-      })
 
       const response = await fetch(url.toString(), {
         method: 'POST',
@@ -807,23 +828,25 @@ function CreateProductContent() {
 
       const data = await response.json()
 
-      console.log('🔍 DEBUG: Frontend received response:', {
-        status: response.status,
-        ok: response.ok,
-        data: data
-      })
-
       if (!data.success) {
-        console.error('❌ Backend returned error:', data)
+        logger.error('Backend returned error', new Error(data.error), {
+          component: 'create-pd-page',
+          operation: 'handleCreateInShopify',
+          shop,
+          category: finalCategory
+        })
         throw new Error(data.error || 'Failed to create product in Shopify')
       }
-
-      console.log('Product created successfully:', data.data)
       setProductCreated(data.data)
       setGeneratedContent(null) // Close the generated content modal
 
     } catch (err) {
-      console.error('Error creating product in Shopify:', err)
+      logger.error('Error creating product in Shopify', err as Error, {
+        component: 'create-pd-page',
+        operation: 'handleCreateInShopify',
+        shop,
+        photosCount: allPhotos.length
+      })
       setError(`Failed to create product in Shopify: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
       setCreatingProduct(false)
@@ -832,13 +855,6 @@ function CreateProductContent() {
 
   // Check if auth bypass is enabled in development
   const authBypass = process.env.NODE_ENV === 'development'
-
-  console.log('🔍 AUTH DEBUG:', {
-    shop,
-    authenticated,
-    authBypass,
-    NODE_ENV: process.env.NODE_ENV,
-  })
 
   // Temporarily disable auth check for development
   if (false) { // if (!shop || (!authenticated && !authBypass)) {

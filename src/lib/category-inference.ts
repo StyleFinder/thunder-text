@@ -73,7 +73,6 @@ export function inferProductCategory(
   const descriptionText = (description || '').toLowerCase()
   const allText = [titleText, keywordsText, descriptionText].join(' ')
 
-  console.log('🔍 Category inference analyzing:', allText.substring(0, 200) + '...')
 
   let bestMatch: CategoryInference = {
     category: 'Fashion & Apparel',
@@ -172,8 +171,6 @@ export function inferProductCategory(
     }
   }
 
-  console.log(`✅ Category inference result: ${bestMatch.category} (confidence: ${bestMatch.confidence.toFixed(2)})`)
-  console.log(`📝 Reasoning: ${bestMatch.reasoning.join(', ')}`)
 
   return bestMatch
 }

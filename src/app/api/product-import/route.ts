@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { importProductData, detectProductCategory, generateSuggestedKeywords, analyzeExistingDescription } from '@/lib/product-data-import'
 import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request)
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
     }, { headers: corsHeaders })
 
   } catch (error) {
-    console.error('Product import error:', error)
+    logger.error('Product import error:', error as Error, { component: 'product-import' })
     
     return NextResponse.json(
       { error: 'Failed to import product data' },

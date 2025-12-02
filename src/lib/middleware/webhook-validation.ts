@@ -3,6 +3,7 @@
  * Implements HMAC signature verification to ensure webhook authenticity
  */
 import { createHmac, timingSafeEqual } from 'crypto'
+import { logger } from '@/lib/logger'
 
 export interface WebhookValidationResult {
   valid: boolean
@@ -22,7 +23,10 @@ export async function validateWebhook(
     // Get HMAC header from Shopify
     const hmacHeader = request.headers.get('x-shopify-hmac-sha256')
     if (!hmacHeader) {
-      console.error('⚠️ Webhook validation failed: Missing HMAC header')
+      logger.error('Webhook validation failed: Missing HMAC header', new Error('Missing HMAC header'), {
+        component: 'webhook-validation',
+        operation: 'validateWebhook'
+      })
       return {
         valid: false,
         error: 'Missing X-Shopify-Hmac-Sha256 header'
@@ -32,7 +36,10 @@ export async function validateWebhook(
     // Get webhook secret from environment
     const webhookSecret = process.env.SHOPIFY_WEBHOOK_SECRET
     if (!webhookSecret) {
-      console.error('❌ Webhook secret not configured')
+      logger.error('Webhook secret not configured', new Error('Missing webhook secret'), {
+        component: 'webhook-validation',
+        operation: 'validateWebhook'
+      })
       return {
         valid: false,
         error: 'Webhook secret not configured'
@@ -53,7 +60,12 @@ export async function validateWebhook(
 
     // Check length first (fast fail, not timing sensitive)
     if (expected.length !== received.length) {
-      console.error('⚠️ Webhook validation failed: HMAC length mismatch')
+      logger.error('Webhook validation failed: HMAC length mismatch', new Error('HMAC length mismatch'), {
+        component: 'webhook-validation',
+        operation: 'validateWebhook',
+        expectedLength: expected.length,
+        receivedLength: received.length
+      })
       return {
         valid: false,
         error: 'Invalid HMAC signature length'
@@ -64,11 +76,15 @@ export async function validateWebhook(
     const valid = timingSafeEqual(expected, received)
 
     if (!valid) {
-      console.error('❌ Webhook validation failed: Invalid HMAC signature')
+      logger.error('Webhook validation failed: Invalid HMAC signature', new Error('Invalid HMAC signature'), {
+        component: 'webhook-validation',
+        operation: 'validateWebhook',
+        isDevelopment: process.env.NODE_ENV === 'development'
+      })
       // Don't log actual signatures in production
       if (process.env.NODE_ENV === 'development') {
-        console.error('Expected HMAC:', hash)
-        console.error('Received HMAC:', hmacHeader)
+        logger.error('Expected HMAC:', hash as Error, { component: 'webhook-validation' })
+        logger.error('Received HMAC:', hmacHeader as Error, { component: 'webhook-validation' })
       }
       return {
         valid: false,
@@ -76,14 +92,16 @@ export async function validateWebhook(
       }
     }
 
-    console.log('✅ Webhook validated successfully')
     return {
       valid: true,
       body: rawBody
     }
 
   } catch (error) {
-    console.error('❌ Webhook validation error:', error)
+    logger.error('Webhook validation error', error as Error, {
+      component: 'webhook-validation',
+      operation: 'validateWebhook'
+    })
     return {
       valid: false,
       error: error instanceof Error ? error.message : 'Validation error'
@@ -101,12 +119,20 @@ export function validateWebhookTopic(
   allowedTopics: string[]
 ): boolean {
   if (!topic) {
-    console.error('⚠️ Webhook topic missing')
+    logger.error('Webhook topic missing', new Error('Missing webhook topic'), {
+      component: 'webhook-validation',
+      operation: 'validateWebhookTopic'
+    })
     return false
   }
 
   if (!allowedTopics.includes(topic)) {
-    console.error(`⚠️ Unexpected webhook topic: ${topic}`)
+    logger.error('Unexpected webhook topic', new Error(`Unexpected topic: ${topic}`), {
+      component: 'webhook-validation',
+      operation: 'validateWebhookTopic',
+      topic,
+      allowedTopics
+    })
     return false
   }
 

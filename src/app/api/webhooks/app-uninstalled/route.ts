@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateWebhook, validateWebhookTopic, extractWebhookMetadata } from '@/lib/middleware/webhook-validation'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
     const validation = await validateWebhook(request)
 
     if (!validation.valid) {
-      console.error('❌ Webhook validation failed:', validation.error)
+      logger.error('❌ Webhook validation failed:', validation.error, undefined, { component: 'app-uninstalled' })
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -34,7 +35,6 @@ export async function POST(request: NextRequest) {
     const webhookData = JSON.parse(validation.body!)
     const shopDomain = webhookData.shop_domain || metadata.shopDomain
 
-    console.log('📦 Processing app/uninstalled webhook for shop:', shopDomain)
 
     // Update shop status in database
     if (shopDomain) {
@@ -49,10 +49,9 @@ export async function POST(request: NextRequest) {
         .eq('shop_domain', shopDomain)
 
       if (updateError) {
-        console.error('❌ Failed to update shop status:', updateError)
+        logger.error('❌ Failed to update shop status:', updateError as Error, { component: 'app-uninstalled' })
         // Don't return error - webhook should still succeed
       } else {
-        console.log('✅ Shop marked as uninstalled:', shopDomain)
       }
 
       // Clean up any active sessions or tokens
@@ -66,7 +65,7 @@ export async function POST(request: NextRequest) {
         .eq('shop_domain', shopDomain)
 
       if (tokenError) {
-        console.error('⚠️ Failed to clear shop tokens:', tokenError)
+        logger.error('⚠️ Failed to clear shop tokens:', tokenError as Error, { component: 'app-uninstalled' })
       }
     }
 
@@ -83,7 +82,7 @@ export async function POST(request: NextRequest) {
           status: 'success'
         })
     } catch (err) {
-      console.error('Failed to log webhook:', err)
+      logger.error('Failed to log webhook:', err as Error, { component: 'app-uninstalled' })
     }
 
     // Return success response
@@ -93,7 +92,7 @@ export async function POST(request: NextRequest) {
     )
 
   } catch (error) {
-    console.error('❌ Webhook processing error:', error)
+    logger.error('❌ Webhook processing error:', error as Error, { component: 'app-uninstalled' })
 
     // Log failed webhook
     try {
@@ -110,7 +109,7 @@ export async function POST(request: NextRequest) {
           error: error instanceof Error ? error.message : 'Unknown error'
         })
     } catch (logError) {
-      console.error('Failed to log webhook error:', logError)
+      logger.error('Failed to log webhook error:', logError as Error, { component: 'app-uninstalled' })
     }
 
     // Always return 200 to prevent Shopify from retrying

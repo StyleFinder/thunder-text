@@ -151,9 +151,12 @@ export default function SamplesPage() {
                 Drop files here or click to upload
               </p>
               <p className="text-sm text-gray-500">
-                Supported formats: PDF, DOC, DOCX, TXT
+                Supported formats: PDF, DOCX, TXT
               </p>
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-gray-400 mt-1">
+                For Google Docs: File → Download → Plain Text (.txt)
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
                 Maximum file size: 10MB per file
               </p>
 
@@ -161,7 +164,7 @@ export default function SamplesPage() {
                 id="file-upload"
                 type="file"
                 multiple
-                accept=".pdf,.doc,.docx,.txt"
+                accept=".pdf,.docx,.txt"
                 className="hidden"
                 onChange={handleFileSelect}
               />

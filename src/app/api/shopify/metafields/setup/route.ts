@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createMetafieldDefinitions } from '@/lib/google-metafield-definitions'
 import { ShopifyOfficialAPI } from '@/lib/shopify-official'
 import { getShopToken } from '@/lib/shopify/token-manager'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   // Check if we're in a build environment without proper configuration
@@ -20,32 +21,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Shop parameter required' }, { status: 400 })
     }
 
-    // Get access token for shop
-    let accessToken: string
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-
-    if (authBypass) {
-      // Development mode bypass
-      console.log('Using auth bypass for metafield definitions setup')
-      accessToken = process.env.SHOPIFY_ACCESS_TOKEN || ''
-      if (!accessToken) {
-        return NextResponse.json({ error: 'Access token not configured' }, { status: 500 })
-      }
-    } else {
-      // Try to get stored token
-      const tokenResult = await getShopToken(shop)
-      if (!tokenResult.success || !tokenResult.accessToken) {
-        return NextResponse.json({ error: 'Unauthorized - no valid access token' }, { status: 401 })
-      }
-      accessToken = tokenResult.accessToken
+    // Get access token for shop from database (production-ready authentication)
+    const tokenResult = await getShopToken(shop)
+    if (!tokenResult.success || !tokenResult.accessToken) {
+      return NextResponse.json({
+        error: 'Unauthorized - no valid access token. Please authenticate via Shopify OAuth.'
+      }, { status: 401 })
     }
+    const accessToken = tokenResult.accessToken
 
     const shopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
 
     // Initialize Shopify API
     const shopify = new ShopifyOfficialAPI(shopDomain, accessToken)
 
-    console.log('🔧 Setting up Google Shopping metafield definitions...')
 
     // Create all metafield definitions
     const results = await createMetafieldDefinitions(shopify.client)
@@ -53,7 +42,6 @@ export async function POST(request: NextRequest) {
     const successful = results.filter(r => r.success).length
     const failed = results.filter(r => !r.success)
 
-    console.log(`✅ Metafield definitions setup complete: ${successful}/${results.length} successful`)
 
     return NextResponse.json({
       success: true,
@@ -70,7 +58,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Error setting up metafield definitions:', error)
+    logger.error('❌ Error setting up metafield definitions:', error as Error, { component: 'setup' })
     return NextResponse.json(
       { 
         success: false,

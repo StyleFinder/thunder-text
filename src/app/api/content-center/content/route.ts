@@ -8,6 +8,7 @@ import {
 import { getUserId } from '@/lib/auth/content-center-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
+import { logger } from '@/lib/logger'
 
 /**
  * GET /api/content-center/content
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const { data: content, error, count } = await query
 
     if (error) {
-      console.error('Error fetching content:', error)
+      logger.error('Error fetching content:', error as Error, { component: 'content' })
       return NextResponse.json(
         { success: false, error: 'Failed to fetch content' },
         { status: 500 }
@@ -125,7 +126,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     })
 
   } catch (error) {
-    console.error('Error in GET /api/content-center/content:', error)
+    logger.error('Error in GET /api/content-center/content:', error as Error, { component: 'content' })
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

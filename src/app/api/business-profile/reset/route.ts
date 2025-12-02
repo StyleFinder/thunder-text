@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { queryWithTenant } from "@/lib/postgres";
 import { getUserId } from "@/lib/auth/content-center-auth";
 import type { ApiResponse } from "@/types/business-profile";
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/business-profile/reset
@@ -22,7 +23,6 @@ export async function POST(
       );
     }
 
-    console.log("🔄 Resetting interview for tenant:", userId);
 
     // Get current profile
     const { data: profile, error: profileError } = await supabaseAdmin
@@ -41,9 +41,10 @@ export async function POST(
 
     // SECURITY: Double-check that profile belongs to authenticated tenant
     if (profile.store_id !== userId) {
-      console.error("🚨 SECURITY VIOLATION: Profile store_id mismatch", {
+      logger.error("🚨 SECURITY VIOLATION: Profile store_id mismatch", undefined, {
         authenticated_store: userId,
         profile_store: profile.store_id,
+        component: 'reset'
       });
       return NextResponse.json(
         { success: false, error: "Unauthorized access" },
@@ -52,7 +53,6 @@ export async function POST(
     }
 
     // Delete all responses for this profile using tenant-aware query
-    console.log("🗑️  Deleting all responses for profile:", profile.id);
     const deleteResult = await queryWithTenant(
       userId,
       `DELETE FROM business_profile_responses
@@ -83,14 +83,13 @@ export async function POST(
       .eq("store_id", userId); // Additional security check
 
     if (updateError) {
-      console.error("❌ Failed to reset profile:", updateError);
+      logger.error("❌ Failed to reset profile:", updateError as Error, { component: 'reset' });
       return NextResponse.json(
         { success: false, error: "Failed to reset profile status" },
         { status: 500 },
       );
     }
 
-    console.log("✅ Interview reset complete for tenant:", userId);
 
     return NextResponse.json(
       {
@@ -102,7 +101,7 @@ export async function POST(
       { status: 200 },
     );
   } catch (error) {
-    console.error("Error in POST /api/business-profile/reset:", error);
+    logger.error("Error in POST /api/business-profile/reset:", error as Error, { component: 'reset' });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

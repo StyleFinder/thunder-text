@@ -8,16 +8,19 @@
  */
 
 import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
-  BlockStack,
-  InlineStack,
-  Text,
   Select,
-  Spinner,
-  Banner,
-  Button,
-  Badge
-} from '@shopify/polaris'
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { Loader2, AlertCircle, AlertTriangle, Info } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 interface AdAccount {
   id: string
@@ -102,7 +105,7 @@ export default function CampaignSelector({
         setCurrentAdAccountId(data.data[0].id)
       }
     } catch (err) {
-      console.error('Error fetching ad accounts:', err)
+      logger.error('Error fetching ad accounts:', err as Error, { component: 'CampaignSelector' })
       setError(err instanceof Error ? err.message : 'Failed to load ad accounts')
     } finally {
       setLoadingAccounts(false)
@@ -130,7 +133,7 @@ export default function CampaignSelector({
         setCurrentCampaignId(data.data[0].id)
       }
     } catch (err) {
-      console.error('Error fetching campaigns:', err)
+      logger.error('Error fetching campaigns:', err as Error, { component: 'CampaignSelector' })
       setError(err instanceof Error ? err.message : 'Failed to load campaigns')
     } finally {
       setLoadingCampaigns(false)
@@ -146,132 +149,161 @@ export default function CampaignSelector({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'ACTIVE':
-        return <Badge tone="success">Active</Badge>
+        return <Badge className="bg-green-100 text-green-700 hover:bg-green-200">Active</Badge>
       case 'PAUSED':
-        return <Badge tone="attention">Paused</Badge>
+        return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200">Paused</Badge>
       case 'ARCHIVED':
-        return <Badge>Archived</Badge>
+        return <Badge variant="outline">Archived</Badge>
       default:
-        return <Badge tone="info">{status}</Badge>
+        return <Badge variant="secondary">{status}</Badge>
     }
   }
 
   if (loadingAccounts) {
     return (
-      <BlockStack gap="400">
-        <Text as="h3" variant="headingMd">Select Campaign</Text>
-        <InlineStack align="center" blockAlign="center" gap="200">
-          <Spinner size="small" />
-          <Text as="p" tone="subdued">Loading ad accounts...</Text>
-        </InlineStack>
-      </BlockStack>
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-foreground">Select Campaign</h3>
+        <div className="flex items-center justify-center gap-2 py-6">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading ad accounts...</p>
+        </div>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <BlockStack gap="400">
-        <Text as="h3" variant="headingMd">Select Campaign</Text>
-        <Banner tone="critical" title="Error loading campaigns">
-          <BlockStack gap="200">
-            <Text as="p">{error}</Text>
-            <Button onClick={() => fetchAdAccounts()}>Try Again</Button>
-          </BlockStack>
-        </Banner>
-      </BlockStack>
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-foreground">Select Campaign</h3>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-semibold">Error loading campaigns</p>
+            <p className="text-sm">{error}</p>
+            <Button
+              onClick={() => fetchAdAccounts()}
+              variant="outline"
+              size="sm"
+              className="mt-2"
+            >
+              Try Again
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
     )
   }
 
   if (adAccounts.length === 0) {
     return (
-      <BlockStack gap="400">
-        <Text as="h3" variant="headingMd">Select Campaign</Text>
-        <Banner tone="warning" title="No ad accounts found">
-          <Text as="p">
-            No Facebook ad accounts were found for your connected account. Please ensure you have
-            access to at least one ad account in Facebook Business Manager.
-          </Text>
-        </Banner>
-      </BlockStack>
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-foreground">Select Campaign</h3>
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-semibold">No ad accounts found</p>
+            <p className="text-sm">
+              No Facebook ad accounts were found for your connected account. Please ensure you have
+              access to at least one ad account in Facebook Business Manager.
+            </p>
+          </AlertDescription>
+        </Alert>
+      </div>
     )
   }
 
   const selectedCampaign = campaigns.find(c => c.id === currentCampaignId)
 
   return (
-    <BlockStack gap="400">
-      <Text as="h3" variant="headingMd">Select Campaign</Text>
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold text-foreground">Select Campaign</h3>
 
-      <BlockStack gap="300">
+      <div className="space-y-4">
         {/* Ad Account Selector */}
-        <Select
-          label="Ad Account"
-          options={[
-            { label: 'Select an ad account', value: '' },
-            ...adAccounts.map(account => ({
-              label: `${account.name} (${account.account_id})`,
-              value: account.id
-            }))
-          ]}
-          value={currentAdAccountId}
-          onChange={setCurrentAdAccountId}
-        />
+        <div className="space-y-2">
+          <Label htmlFor="ad-account">Ad Account</Label>
+          <Select
+            value={currentAdAccountId}
+            onValueChange={setCurrentAdAccountId}
+          >
+            <SelectTrigger id="ad-account">
+              <SelectValue placeholder="Select an ad account" />
+            </SelectTrigger>
+            <SelectContent>
+              {adAccounts.map(account => (
+                <SelectItem key={account.id} value={account.id}>
+                  {account.name} ({account.account_id})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Campaign Selector */}
         {currentAdAccountId && (
           <>
             {loadingCampaigns ? (
-              <InlineStack align="center" blockAlign="center" gap="200">
-                <Spinner size="small" />
-                <Text as="p" tone="subdued">Loading campaigns...</Text>
-              </InlineStack>
+              <div className="flex items-center justify-center gap-2 py-4">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Loading campaigns...</p>
+              </div>
             ) : campaigns.length === 0 ? (
-              <Banner tone="warning" title="No active campaigns">
-                <Text as="p">
-                  No active campaigns found for this ad account. Please create a campaign in
-                  Facebook Ads Manager before continuing.
-                </Text>
-              </Banner>
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <p className="font-semibold">No active campaigns</p>
+                  <p className="text-sm">
+                    No active campaigns found for this ad account. Please create a campaign in
+                    Facebook Ads Manager before continuing.
+                  </p>
+                </AlertDescription>
+              </Alert>
             ) : (
-              <Select
-                label="Campaign"
-                options={[
-                  { label: 'Select a campaign', value: '' },
-                  ...campaigns.map(campaign => ({
-                    label: campaign.name,
-                    value: campaign.id
-                  }))
-                ]}
-                value={currentCampaignId}
-                onChange={setCurrentCampaignId}
-              />
+              <div className="space-y-2">
+                <Label htmlFor="campaign">Campaign</Label>
+                <Select
+                  value={currentCampaignId}
+                  onValueChange={setCurrentCampaignId}
+                >
+                  <SelectTrigger id="campaign">
+                    <SelectValue placeholder="Select a campaign" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {campaigns.map(campaign => (
+                      <SelectItem key={campaign.id} value={campaign.id}>
+                        {campaign.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </>
         )}
 
         {/* Selected Campaign Details */}
         {selectedCampaign && (
-          <BlockStack gap="200">
-            <Text as="p" variant="bodySm" fontWeight="semibold">Campaign Details:</Text>
-            <InlineStack gap="200" wrap={false}>
+          <div className="space-y-2 p-3 bg-secondary/50 rounded-md">
+            <p className="text-xs font-semibold text-foreground">Campaign Details:</p>
+            <div className="flex items-center gap-2 flex-wrap">
               {getStatusBadge(selectedCampaign.status)}
-              <Text as="p" variant="bodySm" tone="subdued">
+              <span className="text-xs text-muted-foreground">
                 {selectedCampaign.objective}
-              </Text>
-            </InlineStack>
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm">
-                Daily Budget: <Text as="span" fontWeight="medium">{formatBudget(selectedCampaign.daily_budget)}</Text>
-              </Text>
+              </span>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-foreground">
+                Daily Budget: <span className="font-medium">{formatBudget(selectedCampaign.daily_budget)}</span>
+              </p>
               {selectedCampaign.lifetime_budget && (
-                <Text as="p" variant="bodySm">
-                  Lifetime Budget: <Text as="span" fontWeight="medium">{formatBudget(selectedCampaign.lifetime_budget)}</Text>
-                </Text>
+                <p className="text-xs text-foreground">
+                  Lifetime Budget: <span className="font-medium">{formatBudget(selectedCampaign.lifetime_budget)}</span>
+                </p>
               )}
-            </BlockStack>
-          </BlockStack>
+            </div>
+          </div>
         )}
-      </BlockStack>
-    </BlockStack>
+      </div>
+    </div>
   )
 }

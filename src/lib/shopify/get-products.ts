@@ -1,4 +1,5 @@
 import { GraphQLClient } from 'graphql-request'
+import { logger } from '@/lib/logger'
 
 // GraphQL response types
 interface ShopifyProductEdge {
@@ -97,14 +98,6 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     formattedQuery = `title:*${searchQuery.trim()}*`
   }
 
-  console.log('🔍 Shopify search query:', {
-    original: searchQuery,
-    formatted: formattedQuery,
-    shop: shop,
-    typeOfQuery: typeof searchQuery,
-    willFilter: !!searchQuery
-  })
-
   // Fetch products with optional search query
   const variables = {
     first: 100, // Fetch more products to ensure we get all matches
@@ -113,15 +106,6 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
 
   try {
     const response = await client.request<ShopifyProductsResponse>(query, variables)
-
-    console.log('🔍 Shopify API response:', {
-      productsFound: response.products?.edges?.length || 0,
-      hasNextPage: response.products?.pageInfo?.hasNextPage,
-      searchQuery: searchQuery || 'none',
-      formattedQuery: formattedQuery || 'none',
-      firstProduct: response.products?.edges?.[0]?.node?.title || 'none',
-      allTitles: response.products?.edges?.map((edge: ShopifyProductEdge) => edge.node.title) || []
-    })
 
   // Transform to simpler format
   let products = response.products.edges.map((edge: ShopifyProductEdge) => ({
@@ -158,15 +142,6 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
       )
     })
 
-    console.log('🔍 Client-side filtering:', {
-      originalCount: products.length,
-      filteredCount: filteredProducts.length,
-      searchTerm: searchLower,
-      searchWords: searchLower.split(/\s+/),
-      shopifyFiltered,
-      sampleTitles: products.slice(0, 3).map((p) => p.title)
-    })
-
     // Use filtered results
     products = filteredProducts
   }
@@ -176,7 +151,7 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     pageInfo: response.products.pageInfo
   }
   } catch (error) {
-    console.error('🔴 Shopify GraphQL Error:', error)
+    logger.error('🔴 Shopify GraphQL Error:', error as Error, { component: 'get-products' })
     throw error
   }
 }

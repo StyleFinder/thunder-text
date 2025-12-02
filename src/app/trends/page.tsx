@@ -1,16 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  Page,
-  Layout,
-  Card,
-  DataTable,
-  Badge,
-  Spinner,
-} from "@shopify/polaris";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Loader2 } from "lucide-react";
 import { TrendThermometer } from "../components/trends/TrendThermometer";
 import { ThemeSelector } from "../components/trends/ThemeSelector";
+import { logger } from '@/lib/logger'
 
 interface Theme {
   id: string;
@@ -60,7 +57,7 @@ export default function TrendsPage() {
         }
       }
     } catch (error) {
-      console.error("Failed to load themes:", error);
+      logger.error("Failed to load themes:", error as Error, { component: 'trends' });
     } finally {
       setLoading(false);
     }
@@ -76,59 +73,75 @@ export default function TrendsPage() {
         setSeries((prev) => ({ ...prev, [themeSlug]: data.series }));
       }
     } catch (error) {
-      console.error(`Failed to load signal for ${themeSlug}:`, error);
+      logger.error(`Failed to load signal for ${themeSlug}:`, error as Error, { component: 'trends' });
     }
   }
 
   const inSeasonThemes = themes.filter((t) => t.inSeason);
 
+  const getStatusVariant = (status: Signal["status"]): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+      case "Rising":
+        return "default";
+      case "Waning":
+        return "destructive";
+      default:
+        return "secondary";
+    }
+  };
+
   if (loading) {
     return (
-      <Page title="Seasonal Trends">
-        <div className="flex items-center justify-center h-64">
-          <Spinner size="large" />
+      <div className="w-full flex flex-col items-center" style={{ background: '#fafaf9', minHeight: '100vh', padding: '32px 16px' }}>
+        <div className="w-full" style={{ maxWidth: '1000px' }}>
+          <div className="flex items-center justify-center" style={{ minHeight: '256px' }}>
+            <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#0066cc' }} />
+          </div>
         </div>
-      </Page>
+      </div>
     );
   }
 
   if (inSeasonThemes.length === 0) {
     return (
-      <Page
-        title="Seasonal Trends"
-        subtitle="Track search interest and optimize merchandising timing"
-      >
-        <Layout>
-          <Layout.Section>
+      <div className="w-full flex flex-col items-center" style={{ background: '#fafaf9', minHeight: '100vh', padding: '32px 16px' }}>
+        <div className="w-full" style={{ maxWidth: '1000px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div>
+              <h1 style={{ fontSize: '32px', fontWeight: 700, color: '#003366', marginBottom: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Seasonal Trends</h1>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Track search interest and optimize merchandising timing</p>
+            </div>
             <ThemeSelector onThemeEnabled={() => loadThemes()} />
-          </Layout.Section>
-        </Layout>
-      </Page>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Page
-      title="Seasonal Trends"
-      subtitle="Track search interest and optimize merchandising timing"
-    >
-      <Layout>
-        {/* Trend Thermometers */}
-        <Layout.Section>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {inSeasonThemes.slice(0, 6).map((theme) => {
+    <div className="w-full flex flex-col items-center" style={{ background: '#fafaf9', minHeight: '100vh', padding: '32px 16px' }}>
+      <div className="w-full" style={{ maxWidth: '1000px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div>
+            <h1 style={{ fontSize: '32px', fontWeight: 700, color: '#003366', marginBottom: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Seasonal Trends</h1>
+            <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Track search interest and optimize merchandising timing</p>
+          </div>
+
+          {/* Trend Thermometers */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+            {inSeasonThemes.slice(0, 8).map((theme) => {
               const signal = signals[theme.slug];
               const themeSeries = series[theme.slug] || [];
 
               if (!signal) {
                 return (
-                  <Card key={theme.id}>
-                    <div className="p-4">
-                      <p className="text-sm text-gray-500">
+                  <div key={theme.id} style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
+                    <div style={{ padding: '24px' }}>
+                      <p style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                         {theme.name} - Loading...
                       </p>
                     </div>
-                  </Card>
+                  </div>
                 );
               }
 
@@ -145,47 +158,75 @@ export default function TrendsPage() {
               );
             })}
           </div>
-        </Layout.Section>
 
-        {/* All Themes Table */}
-        <Layout.Section>
-          <Card>
-            <DataTable
-              columnContentTypes={["text", "text", "text", "numeric", "text"]}
-              headings={["Theme", "Category", "Status", "Momentum", "Season"]}
-              rows={inSeasonThemes.map((theme, index) => {
-                const signal = signals[theme.slug];
-                return [
-                  theme.name,
-                  theme.category,
-                  signal ? (
-                    <Badge
-                      key={`status-${index}`}
-                      tone={
-                        signal.status === "Rising"
-                          ? "success"
-                          : signal.status === "Waning"
-                            ? "warning"
-                            : "info"
-                      }
-                    >
-                      {signal.status}
-                    </Badge>
-                  ) : (
-                    "-"
-                  ),
-                  signal
-                    ? `${signal.momentum_pct >= 0 ? "+" : ""}${signal.momentum_pct.toFixed(1)}%`
-                    : "-",
-                  <Badge key={`active-${index}`} tone="info">
-                    Active
-                  </Badge>,
-                ];
-              })}
-            />
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
+          {/* All Themes Table */}
+          <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#003366', marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>All Seasonal Themes</h3>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>View trends and momentum for all active seasonal themes</p>
+            </div>
+            <div style={{ padding: '24px' }}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead style={{ color: '#003366', fontWeight: 600, fontSize: '14px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Theme</TableHead>
+                    <TableHead style={{ color: '#003366', fontWeight: 600, fontSize: '14px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Category</TableHead>
+                    <TableHead style={{ color: '#003366', fontWeight: 600, fontSize: '14px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Status</TableHead>
+                    <TableHead style={{ color: '#003366', fontWeight: 600, fontSize: '14px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', textAlign: 'right' }}>Momentum</TableHead>
+                    <TableHead style={{ color: '#003366', fontWeight: 600, fontSize: '14px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Season</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {inSeasonThemes.map((theme) => {
+                    const signal = signals[theme.slug];
+                    return (
+                      <TableRow key={theme.id}>
+                        <TableCell style={{ fontWeight: 600, color: '#003366', fontSize: '14px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>{theme.name}</TableCell>
+                        <TableCell style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>{theme.category}</TableCell>
+                        <TableCell>
+                          {signal ? (
+                            <span style={{
+                              background: signal.status === 'Rising' ? '#0066cc' : signal.status === 'Waning' ? '#dc2626' : '#6b7280',
+                              color: '#ffffff',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              padding: '4px 12px',
+                              borderRadius: '4px',
+                              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+                            }}>
+                              {signal.status}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>-</span>
+                          )}
+                        </TableCell>
+                        <TableCell style={{ textAlign: 'right', fontSize: '14px', fontWeight: 600, color: '#003366', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+                          {signal
+                            ? `${signal.momentum_pct >= 0 ? "+" : ""}${signal.momentum_pct.toFixed(1)}%`
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <span style={{
+                            background: '#f3f4f6',
+                            color: '#374151',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            padding: '4px 12px',
+                            borderRadius: '4px',
+                            fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+                          }}>
+                            Active
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

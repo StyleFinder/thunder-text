@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   // Check if we're in a build environment without proper configuration
@@ -33,7 +34,11 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (shopError || !shopData) {
-      console.error('Shop lookup error:', shopError)
+      logger.error('Shop lookup error in GET', shopError as Error, {
+        component: 'categories-api',
+        operation: 'GET',
+        shop
+      })
       return NextResponse.json(
         { error: 'Shop not found. Please ensure the app is installed.' },
         { status: 404 }
@@ -48,7 +53,11 @@ export async function GET(request: NextRequest) {
       .order('sort_order, name')
 
     if (categoriesError) {
-      console.error('Categories fetch error:', categoriesError)
+      logger.error('Categories fetch error', categoriesError as Error, {
+        component: 'categories-api',
+        operation: 'GET',
+        storeId: shopData.id
+      })
       return NextResponse.json(
         { error: 'Failed to fetch categories' },
         { status: 500 }
@@ -61,7 +70,10 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Categories API error:', error)
+    logger.error('Categories API error', error as Error, {
+      component: 'categories-api',
+      operation: 'GET'
+    })
     return NextResponse.json(
       { error: 'Failed to fetch categories' },
       { status: 500 }
@@ -102,7 +114,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (shopError || !shopData) {
-      console.error('Shop lookup error:', shopError)
+      logger.error('Shop lookup error in POST', shopError as Error, {
+        component: 'categories-api',
+        operation: 'POST',
+        shop
+      })
       return NextResponse.json(
         { error: 'Shop not found. Please ensure the app is installed.' },
         { status: 404 }
@@ -153,7 +169,12 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (createError) {
-      console.error('Category creation error:', createError)
+      logger.error('Category creation error', createError as Error, {
+        component: 'categories-api',
+        operation: 'POST',
+        categoryName: name,
+        storeId: shopData.id
+      })
       return NextResponse.json(
         { error: 'Failed to create category' },
         { status: 500 }
@@ -166,7 +187,10 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Category creation API error:', error)
+    logger.error('Category creation API error', error as Error, {
+      component: 'categories-api',
+      operation: 'POST'
+    })
     return NextResponse.json(
       { error: 'Failed to create category' },
       { status: 500 }
@@ -207,7 +231,11 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (shopError || !shopData) {
-      console.error('Shop lookup error:', shopError)
+      logger.error('Shop lookup error in PUT', shopError as Error, {
+        component: 'categories-api',
+        operation: 'PUT',
+        shop
+      })
       return NextResponse.json(
         { error: 'Shop not found. Please ensure the app is installed.' },
         { status: 404 }
@@ -270,7 +298,12 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (updateError) {
-      console.error('Category update error:', updateError)
+      logger.error('Category update error', updateError as Error, {
+        component: 'categories-api',
+        operation: 'PUT',
+        categoryId: id,
+        storeId: shopData.id
+      })
       return NextResponse.json(
         { error: 'Failed to update category' },
         { status: 500 }
@@ -283,7 +316,10 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Category update API error:', error)
+    logger.error('Category update API error', error as Error, {
+      component: 'categories-api',
+      operation: 'PUT'
+    })
     return NextResponse.json(
       { error: 'Failed to update category' },
       { status: 500 }
@@ -324,7 +360,11 @@ export async function DELETE(request: NextRequest) {
       .single()
 
     if (shopError || !shopData) {
-      console.error('Shop lookup error:', shopError)
+      logger.error('Shop lookup error in DELETE', shopError as Error, {
+        component: 'categories-api',
+        operation: 'DELETE',
+        shop
+      })
       return NextResponse.json(
         { error: 'Shop not found. Please ensure the app is installed.' },
         { status: 404 }
@@ -364,7 +404,12 @@ export async function DELETE(request: NextRequest) {
       .eq('store_id', shopData.id)
 
     if (deleteError) {
-      console.error('Category deletion error:', deleteError)
+      logger.error('Category deletion error', deleteError as Error, {
+        component: 'categories-api',
+        operation: 'DELETE',
+        categoryId,
+        storeId: shopData.id
+      })
       return NextResponse.json(
         { error: 'Failed to delete category' },
         { status: 500 }
@@ -377,7 +422,10 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Category deletion API error:', error)
+    logger.error('Category deletion API error', error as Error, {
+      component: 'categories-api',
+      operation: 'DELETE'
+    })
     return NextResponse.json(
       { error: 'Failed to delete category' },
       { status: 500 }

@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { GeneratedContent, ContentType } from "@/types/content-center";
 import { useShopifyAuth } from "@/app/components/UnifiedShopifyAuth";
+import { logger } from '@/lib/logger'
 
 type SortField = "created_at" | "word_count" | "topic";
 type SortOrder = "asc" | "desc";
@@ -87,7 +88,7 @@ export default function LibraryPage() {
         setContent(data.data.content || []);
       }
     } catch (error) {
-      console.error("Error fetching content:", error);
+      logger.error("Error fetching content:", error as Error, { component: 'library' });
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +117,7 @@ export default function LibraryPage() {
 
       setContent(content.filter((c) => c.id !== id));
     } catch (error) {
-      console.error("Error deleting content:", error);
+      logger.error("Error deleting content:", error as Error, { component: 'library' });
       alert("Failed to delete content");
     }
   };
@@ -142,7 +143,7 @@ export default function LibraryPage() {
         ),
       );
     } catch (error) {
-      console.error("Error toggling save:", error);
+      logger.error("Error toggling save:", error as Error, { component: 'library' });
     }
   };
 
@@ -174,7 +175,7 @@ export default function LibraryPage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Error exporting:", error);
+      logger.error("Error exporting:", error as Error, { component: 'library' });
       alert("Failed to export content");
     }
   };
@@ -215,142 +216,194 @@ export default function LibraryPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Content Library</h1>
-        <p className="text-muted-foreground">
+      <div style={{ marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '32px', fontWeight: 700, color: '#003366', marginBottom: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Content Library</h1>
+        <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
           Browse and manage all your generated content
         </p>
       </div>
 
       {/* Filters and Search */}
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by topic or content..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            {/* Content Type Filter */}
-            <Select
-              value={selectedType}
-              onValueChange={(value) =>
-                setSelectedType(value as ContentType | "all")
-              }
-            >
-              <SelectTrigger className="w-full lg:w-[200px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="blog">Blog Posts</SelectItem>
-                <SelectItem value="ad">Ad Copy</SelectItem>
-                <SelectItem value="store_copy">Store Copy</SelectItem>
-                <SelectItem value="social_facebook">Facebook</SelectItem>
-                <SelectItem value="social_instagram">Instagram</SelectItem>
-                <SelectItem value="social_tiktok">TikTok</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Saved Only Toggle */}
-            <Button
-              variant={showSavedOnly ? "default" : "outline"}
-              onClick={() => setShowSavedOnly(!showSavedOnly)}
-              className="w-full lg:w-auto"
-            >
-              <Bookmark className="h-4 w-4 mr-2" />
-              Saved Only
-            </Button>
+      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', padding: '16px', marginBottom: '24px', maxWidth: '450px' }}>
+        <div className="flex flex-col lg:flex-row" style={{ gap: '12px' }}>
+          {/* Search */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <input
+              placeholder="Search by topic or content..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Content Type Filter */}
+          <Select
+            value={selectedType}
+            onValueChange={(value) =>
+              setSelectedType(value as ContentType | "all")
+            }
+          >
+            <SelectTrigger className="w-full lg:w-[200px]" style={{ border: '1px solid #e5e7eb', borderRadius: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="blog">Blog Posts</SelectItem>
+              <SelectItem value="ad">Ad Copy</SelectItem>
+              <SelectItem value="store_copy">Store Copy</SelectItem>
+              <SelectItem value="social_facebook">Facebook</SelectItem>
+              <SelectItem value="social_instagram">Instagram</SelectItem>
+              <SelectItem value="social_tiktok">TikTok</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Saved Only Toggle */}
+          <button
+            onClick={() => setShowSavedOnly(!showSavedOnly)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              background: showSavedOnly ? '#0066cc' : '#ffffff',
+              color: showSavedOnly ? '#ffffff' : '#003366',
+              border: showSavedOnly ? 'none' : '1px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: 600,
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <Bookmark className="h-4 w-4" />
+            Saved Only
+          </button>
+        </div>
+      </div>
 
       {/* Content Count and Sort */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-muted-foreground">
+      <div className="flex items-center justify-between" style={{ marginBottom: '16px' }}>
+        <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
           {filteredContent.length}{" "}
           {filteredContent.length === 1 ? "item" : "items"}
         </p>
         <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={() => toggleSort("created_at")}
-            className="gap-1"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '6px 12px',
+              background: 'transparent',
+              color: '#6b7280',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f9fafb'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent'
+            }}
           >
             Date
             {sortField === "created_at" && <ArrowUpDown className="h-3 w-3" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
+          </button>
+          <button
             onClick={() => toggleSort("word_count")}
-            className="gap-1"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '6px 12px',
+              background: 'transparent',
+              color: '#6b7280',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f9fafb'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent'
+            }}
           >
             Length
             {sortField === "word_count" && <ArrowUpDown className="h-3 w-3" />}
-          </Button>
+          </button>
         </div>
       </div>
 
       {/* Content List */}
       {isLoading ? (
-        <div className="flex justify-center py-20">
+        <div className="flex justify-center" style={{ padding: '80px 0' }}>
           <ContentLoader message="Loading your content..." />
         </div>
       ) : filteredContent.length === 0 ? (
-        <Card>
-          <CardContent className="py-20 text-center">
-            <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No content found</h3>
-            <p className="text-muted-foreground mb-6">
-              {searchQuery || selectedType !== "all" || showSavedOnly
-                ? "Try adjusting your filters or search query"
-                : "Start generating content to see it here"}
-            </p>
-            <Link href="/content-center/generate">
-              <Button>Generate Content</Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', padding: '80px 24px', textAlign: 'center' }}>
+          <FileText className="h-16 w-16 mx-auto" style={{ color: '#6b7280', marginBottom: '16px' }} />
+          <h3 style={{ fontSize: '20px', fontWeight: 600, color: '#003366', marginBottom: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>No content found</h3>
+          <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+            {searchQuery || selectedType !== "all" || showSavedOnly
+              ? "Try adjusting your filters or search query"
+              : "Start generating content to see it here"}
+          </p>
+          <Link href="/content-center/generate">
+            <button style={{ background: '#0066cc', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', cursor: 'pointer' }}>
+              Generate Content
+            </button>
+          </Link>
+        </div>
       ) : (
-        <div className="space-y-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {filteredContent.map((item) => (
-            <Card key={item.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
+            <div key={item.id} style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', transition: 'box-shadow 0.15s ease' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.12)' }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
+              <div style={{ padding: '16px' }}>
                 <div className="flex items-start gap-4">
                   {/* Icon */}
-                  <div className="bg-primary/10 p-3 rounded-lg shrink-0">
-                    <FileText className="h-6 w-6 text-primary" />
+                  <div style={{ background: '#f0f7ff', padding: '12px', borderRadius: '8px', flexShrink: 0 }}>
+                    <FileText className="h-6 w-6" style={{ color: '#0066cc' }} />
                   </div>
 
                   {/* Content Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-start justify-between gap-3" style={{ marginBottom: '8px' }}>
                       <div className="flex-1 min-w-0">
                         <Link href={`/content-center/library/${item.id}`}>
-                          <h3 className="font-semibold text-lg hover:text-primary transition-colors truncate">
+                          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#003366', marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', cursor: 'pointer', transition: 'color 0.15s ease' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#0066cc' }} onMouseLeave={(e) => { e.currentTarget.style.color = '#003366' }}>
                             {item.topic}
                           </h3>
                         </Link>
-                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                          <Badge variant="secondary">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span style={{ background: '#f3f4f6', color: '#6b7280', fontSize: '12px', padding: '2px 8px', borderRadius: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                             {CONTENT_TYPE_LABELS[item.content_type]}
-                          </Badge>
+                          </span>
                           {item.is_saved && (
-                            <Badge variant="default" className="gap-1">
+                            <span style={{ background: '#0066cc', color: '#ffffff', fontSize: '12px', padding: '2px 8px', borderRadius: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <Bookmark className="h-3 w-3" />
                               Saved
-                            </Badge>
+                            </span>
                           )}
                         </div>
                       </div>
@@ -358,9 +411,9 @@ export default function LibraryPage() {
                       {/* Actions */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
+                          <button style={{ background: 'transparent', border: 'none', padding: '6px', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.15s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f9fafb' }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>
+                            <MoreVertical className="h-4 w-4" style={{ color: '#6b7280' }} />
+                          </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <Link href={`/content-center/library/${item.id}`}>
@@ -424,7 +477,7 @@ export default function LibraryPage() {
                     </div>
 
                     {/* Preview Text */}
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                    <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '12px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {item.generated_text
                         .replace(/<[^>]*>/g, "")
                         .substring(0, 200)}
@@ -432,7 +485,7 @@ export default function LibraryPage() {
                     </p>
 
                     {/* Metadata */}
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-4" style={{ fontSize: '12px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                       <span className="flex items-center gap-1">
                         <FileText className="h-3 w-3" />
                         {item.word_count} words
@@ -444,8 +497,8 @@ export default function LibraryPage() {
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       )}

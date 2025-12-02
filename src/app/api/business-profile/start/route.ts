@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getUserId } from "@/lib/auth/content-center-auth";
+import { logger } from '@/lib/logger'
 import type {
   ApiResponse,
   StartInterviewResponse,
@@ -68,7 +69,7 @@ export async function POST(
         .single();
 
       if (createError) {
-        console.error("Error creating business profile:", createError);
+        logger.error("Error creating business profile:", createError as Error, { component: 'start' });
         return NextResponse.json(
           { success: false, error: "Failed to create business profile" },
           { status: 500 },
@@ -88,7 +89,7 @@ export async function POST(
       .single();
 
     if (promptError || !firstPrompt) {
-      console.error("Error fetching first prompt:", promptError);
+      logger.error("Error fetching first prompt:", promptError as Error, { component: 'start' });
       return NextResponse.json(
         { success: false, error: "Failed to fetch interview questions" },
         { status: 500 },
@@ -106,7 +107,7 @@ export async function POST(
       { status: 201 },
     );
   } catch (error) {
-    console.error("Error in POST /api/business-profile/start:", error);
+    logger.error("Error in POST /api/business-profile/start:", error as Error, { component: 'start' });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

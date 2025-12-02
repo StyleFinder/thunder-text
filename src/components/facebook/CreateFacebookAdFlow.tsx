@@ -12,19 +12,23 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
-  Modal,
-  BlockStack,
-  InlineStack,
-  Text,
-  TextField,
-  Banner,
-  Spinner,
-  Thumbnail,
-  Checkbox,
-  Card,
-} from "@shopify/polaris";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, AlertCircle, Image as ImageIcon } from "lucide-react";
 import AdPreview from "./AdPreview";
 import { authenticatedFetch } from "@/lib/shopify/api-client";
+import { logger } from '@/lib/logger'
 
 interface ShopifyProduct {
   id: string;
@@ -93,23 +97,15 @@ export default function CreateFacebookAdFlow({
         params.append("query", debouncedSearchQuery);
       }
 
-      console.log("🔍 Fetching products with params:", {
-        shop,
-        query: debouncedSearchQuery || "none",
-      });
-
       const response = await authenticatedFetch(
         `/api/shopify/products?${params}`,
       );
       const data = await response.json();
 
-      console.log("📦 Products API response:", data);
 
       if (data.success) {
         const productList = data.data?.products || data.products || [];
 
-        console.log("✅ Received products:", productList.length);
-        console.log("📦 Raw products from API:", productList);
 
         // Products are already in the correct format from getProducts()
         // Just ensure they match our interface
@@ -129,18 +125,17 @@ export default function CreateFacebookAdFlow({
           }),
         );
 
-        console.log("🔄 Transformed products:", transformedProducts.length);
         if (transformedProducts.length > 0) {
           console.log("📋 First product:", transformedProducts[0]);
         }
 
         setProducts(transformedProducts);
       } else {
-        console.error("❌ Products API error:", data.error);
+        logger.error("❌ Products API error:", data.error, undefined, { component: 'CreateFacebookAdFlow' });
         setError(data.error || "Failed to load products from Shopify");
       }
     } catch (err) {
-      console.error("❌ Error fetching products:", err);
+      logger.error("❌ Error fetching products:", err as Error, { component: 'CreateFacebookAdFlow' });
       setError(err instanceof Error ? err.message : "Failed to load products");
     } finally {
       setLoadingProducts(false);
@@ -186,12 +181,10 @@ export default function CreateFacebookAdFlow({
 
     // If the search is cleared, update immediately
     if (value === "") {
-      console.log("🔍 Clearing search query");
       setDebouncedSearchQuery("");
     } else {
       // Otherwise, debounce the search query (triggers server-side search)
       debounceTimeout.current = setTimeout(() => {
-        console.log("🔍 Setting debounced search query:", value);
         setDebouncedSearchQuery(value);
       }, 500); // 500ms delay
     }
@@ -253,7 +246,7 @@ export default function CreateFacebookAdFlow({
         setStep("select-images");
       }
     } catch (err) {
-      console.error("Error generating ad content:", err);
+      logger.error("Error generating ad content:", err as Error, { component: 'CreateFacebookAdFlow' });
       // Fallback: use product data directly
       setAdTitle(selectedProduct.title.substring(0, 125));
       setAdCopy(selectedProduct.description.substring(0, 125));
@@ -319,19 +312,18 @@ export default function CreateFacebookAdFlow({
       console.log("📤 Submit response:", submitData);
 
       if (!submitData.success) {
-        console.error("❌ Submit error:", submitData);
+        logger.error("❌ Submit error:", submitData as Error, { component: 'CreateFacebookAdFlow' });
         throw new Error(submitData.error || "Failed to submit ad to Facebook");
       }
 
       // Success!
-      console.log("✅ Ad created successfully:", submitData.data);
       alert(
         "Ad successfully created in Facebook Ads Manager (PAUSED status). You can review and activate it in Facebook.",
       );
       onClose();
       resetFlow();
     } catch (err) {
-      console.error("Error submitting ad:", err);
+      logger.error("Error submitting ad:", err as Error, { component: 'CreateFacebookAdFlow' });
       setError(err instanceof Error ? err.message : "Failed to create ad");
     } finally {
       setSubmitting(false);
@@ -340,237 +332,211 @@ export default function CreateFacebookAdFlow({
 
   // Render product selection step
   const renderProductSelection = () => (
-    <BlockStack gap="400">
-      <Text as="h3" variant="headingMd">
-        Select a Product
-      </Text>
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold text-ace-gray-900 mb-4">
+          Select a Product
+        </h3>
 
-      {/* Always show search box */}
-      <div
-        style={{ position: "relative", minHeight: "100px" }}
-        key="product-search-container"
-      >
-        <TextField
-          label="Search for a product"
-          value={searchQuery}
-          onChange={handleSearchChange}
-          placeholder="Type to search products..."
-          autoComplete="off"
-          onFocus={() => setShowProductList(true)}
-          autoFocus
-          key="product-search-field"
-        />
-
-        {/* Product search results dropdown */}
-        {showProductList && (products.length > 0 || loadingProducts) && (
-          <div
-            style={{
-              position: "absolute",
-              top: "100%",
-              left: 0,
-              right: 0,
-              minHeight: "400px",
-              maxHeight: "800px",
-              overflowY: "auto",
-              backgroundColor: "white",
-              border: "1px solid #ddd",
-              borderRadius: "8px",
-              marginTop: "4px",
-              zIndex: 10000,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            }}
-            onMouseDown={(e) => {
-              // Prevent the dropdown from stealing focus from the text field
-              e.preventDefault();
-            }}
-          >
-            {loadingProducts ? (
-              <div style={{ padding: "20px", textAlign: "center" }}>
-                <Spinner size="small" />
-              </div>
-            ) : (
-              products.map((product) => (
-                <div
-                  key={product.id}
-                  onClick={(e) => handleProductSelect(product, e)}
-                  style={{
-                    padding: "12px",
-                    cursor: "pointer",
-                    borderBottom: "1px solid #f0f0f0",
-                    display: "flex",
-                    gap: "12px",
-                    alignItems: "center",
-                    transition: "background-color 0.15s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f7f7f7";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "white";
-                  }}
-                >
-                  {product.images.length > 0 && (
-                    <Thumbnail
-                      source={product.images[0].url}
-                      alt={product.title}
-                      size="small"
-                    />
-                  )}
-                  <div style={{ flex: 1 }}>
-                    <Text as="p" variant="bodyMd" fontWeight="medium">
-                      {product.title}
-                    </Text>
-                    {product.images.length > 0 && (
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        {product.images.length} image(s)
-                      </Text>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
+        {/* Product search */}
+        <div className="relative min-h-[100px]">
+          <div className="space-y-2">
+            <Label htmlFor="product-search">Search for a product</Label>
+            <Input
+              id="product-search"
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Type to search products..."
+              autoComplete="off"
+              onFocus={() => setShowProductList(true)}
+              autoFocus
+              className="border-ace-gray-300 focus:border-ace-purple focus:ring-ace-purple"
+            />
           </div>
-        )}
 
-        {/* No results message */}
-        {showProductList &&
-          debouncedSearchQuery &&
-          products.length === 0 &&
-          !loadingProducts && (
+          {/* Product search results dropdown */}
+          {showProductList && (products.length > 0 || loadingProducts) && (
             <div
-              style={{
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                right: 0,
-                padding: "12px",
-                backgroundColor: "white",
-                border: "1px solid #ddd",
-                borderRadius: "8px",
-                marginTop: "4px",
-                zIndex: 10000,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              className="absolute top-full left-0 right-0 min-h-[400px] max-h-[800px] overflow-y-auto bg-white border border-ace-gray-200 rounded-lg mt-1 z-50 shadow-lg"
+              onMouseDown={(e) => {
+                // Prevent the dropdown from stealing focus from the text field
+                e.preventDefault();
               }}
             >
-              <Text as="p" tone="subdued" alignment="center">
-                No products found matching &ldquo;{debouncedSearchQuery}&rdquo;
-              </Text>
+              {loadingProducts ? (
+                <div className="p-5 text-center">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto text-ace-purple" />
+                </div>
+              ) : (
+                products.map((product) => (
+                  <div
+                    key={product.id}
+                    onClick={(e) => handleProductSelect(product, e)}
+                    className="p-3 cursor-pointer border-b border-ace-gray-100 flex gap-3 items-center hover:bg-ace-gray-50 transition-colors"
+                  >
+                    {product.images.length > 0 ? (
+                      <img
+                        src={product.images[0].url}
+                        alt={product.title}
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-ace-gray-100 rounded flex items-center justify-center">
+                        <ImageIcon className="h-6 w-6 text-ace-gray-400" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-ace-gray-900">
+                        {product.title}
+                      </p>
+                      {product.images.length > 0 && (
+                        <p className="text-xs text-ace-gray-500">
+                          {product.images.length} image(s)
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
+
+          {/* No results message */}
+          {showProductList &&
+            debouncedSearchQuery &&
+            products.length === 0 &&
+            !loadingProducts && (
+              <div className="absolute top-full left-0 right-0 p-3 bg-white border border-ace-gray-200 rounded-lg mt-1 z-50 shadow-lg">
+                <p className="text-sm text-ace-gray-500 text-center">
+                  No products found matching &ldquo;{debouncedSearchQuery}&rdquo;
+                </p>
+              </div>
+            )}
+        </div>
       </div>
 
       {/* Show loading state */}
       {loadingProducts && !showProductList && (
-        <InlineStack align="center" blockAlign="center" gap="200">
-          <Spinner size="small" />
-          <Text as="p" tone="subdued">
+        <div className="flex items-center justify-center gap-2 py-4">
+          <Loader2 className="h-4 w-4 animate-spin text-ace-purple" />
+          <p className="text-sm text-ace-gray-500">
             Loading products from Shopify...
-          </Text>
-        </InlineStack>
+          </p>
+        </div>
       )}
 
       {/* Show no results message */}
       {!loadingProducts && products.length === 0 && debouncedSearchQuery && (
-        <Banner tone="info">
-          No products found matching &ldquo;{debouncedSearchQuery}&rdquo;. Try a
-          different search term.
-        </Banner>
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            No products found matching &ldquo;{debouncedSearchQuery}&rdquo;. Try a
+            different search term.
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Selected product preview */}
       {selectedProduct && (
-        <Card>
-          <BlockStack gap="300">
-            <Text as="p" variant="bodyMd" fontWeight="semibold">
+        <Card className="border-ace-gray-200">
+          <CardContent className="p-4">
+            <p className="text-sm font-semibold text-ace-gray-900 mb-3">
               Selected Product:
-            </Text>
-            <InlineStack gap="300" blockAlign="center">
-              {selectedProduct.images.length > 0 && (
-                <Thumbnail
-                  source={selectedProduct.images[0].url}
+            </p>
+            <div className="flex gap-3 items-center">
+              {selectedProduct.images.length > 0 ? (
+                <img
+                  src={selectedProduct.images[0].url}
                   alt={selectedProduct.title}
-                  size="large"
+                  className="w-20 h-20 object-cover rounded"
                 />
+              ) : (
+                <div className="w-20 h-20 bg-ace-gray-100 rounded flex items-center justify-center">
+                  <ImageIcon className="h-8 w-8 text-ace-gray-400" />
+                </div>
               )}
-              <BlockStack gap="200">
-                <Text as="p" variant="bodyMd" fontWeight="medium">
+              <div>
+                <p className="text-sm font-medium text-ace-gray-900">
                   {selectedProduct.title}
-                </Text>
-                <Text as="p" variant="bodySm" tone="subdued">
+                </p>
+                <p className="text-xs text-ace-gray-500">
                   {selectedProduct.images.length} image(s) available
-                </Text>
-              </BlockStack>
-            </InlineStack>
-          </BlockStack>
+                </p>
+              </div>
+            </div>
+          </CardContent>
         </Card>
       )}
-    </BlockStack>
+    </div>
   );
 
   // Render content generation step
   const renderContentGeneration = () => (
-    <BlockStack gap="400" inlineAlign="center">
-      <Spinner size="large" />
-      <Text as="p" variant="bodyMd" alignment="center">
+    <div className="flex flex-col items-center justify-center py-12 space-y-4">
+      <Loader2 className="h-12 w-12 animate-spin text-ace-purple" />
+      <p className="text-base font-medium text-ace-gray-700 text-center">
         AI is generating ad content...
-      </Text>
-      <Text as="p" variant="bodySm" tone="subdued" alignment="center">
+      </p>
+      <p className="text-sm text-ace-gray-500 text-center">
         Creating optimized ad title and copy for Facebook
-      </Text>
-    </BlockStack>
+      </p>
+    </div>
   );
 
   // Render image selection step
   const renderImageSelection = () => (
-    <BlockStack gap="400">
-      <Text as="h3" variant="headingMd">
-        Select Images for Ad
-      </Text>
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold text-ace-gray-900">
+          Select Images for Ad
+        </h3>
+        <p className="text-sm text-ace-gray-500 mt-1">
+          Choose which images to include in your Facebook ad (1-10 images)
+        </p>
+      </div>
 
-      <Text as="p" variant="bodySm" tone="subdued">
-        Choose which images to include in your Facebook ad (1-10 images)
-      </Text>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-          gap: "1rem",
-        }}
-      >
+      <div className="grid grid-cols-3 gap-4">
         {selectedProduct?.images.map((image, index) => (
-          <Card key={index}>
-            <BlockStack gap="200">
-              <div style={{ position: "relative" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+          <Card key={index} className="border-ace-gray-200">
+            <CardContent className="p-3 space-y-2">
+              <div className="relative">
                 <img
                   src={image.url}
                   alt={image.altText || `Product image ${index + 1}`}
-                  style={{
-                    width: "100%",
-                    height: "150px",
-                    objectFit: "cover",
-                    borderRadius: "4px",
-                    opacity: selectedImageUrls.includes(image.url) ? 1 : 0.5,
-                  }}
+                  className={`w-full h-36 object-cover rounded transition-opacity ${
+                    selectedImageUrls.includes(image.url) ? 'opacity-100' : 'opacity-50'
+                  }`}
                 />
               </div>
-              <Checkbox
-                label={`Image ${index + 1}`}
-                checked={selectedImageUrls.includes(image.url)}
-                onChange={() => toggleImageSelection(image.url)}
-              />
-            </BlockStack>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={`image-${index}`}
+                  checked={selectedImageUrls.includes(image.url)}
+                  onCheckedChange={() => toggleImageSelection(image.url)}
+                  className="border-ace-gray-300 data-[state=checked]:bg-ace-purple data-[state=checked]:border-ace-purple"
+                />
+                <label
+                  htmlFor={`image-${index}`}
+                  className="text-sm font-medium text-ace-gray-700 cursor-pointer"
+                >
+                  Image {index + 1}
+                </label>
+              </div>
+            </CardContent>
           </Card>
         ))}
       </div>
 
-      <Banner tone={selectedImageUrls.length === 0 ? "warning" : "info"}>
-        {selectedImageUrls.length === 0
-          ? "Please select at least one image"
-          : `${selectedImageUrls.length} image(s) selected`}
-      </Banner>
-    </BlockStack>
+      <Alert className={selectedImageUrls.length === 0 ? "border-yellow-200 bg-yellow-50" : "border-ace-gray-200"}>
+        <AlertCircle className={`h-4 w-4 ${selectedImageUrls.length === 0 ? 'text-yellow-600' : 'text-ace-gray-600'}`} />
+        <AlertDescription className={selectedImageUrls.length === 0 ? "text-yellow-800" : "text-ace-gray-700"}>
+          {selectedImageUrls.length === 0
+            ? "Please select at least one image"
+            : `${selectedImageUrls.length} image(s) selected`}
+        </AlertDescription>
+      </Alert>
+    </div>
   );
 
   // Render preview step
@@ -592,84 +558,108 @@ export default function CreateFacebookAdFlow({
     switch (step) {
       case "select-product":
         return {
-          primaryAction: {
-            content: "Next: Generate Ad Content",
-            onAction: handleNextFromProductSelection,
-            disabled: !selectedProduct,
-          },
-          secondaryActions: [
-            {
-              content: "Cancel",
-              onAction: onClose,
-            },
-          ],
+          primaryAction: (
+            <Button
+              onClick={handleNextFromProductSelection}
+              disabled={!selectedProduct}
+              className="bg-ace-purple hover:bg-ace-purple-dark text-white"
+            >
+              Next: Generate Ad Content
+            </Button>
+          ),
+          secondaryActions: (
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="border-ace-gray-300 text-ace-gray-700 hover:bg-ace-gray-50"
+            >
+              Cancel
+            </Button>
+          ),
         };
 
       case "generate-content":
-        return {}; // No actions while generating
+        return { primaryAction: null, secondaryActions: null };
 
       case "select-images":
         return {
-          primaryAction: {
-            content: "Next: Preview & Submit",
-            onAction: () => setStep("preview"),
-            disabled: selectedImageUrls.length === 0,
-          },
-          secondaryActions: [
-            {
-              content: "Back to Product",
-              onAction: () => setStep("select-product"),
-            },
-          ],
+          primaryAction: (
+            <Button
+              onClick={() => setStep("preview")}
+              disabled={selectedImageUrls.length === 0}
+              className="bg-ace-purple hover:bg-ace-purple-dark text-white"
+            >
+              Next: Preview & Submit
+            </Button>
+          ),
+          secondaryActions: (
+            <Button
+              variant="outline"
+              onClick={() => setStep("select-product")}
+              className="border-ace-gray-300 text-ace-gray-700 hover:bg-ace-gray-50"
+            >
+              Back to Product
+            </Button>
+          ),
         };
 
       case "preview":
         return {
-          secondaryActions: [
-            {
-              content: "Back to Images",
-              onAction: () => setStep("select-images"),
-            },
-          ],
+          primaryAction: null,
+          secondaryActions: (
+            <Button
+              variant="outline"
+              onClick={() => setStep("select-images")}
+              className="border-ace-gray-300 text-ace-gray-700 hover:bg-ace-gray-50"
+            >
+              Back to Images
+            </Button>
+          ),
         };
 
       default:
-        return {};
+        return { primaryAction: null, secondaryActions: null };
     }
   };
 
   const modalActions = getModalActions();
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Create Facebook Ad"
-      size="large"
-      primaryAction={modalActions.primaryAction}
-      secondaryActions={modalActions.secondaryActions}
-      sectioned={false}
-    >
-      <div style={{ minHeight: "600px" }}>
-        <Modal.Section>
-          <BlockStack gap="400">
-            {error && (
-              <Banner tone="critical" title="Error">
-                {error}
-              </Banner>
-            )}
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold text-ace-purple">
+            Create Facebook Ad
+          </DialogTitle>
+          <DialogDescription className="text-sm text-ace-gray-500">
+            Campaign: {campaignName}
+          </DialogDescription>
+        </DialogHeader>
 
-            <Text as="p" variant="bodySm" tone="subdued">
-              Campaign: {campaignName}
-            </Text>
+        <div className="min-h-[600px]">
+          <div className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
             {step === "select-product" && renderProductSelection()}
             {step === "generate-content" && renderContentGeneration()}
             {step === "select-images" && renderImageSelection()}
             {step === "preview" && renderPreview()}
-          </BlockStack>
-        </Modal.Section>
-      </div>
-    </Modal>
+          </div>
+        </div>
+
+        {(modalActions.primaryAction || modalActions.secondaryActions) && (
+          <DialogFooter className="flex items-center justify-between">
+            {modalActions.secondaryActions}
+            {modalActions.primaryAction}
+          </DialogFooter>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

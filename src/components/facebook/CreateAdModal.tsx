@@ -9,15 +9,19 @@
 
 import { useState, useEffect } from 'react'
 import {
-  Modal,
-  BlockStack,
-  Text,
-  Banner,
-  Spinner,
-  InlineStack
-} from '@shopify/polaris'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Loader2, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react'
 import CampaignSelector from './CampaignSelector'
 import AdPreview from './AdPreview'
+import { logger } from '@/lib/logger'
 
 interface CreateAdModalProps {
   open: boolean
@@ -72,7 +76,7 @@ export default function CreateAdModal({
         }
       }
     } catch (err) {
-      console.error('Error fetching campaign name:', err)
+      logger.error('Error fetching campaign name:', err as Error, { component: 'CreateAdModal' })
     }
   }
 
@@ -141,7 +145,7 @@ export default function CreateAdModal({
 
       setStep('success')
     } catch (err) {
-      console.error('Error submitting ad:', err)
+      logger.error('Error submitting ad:', err as Error, { component: 'CreateAdModal' })
       setError(err instanceof Error ? err.message : 'Failed to create ad')
       setStep('preview')
     } finally {
@@ -163,69 +167,42 @@ export default function CreateAdModal({
     onClose()
   }
 
+  const handleViewInFacebook = () => {
+    window.open('https://business.facebook.com/adsmanager', '_blank')
+    handleClose()
+  }
+
   return (
-    <Modal
-      open={open}
-      onClose={handleClose}
-      title="Create Facebook Ad"
-      size="large"
-      primaryAction={
-        step === 'select'
-          ? {
-              content: 'Next: Preview Ad',
-              onAction: handleNextStep,
-              disabled: !selectedCampaignId
-            }
-          : step === 'preview'
-          ? undefined // AdPreview has its own submit button
-          : step === 'success'
-          ? {
-              content: 'View in Facebook Ads',
-              onAction: () => {
-                window.open('https://business.facebook.com/adsmanager', '_blank')
-                handleClose()
-              }
-            }
-          : undefined
-      }
-      secondaryActions={
-        step === 'preview'
-          ? [
-              {
-                content: 'Back to Campaign Selection',
-                onAction: () => setStep('select')
-              }
-            ]
-          : step === 'success'
-          ? [
-              {
-                content: 'Close',
-                onAction: handleClose
-              }
-            ]
-          : undefined
-      }
-    >
-      <Modal.Section>
-        <BlockStack gap="400">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold text-ace-purple">
+            Create Facebook Ad
+          </DialogTitle>
+          <DialogDescription className="text-ace-gray-500">
+            {step === 'select' && 'Select the ad account and campaign where you want to create this ad.'}
+            {step === 'preview' && 'Review and edit your ad before submitting to Facebook.'}
+            {step === 'submitting' && 'Creating your ad in Facebook...'}
+            {step === 'success' && 'Your ad has been created successfully!'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
           {error && (
-            <Banner tone="critical" title="Error creating ad">
-              <Text as="p">{error}</Text>
-            </Banner>
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error creating ad</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
           {step === 'select' && (
-            <BlockStack gap="400">
-              <Text as="p" variant="bodyMd">
-                Select the ad account and campaign where you want to create this ad.
-              </Text>
-              <CampaignSelector
-                shop={shop}
-                onSelect={handleCampaignSelect}
-                selectedAdAccountId={selectedAdAccountId}
-                selectedCampaignId={selectedCampaignId}
-              />
-            </BlockStack>
+            <CampaignSelector
+              shop={shop}
+              onSelect={handleCampaignSelect}
+              selectedAdAccountId={selectedAdAccountId}
+              selectedCampaignId={selectedCampaignId}
+            />
           )}
 
           {step === 'preview' && (
@@ -243,36 +220,88 @@ export default function CreateAdModal({
           )}
 
           {step === 'submitting' && (
-            <BlockStack gap="400" inlineAlign="center">
-              <Spinner size="large" />
-              <Text as="p" variant="bodyMd" alignment="center">
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <Loader2 className="h-12 w-12 animate-spin text-ace-purple" />
+              <p className="text-base font-medium text-ace-gray-700">
                 Creating your ad in Facebook...
-              </Text>
-              <Text as="p" variant="bodySm" tone="subdued" alignment="center">
+              </p>
+              <p className="text-sm text-ace-gray-500">
                 This may take a few moments
-              </Text>
-            </BlockStack>
+              </p>
+            </div>
           )}
 
           {step === 'success' && (
-            <BlockStack gap="400">
-              <Banner tone="success" title="Ad created successfully!">
-                <BlockStack gap="200">
-                  <Text as="p">
+            <div className="space-y-4">
+              <Alert className="bg-green-50 border-green-200">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertTitle className="text-green-800">Ad created successfully!</AlertTitle>
+                <AlertDescription className="text-green-700 space-y-2">
+                  <p>
                     Your ad has been created in Facebook Ads Manager in PAUSED status.
-                  </Text>
-                  <Text as="p">
+                  </p>
+                  <p>
                     You can review the ad details, adjust targeting and budget, and activate it when ready.
-                  </Text>
-                </BlockStack>
-              </Banner>
-              <Text as="p" variant="bodySm" tone="subdued">
+                  </p>
+                </AlertDescription>
+              </Alert>
+              <p className="text-sm text-ace-gray-500">
                 Campaign: {selectedCampaignName}
-              </Text>
-            </BlockStack>
+              </p>
+            </div>
           )}
-        </BlockStack>
-      </Modal.Section>
-    </Modal>
+        </div>
+
+        <DialogFooter className="flex items-center justify-between">
+          {step === 'select' && (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleClose}
+                className="border-ace-gray-300 text-ace-gray-700 hover:bg-ace-gray-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleNextStep}
+                disabled={!selectedCampaignId}
+                className="bg-ace-purple hover:bg-ace-purple-dark text-white"
+              >
+                Next: Preview Ad
+              </Button>
+            </>
+          )}
+
+          {step === 'preview' && (
+            <Button
+              variant="outline"
+              onClick={() => setStep('select')}
+              className="border-ace-gray-300 text-ace-gray-700 hover:bg-ace-gray-50"
+            >
+              Back to Campaign Selection
+            </Button>
+          )}
+
+          {step === 'success' && (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleClose}
+                className="border-ace-gray-300 text-ace-gray-700 hover:bg-ace-gray-50"
+              >
+                Close
+              </Button>
+              <Button
+                onClick={handleViewInFacebook}
+                className="bg-ace-purple hover:bg-ace-purple-dark text-white"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                View in Facebook Ads
+              </Button>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

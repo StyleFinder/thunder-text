@@ -1,14 +1,13 @@
 import { ShopifyAPI } from '../shopify'
 import { getAccessToken } from '../shopify-auth'
+import { logger } from '@/lib/logger'
 
 // Helper function to get Shopify access token for a shop
 async function getShopifyAccessToken(shop: string, sessionToken?: string): Promise<string> {
-  console.log('🔍 Getting Shopify access token for shop:', shop)
 
   // Use the official Shopify authentication library
   // This will either use database token or Token Exchange
   const accessToken = await getAccessToken(shop, sessionToken)
-  console.log('✅ Access token obtained')
   return accessToken
 }
 
@@ -16,16 +15,12 @@ async function getShopifyAccessToken(shop: string, sessionToken?: string): Promi
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function shopifyGraphQL<T = any>(query: string, variables: Record<string, unknown>, shop: string, sessionToken?: string): Promise<{ data: T }> {
   try {
-    console.log('🔍 Starting Shopify GraphQL query for shop:', shop)
-    console.log('📝 Query variables:', JSON.stringify(variables, null, 2))
 
     // Get the access token for this shop
     const accessToken = await getShopifyAccessToken(shop, sessionToken)
 
-    console.log('🔑 Access token status:', accessToken ? 'Available' : 'Missing')
 
     // Use the GraphQLClient for real API calls
-    console.log('✅ Using Shopify API with access token')
 
     // Ensure shop domain format is correct
     const shopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
@@ -42,11 +37,10 @@ export async function shopifyGraphQL<T = any>(query: string, variables: Record<s
     )
 
     const response = await client.request<T>(query, variables)
-    console.log('✅ Shopify GraphQL query successful')
     return { data: response }
 
   } catch (error) {
-    console.error('❌ Shopify GraphQL query failed:', error)
+    logger.error('❌ Shopify GraphQL query failed:', error as Error, { component: 'client' })
     throw error
   }
 }

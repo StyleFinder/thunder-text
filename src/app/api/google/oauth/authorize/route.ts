@@ -23,6 +23,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { createGoogleOAuthState } from '@/lib/security/oauth-validation'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
     // Verify environment variables
     const googleClientId = process.env.GOOGLE_ADS_CLIENT_ID
     if (!googleClientId) {
-      console.error('GOOGLE_ADS_CLIENT_ID not configured')
+      logger.error('GOOGLE_ADS_CLIENT_ID not configured', undefined, { component: 'authorize' })
       return NextResponse.json(
         { error: 'Google Ads integration not configured' },
         { status: 500 }
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (shopError || !shopData) {
-      console.error('Shop not found:', shop, shopError)
+      logger.error('Shop not found:', shop, shopError, undefined, { component: 'authorize' })
       return NextResponse.json(
         { error: 'Shop not found' },
         { status: 404 }
@@ -101,7 +102,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(googleAuthUrl.toString())
 
   } catch (error) {
-    console.error('Error in Google Ads OAuth authorize:', error)
+    logger.error('Error in Google Ads OAuth authorize:', error as Error, { component: 'authorize' })
 
     // Redirect to onboarding welcome page with error if shop is known
     if (shop) {

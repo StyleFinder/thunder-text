@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, Modal, Button, FormLayout, TextField, Select, RadioButton, Thumbnail, Badge, Banner, Layout, Icon, BlockStack } from '@shopify/polaris'
 import { CheckIcon } from '@shopify/polaris-icons'
 import { useSearchParams } from 'next/navigation'
+import { logger } from '@/lib/logger'
 
 interface ProductImage {
   id: string
@@ -171,7 +172,7 @@ export default function ProductDescriptionOverlay({
       setEditableContent(data.data.generatedContent)
       setCurrentStep(5)
     } catch (err) {
-      console.error('Generation error:', err)
+      logger.error('Generation error:', err as Error, { component: 'ProductDescriptionOverlay' })
       setError('Failed to generate content. Please try again.')
     } finally {
       setLoading(false)

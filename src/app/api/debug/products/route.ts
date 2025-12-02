@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createCorsHeaders } from '@/lib/middleware/cors'
+import { logger } from '@/lib/logger'
+import { guardDebugRoute } from '../_middleware-guard'
 
 export async function GET(request: NextRequest) {
+  const guardResponse = guardDebugRoute('/api/debug/products');
+  if (guardResponse) return guardResponse;
   const corsHeaders = createCorsHeaders(request)
 
   try {
@@ -12,22 +16,14 @@ export async function GET(request: NextRequest) {
     const authHeader = request.headers.get('authorization')
     const sessionToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined
 
-    console.log('🔍 Debug Products API:', {
-      shop,
-      hasSessionToken: !!sessionToken,
-      tokenLength: sessionToken?.length,
-      authHeader: authHeader?.substring(0, 50) + '...'
-    })
-
     // Try to get access token
     const { getAccessToken } = await import('@/lib/shopify-auth')
     let accessToken: string
 
     try {
       accessToken = await getAccessToken(shop, sessionToken)
-      console.log('✅ Got access token successfully')
     } catch (error) {
-      console.error('❌ Failed to get access token:', error)
+      logger.error('❌ Failed to get access token:', error as Error, { component: 'products' })
       return NextResponse.json({
         success: false,
         error: 'Authentication failed',
@@ -75,7 +71,6 @@ export async function GET(request: NextRequest) {
 
     console.log('📊 Checking shop and scopes...')
     const shopResponse = await client.request<ShopResponse>(shopQuery)
-    console.log('🏪 Shop info:', JSON.stringify(shopResponse, null, 2))
 
     // Now try to get products with different query approaches
     const query = `
@@ -110,7 +105,6 @@ export async function GET(request: NextRequest) {
 
     console.log('📊 Making GraphQL query to Shopify...')
     const response = await client.request<ProductsResponse>(query)
-    console.log('📦 GraphQL Response:', JSON.stringify(response, null, 2))
 
     const productCount = response.products?.edges?.length || 0
     const products = response.products?.edges?.map((edge: { node: ProductNode }) => ({
@@ -131,9 +125,8 @@ export async function GET(request: NextRequest) {
       })
       const restData = await restResponse.json()
       restProducts = restData.products || []
-      console.log('🔄 REST API products count:', restProducts.length)
     } catch (restError) {
-      console.error('REST API error:', restError)
+      logger.error('REST API error:', restError as Error, { component: 'products' })
     }
 
     return NextResponse.json({
@@ -164,7 +157,7 @@ export async function GET(request: NextRequest) {
     }, { headers: corsHeaders })
 
   } catch (error) {
-    console.error('❌ Debug endpoint error:', error)
+    logger.error('❌ Debug endpoint error:', error as Error, { component: 'products' })
     return NextResponse.json({
       success: false,
       error: 'Debug endpoint failed',

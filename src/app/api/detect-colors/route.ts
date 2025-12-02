@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
+import { logger } from '@/lib/logger'
 
 interface ColorDetectionRequest {
   images: Array<{
@@ -139,7 +140,7 @@ CRITICAL: Respond with ONLY raw JSON, no code blocks or formatting:
           `✅ Image ${i + 1} detected: ${detectedColor} → ${standardizedColor} (${confidencePercentage}%)`,
         );
       } catch (error) {
-        console.error(`❌ Error analyzing image ${i + 1}:`, error);
+        logger.error(`❌ Error analyzing image ${i + 1}:`, error as Error, { component: 'detect-colors' });
 
         // Add as unknown for failed detection
         colorResults.push({
@@ -166,7 +167,7 @@ CRITICAL: Respond with ONLY raw JSON, no code blocks or formatting:
       detectionResults: colorResults,
     });
   } catch (error) {
-    console.error("Color detection API error:", error);
+    logger.error("Color detection API error:", error as Error, { component: 'detect-colors' });
     return NextResponse.json(
       {
         error: "Failed to detect colors",

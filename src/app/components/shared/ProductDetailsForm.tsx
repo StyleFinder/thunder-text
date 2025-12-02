@@ -1,7 +1,9 @@
 'use client'
 
-import { Card, BlockStack, Select, TextField, Text } from '@shopify/polaris'
-import { type ProductCategory, PRODUCT_CATEGORIES } from '@/lib/prompts'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { type ProductCategory } from '@/lib/prompts'
 
 interface ProductDetailsFormProps {
   mode?: 'create' | 'enhance'
@@ -41,8 +43,6 @@ export function ProductDetailsForm({
   sizingOptions,
   selectedTemplate,
   setSelectedTemplate,
-  templatePreview,
-  setTemplatePreview,
   disabled = false,
   initialData
 }: ProductDetailsFormProps) {
@@ -61,47 +61,82 @@ export function ProductDetailsForm({
 
   return (
     <Card>
-      <BlockStack gap="400">
-        <Text as="h2" variant="headingMd">
+      <CardHeader>
+        <CardTitle className="text-lg">
           {mode === 'enhance' ? 'Enhancement Settings' : 'Product Details'}
-        </Text>
-
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
         {mode === 'create' && (
-          <Select
-            label="Parent Category"
-            options={parentCategoryOptions}
-            value={parentCategory}
-            onChange={setParentCategory}
-            disabled={disabled}
-          />
+          <div className="space-y-2">
+            <Label htmlFor="parent-category">Parent Category</Label>
+            <Select
+              value={parentCategory}
+              onValueChange={setParentCategory}
+              disabled={disabled}
+            >
+              <SelectTrigger id="parent-category">
+                <SelectValue placeholder="Select parent category" />
+              </SelectTrigger>
+              <SelectContent>
+                {parentCategoryOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
 
         {mode === 'create' && (
-          <Select
-            label="Available Sizing"
-            options={sizingOptions}
-            value={availableSizing}
-            onChange={setAvailableSizing}
-            helpText="Select the available size range for this product"
-            disabled={disabled}
-          />
+          <div className="space-y-2">
+            <Label htmlFor="available-sizing">Available Sizing</Label>
+            <Select
+              value={availableSizing}
+              onValueChange={setAvailableSizing}
+              disabled={disabled}
+            >
+              <SelectTrigger id="available-sizing">
+                <SelectValue placeholder="Select size range" />
+              </SelectTrigger>
+              <SelectContent>
+                {sizingOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              Select the available size range for this product
+            </p>
+          </div>
         )}
 
-        <Select
-          label="Product Category Template"
-          options={[
-            { label: "Women's Clothing", value: 'clothing' },
-            { label: "Jewelry & Accessories", value: 'jewelry' },
-            { label: "Home & Living", value: 'home' },
-            { label: "Beauty & Personal Care", value: 'beauty' },
-            { label: "Electronics", value: 'electronics' },
-            { label: "General Products", value: 'general' }
-          ]}
-          value={selectedTemplate}
-          onChange={(value) => setSelectedTemplate(value as ProductCategory)}
-          helpText="Choose a template that best matches your product type for optimized descriptions"
-        />
-      </BlockStack>
+        <div className="space-y-2">
+          <Label htmlFor="product-template">Product Category Template</Label>
+          <Select
+            value={selectedTemplate}
+            onValueChange={(value) => setSelectedTemplate(value as ProductCategory)}
+          >
+            <SelectTrigger id="product-template">
+              <SelectValue placeholder="Select template" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="clothing">Women's Clothing</SelectItem>
+              <SelectItem value="jewelry">Jewelry & Accessories</SelectItem>
+              <SelectItem value="home">Home & Living</SelectItem>
+              <SelectItem value="beauty">Beauty & Personal Care</SelectItem>
+              <SelectItem value="electronics">Electronics</SelectItem>
+              <SelectItem value="general">General Products</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground">
+            Choose a template that best matches your product type for optimized descriptions
+          </p>
+        </div>
+      </CardContent>
     </Card>
   )
 }

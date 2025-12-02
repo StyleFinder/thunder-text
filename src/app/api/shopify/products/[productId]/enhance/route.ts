@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { 
   fetchProductDataForEnhancement, 
   updateProductWithEnhancement,
@@ -27,7 +28,7 @@ export async function GET(
     // Validate productId - prevent invalid values
     const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test']
     if (invalidProductIds.includes(productId.toLowerCase())) {
-      console.error('❌ Invalid productId received in GET:', productId)
+      logger.error('❌ Invalid productId received in GET:', productId as Error, { component: 'enhance' })
       return NextResponse.json(
         {
           success: false,
@@ -38,7 +39,6 @@ export async function GET(
       )
     }
 
-    console.log('🔄 Fetching product data for enhancement:', { productId, shop })
 
     // Get session token from Authorization header if provided
     const authHeader = request.headers.get('authorization')
@@ -63,13 +63,6 @@ export async function GET(
       )
     }
 
-    console.log('✅ Product data fetched successfully for enhancement:', {
-      productId,
-      title: productData.title,
-      hasDescription: !!productData.originalDescription,
-      imageCount: productData.images?.length || 0
-    })
-
     return NextResponse.json({
       success: true,
       data: productData,
@@ -77,7 +70,7 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('❌ Error fetching product data for enhancement:', error)
+    logger.error('❌ Error fetching product data for enhancement:', error as Error, { component: 'enhance' })
     return NextResponse.json(
       { 
         success: false, 
@@ -110,7 +103,7 @@ export async function PUT(
     // Validate productId - prevent invalid values
     const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test']
     if (invalidProductIds.includes(productId.toLowerCase())) {
-      console.error('❌ Invalid productId received in PUT:', productId)
+      logger.error('❌ Invalid productId received in PUT:', productId as Error, { component: 'enhance' })
       return NextResponse.json(
         {
           success: false,
@@ -131,13 +124,6 @@ export async function PUT(
       )
     }
 
-    console.log('🔄 Updating product with enhanced description:', {
-      productId,
-      shop,
-      hasTitle: !!enhancedTitle,
-      descriptionLength: enhancedDescription.length
-    })
-
     // Update the product with enhanced content
     const updateResult = await updateProductWithEnhancement(productId, shop, {
       title: enhancedTitle,
@@ -154,12 +140,6 @@ export async function PUT(
       throw new Error(updateResult.error || 'Failed to update product')
     }
 
-    console.log('✅ Product enhanced successfully:', {
-      productId,
-      shop,
-      updatedAt: updateResult.updatedAt
-    })
-
     return NextResponse.json({
       success: true,
       data: {
@@ -172,7 +152,7 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('❌ Error updating product with enhancement:', error)
+    logger.error('❌ Error updating product with enhancement:', error as Error, { component: 'enhance' })
     return NextResponse.json(
       { 
         success: false, 
@@ -212,7 +192,6 @@ export async function PATCH(
       )
     }
 
-    console.log('🔄 Rolling back product enhancement:', { productId, shop })
 
     // Import rollback function (would be added to product-enhancement.ts)
     // const rollbackResult = await rollbackProductEnhancement(productId, shop)
@@ -225,7 +204,6 @@ export async function PATCH(
       rolledBackAt: new Date().toISOString()
     }
 
-    console.log('✅ Product enhancement rollback completed:', { productId, shop })
 
     return NextResponse.json({
       success: true,
@@ -234,7 +212,7 @@ export async function PATCH(
     })
 
   } catch (error) {
-    console.error('❌ Error rolling back product enhancement:', error)
+    logger.error('❌ Error rolling back product enhancement:', error as Error, { component: 'enhance' })
     return NextResponse.json(
       { 
         success: false, 

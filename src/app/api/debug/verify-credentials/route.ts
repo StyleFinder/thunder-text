@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
+import { guardDebugRoute } from '../_middleware-guard'
 
 export async function GET() {
+  const guardResponse = guardDebugRoute('/api/debug/verify-credentials');
+  if (guardResponse) return guardResponse;
   // This endpoint helps verify the format and configuration of Shopify credentials
 
   const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY

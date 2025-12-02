@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -46,39 +47,52 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
 
     if (integrationsError) {
-      console.error('Error fetching integrations:', integrationsError)
+      logger.error('Error fetching integrations:', integrationsError as Error, { component: 'connections' })
       return NextResponse.json(
         { error: 'Failed to fetch connections', connections: [] },
         { status: 500 }
       )
     }
 
-    // Transform integrations to connections format
-    const connections = (integrations || []).map(integration => ({
-      provider: integration.provider,
-      connected: integration.is_active === true,
-      status: integration.is_active ? 'active' : 'inactive',
-      metadata: {
-        shop_domain: shop,
-        provider_account_id: integration.provider_account_id,
-        provider_account_name: integration.provider_account_name,
-        ...integration.additional_metadata
-      }
-    }))
+    // Define all available providers
+    const allProviders = ['shopify', 'meta', 'google', 'tiktok', 'pinterest', 'klaviyo', 'mailchimp', 'lightspeed', 'commentsold']
 
-    // Add Shopify connection status (tracked in shops table, not integrations)
-    connections.push({
-      provider: 'shopify',
-      connected: shopData.is_active === true,
-      status: shopData.is_active ? 'active' : 'inactive',
-      metadata: {
-        shop_domain: shop
+    // Map integrations to include connection status for all providers
+    const connections = allProviders.map(provider => {
+      if (provider === 'shopify') {
+        // Shopify connection status from shops table
+        return {
+          provider: 'shopify',
+          connected: shopData.is_active === true,
+          lastConnected: null,
+          metadata: {
+            shop_domain: shop
+          }
+        }
+      }
+
+      // Map display provider name to database provider name
+      // 'meta' in UI maps to 'facebook' in database
+      const dbProviderName = provider === 'meta' ? 'facebook' : provider
+
+      // Check if integration exists for this provider
+      const integration = integrations?.find(i => i.provider === dbProviderName)
+
+      return {
+        provider,
+        connected: integration?.is_active === true || false,
+        lastConnected: integration?.updated_at || null,
+        metadata: integration ? {
+          provider_account_id: integration.provider_account_id,
+          provider_account_name: integration.provider_account_name,
+          ...integration.additional_metadata
+        } : null
       }
     })
 
-    return NextResponse.json({ connections })
+    return NextResponse.json({ success: true, connections })
   } catch (error) {
-    console.error('Error in connections API:', error)
+    logger.error('Error in connections API:', error as Error, { component: 'connections' })
     return NextResponse.json(
       { error: 'Internal server error', connections: [] },
       { status: 500 }

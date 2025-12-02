@@ -8,20 +8,29 @@
  */
 
 import { useState } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
-  Card,
-  BlockStack,
-  InlineStack,
-  Text,
-  Button,
-  TextField,
-  Thumbnail,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Select,
-  Badge,
-  Modal,
-  Banner
-} from '@shopify/polaris'
-import { ImageIcon } from '@shopify/polaris-icons'
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Image as ImageIcon, AlertCircle, Loader2 } from 'lucide-react'
 
 interface AdPreviewProps {
   title: string
@@ -71,201 +80,218 @@ export default function AdPreview({
   return (
     <>
       <Card>
-        <BlockStack gap="400">
-          <Text as="h3" variant="headingMd">Ad Preview</Text>
-
+        <CardHeader>
+          <CardTitle className="text-oxford-navy">Ad Preview</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
           {/* Character count warnings */}
           {!readOnly && (
-            <BlockStack gap="200">
+            <div className="space-y-2">
               {!titleValid && (
-                <Banner tone="warning">
-                  Title must be between 1-125 characters (currently: {titleLength})
-                </Banner>
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Title must be between 1-125 characters (currently: {titleLength})
+                  </AlertDescription>
+                </Alert>
               )}
               {!copyValid && (
-                <Banner tone="warning">
-                  Copy must be between 1-125 characters (currently: {copyLength})
-                </Banner>
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Copy must be between 1-125 characters (currently: {copyLength})
+                  </AlertDescription>
+                </Alert>
               )}
-            </BlockStack>
+            </div>
           )}
 
           {/* Editable fields */}
           {!readOnly && (
-            <BlockStack gap="300">
-              <TextField
-                label="Ad Title"
-                value={localTitle}
-                onChange={handleTitleChange}
-                maxLength={125}
-                showCharacterCount
-                autoComplete="off"
-                helpText="Maximum 125 characters"
-              />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="adTitle">Ad Title</Label>
+                <Input
+                  id="adTitle"
+                  value={localTitle}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  maxLength={125}
+                  autoComplete="off"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {titleLength}/125 characters
+                </p>
+              </div>
 
-              <TextField
-                label="Ad Copy"
-                value={localCopy}
-                onChange={handleCopyChange}
-                maxLength={125}
-                multiline={3}
-                showCharacterCount
-                autoComplete="off"
-                helpText="Maximum 125 characters"
-              />
+              <div className="space-y-2">
+                <Label htmlFor="adCopy">Ad Copy</Label>
+                <Textarea
+                  id="adCopy"
+                  value={localCopy}
+                  onChange={(e) => handleCopyChange(e.target.value)}
+                  maxLength={125}
+                  rows={3}
+                  autoComplete="off"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {copyLength}/125 characters
+                </p>
+              </div>
 
               {imageUrls.length > 1 && (
-                <Select
-                  label="Select Image"
-                  options={imageUrls.map((url, index) => ({
-                    label: `Image ${index + 1}`,
-                    value: String(index)
-                  }))}
-                  value={String(selectedImageIndex)}
-                  onChange={(value) => onImageSelect?.(parseInt(value))}
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="imageSelect">Select Image</Label>
+                  <Select
+                    value={String(selectedImageIndex)}
+                    onValueChange={(value) => onImageSelect?.(parseInt(value))}
+                  >
+                    <SelectTrigger id="imageSelect">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {imageUrls.map((url, index) => (
+                        <SelectItem key={index} value={String(index)}>
+                          Image {index + 1}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
-            </BlockStack>
+            </div>
           )}
 
           {/* Facebook-style preview */}
-          <Card>
-            <BlockStack gap="300">
-              <InlineStack gap="200" align="start" blockAlign="start">
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  backgroundColor: '#1877f2',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold'
-                }}>
+          <Card className="overflow-hidden">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <div className="w-10 h-10 rounded-full bg-smart-blue-500 flex items-center justify-center text-white font-bold flex-shrink-0">
                   FB
                 </div>
-                <BlockStack gap="100">
-                  <Text as="p" variant="bodyMd" fontWeight="semibold">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-oxford-navy">
                     Your Business Page
-                  </Text>
-                  <Text as="p" variant="bodySm" tone="subdued">
+                  </p>
+                  <p className="text-xs text-muted-foreground">
                     Sponsored
-                  </Text>
-                </BlockStack>
-              </InlineStack>
+                  </p>
+                </div>
+              </div>
 
-              <Text as="p" variant="bodyMd">
-                {localCopy || <Text as="span" tone="subdued">Your ad copy will appear here...</Text>}
-              </Text>
+              <p className="text-sm text-oxford-navy">
+                {localCopy || <span className="text-muted-foreground">Your ad copy will appear here...</span>}
+              </p>
 
               {selectedImage ? (
-                <div style={{
-                  width: '100%',
-                  maxWidth: '500px',
-                  border: '1px solid #e1e3e5',
-                  borderRadius: '8px',
-                  overflow: 'hidden'
-                }}>
+                <div className="w-full max-w-md border rounded-lg overflow-hidden">
                   <img
                     src={selectedImage}
                     alt="Ad preview"
-                    style={{
-                      width: '100%',
-                      height: 'auto',
-                      display: 'block'
-                    }}
+                    className="w-full h-auto block"
                   />
                 </div>
               ) : (
-                <div style={{
-                  width: '100%',
-                  maxWidth: '500px',
-                  height: '300px',
-                  border: '2px dashed #c9cccf',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#f6f6f7'
-                }}>
-                  <BlockStack gap="200" inlineAlign="center">
-                    <ImageIcon />
-                    <Text as="p" tone="subdued">No image selected</Text>
-                  </BlockStack>
+                <div className="w-full max-w-md h-64 border-2 border-dashed rounded-lg flex flex-col items-center justify-center bg-muted/50">
+                  <ImageIcon className="h-12 w-12 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">No image selected</p>
                 </div>
               )}
 
-              <BlockStack gap="100">
-                <Text as="p" variant="bodyMd" fontWeight="semibold">
-                  {localTitle || <Text as="span" tone="subdued">Your ad title will appear here...</Text>}
-                </Text>
-                <Text as="p" variant="bodySm" tone="subdued">
+              <div className="space-y-1">
+                <p className="font-semibold text-sm text-oxford-navy">
+                  {localTitle || <span className="text-muted-foreground">Your ad title will appear here...</span>}
+                </p>
+                <p className="text-xs text-muted-foreground">
                   yourbusiness.com
-                </Text>
-              </BlockStack>
+                </p>
+              </div>
 
-              <InlineStack gap="200">
-                <Button size="slim" disabled>Like</Button>
-                <Button size="slim" disabled>Comment</Button>
-                <Button size="slim" disabled>Share</Button>
-              </InlineStack>
-            </BlockStack>
+              <div className="flex gap-2 pt-2 border-t">
+                <Button variant="ghost" size="sm" disabled className="text-xs">
+                  Like
+                </Button>
+                <Button variant="ghost" size="sm" disabled className="text-xs">
+                  Comment
+                </Button>
+                <Button variant="ghost" size="sm" disabled className="text-xs">
+                  Share
+                </Button>
+              </div>
+            </CardContent>
           </Card>
 
           {/* Submit button */}
           {!readOnly && onSubmit && (
-            <InlineStack align="end">
+            <div className="flex justify-end">
               <Button
-                variant="primary"
                 onClick={() => setShowSubmitModal(true)}
-                loading={submitting}
                 disabled={!titleValid || !copyValid || !selectedImage || submitting}
+                className="bg-smart-blue-500 hover:bg-smart-blue-600"
               >
-                {submitting ? 'Submitting...' : 'Submit to Facebook'}
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit to Facebook'
+                )}
               </Button>
-            </InlineStack>
+            </div>
           )}
-        </BlockStack>
+        </CardContent>
       </Card>
 
       {/* Confirmation modal */}
-      <Modal
-        open={showSubmitModal}
-        onClose={() => setShowSubmitModal(false)}
-        title="Submit Ad to Facebook?"
-        primaryAction={{
-          content: 'Submit Ad',
-          onAction: () => {
-            setShowSubmitModal(false)
-            onSubmit?.()
-          },
-          loading: submitting
-        }}
-        secondaryActions={[
-          {
-            content: 'Cancel',
-            onAction: () => setShowSubmitModal(false)
-          }
-        ]}
-      >
-        <Modal.Section>
-          <BlockStack gap="300">
-            <Text as="p">
-              Your ad will be created in your selected Facebook campaign in <Badge tone="attention">PAUSED</Badge> status.
-            </Text>
-            <Text as="p">
+      <Dialog open={showSubmitModal} onOpenChange={setShowSubmitModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-oxford-navy">Submit Ad to Facebook?</DialogTitle>
+            <DialogDescription>
+              Review your ad details before submitting
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <p className="text-sm">
+              Your ad will be created in your selected Facebook campaign in{' '}
+              <Badge variant="secondary">PAUSED</Badge> status.
+            </p>
+            <p className="text-sm">
               You can review and activate the ad in Facebook Ads Manager.
-            </Text>
-            <BlockStack gap="200">
-              <Text as="p" variant="bodySm" fontWeight="semibold">Ad Details:</Text>
-              <Text as="p" variant="bodySm">Title: {localTitle}</Text>
-              <Text as="p" variant="bodySm">Copy: {localCopy}</Text>
-              <Text as="p" variant="bodySm">Images: {imageUrls.length}</Text>
-            </BlockStack>
-          </BlockStack>
-        </Modal.Section>
-      </Modal>
+            </p>
+            <div className="space-y-2 bg-muted p-4 rounded-lg">
+              <p className="text-sm font-semibold text-oxford-navy">Ad Details:</p>
+              <p className="text-sm"><span className="font-medium">Title:</span> {localTitle}</p>
+              <p className="text-sm"><span className="font-medium">Copy:</span> {localCopy}</p>
+              <p className="text-sm"><span className="font-medium">Images:</span> {imageUrls.length}</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSubmitModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setShowSubmitModal(false)
+                onSubmit?.()
+              }}
+              disabled={submitting}
+              className="bg-smart-blue-500 hover:bg-smart-blue-600"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                'Submit Ad'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

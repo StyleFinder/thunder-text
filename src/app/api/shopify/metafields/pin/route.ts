@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ShopifyOfficialAPI } from '@/lib/shopify-official'
 import { getShopToken } from '@/lib/shopify/token-manager'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,24 +17,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Shop parameter required' }, { status: 400 })
     }
 
-    // Get access token for shop
-    let accessToken: string
-    const authBypass = process.env.SHOPIFY_AUTH_BYPASS === 'true'
-
-    if (authBypass) {
-      console.log('Using auth bypass for metafield pinning')
-      accessToken = process.env.SHOPIFY_ACCESS_TOKEN || ''
-      if (!accessToken) {
-        return NextResponse.json({ error: 'Access token not configured' }, { status: 500 })
-      }
-    } else {
-      // Try to get stored token
-      const tokenResult = await getShopToken(shop)
-      if (!tokenResult.success || !tokenResult.accessToken) {
-        return NextResponse.json({ error: 'Unauthorized - no valid access token' }, { status: 401 })
-      }
-      accessToken = tokenResult.accessToken
+    // Get access token for shop from database (production-ready authentication)
+    const tokenResult = await getShopToken(shop)
+    if (!tokenResult.success || !tokenResult.accessToken) {
+      return NextResponse.json({
+        error: 'Unauthorized - no valid access token. Please authenticate via Shopify OAuth.'
+      }, { status: 401 })
     }
+    const accessToken = tokenResult.accessToken
 
     const shopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
 
@@ -50,7 +41,6 @@ export async function POST(request: NextRequest) {
       'thunder_text.meta_description'
     ]
 
-    console.log(`🔧 Auto-pinning important metafields for product ${productId}...`)
 
     // Note: Unfortunately, Shopify doesn't provide a direct API to "pin" metafields
     // Pinning is a UI-only feature that stores user preferences
@@ -104,7 +94,6 @@ export async function POST(request: NextRequest) {
       importantMetafields.includes(`${mf.namespace}.${mf.key}`)
     )
 
-    console.log(`✅ Found ${foundImportantMetafields.length}/${importantMetafields.length} important metafields`)
 
     return NextResponse.json({
       success: true,
@@ -126,7 +115,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Error in metafield pinning:', error)
+    logger.error('❌ Error in metafield pinning:', error as Error, { component: 'pin' })
     return NextResponse.json(
       { 
         success: false,

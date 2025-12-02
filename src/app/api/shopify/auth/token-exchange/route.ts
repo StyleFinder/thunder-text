@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeToken } from '@/lib/shopify/token-exchange'
 import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors'
+import { logger } from '@/lib/logger'
 
 // OPTIONS handler for CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -26,14 +27,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('🔄 Token exchange request for shop:', shop)
 
     // Get API credentials from environment
     const clientId = process.env.SHOPIFY_API_KEY
     const clientSecret = process.env.SHOPIFY_API_SECRET
 
     if (!clientId || !clientSecret) {
-      console.error('❌ Missing Shopify API credentials in environment')
+      logger.error('❌ Missing Shopify API credentials in environment', undefined, { component: 'token-exchange' })
       return NextResponse.json(
         {
           success: false,
@@ -52,7 +52,6 @@ export async function POST(request: NextRequest) {
       requestedTokenType: 'offline' // Offline for persistent access
     })
 
-    console.log('✅ Token exchange successful for shop:', shop)
 
     // Return success - the access token is already saved in the database
     return NextResponse.json({
@@ -63,7 +62,7 @@ export async function POST(request: NextRequest) {
     }, { headers: corsHeaders })
 
   } catch (error) {
-    console.error('❌ Token exchange error:', error)
+    logger.error('❌ Token exchange error:', error as Error, { component: 'token-exchange' })
 
     // Determine appropriate error response
     let statusCode = 500

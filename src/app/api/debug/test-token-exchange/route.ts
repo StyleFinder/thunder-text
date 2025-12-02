@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardDebugRoute } from '../_middleware-guard'
 
 export async function GET(request: NextRequest) {
+  const guardResponse = guardDebugRoute('/api/debug/test-token-exchange');
+  if (guardResponse) return guardResponse;
   // This endpoint will test Token Exchange with a mock session token
   // to identify what the actual error is
 

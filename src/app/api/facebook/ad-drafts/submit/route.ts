@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { FacebookAPIError } from '@/lib/services/facebook-api'
 import { decryptToken } from '@/lib/services/encryption'
+import { logger } from '@/lib/logger'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
@@ -33,7 +34,11 @@ async function getAccessTokenAndPageId(shopId: string): Promise<{
     .single()
 
   if (error || !integration) {
-    console.error('Facebook integration not found for shop:', shopId, error?.message)
+    logger.error('Facebook integration not found for shop', error || new Error('Integration not found'), {
+      component: 'facebook-ad-drafts-submit',
+      operation: 'getAccessTokenAndPageId',
+      shopId
+    })
     throw new FacebookAPIError('Facebook account not connected', 404, 'NOT_CONNECTED')
   }
 
@@ -86,10 +91,12 @@ async function uploadAdImage(
   const data = await response.json()
 
   if (!response.ok || data.error) {
-    console.error('❌ FACEBOOK API ERROR - Image Upload:', {
+    logger.error('Facebook API error - Image Upload', new Error(data.error?.message || 'Image upload failed'), {
+      component: 'facebook-ad-drafts-submit',
+      operation: 'uploadAdImage',
       status: response.status,
-      error: data.error,
-      fullResponse: data,
+      errorCode: data.error?.code,
+      errorType: data.error?.type,
       imageUrl,
       adAccountId
     })
@@ -144,10 +151,12 @@ async function createAdCreative(
   const data = await response.json()
 
   if (!response.ok || data.error) {
-    console.error('❌ FACEBOOK API ERROR - Ad Creative:', {
+    logger.error('Facebook API error - Ad Creative', new Error(data.error?.message || 'Ad creative creation failed'), {
+      component: 'facebook-ad-drafts-submit',
+      operation: 'createAdCreative',
       status: response.status,
-      error: data.error,
-      fullResponse: data,
+      errorCode: data.error?.code,
+      errorType: data.error?.type,
       adAccountId,
       pageId,
       title,
@@ -222,7 +231,15 @@ async function getOrCreateAdSet(
   const adSetResult = await adSetResponse.json()
 
   if (!adSetResponse.ok || adSetResult.error) {
-    console.error('Failed to create ad set:', adSetResult.error)
+    logger.error('Failed to create ad set', new Error(adSetResult.error?.message || 'Ad set creation failed'), {
+      component: 'facebook-ad-drafts-submit',
+      operation: 'getOrCreateAdSet',
+      status: adSetResponse.status,
+      errorCode: adSetResult.error?.code,
+      errorType: adSetResult.error?.type,
+      campaignId,
+      adAccountId
+    })
     throw new FacebookAPIError(
       adSetResult.error?.message || 'Failed to create ad set',
       adSetResponse.status,
@@ -269,10 +286,12 @@ async function createAd(
   const adResult = await adResponse.json()
 
   if (!adResponse.ok || adResult.error) {
-    console.error('❌ FACEBOOK API ERROR - Ad Creation:', {
+    logger.error('Facebook API error - Ad Creation', new Error(adResult.error?.message || 'Ad creation failed'), {
+      component: 'facebook-ad-drafts-submit',
+      operation: 'createAd',
       status: adResponse.status,
-      error: adResult.error,
-      fullResponse: adResult,
+      errorCode: adResult.error?.code,
+      errorType: adResult.error?.type,
       adAccountId,
       adSetId,
       creativeId,
@@ -312,7 +331,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (shopError || !shopData) {
-      console.error('Shop not found for ad submission:', shop)
+      logger.error('Shop not found for ad submission', shopError || new Error('Shop not found'), {
+        component: 'facebook-ad-drafts-submit',
+        operation: 'POST',
+        shop
+      })
       return NextResponse.json(
         { success: false, error: 'Shop not found' },
         { status: 404 }
@@ -416,7 +439,12 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (updateError) {
-        console.error('Error updating draft after submission:', updateError)
+        logger.error('Error updating draft after submission', new Error(updateError.message), {
+          component: 'facebook-ad-drafts-submit',
+          operation: 'POST-updateDraft',
+          draftId: draft_id,
+          shop
+        })
       }
 
       return NextResponse.json({
@@ -449,7 +477,10 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Error in POST /api/facebook/ad-drafts/submit:', error)
+    logger.error('Error in POST /api/facebook/ad-drafts/submit', error as Error, {
+      component: 'facebook-ad-drafts-submit',
+      operation: 'POST'
+    })
 
     if (error instanceof FacebookAPIError) {
       return NextResponse.json(

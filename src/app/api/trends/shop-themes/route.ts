@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/trends/shop-themes
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error("Error enabling theme:", insertError);
+      logger.error("Error enabling theme:", insertError as Error, { component: 'shop-themes' });
       return NextResponse.json(
         { success: false, error: "Failed to enable theme" },
         { status: 500 },
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ shopThemeId: shopTheme.id }),
-    }).catch((err) => console.error("Backfill trigger failed:", err));
+    }).catch((err) => logger.error("Backfill trigger failed:", err as Error, { component: 'shop-themes' }));
 
     return NextResponse.json({
       success: true,
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
       shopTheme,
     });
   } catch (error) {
-    console.error("Unexpected error in POST /api/trends/shop-themes:", error);
+    logger.error("Unexpected error in POST /api/trends/shop-themes:", error as Error, { component: 'shop-themes' });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },
@@ -174,7 +175,7 @@ export async function DELETE(request: NextRequest) {
       .eq("shop_id", shopId); // RLS safety
 
     if (updateError) {
-      console.error("Error disabling theme:", updateError);
+      logger.error("Error disabling theme:", updateError as Error, { component: 'shop-themes' });
       return NextResponse.json(
         { success: false, error: "Failed to disable theme" },
         { status: 500 },
@@ -186,7 +187,7 @@ export async function DELETE(request: NextRequest) {
       message: "Theme disabled successfully",
     });
   } catch (error) {
-    console.error("Unexpected error in DELETE /api/trends/shop-themes:", error);
+    logger.error("Unexpected error in DELETE /api/trends/shop-themes:", error as Error, { component: 'shop-themes' });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

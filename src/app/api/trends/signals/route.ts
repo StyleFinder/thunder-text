@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { logger } from '@/lib/logger'
 
 /**
  * GET /api/trends/signals?themeSlug=game-day
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     if (signalError) {
-      console.error("Error fetching signal:", signalError);
+      logger.error("Error fetching signal:", signalError as Error, { component: 'signals' });
     }
 
     // 3. Get trend series (last 12 weeks)
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
       .limit(1);
 
     if (seriesError) {
-      console.error("Error fetching series:", seriesError);
+      logger.error("Error fetching series:", seriesError as Error, { component: 'signals' });
     }
 
     const series = seriesRecords?.[0]?.points || [];
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     if (profileError) {
-      console.error("Error fetching profile:", profileError);
+      logger.error("Error fetching profile:", profileError as Error, { component: 'signals' });
     }
 
     return NextResponse.json({
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
       seasonalProfile: profile?.week_1_to_52 || null,
     });
   } catch (error) {
-    console.error("Unexpected error in GET /api/trends/signals:", error);
+    logger.error("Unexpected error in GET /api/trends/signals:", error as Error, { component: 'signals' });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

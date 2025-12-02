@@ -50,17 +50,6 @@ function EnhanceProductContent() {
   const productId = searchParams?.get('productId')
   const source = searchParams?.get('source')
 
-  console.log('🔍 Debug params:', {
-    shop,
-    productId,
-    source,
-    isEmbedded,
-    isAuthenticated,
-    authLoading,
-    authError,
-    windowLocation: typeof window !== 'undefined' ? window.location.href : 'SSR'
-  })
-
   // Workflow state management
   const [workflow, setWorkflow] = useState<EnhancementWorkflowState>({
     currentStep: 'loading',
@@ -82,7 +71,6 @@ function EnhanceProductContent() {
 
   // Reset loading state when productId changes
   useEffect(() => {
-    console.log('🔄 ProductId changed, resetting load state:', productId)
     setHasAttemptedLoad(false)
     setIsLoading(false)
     // Reset workflow state when productId changes
@@ -121,7 +109,6 @@ function EnhanceProductContent() {
       // If no productId, we'll show product selection instead of loading
       // This check comes BEFORE shop validation to ensure we show selector UI
       if (!productId) {
-        console.log('🎯 No productId provided, will show ProductSelector')
         setWorkflow(prev => ({
           ...prev,
           currentStep: 'loading', // Will be handled by product selector rendering
@@ -160,7 +147,6 @@ function EnhanceProductContent() {
       setHasAttemptedLoad(true)
 
       try {
-        console.log('🔄 Loading product data for enhancement:', { productId, shop, hasToken: !!sessionToken })
 
         const data = await fetchProductDataForEnhancement(productId, shop, sessionToken, authenticatedFetch)
 
@@ -172,10 +158,6 @@ function EnhanceProductContent() {
             progress: 20,
             error: null
           }))
-          console.log('✅ Product data loaded successfully for enhancement:', {
-            id: data.id,
-            title: data.title
-          })
         } else {
           console.error('❌ Invalid product data structure:', data)
           throw new Error('No valid product data returned')
@@ -290,7 +272,6 @@ function EnhanceProductContent() {
         progress: 80
       }))
 
-      console.log('✅ Enhanced description generated successfully')
 
     } catch (err) {
       console.error('❌ Error generating enhanced description:', err)
@@ -320,7 +301,6 @@ function EnhanceProductContent() {
         throw new Error(`Invalid product ID: "${productId}"`)
       }
 
-      console.log('📝 Applying enhanced description to Shopify...')
 
       const response = await authenticatedFetch(`/api/shopify/products/${productId}/enhance?shop=${shop}`, {
         method: 'PUT',
@@ -342,7 +322,6 @@ function EnhanceProductContent() {
         progress: 100
       }))
 
-      console.log('✅ Enhanced description applied successfully')
 
     } catch (err) {
       console.error('❌ Error applying enhanced description:', err)

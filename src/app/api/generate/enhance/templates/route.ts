@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 // GET /api/generate/enhance/templates
 // Get available templates for enhancement
@@ -7,7 +8,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const storeId = searchParams.get('store_id')
 
-    console.log('🔄 Fetching enhancement templates for store:', storeId)
 
     // TODO: This will integrate with existing template system
     // const templates = await getEnhancementTemplates(storeId)
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Error fetching enhancement templates:', error)
+    logger.error('❌ Error fetching enhancement templates:', error as Error, { component: 'templates' })
     return NextResponse.json(
       { 
         success: false, 

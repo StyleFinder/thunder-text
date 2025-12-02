@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { getCombinedPrompt, type ProductCategory } from "./prompts";
+import { logger } from '@/lib/logger'
 
 // Master OpenAI client with centralized API key
 const openai = new OpenAI({
@@ -138,7 +139,7 @@ export class AIDescriptionGenerator {
         },
       };
     } catch (error) {
-      console.error("AI generation error:", error);
+      logger.error("AI generation error:", error as Error, { component: 'openai' });
       throw new Error(
         `Failed to generate product description: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
@@ -158,22 +159,13 @@ export class AIDescriptionGenerator {
     const category = (request.category || "general") as ProductCategory;
     let customPrompts = null;
 
-    console.log("🎯 AI Generation - Building prompt for:", {
-      storeId: request.storeId,
-      category,
-    });
-
     try {
       customPrompts = await getCombinedPrompt(request.storeId, category);
-      console.log("✅ Custom prompts loaded:", {
-        hasSystemPrompt: !!customPrompts?.system_prompt,
-        hasCategoryTemplate: !!customPrompts?.category_template,
-        hasCombo: !!customPrompts?.combined,
-      });
     } catch (error) {
-      console.error(
-        "❌ Failed to load custom prompts, falling back to default:",
-        error,
+      logger.error(
+        "❌ Failed to load custom prompts, falling back to default",
+        error as Error,
+        { component: 'openai' }
       );
     }
 
@@ -246,7 +238,7 @@ CRITICAL: The "description" field must strictly follow the custom prompt guideli
         };
       }
     } catch (error) {
-      console.error("Failed to parse JSON response:", error);
+      logger.error("Failed to parse JSON response:", error as Error, { component: 'openai' });
     }
 
     // Fallback parsing if JSON extraction fails
@@ -306,29 +298,18 @@ CRITICAL: The "description" field must strictly follow the custom prompt guideli
       const category = (request.template || "general") as ProductCategory;
       let customPrompts = null;
 
-      console.log("🎯 AI Enhancement - Building custom prompt for:", {
-        storeId: request.storeId,
-        category,
-      });
-
       try {
         customPrompts = await getCombinedPrompt(request.storeId, category);
-        console.log("✅ Custom prompts loaded for enhancement:", {
-          hasSystemPrompt: !!customPrompts?.system_prompt,
-          hasCategoryTemplate: !!customPrompts?.category_template,
-          hasCombo: !!customPrompts?.combined,
-        });
       } catch (error) {
-        console.error(
-          "❌ Failed to load custom prompts for enhancement, falling back to default:",
-          error,
+        logger.error(
+          "❌ Failed to load custom prompts for enhancement, falling back to default",
+          error as Error,
+          { component: 'openai' }
         );
       }
 
       // Use the same detailed template instructions as create workflow
-      const templateInstructions =
-        customPrompts?.combined ||
-        `
+      const templateInstructions = customPrompts?.combined || `
 You are an expert e-commerce copywriter. Create compelling product descriptions that convert browsers into buyers.
 
 CORE PRINCIPLES:
@@ -362,7 +343,7 @@ REQUIRED SECTIONS:
       }
       if (request.enhancementOptions.enhanceDescription) {
         outputFields.push(
-          '"description": "Complete detailed product description with ALL template sections (Product Details, Perfect For, Styling Tips, Materials & Details, FAQ, Care and Sizing, Why You\'ll Love It) - 200-400 words using HTML formatting"',
+          '"description": "Complete detailed product description with ALL template sections (Product Details, Perfect For, Styling Tips, Materials & Details, FAQ, Care and Sizing, Why You will Love It) - 200-400 words using HTML formatting"'
         );
       }
       if (request.enhancementOptions.generateSEO) {
@@ -468,7 +449,7 @@ More plain text here describing what it's perfect for.`;
           parsed = JSON.parse(content);
         }
       } catch (e) {
-        console.error("Failed to parse enhanced content:", e);
+        logger.error("Failed to parse enhanced content:", e as Error, { component: 'openai' });
         // Fallback structure
         parsed = {
           description: content,
@@ -488,7 +469,7 @@ More plain text here describing what it's perfect for.`;
         },
       };
     } catch (error) {
-      console.error("AI enhancement error:", error);
+      logger.error("AI enhancement error:", error as Error, { component: 'openai' });
       throw new Error(
         `Failed to enhance product description: ${error instanceof Error ? error.message : "Unknown error"}`,
       );

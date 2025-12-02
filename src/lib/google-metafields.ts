@@ -202,7 +202,6 @@ function inferGender(category: string, productType?: string, description?: strin
     (keywords || []).join(' ')
   ].join(' ').toLowerCase()
   
-  console.log('🔍 Gender detection analyzing:', allText.substring(0, 200) + '...')
   
   // Female indicators (more comprehensive)
   const femaleKeywords = [
@@ -228,26 +227,22 @@ function inferGender(category: string, productType?: string, description?: strin
   // Check for female indicators
   const femaleMatches = femaleKeywords.filter(keyword => allText.includes(keyword))
   if (femaleMatches.length > 0) {
-    console.log('✅ Female detected from keywords:', femaleMatches)
     return 'female'
   }
   
   // Check for male indicators
   const maleMatches = maleKeywords.filter(keyword => allText.includes(keyword))
   if (maleMatches.length > 0) {
-    console.log('✅ Male detected from keywords:', maleMatches)
     return 'male'
   }
   
   // Check for unisex indicators
   const unisexMatches = unisexKeywords.filter(keyword => allText.includes(keyword))
   if (unisexMatches.length > 0) {
-    console.log('✅ Unisex detected from keywords:', unisexMatches)
     return 'unisex'
   }
   
   // Default to unisex for ambiguous items
-  console.log('⚠️ No gender indicators found, defaulting to unisex')
   return 'unisex'
 }
 
@@ -277,7 +272,6 @@ function inferMaterial(description?: string): string | null {
   if (!description) return null
   
   const text = description.toLowerCase()
-  console.log('🧵 Inferring material from text:', text.substring(0, 100) + '...')
   
   // Comprehensive list of materials including blends and common fabrics
   const materials = [
@@ -305,7 +299,6 @@ function inferMaterial(description?: string): string | null {
   
   for (const material of sortedMaterials) {
     if (text.includes(material)) {
-      console.log('✅ Material detected:', material)
       return material.charAt(0).toUpperCase() + material.slice(1)
     }
   }
@@ -314,11 +307,9 @@ function inferMaterial(description?: string): string | null {
   const fabricMatch = text.match(/(\d+%?\s*(?:cotton|polyester|wool|silk|linen|spandex|elastane|nylon|acrylic|rayon|viscose|modal|bamboo|hemp))/i)
   if (fabricMatch) {
     const fabric = fabricMatch[1].replace(/^\d+%?\s*/, '') // Remove percentage
-    console.log('✅ Material detected from percentage:', fabric)
     return fabric.charAt(0).toUpperCase() + fabric.slice(1)
   }
   
-  console.log('⚠️ No material detected in description')
   return null
 }
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +23,6 @@ export async function POST(request: NextRequest) {
       undefined // No existing category
     )
 
-    console.log('🎯 Category suggestion:', inference.category, 'confidence:', inference.confidence.toFixed(2))
 
     return NextResponse.json({
       success: true,
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Error suggesting category:', error)
+    logger.error('❌ Error suggesting category:', error as Error, { component: 'suggest' })
     return NextResponse.json(
       { 
         error: 'Failed to suggest category',

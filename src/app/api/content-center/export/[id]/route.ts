@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserId } from '@/lib/auth/content-center-auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 
 type ExportFormat = 'txt' | 'html' | 'md'
 
@@ -63,7 +64,7 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('Error in GET /api/content-center/export:', error)
+    logger.error('Error in GET /api/content-center/export:', error as Error, { component: '[id]' })
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

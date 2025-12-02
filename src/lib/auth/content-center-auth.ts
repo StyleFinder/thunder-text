@@ -7,6 +7,7 @@
 
 import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 
 /**
  * Authentication result
@@ -66,7 +67,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
       .single()
 
     if (error || !shopData) {
-      console.error('Shop not found in database:', shop)
+      logger.error('Shop not found in database:', shop as Error, { component: 'content-center-auth' })
       return {
         authenticated: false,
         error: 'Shop not found. Please install the app first.'
@@ -80,7 +81,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
     }
 
   } catch (error) {
-    console.error('Authentication error:', error)
+    logger.error('Authentication error:', error as Error, { component: 'content-center-auth' })
     return {
       authenticated: false,
       error: 'Authentication failed'

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getStoreId } from '@/lib/prompts'
+import { logger } from '@/lib/logger'
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -35,7 +36,7 @@ export async function DELETE(request: NextRequest) {
       .eq('store_id', actualStoreId)
 
     if (deleteError) {
-      console.error('Error deleting template:', deleteError)
+      logger.error('Error deleting template:', deleteError as Error, { component: 'delete' })
       return NextResponse.json(
         { success: false, error: 'Failed to delete template' },
         { status: 500 }
@@ -48,7 +49,7 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in DELETE /api/prompts/delete:', error)
+    logger.error('Error in DELETE /api/prompts/delete:', error as Error, { component: 'delete' })
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

@@ -10,6 +10,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
 import { generateVoiceProfile, validateVoiceProfile } from '@/lib/services/voice-profile-generator'
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/content-center/voice/generate
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       .eq('is_active', true)
 
     if (samplesError) {
-      console.error('Error fetching samples:', samplesError)
+      logger.error('Error fetching samples:', samplesError as Error, { component: 'generate' })
       return NextResponse.json(
         { success: false, error: 'Failed to fetch samples' },
         { status: 500 }
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     // Validate profile quality
     const validation = validateVoiceProfile(profileText)
     if (!validation.valid) {
-      console.error('Generated profile failed quality validation:', validation.issues)
+      logger.error('Generated profile failed quality validation:', validation.issues, undefined, { component: 'generate' })
       // Still save the profile but log the issues
     }
 
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       .single()
 
     if (profileError) {
-      console.error('Error creating voice profile:', profileError)
+      logger.error('Error creating voice profile:', profileError as Error, { component: 'generate' })
       return NextResponse.json(
         { success: false, error: 'Failed to create voice profile' },
         { status: 500 }
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Error in POST /api/content-center/voice/generate:', error)
+    logger.error('Error in POST /api/content-center/voice/generate:', error as Error, { component: 'generate' })
 
     if (error instanceof InsufficientSamplesError) {
       return NextResponse.json(

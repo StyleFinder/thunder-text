@@ -1,5 +1,6 @@
 import { authenticatedFetch } from '@shopify/app-bridge/utilities'
 import type { ClientApplication } from '@shopify/app-bridge'
+import { logger } from '@/lib/logger'
 
 /**
  * Create an authenticated fetch function that automatically includes session tokens
@@ -31,14 +32,13 @@ export async function makeAuthenticatedRequest(
     // If we get a 401, the session token might be expired
     // App Bridge will automatically refresh it on the next request
     if (response.status === 401) {
-      console.log('🔄 Session token expired, retrying request...')
       // Retry once with a fresh token
       return await fetchFunction(url, options)
     }
 
     return response
   } catch (error) {
-    console.error('❌ Authenticated fetch failed:', error)
+    logger.error('❌ Authenticated fetch failed:', error as Error, { component: 'authenticated-fetch' })
     throw error
   }
 }

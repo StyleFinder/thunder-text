@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getShopToken } from '@/lib/shopify/token-manager'
+import { guardDebugRoute } from '../_middleware-guard'
 
 export async function GET(request: NextRequest) {
+  const guardResponse = guardDebugRoute('/api/debug/check-token');
+  if (guardResponse) return guardResponse;
   const { searchParams } = new URL(request.url)
   const shop = searchParams.get('shop')
 

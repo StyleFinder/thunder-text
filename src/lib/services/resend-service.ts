@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger'
+
 /**
  * Resend Email Service
  *
@@ -60,7 +62,7 @@ export async function sendEmail({
       messageId: data.id,
     }
   } catch (error) {
-    console.error('Error sending email via Resend:', error)
+    logger.error('Error sending email via Resend:', error as Error, { component: 'resend-service' })
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

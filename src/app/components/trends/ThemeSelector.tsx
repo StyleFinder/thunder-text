@@ -1,16 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  ResourceList,
-  ResourceItem,
-  Badge,
-  Button,
-  Text,
-  InlineStack,
-  BlockStack,
-} from "@shopify/polaris";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import { logger } from '@/lib/logger'
 
 interface Theme {
   id: string;
@@ -45,7 +40,7 @@ export function ThemeSelector({ onThemeEnabled }: ThemeSelectorProps) {
         setThemes(data.themes);
       }
     } catch (error) {
-      console.error("Failed to load themes:", error);
+      logger.error("Failed to load themes:", error as Error, { component: 'ThemeSelector' });
     } finally {
       setLoading(false);
     }
@@ -71,10 +66,10 @@ export function ThemeSelector({ onThemeEnabled }: ThemeSelectorProps) {
           onThemeEnabled();
         }
       } else {
-        console.error("Failed to enable theme:", data.error);
+        logger.error("Failed to enable theme:", data.error, undefined, { component: 'ThemeSelector' });
       }
     } catch (error) {
-      console.error("Error enabling theme:", error);
+      logger.error("Error enabling theme:", error as Error, { component: 'ThemeSelector' });
     } finally {
       setEnablingTheme(null);
     }
@@ -82,70 +77,78 @@ export function ThemeSelector({ onThemeEnabled }: ThemeSelectorProps) {
 
   return (
     <Card>
-      <BlockStack gap="400">
-        <Text variant="headingMd" as="h2">
-          Available Themes
-        </Text>
-        <Text variant="bodySm" as="p" tone="subdued">
+      <CardHeader>
+        <CardTitle>Available Themes</CardTitle>
+        <CardDescription>
           Select seasonal themes to track demand trends for your products
-        </Text>
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-ace-blue" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {themes.map((theme) => {
+              const { id, name, description, category, inSeason } = theme;
 
-        <ResourceList
-          loading={loading}
-          resourceName={{ singular: "theme", plural: "themes" }}
-          items={themes}
-          renderItem={(theme) => {
-            const { id, name, description, category, inSeason } = theme;
-
-            return (
-              <ResourceItem
-                id={id}
-                onClick={() => {}}
-                media={
+              return (
+                <div
+                  key={id}
+                  className="flex items-start gap-4 p-4 border border-ace-gray-light rounded-lg hover:border-ace-blue transition-colors"
+                >
                   <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0"
                     style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 8,
                       background: getCategoryColor(category),
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "20px",
                     }}
                   >
                     {getCategoryIcon(category)}
                   </div>
-                }
-              >
-                <BlockStack gap="200">
-                  <InlineStack align="space-between" blockAlign="center">
-                    <Text variant="bodyMd" fontWeight="semibold" as="h3">
-                      {name}
-                    </Text>
-                    <InlineStack gap="200">
-                      {inSeason && <Badge tone="success">In Season</Badge>}
-                      <Badge>{category}</Badge>
-                    </InlineStack>
-                  </InlineStack>
 
-                  <Text variant="bodySm" as="p" tone="subdued">
-                    {description}
-                  </Text>
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="font-semibold text-ace-black">{name}</h3>
+                        <p className="text-sm text-ace-gray-dark mt-1">
+                          {description}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {inSeason && (
+                          <Badge className="bg-ace-green/10 text-ace-green hover:bg-ace-green/20 border-ace-green/20">
+                            In Season
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="border-ace-gray-light text-ace-gray-dark">
+                          {category}
+                        </Badge>
+                      </div>
+                    </div>
 
-                  <Button
-                    onClick={() => enableTheme(id)}
-                    loading={enablingTheme === id}
-                    size="slim"
-                  >
-                    Enable Theme
-                  </Button>
-                </BlockStack>
-              </ResourceItem>
-            );
-          }}
-        />
-      </BlockStack>
+                    <Button
+                      onClick={() => enableTheme(id)}
+                      disabled={enablingTheme === id}
+                      size="sm"
+                      className="bg-ace-blue hover:bg-ace-blue-dark text-white"
+                    >
+                      {enablingTheme === id ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Enabling...
+                        </>
+                      ) : (
+                        "Enable Theme"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
     </Card>
   );
 }

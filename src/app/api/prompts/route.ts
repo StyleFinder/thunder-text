@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { 
   getSystemPrompt, 
   getCategoryTemplates, 
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in GET /api/prompts:', error)
+    logger.error('Error in GET /api/prompts:', error as Error, { component: 'prompts' })
     return NextResponse.json(
       { error: 'Failed to fetch prompts' },
       { status: 500 }
@@ -130,7 +131,7 @@ export async function PUT(request: NextRequest) {
         .single()
 
       if (error) {
-        console.error('Error updating template:', error)
+        logger.error('Error updating template:', error as Error, { component: 'prompts' })
         return NextResponse.json(
           { error: 'Failed to update template' },
           { status: 500 }
@@ -155,7 +156,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: true, data: result })
 
   } catch (error) {
-    console.error('Error in PUT /api/prompts:', error)
+    logger.error('Error in PUT /api/prompts:', error as Error, { component: 'prompts' })
     return NextResponse.json(
       { error: 'Failed to update prompt' },
       { status: 500 }
@@ -225,7 +226,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Error creating template:', error)
+      logger.error('Error creating template:', error as Error, { component: 'prompts' })
       return NextResponse.json(
         { error: 'Failed to create template' },
         { status: 500 }
@@ -235,7 +236,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, data })
 
   } catch (error) {
-    console.error('Error in POST /api/prompts:', error)
+    logger.error('Error in POST /api/prompts:', error as Error, { component: 'prompts' })
     return NextResponse.json(
       { error: 'Failed to create template' },
       { status: 500 }

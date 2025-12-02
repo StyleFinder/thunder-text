@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from '@/lib/logger'
 import {
   resetSystemPrompt,
   resetCategoryTemplate,
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    console.error("Error in POST /api/prompts/reset:", error);
+    logger.error("Error in POST /api/prompts/reset:", error as Error, { component: 'reset' });
     return NextResponse.json(
       { error: "Failed to reset prompt" },
       { status: 500 },

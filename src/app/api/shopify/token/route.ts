@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 // Modern Token Exchange API endpoint
 export async function POST(request: NextRequest) {
@@ -13,7 +14,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('[Token Exchange] Starting exchange for:', { shop })
 
     // Prepare Token Exchange request
     const tokenExchangeParams = {
@@ -38,10 +38,9 @@ export async function POST(request: NextRequest) {
     })
 
     const responseData = await tokenResponse.text()
-    console.log('[Token Exchange] Response status:', tokenResponse.status)
 
     if (!tokenResponse.ok) {
-      console.error('[Token Exchange] Failed:', responseData)
+      logger.error('[Token Exchange] Failed:', responseData as Error, { component: 'token' })
 
       // Parse error if it's JSON
       try {
@@ -61,7 +60,6 @@ export async function POST(request: NextRequest) {
     }
 
     const tokenData = JSON.parse(responseData)
-    console.log('[Token Exchange] Success! Scopes:', tokenData.scope)
 
     // TODO: Store the access token in your database
     // For now, return it to the client (in production, store it securely)
@@ -73,7 +71,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[Token Exchange] Error:', error)
+    logger.error('[Token Exchange] Error:', error as Error, { component: 'token' })
     return NextResponse.json({
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error'

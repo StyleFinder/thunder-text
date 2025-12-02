@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCombinedPrompt, type ProductCategory } from '@/lib/prompts'
+import { logger } from '@/lib/logger'
 
 // GET /api/prompts/combine - Get combined prompt for AI generation
 export async function GET(request: NextRequest) {
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(combinedPrompt)
 
   } catch (error) {
-    console.error('Error in GET /api/prompts/combine:', error)
+    logger.error('Error in GET /api/prompts/combine:', error as Error, { component: 'combine' })
     return NextResponse.json(
       { error: 'Failed to combine prompts' },
       { status: 500 }

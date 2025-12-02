@@ -1,20 +1,22 @@
 import { Pool, QueryResult, QueryResultRow } from "pg";
+import { logger } from '@/lib/logger'
 
 // Direct PostgreSQL connection - bypasses Supabase PostgREST entirely
 // Only use this when PostgREST has issues (like schema cache problems)
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  console.error("❌ CRITICAL: DATABASE_URL environment variable is not set!", {
+  logger.error("❌ CRITICAL: DATABASE_URL environment variable is not set!", undefined, {
     availableEnvVars: Object.keys(process.env).filter((key) =>
       key.includes("DATABASE"),
     ),
     nodeEnv: process.env.NODE_ENV,
+    component: 'postgres'
   });
   throw new Error("DATABASE_URL is required for direct PostgreSQL connection");
 }
 
-// Log connection details IMMEDIATELY
+// Log connection details IMMEDIATELY (keep console.log for bootstrapping)
 const dbHost = connectionString.split("@")[1]?.split(":")[0];
 const dbName = connectionString.split("/").pop()?.split("?")[0];
 const projectIdMatch = connectionString.match(/db\.([a-z]+)\.supabase\.co/);
@@ -30,8 +32,8 @@ console.log("Expected Project:", "***REMOVED*** (Thunder Text)");
 console.log("=".repeat(80));
 
 if (projectId !== "***REMOVED***") {
-  console.error("❌ WRONG DATABASE! Connected to:", projectId);
-  console.error("   Expected: ***REMOVED*** (Thunder Text)");
+  logger.error("❌ WRONG DATABASE! Connected to:", projectId as Error, { component: 'postgres' });
+  logger.error("   Expected: ***REMOVED*** (Thunder Text, undefined, { component: 'postgres' })");
   throw new Error(
     `DATABASE_URL points to wrong project: ${projectId}. Expected: ***REMOVED***`,
   );
@@ -47,7 +49,6 @@ const pool = new Pool({
 
 // Test connection on startup
 pool.query("SELECT current_database(), current_schema()").then((result) => {
-  console.log("✅ Connection verified:", result.rows[0]);
 });
 
 /**
@@ -104,7 +105,8 @@ export async function getTenantClient(
 
       if (involvesTenantTable) {
         // Log query for audit trail
-        console.log("🔒 Tenant-scoped query:", {
+        logger.debug("Tenant-scoped query", {
+          component: 'postgres',
           tenantId,
           operation: queryLower.includes("insert")
             ? "INSERT"

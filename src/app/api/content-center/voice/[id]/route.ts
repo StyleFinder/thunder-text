@@ -8,6 +8,7 @@ import { getUserId } from '@/lib/auth/content-center-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
+import { logger } from '@/lib/logger'
 
 
 
@@ -74,7 +75,7 @@ export async function PATCH(
       .single()
 
     if (updateError) {
-      console.error('Error updating voice profile:', updateError)
+      logger.error('Error updating voice profile:', updateError as Error, { component: '[id]' })
       return NextResponse.json(
         { success: false, error: 'Failed to update voice profile' },
         { status: 500 }
@@ -87,7 +88,7 @@ export async function PATCH(
     })
 
   } catch (error) {
-    console.error('Error in PATCH /api/content-center/voice/:id:', error)
+    logger.error('Error in PATCH /api/content-center/voice/:id:', error as Error, { component: '[id]' })
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

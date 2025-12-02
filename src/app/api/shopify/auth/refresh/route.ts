@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/shopify-auth'
 import { tokenRefreshManager } from '@/lib/auth/token-refresh'
 import { createCorsHeaders } from '@/lib/middleware/cors'
+import { logger } from '@/lib/logger'
 
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, {
@@ -43,14 +44,13 @@ export async function POST(request: NextRequest) {
     try {
       await authenticateRequest(request, { sessionToken, shop })
     } catch (authError) {
-      console.error('❌ Authentication failed:', authError)
+      logger.error('❌ Authentication failed:', authError as Error, { component: 'refresh' })
       return NextResponse.json(
         { error: 'Invalid session token' },
         { status: 401, headers: corsHeaders }
       )
     }
 
-    console.log(`🔄 Processing token refresh request for ${shop}`)
 
     // Handle the token refresh with the fresh session token
     const result = await tokenRefreshManager.handleClientTokenRefresh(
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     }, { headers: corsHeaders })
 
   } catch (error) {
-    console.error('❌ Token refresh error:', error)
+    logger.error('❌ Token refresh error:', error as Error, { component: 'refresh' })
     return NextResponse.json(
       { error: 'Failed to refresh token' },
       { status: 500, headers: corsHeaders }

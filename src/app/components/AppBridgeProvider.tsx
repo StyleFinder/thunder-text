@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, createContext, useContext } from 'react'
+import { logger } from '@/lib/logger'
 
 // Import ShopifyGlobal type from global declarations
 interface AppBridgeContextType {
@@ -60,7 +61,6 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
           // Skip App Bridge initialization if API key is missing
           if (!apiKey) {
             console.warn('⚠️ Shopify API Key not found. App Bridge disabled.')
-            console.log('ℹ️ Add NEXT_PUBLIC_SHOPIFY_API_KEY to environment variables for full Shopify integration.')
             setIsLoading(false)
             return
           }
@@ -99,14 +99,12 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
             document.head.appendChild(metaTag)
           }
 
-          console.log('✅ App Bridge loaded, using window.shopify')
           setAppBridge(window.shopify)
 
           // Get initial session token using the shopify.idToken() method
           if (window.shopify) {
             try {
               const token = await window.shopify.idToken()
-              console.log('✅ Initial session token obtained successfully')
 
               // Store the token for API calls
               if (typeof window !== 'undefined') {
@@ -125,13 +123,13 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
                   window.sessionStorage.setItem('shopify_session_token', freshToken)
                   return freshToken
                 } catch (error) {
-                  console.error('Failed to get session token:', error)
+                  logger.error('Failed to get session token:', error as Error, { component: 'AppBridgeProvider' })
                   throw error
                 }
               }
 
             } catch (tokenError) {
-              console.error('Failed to get initial session token:', tokenError)
+              logger.error('Failed to get initial session token:', tokenError as Error, { component: 'AppBridgeProvider' })
               setError('Failed to authenticate with Shopify')
             }
           }
@@ -139,7 +137,7 @@ export function AppBridgeProvider({ children }: AppBridgeProviderProps) {
 
         setIsLoading(false)
       } catch (err) {
-        console.error('App Bridge initialization failed:', err)
+        logger.error('App Bridge initialization failed:', err as Error, { component: 'AppBridgeProvider' })
         setError('Failed to initialize Shopify App Bridge')
         setIsLoading(false)
       }

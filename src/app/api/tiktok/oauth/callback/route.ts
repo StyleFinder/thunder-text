@@ -21,6 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateTikTokOAuthState, type TikTokOAuthState } from '@/lib/security/oauth-validation'
 import { ZodError } from 'zod'
+import { logger } from '@/lib/logger'
 
 /**
  * Exchange authorization code for access token
@@ -49,16 +50,25 @@ async function exchangeCodeForToken(authCode: string): Promise<{
 
   if (!response.ok) {
     const error = await response.text()
-    console.error('🔴 TikTok token exchange failed!')
-    console.error('🔴 Response status:', response.status, response.statusText)
-    console.error('🔴 Response body:', error)
+    logger.error('TikTok token exchange failed', new Error(`Failed to exchange code for token: ${error}`), {
+      component: 'tiktok-oauth-callback',
+      operation: 'exchangeCodeForToken',
+      responseStatus: response.status,
+      responseStatusText: response.statusText,
+      responseBody: error
+    })
     throw new Error(`Failed to exchange code for token: ${error}`)
   }
 
   const data = await response.json()
 
   if (data.code !== 0) {
-    console.error('🔴 TikTok API error:', data)
+    logger.error('TikTok API error', new Error(`TikTok API error: ${data.message}`), {
+      component: 'tiktok-oauth-callback',
+      operation: 'exchangeCodeForToken',
+      apiErrorCode: data.code,
+      apiErrorMessage: data.message
+    })
     throw new Error(`TikTok API error: ${data.message}`)
   }
 
@@ -90,7 +100,10 @@ export async function GET(request: NextRequest) {
 
     // Verify environment variables
     if (!process.env.TIKTOK_CLIENT_KEY || !process.env.TIKTOK_CLIENT_SECRET) {
-      console.error('TikTok credentials not configured')
+      logger.error('TikTok credentials not configured', new Error('Missing TikTok credentials'), {
+        component: 'tiktok-oauth-callback',
+        operation: 'GET'
+      })
       return NextResponse.json(
         { error: 'TikTok integration not configured' },
         { status: 500 }
@@ -102,13 +115,20 @@ export async function GET(request: NextRequest) {
       stateData = validateTikTokOAuthState(state)
     } catch (error) {
       if (error instanceof ZodError) {
-        console.error('State validation failed:', error.errors)
+        logger.error('State validation failed', error, {
+          component: 'tiktok-oauth-callback',
+          operation: 'validateState',
+          errors: error.errors
+        })
         return NextResponse.json(
           { error: 'Invalid state parameter format', details: error.errors },
           { status: 400 }
         )
       }
-      console.error('State validation error:', error)
+      logger.error('State validation error', error as Error, {
+        component: 'tiktok-oauth-callback',
+        operation: 'validateState'
+      })
       return NextResponse.json(
         { error: error instanceof Error ? error.message : 'Invalid state parameter' },
         { status: 400 }
@@ -129,11 +149,6 @@ export async function GET(request: NextRequest) {
     // Encrypt tokens before storing
     const { encryptToken } = await import('@/lib/services/encryption')
     const encryptedAccessToken = await encryptToken(access_token)
-
-    console.log('🔍 [DEBUG] Saving TikTok integration:', {
-      shop_id,
-      has_advertiser_ids: advertiser_ids.length > 0
-    })
 
     // Save to integrations table using supabaseAdmin directly
     const { supabaseAdmin } = await import('@/lib/supabase/admin')
@@ -157,11 +172,14 @@ export async function GET(request: NextRequest) {
       })
 
     if (saveError) {
-      console.error('Failed to save TikTok integration:', saveError)
+      logger.error('Failed to save TikTok integration', saveError as Error, {
+        component: 'tiktok-oauth-callback',
+        operation: 'saveIntegration',
+        shopId: shop_id
+      })
       throw new Error(`Failed to save TikTok integration: ${saveError.message}`)
     }
 
-    console.log('✅ [DEBUG] TikTok integration stored successfully')
 
     // Redirect to return_to path or welcome page
     const redirectUrl = new URL(return_to || '/welcome', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
@@ -181,9 +199,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectUrl.toString())
 
   } catch (error) {
-    console.error('🔴 Error in TikTok OAuth callback:', error)
-    console.error('🔴 Error stack:', error instanceof Error ? error.stack : 'No stack trace')
-    console.error('🔴 Error message:', error instanceof Error ? error.message : String(error))
+    logger.error('Error in TikTok OAuth callback', error as Error, {
+      component: 'tiktok-oauth-callback',
+      operation: 'GET',
+      shopDomain: stateData?.shop_domain,
+      returnTo: stateData?.return_to
+    })
 
     // Redirect to welcome page with error message
     const redirectUrl = new URL(stateData?.return_to || '/welcome', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')

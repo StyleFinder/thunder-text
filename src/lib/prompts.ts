@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase";
+import { logger } from '@/lib/logger';
 
 // Types for prompt system
 export interface SystemPrompt {
@@ -60,13 +61,13 @@ export async function getStoreId(shopDomain: string): Promise<string | null> {
       .single();
 
     if (error || !data) {
-      console.error("Error finding store:", error);
+      logger.error("Error finding store", error as Error, { component: 'prompts', operation: 'getStoreId', shopDomain });
       return null;
     }
 
     return data.id;
   } catch (error) {
-    console.error("Error in getStoreId:", error);
+    logger.error("Error in getStoreId", error as Error, { component: 'prompts', operation: 'getStoreId', shopDomain });
     return null;
   }
 }
@@ -78,7 +79,6 @@ export async function getSystemPrompt(
   storeId: string,
 ): Promise<SystemPrompt | null> {
   try {
-    console.log("🔍 getSystemPrompt called with storeId:", storeId);
 
     // If storeId looks like a shop domain, convert it to UUID
     let actualStoreId = storeId;
@@ -90,7 +90,6 @@ export async function getSystemPrompt(
     ) {
       console.log("📍 Converting shop domain to UUID...");
       actualStoreId = (await getStoreId(storeId)) || storeId;
-      console.log("✅ Converted storeId to:", actualStoreId);
     }
 
     console.log(
@@ -106,7 +105,7 @@ export async function getSystemPrompt(
       .single();
 
     if (error) {
-      console.error("❌ Error fetching system prompt:", error);
+      logger.error("Error fetching system prompt", error as Error, { component: 'prompts', operation: 'getSystemPrompt', storeId: actualStoreId });
       return null;
     }
 
@@ -116,7 +115,7 @@ export async function getSystemPrompt(
     );
     return data;
   } catch (error) {
-    console.error("❌ Error in getSystemPrompt:", error);
+    logger.error("Error in getSystemPrompt", error as Error, { component: 'prompts', operation: 'getSystemPrompt', storeId });
     return null;
   }
 }
@@ -147,13 +146,13 @@ export async function getCategoryTemplates(
       .order("category", { ascending: true });
 
     if (error) {
-      console.error("Error fetching category templates:", error);
+      logger.error("Error fetching category templates", error as Error, { component: 'prompts', operation: 'getCategoryTemplates', storeId: actualStoreId });
       return [];
     }
 
     return data || [];
   } catch (error) {
-    console.error("Error in getCategoryTemplates:", error);
+    logger.error("Error in getCategoryTemplates", error as Error, { component: 'prompts', operation: 'getCategoryTemplates', storeId });
     return [];
   }
 }
@@ -187,13 +186,13 @@ export async function getCategoryTemplate(
       .single();
 
     if (error) {
-      console.error("Error fetching category template:", error);
+      logger.error("Error fetching category template", error as Error, { component: 'prompts', operation: 'getCategoryTemplate', storeId: actualStoreId, category });
       return null;
     }
 
     return data;
   } catch (error) {
-    console.error("Error in getCategoryTemplate:", error);
+    logger.error("Error in getCategoryTemplate", error as Error, { component: 'prompts', operation: 'getCategoryTemplate', storeId, category });
     return null;
   }
 }
@@ -244,7 +243,7 @@ export async function getGlobalDefaultTemplate(
 
     return data.category as ProductCategory;
   } catch (error) {
-    console.error("Error in getGlobalDefaultTemplate:", error);
+    logger.error("Error in getGlobalDefaultTemplate", error as Error, { component: 'prompts', operation: 'getGlobalDefaultTemplate', storeId });
     return "general";
   }
 }
@@ -303,12 +302,12 @@ export async function getCombinedPrompt(
     ]);
 
     if (!systemPrompt) {
-      console.error("No system prompt found for store:", storeId);
+      logger.error("No system prompt found for store", undefined, { component: 'prompts', operation: 'getCombinedPrompt', storeId });
       return null;
     }
 
     if (!categoryTemplate) {
-      console.error("No category template found for:", category);
+      logger.error("No category template found", undefined, { component: 'prompts', operation: 'getCombinedPrompt', category });
       return null;
     }
 
@@ -323,7 +322,7 @@ export async function getCombinedPrompt(
       combined,
     };
   } catch (error) {
-    console.error("Error in getCombinedPrompt:", error);
+    logger.error("Error in getCombinedPrompt", error as Error, { component: 'prompts', operation: 'getCombinedPrompt', storeId, category });
     return null;
   }
 }
@@ -370,7 +369,7 @@ export async function updateSystemPrompt(
         .single();
 
       if (error) {
-        console.error("Error updating system prompt:", error);
+        logger.error("Error updating system prompt", error as Error, { component: 'prompts', operation: 'updateSystemPrompt', storeId: actualStoreId });
         return null;
       }
       return data;
@@ -389,13 +388,13 @@ export async function updateSystemPrompt(
         .single();
 
       if (error) {
-        console.error("Error inserting system prompt:", error);
+        logger.error("Error inserting system prompt", error as Error, { component: 'prompts', operation: 'updateSystemPrompt', storeId: actualStoreId });
         return null;
       }
       return data;
     }
   } catch (error) {
-    console.error("Error in updateSystemPrompt:", error);
+    logger.error("Error in updateSystemPrompt", error as Error, { component: 'prompts', operation: 'updateSystemPrompt', storeId });
     return null;
   }
 }
@@ -444,7 +443,7 @@ export async function updateCategoryTemplate(
         .single();
 
       if (error) {
-        console.error("Error updating category template:", error);
+        logger.error("Error updating category template", error as Error, { component: 'prompts', operation: 'updateCategoryTemplate', storeId: actualStoreId, category });
         return null;
       }
       return data;
@@ -464,13 +463,13 @@ export async function updateCategoryTemplate(
         .single();
 
       if (error) {
-        console.error("Error inserting category template:", error);
+        logger.error("Error inserting category template", error as Error, { component: 'prompts', operation: 'updateCategoryTemplate', storeId: actualStoreId, category });
         return null;
       }
       return data;
     }
   } catch (error) {
-    console.error("Error in updateCategoryTemplate:", error);
+    logger.error("Error in updateCategoryTemplate", error as Error, { component: 'prompts', operation: 'updateCategoryTemplate', storeId, category });
     return null;
   }
 }
@@ -659,7 +658,7 @@ export async function initializeDefaultPrompts(storeId: string): Promise<void> {
       actualStoreId,
     );
   } catch (error) {
-    console.error("❌ Error initializing default prompts:", error);
+    logger.error("Error initializing default prompts", error as Error, { component: 'prompts', operation: 'initializeDefaultPrompts', storeId });
     throw error;
   }
 }

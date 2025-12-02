@@ -6,6 +6,7 @@ import { useShopifyAuth } from '../components/UnifiedShopifyAuth'
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { logger } from '@/lib/logger'
 
 interface ProductImage {
   id: string
@@ -95,7 +96,7 @@ function ProductsContent() {
       setCursor(data.pageInfo?.endCursor || null)
       setError(null)
     } catch (err) {
-      console.error('Error fetching products:', err)
+      logger.error('Error fetching products:', err as Error, { component: 'products' })
       setError('Failed to load products. Please try again.')
     } finally {
       setLoading(false)

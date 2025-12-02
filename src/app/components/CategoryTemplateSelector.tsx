@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Select, Box, Text, Button, InlineStack } from '@shopify/polaris'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 import { PRODUCT_CATEGORIES, type ProductCategory } from '@/lib/prompts'
+import { Loader2 } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 interface CategoryTemplate {
   id: string
@@ -19,11 +22,11 @@ interface CategoryTemplateSelectorProps {
   onPreview?: (template: CategoryTemplate | null) => void
 }
 
-export function CategoryTemplateSelector({ 
-  value, 
-  onChange, 
-  storeId, 
-  onPreview 
+export function CategoryTemplateSelector({
+  value,
+  onChange,
+  storeId,
+  onPreview
 }: CategoryTemplateSelectorProps) {
   const [templates, setTemplates] = useState<CategoryTemplate[]>([])
   const [loading, setLoading] = useState(true)
@@ -59,7 +62,7 @@ export function CategoryTemplateSelector({
           onChange(defaultTemplate.category, defaultTemplate.category as ProductCategory)
         }
       } catch (err) {
-        console.error('Error loading templates:', err)
+        logger.error('Error loading templates:', err as Error, { component: 'CategoryTemplateSelector' })
         setError('Failed to load templates')
       } finally {
         setLoading(false)
@@ -79,7 +82,7 @@ export function CategoryTemplateSelector({
   const handleChange = (newValue: string) => {
     const template = templates.find(t => t.category === newValue)
     onChange(newValue, newValue as ProductCategory)
-    
+
     if (onPreview) {
       onPreview(template || null)
     }
@@ -92,7 +95,7 @@ export function CategoryTemplateSelector({
   }))
 
   // Add "Custom" option if there are templates not in the standard categories
-  const customTemplates = templates.filter(t => 
+  const customTemplates = templates.filter(t =>
     !PRODUCT_CATEGORIES.some(cat => cat.value === t.category)
   )
 
@@ -106,33 +109,40 @@ export function CategoryTemplateSelector({
 
   if (loading) {
     return (
-      <Box>
-        <Text variant="bodyMd" as="p" tone="subdued">
+      <div className="space-y-2">
+        <Label>Product Category Template</Label>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
           Loading templates...
-        </Text>
-      </Box>
+        </div>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <Box>
-        <Text variant="bodyMd" as="p" tone="critical">
-          {error}
-        </Text>
-      </Box>
+      <div className="space-y-2">
+        <Label>Product Category Template</Label>
+        <p className="text-sm text-destructive">{error}</p>
+      </div>
     )
   }
 
   return (
-    <Box>
-      <Select
-        label="Product Category Template"
-        options={allOptions}
-        value={value}
-        onChange={handleChange}
-        helpText="Choose a template that best matches your product type for optimized descriptions"
-      />
-    </Box>
+    <div className="space-y-2">
+      <Label htmlFor="category-template">Product Category Template</Label>
+      <Select value={value} onValueChange={handleChange}>
+        <SelectTrigger id="category-template" style={{ backgroundColor: '#ffffff', color: '#111827' }}>
+          <SelectValue placeholder="Select a category template" />
+        </SelectTrigger>
+        <SelectContent>
+          {allOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   )
 }

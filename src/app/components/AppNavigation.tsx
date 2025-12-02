@@ -1,36 +1,70 @@
 "use client";
 
-import { useState, Suspense, useRef } from "react";
-import { Navigation, TopBar, Frame, Spinner, Box } from "@shopify/polaris";
+import { useState, useEffect, Suspense } from "react";
+import { useSession } from "next-auth/react";
 import {
-  HomeIcon,
-  SettingsIcon,
-  PlusCircleIcon,
-  QuestionCircleIcon,
-  EditIcon,
-  TextIcon,
-  SocialAdIcon,
-  ChartVerticalIcon,
-} from "@shopify/polaris-icons";
+  Home,
+  Settings,
+  PlusCircle,
+  HelpCircle,
+  Edit,
+  FileText,
+  TrendingUp,
+  Megaphone,
+  User,
+  Bell,
+  File,
+  Menu,
+  X,
+} from "lucide-react";
 import { useNavigation } from "../hooks/useNavigation";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface AppNavigationProps {
   children: React.ReactNode;
 }
 
+interface NavItem {
+  url: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  onClick: () => void;
+  matches: boolean;
+  allowedRoles?: string[]; // undefined = all roles
+}
+
 function NavigationContent({ children }: AppNavigationProps) {
   const [mobileNavigationActive, setMobileNavigationActive] = useState(false);
-  const [userMenuActive, setUserMenuActive] = useState(false);
-  const skipToContentRef = useRef<HTMLAnchorElement>(null);
+  const [isLargeScreen, setIsLargeScreen] = useState(true);
+  const { data: session } = useSession();
   const { buildUrl, navigateTo, isActive, getAuthParams } = useNavigation();
 
   const { hasAuth } = getAuthParams();
+  const userRole = session?.user?.role || 'user'; // 'user', 'coach', or 'admin'
 
-  const navigationItems = [
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsLargeScreen(window.innerWidth >= 640);
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  const allNavigationItems: NavItem[] = [
+    // Store Owner Dashboard
     {
       url: buildUrl("/dashboard"),
       label: "Dashboard",
-      icon: HomeIcon,
+      icon: Home,
       onClick: () => navigateTo("/dashboard"),
       matches: isActive({
         label: "Dashboard",
@@ -38,27 +72,40 @@ function NavigationContent({ children }: AppNavigationProps) {
         matchPaths: ["/dashboard"],
         exactMatch: false,
       }),
-      exactMatch: false,
-      matchPaths: ["/dashboard"],
+      allowedRoles: ['user', 'admin'], // Store owners only
     },
+    // Coach Dashboard (BHB Dashboard)
     {
-      url: buildUrl("/create"),
-      label: "Create Description",
-      icon: PlusCircleIcon,
-      onClick: () => navigateTo("/create"),
+      url: buildUrl("/bhb"),
+      label: "BHB Dashboard",
+      icon: Home,
+      onClick: () => navigateTo("/bhb"),
       matches: isActive({
-        label: "Create Description",
-        url: buildUrl("/create"),
-        matchPaths: ["/create", "/generate"],
+        label: "BHB Dashboard",
+        url: buildUrl("/bhb"),
+        matchPaths: ["/bhb"],
         exactMatch: false,
       }),
-      exactMatch: false,
-      matchPaths: ["/create", "/generate"],
+      allowedRoles: ['coach'], // Coaches only
+    },
+    // Store owner tools
+    {
+      url: buildUrl("/create-pd"),
+      label: "Create Description",
+      icon: PlusCircle,
+      onClick: () => navigateTo("/create-pd"),
+      matches: isActive({
+        label: "Create Description",
+        url: buildUrl("/create-pd"),
+        matchPaths: ["/create-pd", "/generate"],
+        exactMatch: false,
+      }),
+      allowedRoles: ['user', 'admin'],
     },
     {
       url: buildUrl("/enhance"),
       label: "Enhance Product",
-      icon: EditIcon,
+      icon: Edit,
       onClick: () => navigateTo("/enhance"),
       matches: isActive({
         label: "Enhance Product",
@@ -66,27 +113,38 @@ function NavigationContent({ children }: AppNavigationProps) {
         matchPaths: ["/enhance"],
         exactMatch: false,
       }),
-      exactMatch: false,
-      matchPaths: ["/enhance"],
+      allowedRoles: ['user', 'admin'],
     },
     {
-      url: buildUrl("/facebook-ads"),
-      label: "Facebook Ads",
-      icon: SocialAdIcon,
-      onClick: () => navigateTo("/facebook-ads"),
+      url: buildUrl("/aie"),
+      label: "AI Ad Engine",
+      icon: Megaphone,
+      onClick: () => navigateTo("/aie"),
       matches: isActive({
-        label: "Facebook Ads",
-        url: buildUrl("/facebook-ads"),
-        matchPaths: ["/facebook-ads", "/test-campaigns"],
+        label: "AI Ad Engine",
+        url: buildUrl("/aie"),
+        matchPaths: ["/aie"],
         exactMatch: false,
       }),
-      exactMatch: false,
-      matchPaths: ["/facebook-ads", "/test-campaigns"],
+      allowedRoles: ['user', 'admin'],
+    },
+    {
+      url: buildUrl("/business-profile"),
+      label: "Business Profile",
+      icon: User,
+      onClick: () => navigateTo("/business-profile"),
+      matches: isActive({
+        label: "Business Profile",
+        url: buildUrl("/business-profile"),
+        matchPaths: ["/business-profile"],
+        exactMatch: false,
+      }),
+      allowedRoles: ['user', 'admin'],
     },
     {
       url: buildUrl("/content-center"),
       label: "Content Center",
-      icon: TextIcon,
+      icon: FileText,
       onClick: () => navigateTo("/content-center"),
       matches: isActive({
         label: "Content Center",
@@ -94,13 +152,26 @@ function NavigationContent({ children }: AppNavigationProps) {
         matchPaths: ["/content-center"],
         exactMatch: false,
       }),
-      exactMatch: false,
-      matchPaths: ["/content-center"],
+      allowedRoles: ['user', 'admin'],
+    },
+    // Shared resources
+    {
+      url: buildUrl("/best-practices"),
+      label: "Best Practices",
+      icon: File,
+      onClick: () => navigateTo("/best-practices"),
+      matches: isActive({
+        label: "Best Practices",
+        url: buildUrl("/best-practices"),
+        matchPaths: ["/best-practices"],
+        exactMatch: false,
+      }),
+      allowedRoles: ['coach'], // Coaches only
     },
     {
       url: buildUrl("/trends"),
       label: "Seasonal Trends",
-      icon: ChartVerticalIcon,
+      icon: TrendingUp,
       onClick: () => navigateTo("/trends"),
       matches: isActive({
         label: "Seasonal Trends",
@@ -108,13 +179,12 @@ function NavigationContent({ children }: AppNavigationProps) {
         matchPaths: ["/trends"],
         exactMatch: false,
       }),
-      exactMatch: false,
-      matchPaths: ["/trends"],
+      // Both coaches and store owners
     },
     {
       url: buildUrl("/settings"),
       label: "Settings",
-      icon: SettingsIcon,
+      icon: Settings,
       onClick: () => navigateTo("/settings"),
       matches: isActive({
         label: "Settings",
@@ -122,13 +192,12 @@ function NavigationContent({ children }: AppNavigationProps) {
         matchPaths: ["/settings"],
         exactMatch: false,
       }),
-      exactMatch: false,
-      matchPaths: ["/settings"],
+      allowedRoles: ['user', 'admin'],
     },
     {
       url: buildUrl("/help"),
       label: "Help",
-      icon: QuestionCircleIcon,
+      icon: HelpCircle,
       onClick: () => navigateTo("/help"),
       matches: isActive({
         label: "Help",
@@ -136,123 +205,324 @@ function NavigationContent({ children }: AppNavigationProps) {
         matchPaths: ["/help"],
         exactMatch: false,
       }),
-      exactMatch: false,
-      matchPaths: ["/help"],
+      allowedRoles: ['user', 'admin'],
     },
   ];
 
-  const toggleMobileNavigationActive = () =>
-    setMobileNavigationActive(
-      (mobileNavigationActive) => !mobileNavigationActive,
-    );
-
-  const navigation = (
-    <Navigation location={buildUrl("/dashboard")}>
-      <Navigation.Section
-        items={navigationItems}
-        title="Thunder Text"
-        action={{
-          accessibilityLabel: "Create new product description",
-          icon: PlusCircleIcon,
-          onClick: () => navigateTo("/create"),
-        }}
-      />
-    </Navigation>
-  );
-
-  const topBarMarkup = (
-    <TopBar
-      showNavigationToggle
-      userMenu={
-        <TopBar.UserMenu
-          actions={[
-            {
-              items: [
-                {
-                  content: "Settings",
-                  onAction: () => navigateTo("/settings"),
-                },
-                { content: "Help Center", onAction: () => navigateTo("/help") },
-              ],
-            },
-          ]}
-          name="Thunder Text"
-          detail={hasAuth ? "Connected to Shopify" : "Not Connected"}
-          initials="TT"
-          open={userMenuActive}
-          onToggle={() => setUserMenuActive(!userMenuActive)}
-        />
-      }
-      onNavigationToggle={toggleMobileNavigationActive}
-    />
-  );
+  // Filter navigation items based on user role
+  const navigationItems = allNavigationItems.filter(item => {
+    if (!item.allowedRoles) return true; // No restriction, show to all
+    return item.allowedRoles.includes(userRole);
+  });
 
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <Frame
-        topBar={topBarMarkup}
-        navigation={navigation}
-        showMobileNavigation={mobileNavigationActive}
-        onNavigationDismiss={toggleMobileNavigationActive}
-        skipToContentTarget={
-          skipToContentRef as React.RefObject<HTMLAnchorElement>
-        }
+    <div className="min-h-screen flex" style={{ backgroundColor: '#f9fafb' }}>
+      {/* Desktop Sidebar (in-flow, no overlays) */}
+      {isLargeScreen && (
+        <aside
+          className="flex flex-col shrink-0 border-r border-gray-200 bg-white"
+          style={{
+            position: 'sticky',
+            top: 0,
+            height: '100vh',
+            width: '240px',
+            maxWidth: '240px',
+            minWidth: '240px',
+          }}
+        >
+        <div className="px-4 py-6 border-b border-gray-200">
+          <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#003366', margin: 0 }}>
+            ⚡ Thunder Text
+          </h1>
+        </div>
+
+        <nav className="px-4 py-6 overflow-y-auto flex-1">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {navigationItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  onClick={item.onClick}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: item.matches ? 600 : 500,
+                    backgroundColor: 'transparent',
+                    color: item.matches ? '#0066cc' : '#111827',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    textAlign: 'left',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!item.matches) {
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!item.matches) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                >
+                  <Icon
+                    className="h-5 w-5"
+                    style={{
+                      flexShrink: 0,
+                      color: item.matches ? '#0066cc' : '#6b7280'
+                    }}
+                  />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
+        <div className="px-4 py-4 border-t border-gray-200">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 500,
+                backgroundColor: 'transparent',
+                color: '#111827',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                textAlign: 'left',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#f9fafb';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  backgroundColor: '#0066cc',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  flexShrink: 0,
+                }}>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: '14px', fontWeight: 500, margin: 0, color: '#111827' }}>Thunder Text</p>
+                  <p style={{ fontSize: '12px', margin: 0, color: '#6b7280' }}>
+                    {hasAuth ? "Connected" : "Not Connected"}
+                  </p>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => navigateTo("/settings")}>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigateTo("/help")}>
+                <HelpCircle className="mr-2 h-4 w-4" />
+                Help Center
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        </aside>
+      )}
+
+      {/* Mobile Header */}
+      {!isLargeScreen && (
+      <header className="text-white sticky top-0 z-50" style={{
+        backgroundColor: 'white',
+        height: '64px',
+        borderBottom: '1px solid #e5e7eb',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+      }}>
+        <div className="px-4">
+          <div className="flex items-center justify-between" style={{ height: '64px' }}>
+            {/* Logo and Menu */}
+            <div className="flex items-center gap-3">
+              <button
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                onClick={() => setMobileNavigationActive(!mobileNavigationActive)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                {mobileNavigationActive ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
+              </button>
+              <h1 style={{ fontSize: '18px', fontWeight: 600, color: '#003366', margin: 0 }}>
+                ⚡ Thunder Text
+              </h1>
+            </div>
+
+            {/* User Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 text-white"
+                  style={{ padding: 0 }}
+                >
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium">Thunder Text</p>
+                  <p className="text-xs text-muted-foreground">
+                    {hasAuth ? "Connected to Shopify" : "Not Connected"}
+                  </p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigateTo("/settings")}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigateTo("/help")}>
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  Help Center
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </header>
+      )}
+
+      {/* Mobile Navigation Sidebar */}
+      {!isLargeScreen && mobileNavigationActive && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setMobileNavigationActive(false)}
+        >
+          <aside
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: '280px',
+              backgroundColor: '#ffffff',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '24px 16px' }}>
+              <h2 style={{
+                fontSize: '18px',
+                fontWeight: 700,
+                color: '#111827',
+                marginBottom: '24px',
+              }}>
+                ⚡ Thunder Text
+              </h2>
+
+              <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '24px' }}>
+                {navigationItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.label}
+                      onClick={() => {
+                        item.onClick();
+                        setMobileNavigationActive(false);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: item.matches ? 600 : 500,
+                        backgroundColor: 'transparent',
+                        color: item.matches ? '#0066cc' : '#111827',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <Icon
+                        className="h-5 w-5"
+                        style={{
+                          flexShrink: 0,
+                          color: item.matches ? '#0066cc' : '#6b7280'
+                        }}
+                      />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <div
+        className="flex-1 flex flex-col w-full"
+        style={{ position: 'relative', zIndex: 10 }}
       >
-        <main id="main-content">{children}</main>
-      </Frame>
+        <main
+          id="main-content"
+          className="flex-1 overflow-auto"
+          style={{
+            backgroundColor: '#f9fafb',
+            padding: '48px 32px'
+          }}
+        >
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
 
 function NavigationFallback() {
-  const skipToContentRef = useRef<HTMLAnchorElement>(null);
-
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <Frame
-        topBar={
-          <TopBar
-            showNavigationToggle
-            userMenu={
-              <TopBar.UserMenu
-                actions={[
-                  {
-                    items: [{ content: "Loading...", onAction: () => {} }],
-                  },
-                ]}
-                name="Thunder Text"
-                detail="Loading..."
-                initials="TT"
-                open={false}
-                onToggle={() => {}}
-              />
-            }
-          />
-        }
-        navigation={
-          <Navigation location="/">
-            <Navigation.Section items={[]} title="Thunder Text" />
-          </Navigation>
-        }
-        skipToContentTarget={
-          skipToContentRef as React.RefObject<HTMLAnchorElement>
-        }
-      >
-        <main id="main-content">
-          <Box padding="800" minHeight="400px">
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                minHeight: "200px",
-              }}
-            >
-              <Spinner size="small" />
-            </div>
-          </Box>
-        </main>
-      </Frame>
+    <div className="min-h-screen flex items-center justify-center bg-oxford-50">
+      <div className="text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-smart-500"></div>
+        <p className="mt-4 text-oxford-700">Loading...</p>
+      </div>
     </div>
   );
 }

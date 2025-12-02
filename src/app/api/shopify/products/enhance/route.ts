@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { 
   fetchProductDataForEnhancement, 
   validateProductForEnhancement,
@@ -21,7 +22,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('🔄 Fetching product data for enhancement:', { productId, shop })
 
     // Get session token from Authorization header if provided
     const authHeader = request.headers.get('authorization')
@@ -52,7 +52,6 @@ export async function GET(request: NextRequest) {
     const enhancementContext = generateEnhancementContext(productData)
     const enhancementPreview = createEnhancementPreview(productData, enhancementContext)
 
-    console.log('✅ Product data fetched and validated successfully')
 
     return NextResponse.json({
       success: true,
@@ -66,7 +65,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Error fetching product data for enhancement:', error)
+    logger.error('❌ Error fetching product data for enhancement:', error as Error, { component: 'enhance' })
     return NextResponse.json(
       { 
         success: false, 
@@ -108,7 +107,6 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    console.log('🔄 Updating product with enhanced description:', { productId, shop })
 
     // First, get current product data for backup if needed
     let originalData = null
@@ -164,7 +162,6 @@ export async function PUT(request: NextRequest) {
         )
       }
 
-      console.log('✅ Product successfully updated in Shopify')
 
       return NextResponse.json({
         success: true,
@@ -181,7 +178,7 @@ export async function PUT(request: NextRequest) {
       })
 
     } catch (error) {
-      console.error('❌ Error in product update process:', error)
+      logger.error('❌ Error in product update process:', error as Error, { component: 'enhance' })
       
       // Handle specific authentication errors
       if (error instanceof Error && error.message.includes('access token')) {
@@ -206,7 +203,7 @@ export async function PUT(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('❌ Error updating product with enhanced description:', error)
+    logger.error('❌ Error updating product with enhanced description:', error as Error, { component: 'enhance' })
     return NextResponse.json(
       { 
         success: false, 

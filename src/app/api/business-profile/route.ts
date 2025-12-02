@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getUserId } from "@/lib/auth/content-center-auth";
+import { logger } from '@/lib/logger'
 import type {
   ApiResponse,
   GetBusinessProfileResponse,
@@ -48,7 +49,7 @@ export async function GET(
         .single();
 
       if (createError) {
-        console.error("Error creating profile:", createError);
+        logger.error("Error creating profile:", createError as Error, { component: 'business-profile' });
         return NextResponse.json(
           { success: false, error: "Failed to create business profile" },
           { status: 500 },
@@ -61,7 +62,7 @@ export async function GET(
     }
 
     if (profileError || !profile) {
-      console.error("Error fetching business profile:", profileError);
+      logger.error("Error fetching business profile:", profileError as Error, { component: 'business-profile' });
       return NextResponse.json(
         { success: false, error: "Failed to fetch business profile" },
         { status: 500 },
@@ -139,7 +140,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error in GET /api/business-profile:", error);
+    logger.error("Error in GET /api/business-profile:", error as Error, { component: 'business-profile' });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

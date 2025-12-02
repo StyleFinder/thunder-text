@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getCampaigns, FacebookAPIError } from '@/lib/services/facebook-api'
+import { logger } from '@/lib/logger'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in GET /api/facebook/campaigns:', error)
+    logger.error('Error in GET /api/facebook/campaigns:', error as Error, { component: 'campaigns' })
 
     if (error instanceof FacebookAPIError) {
       if (error.errorCode === 'NOT_CONNECTED') {

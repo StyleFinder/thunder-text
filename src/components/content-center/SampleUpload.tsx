@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 interface SampleUploadProps {
   onUploadSuccess?: () => void
@@ -30,10 +31,16 @@ export function SampleUpload({ onUploadSuccess }: SampleUploadProps) {
     const file = event.target.files?.[0]
     if (!file) return
 
+    // Check for legacy .doc files first (not supported)
+    if (file.name.endsWith('.doc') && !file.name.endsWith('.docx')) {
+      setError('Legacy .doc files are not supported. Please save as .docx or .txt format, or copy/paste your text.')
+      return
+    }
+
     // Check file type
-    const validTypes = ['text/plain', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-    if (!validTypes.includes(file.type) && !file.name.endsWith('.txt') && !file.name.endsWith('.doc') && !file.name.endsWith('.docx')) {
-      setError('Please upload a .txt, .doc, .docx, or .pdf file')
+    const validTypes = ['text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+    if (!validTypes.includes(file.type) && !file.name.endsWith('.txt') && !file.name.endsWith('.docx')) {
+      setError('Please upload a .txt or .docx file')
       return
     }
 
@@ -45,16 +52,37 @@ export function SampleUpload({ onUploadSuccess }: SampleUploadProps) {
 
     setError(null)
 
-    // Read file content
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const text = e.target?.result as string
-      setSampleText(text)
+    try {
+
+      // Handle DOCX files
+      if (file.name.endsWith('.docx')) {
+        const mammoth = await import('mammoth')
+        const arrayBuffer = await file.arrayBuffer()
+        const result = await mammoth.extractRawText({ arrayBuffer })
+        setSampleText(result.value)
+        return
+      }
+
+      // Handle plain text files
+      if (file.name.endsWith('.txt')) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const text = e.target?.result as string
+          setSampleText(text)
+        }
+        reader.onerror = () => {
+          setError('Failed to read file')
+        }
+        reader.readAsText(file)
+        return
+      }
+
+      // Unsupported format
+      setError('Only .txt and .docx files are currently supported. Please convert your file or copy/paste the text.')
+    } catch (err) {
+      setError('Failed to parse file. Please try a different file or copy/paste the text.')
+      logger.error('File parsing error:', err as Error, { component: 'SampleUpload' })
     }
-    reader.onerror = () => {
-      setError('Failed to read file')
-    }
-    reader.readAsText(file)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

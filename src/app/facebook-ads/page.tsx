@@ -9,24 +9,16 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import {
-  Page,
-  Layout,
-  Card,
-  Button,
-  BlockStack,
-  Text,
-  Banner,
-  InlineStack,
-  Spinner,
-  EmptyState,
-  Badge,
-} from '@shopify/polaris'
-import { SocialAdIcon } from '@shopify/polaris-icons'
+import { Share2 } from 'lucide-react'
 import CampaignSelector from '@/components/facebook/CampaignSelector'
 import CreateFacebookAdFlow from '@/components/facebook/CreateFacebookAdFlow'
 import CampaignMetricsCard from '@/components/facebook/CampaignMetricsCard'
 import { useShopifyAuth } from '@/app/components/UnifiedShopifyAuth'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Loader2, ChevronLeft } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 interface IntegrationInfo {
   connected: boolean
@@ -57,13 +49,11 @@ function FacebookAdsContent() {
     if (shop) {
       checkFacebookConnection()
     }
-  }, [shop, facebookConnected]) // Refetch when returning from OAuth
+  }, [shop, facebookConnected])
 
-  // Show success/error banner when redirected from OAuth
   useEffect(() => {
     if (facebookConnected || facebookError) {
       setShowBanner(true)
-      // Auto-hide after 5 seconds
       const timer = setTimeout(() => setShowBanner(false), 5000)
       return () => clearTimeout(timer)
     }
@@ -73,7 +63,6 @@ function FacebookAdsContent() {
     try {
       setLoading(true)
 
-      // Check if Facebook is connected by trying to fetch ad accounts
       const response = await fetch(`/api/facebook/ad-accounts?shop=${shop}`)
       const data = await response.json()
 
@@ -93,7 +82,7 @@ function FacebookAdsContent() {
         })
       }
     } catch (error) {
-      console.error('Error checking Facebook connection:', error)
+      logger.error('Error checking Facebook connection:', error as Error, { component: 'facebook-ads' })
       setIntegrationInfo({
         connected: false,
         accountName: null,
@@ -108,14 +97,10 @@ function FacebookAdsContent() {
   const handleConnectFacebook = () => {
     const authorizeUrl = `/api/facebook/oauth/authorize?shop=${shop}`
 
-    // For embedded apps in Shopify Admin, use window.open with _top target
-    // This is the recommended approach for App Bridge v3+ (replaces Redirect.Action.REMOTE)
-    // See: https://shopify.dev/docs/api/app-bridge-library/reference
     if (isEmbedded) {
       console.log('🔀 Using window.open(_top) for OAuth flow (embedded context)')
       window.open(authorizeUrl, '_top')
     } else {
-      // For non-embedded context (direct browser access)
       console.log('🔀 Using window.location for OAuth flow (non-embedded)')
       window.location.href = authorizeUrl
     }
@@ -129,192 +114,201 @@ function FacebookAdsContent() {
 
   if (loading) {
     return (
-      <Page title="Facebook Ads">
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <InlineStack align="center" blockAlign="center" gap="200">
-                <Spinner size="small" />
-                <Text as="p" tone="subdued">Loading Facebook integration...</Text>
-              </InlineStack>
-            </Card>
-          </Layout.Section>
-        </Layout>
-      </Page>
+      <div className="w-full flex flex-col items-center">
+        <div className="w-full" style={{ maxWidth: '1000px' }}>
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">Facebook Ads</h1>
+          </div>
+          <Card>
+            <CardContent className="flex items-center justify-center py-12">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                <p className="text-gray-600">Loading Facebook integration...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     )
   }
 
-  // Not connected state
   if (!integrationInfo?.connected) {
     return (
-      <Page
-        title="Facebook Ads"
-        subtitle="Create and manage Facebook ads from your product descriptions"
-      >
-        <Layout>
-          {/* Show OAuth callback banner */}
-          {showBanner && message && (
-            <Layout.Section>
-              <Banner
-                title={facebookConnected ? 'Success' : 'Error'}
-                tone={facebookConnected ? 'success' : 'critical'}
-                onDismiss={() => setShowBanner(false)}
-              >
-                <p>{message}</p>
-              </Banner>
-            </Layout.Section>
-          )}
+      <div className="w-full flex flex-col items-center">
+        <div className="w-full" style={{ maxWidth: '1000px' }}>
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">Facebook Ads</h1>
+            <p className="text-gray-600 mt-1">Create and manage Facebook ads from your product descriptions</p>
+          </div>
 
-          <Layout.Section>
-            <Card>
-              <EmptyState
-                heading="Connect your Facebook account"
-                action={{
-                  content: 'Connect Facebook',
-                  onAction: handleConnectFacebook,
-                }}
-                image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
-              >
-                <p>
-                  Connect your Facebook Business account to create ads directly from your
-                  product descriptions. Your campaigns and ad accounts will be available
-                  for selection.
-                </p>
-              </EmptyState>
-            </Card>
-          </Layout.Section>
+          <div className="space-y-6">
+            {showBanner && message && (
+              <Alert variant={facebookConnected ? 'default' : 'destructive'}>
+                <AlertDescription>{message}</AlertDescription>
+              </Alert>
+            )}
 
-          <Layout.Section>
             <Card>
-              <BlockStack gap="400">
-                <Text as="h3" variant="headingMd">What you can do with Facebook Ads:</Text>
-                <BlockStack gap="200">
-                  <Text as="p">✓ Create ads from product descriptions with one click</Text>
-                  <Text as="p">✓ Select existing campaigns to add your ads to</Text>
-                  <Text as="p">✓ Use AI-generated titles, copy, and product images</Text>
-                  <Text as="p">✓ Manage campaign settings in Facebook Ads Manager</Text>
-                </BlockStack>
-              </BlockStack>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <div className="text-center max-w-md">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Share2 className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <h2 className="text-xl font-semibold mb-2">Connect your Facebook account</h2>
+                  <p className="text-gray-600 mb-6">
+                    Connect your Facebook Business account to create ads directly from your
+                    product descriptions. Your campaigns and ad accounts will be available
+                    for selection.
+                  </p>
+                  <Button onClick={handleConnectFacebook} size="lg">
+                    Connect Facebook
+                  </Button>
+                </div>
+              </CardContent>
             </Card>
-          </Layout.Section>
-        </Layout>
-      </Page>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>What you can do with Facebook Ads</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-2">
+                  <span className="text-green-600">✓</span>
+                  <p className="text-gray-700">Create ads from product descriptions with one click</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-green-600">✓</span>
+                  <p className="text-gray-700">Select existing campaigns to add your ads to</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-green-600">✓</span>
+                  <p className="text-gray-700">Use AI-generated titles, copy, and product images</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-green-600">✓</span>
+                  <p className="text-gray-700">Manage campaign settings in Facebook Ads Manager</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
     )
   }
 
-  // Connected state
   return (
-    <Page
-      title="Facebook Ads"
-      subtitle="Create ads from your product descriptions"
-      backAction={{
-        content: 'Dashboard',
-        onAction: () => router.push(`/dashboard?${searchParams?.toString() || ''}`)
-      }}
-    >
-      <Layout>
-        {/* Show OAuth callback banner */}
-        {showBanner && message && (
-          <Layout.Section>
-            <Banner
-              title={facebookConnected ? 'Success' : 'Error'}
-              tone={facebookConnected ? 'success' : 'critical'}
-              onDismiss={() => setShowBanner(false)}
-            >
-              <p>{message}</p>
-            </Banner>
-          </Layout.Section>
-        )}
-
-        <Layout.Section>
-          <Banner
-            tone="success"
-            title="Facebook account connected"
+    <div className="w-full flex flex-col items-center">
+      <div className="w-full" style={{ maxWidth: '1000px' }}>
+        <div className="mb-6 flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push(`/dashboard?${searchParams?.toString() || ''}`)}
           >
-            <InlineStack gap="200">
-              <Text as="p">
-                {integrationInfo.adAccountsCount} ad account(s) available
-              </Text>
-            </InlineStack>
-          </Banner>
-        </Layout.Section>
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Dashboard
+          </Button>
+        </div>
 
-        {/* Campaign Performance Metrics */}
-        {selectedAdAccountId && (
-          <Layout.Section>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Facebook Ads</h1>
+          <p className="text-gray-600 mt-1">Create ads from your product descriptions</p>
+        </div>
+
+        <div className="space-y-6">
+          {showBanner && message && (
+            <Alert variant={facebookConnected ? 'default' : 'destructive'}>
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
+          )}
+
+          <Alert>
+            <AlertDescription className="flex items-center gap-2">
+              <span className="font-semibold">Facebook account connected</span>
+              <span className="text-gray-600">
+                {integrationInfo.adAccountsCount} ad account(s) available
+              </span>
+            </AlertDescription>
+          </Alert>
+
+          {selectedAdAccountId && (
             <CampaignMetricsCard
               shop={shop || ''}
               adAccountId={selectedAdAccountId}
             />
-          </Layout.Section>
-        )}
+          )}
 
-        <Layout.Section variant="oneHalf">
-          <Card>
-            <CampaignSelector
-              shop={shop || ''}
-              onSelect={handleCampaignSelect}
-              selectedAdAccountId={selectedAdAccountId}
-              selectedCampaignId={selectedCampaignId}
-            />
-          </Card>
-        </Layout.Section>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardContent className="pt-6">
+                <CampaignSelector
+                  shop={shop || ''}
+                  onSelect={handleCampaignSelect}
+                  selectedAdAccountId={selectedAdAccountId}
+                  selectedCampaignId={selectedCampaignId}
+                />
+              </CardContent>
+            </Card>
 
-        <Layout.Section variant="oneHalf">
-          <Card>
-            <BlockStack gap="400">
-              <Text as="h3" variant="headingMd">Create Facebook Ad</Text>
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Create Facebook Ad</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {selectedCampaignId ? (
+                    <>
+                      <p className="text-sm text-green-600">
+                        ✓ Campaign selected: {selectedCampaignName}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Click the button below to create a new Facebook ad for this campaign.
+                        You'll be able to select a product, generate ad content with AI, and choose images.
+                      </p>
+                      <Button
+                        className="w-full"
+                        onClick={() => setCreateAdModalOpen(true)}
+                      >
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Create Facebook Ad
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-gray-600">
+                      Select an ad account and campaign to continue
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
 
-              {selectedCampaignId ? (
-                <BlockStack gap="300">
-                  <Text as="p" tone="success">
-                    ✓ Campaign selected: {selectedCampaignName}
-                  </Text>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    Click the button below to create a new Facebook ad for this campaign.
-                    You'll be able to select a product, generate ad content with AI, and choose images.
-                  </Text>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Settings</CardTitle>
+                </CardHeader>
+                <CardContent>
                   <Button
-                    variant="primary"
-                    icon={SocialAdIcon}
-                    onClick={() => setCreateAdModalOpen(true)}
+                    variant="destructive"
+                    onClick={() => {
+                      if (confirm('Are you sure you want to disconnect your Facebook account?')) {
+                        fetch(`/api/facebook/oauth/disconnect`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ shop })
+                        }).then(() => {
+                          window.location.reload()
+                        })
+                      }
+                    }}
                   >
-                    Create Facebook Ad
+                    Disconnect Facebook
                   </Button>
-                </BlockStack>
-              ) : (
-                <Text as="p" tone="subdued">
-                  Select an ad account and campaign to continue
-                </Text>
-              )}
-            </BlockStack>
-          </Card>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
 
-          <Card>
-            <BlockStack gap="400">
-              <Text as="h3" variant="headingMd">Account Settings</Text>
-              <Button
-                onClick={() => {
-                  if (confirm('Are you sure you want to disconnect your Facebook account?')) {
-                    fetch(`/api/facebook/oauth/disconnect`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ shop })
-                    }).then(() => {
-                      window.location.reload()
-                    })
-                  }
-                }}
-                tone="critical"
-              >
-                Disconnect Facebook
-              </Button>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
-
-      {/* Create Facebook Ad Flow Modal */}
       <CreateFacebookAdFlow
         open={createAdModalOpen}
         onClose={() => setCreateAdModalOpen(false)}
@@ -323,16 +317,18 @@ function FacebookAdsContent() {
         campaignName={selectedCampaignName}
         adAccountId={selectedAdAccountId}
       />
-    </Page>
+    </div>
   )
 }
 
 export default function FacebookAdsPage() {
   return (
     <Suspense fallback={
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <Spinner size="small" />
-        <p>Loading Facebook Ads...</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+          <p className="text-gray-600">Loading Facebook Ads...</p>
+        </div>
       </div>
     }>
       <FacebookAdsContent />

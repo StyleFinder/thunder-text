@@ -2,36 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useNavigation } from './hooks/useNavigation'
+import { CheckCircle2, Info, AlertTriangle } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
-import {
-  Page,
-  Layout,
-  Card,
-  Button,
-  Text,
-  Box,
-  InlineStack,
-  BlockStack,
-  Banner,
-  List,
-} from '@shopify/polaris'
-import { useNavigation } from './hooks/useNavigation'
-
-interface GenerationResult {
-  title: string
-  description: string
-  bulletPoints: string[]
-  metaDescription: string
-  keywords: string[]
-  confidence: number
-  processingTime: number
-  tokenUsage: {
-    prompt: number
-    completion: number
-    total: number
-  }
-}
 
 export default function HomePage() {
   const [deploymentStatus, setDeploymentStatus] = useState('checking')
@@ -48,75 +25,79 @@ export default function HomePage() {
 
     // If shop parameter exists, redirect to dashboard immediately
     if (shop) {
-      console.log('✅ Shop parameter found - redirecting to dashboard')
       navigateTo('/dashboard')
     }
   }, [shop, host, navigateTo])
 
   return (
-    <Page title="Welcome to Thunder Text" subtitle="AI-Powered Product Description Generator">
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <Text as="h2" variant="headingMd">Deployment Complete - Services Ready</Text>
-              
-              <Banner tone="info">
-                <Text as="p" variant="bodyMd">
-                  🚀 <strong>Version:</strong> Render Build (2025-10-09) |
-                  🌐 <strong>Source:</strong> thunder-text.onrender.com |
-                  ⚡ <strong>Status:</strong> Live Production
-                </Text>
-              </Banner>
-              
-              <Text as="p" variant="bodyMd">
-                Thunder Text is now deployed and ready to generate AI-powered product descriptions for your Shopify store.
-              </Text>
-              
-              <Banner tone="success">
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingSm">✅ System Status</Text>
-                  <List type="bullet">
-                    <List.Item>Database: Connected to Supabase</List.Item>
-                    <List.Item>AI Engine: OpenAI GPT-4 Vision Ready</List.Item>
-                    <List.Item>Shopify API: Authentication Configured</List.Item>
-                    <List.Item>Deployment: Live on Render</List.Item>
-                  </List>
-                </BlockStack>
-              </Banner>
+    <div className="container mx-auto p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-oxford-900">Welcome to Thunder Text</h1>
+          <p className="text-muted-foreground mt-2">AI-Powered Product Description Generator</p>
+        </div>
 
-              <Banner tone="warning">
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingSm">📋 Next Steps</Text>
-                  <List type="number">
-                    <List.Item>Update Shopify Partner App settings with this URL</List.Item>
-                    <List.Item>Install app in your test store (zunosai-staging-test-store)</List.Item>
-                    <List.Item>Test the end-to-end workflow</List.Item>
-                    <List.Item>Begin generating product descriptions!</List.Item>
-                  </List>
-                </BlockStack>
-              </Banner>
+        <Card>
+          <CardHeader>
+            <CardTitle>Deployment Complete - Services Ready</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert className="bg-dodger-50 border-dodger-200">
+              <Info className="h-4 w-4 text-dodger-600" />
+              <AlertDescription>
+                🚀 <strong>Version:</strong> Render Build (2025-10-09) |
+                🌐 <strong>Source:</strong> thunder-text.onrender.com |
+                ⚡ <strong>Status:</strong> Live Production
+              </AlertDescription>
+            </Alert>
 
-              <InlineStack gap="300">
-                <Button
-                  variant="primary"
-                  onClick={() => window.open('https://partners.shopify.com', '_blank')}
-                >
-                  Configure Shopify App
-                </Button>
-                
-                <Button
-                  variant="primary" 
-                  tone="success"
-                  onClick={() => navigateTo('/dashboard')}
-                >
-                  Go to Dashboard
-                </Button>
-              </InlineStack>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
+            <p className="text-sm text-foreground">
+              Thunder Text is now deployed and ready to generate AI-powered product descriptions for your Shopify store.
+            </p>
+
+            <Alert className="bg-green-50 border-green-200">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertDescription>
+                <h3 className="font-semibold text-green-900 mb-2">✅ System Status</h3>
+                <ul className="list-disc list-inside space-y-1 text-sm text-green-800">
+                  <li>Database: Connected to Supabase</li>
+                  <li>AI Engine: OpenAI GPT-4 Vision Ready</li>
+                  <li>Shopify API: Authentication Configured</li>
+                  <li>Deployment: Live on Render</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+
+            <Alert className="bg-amber-50 border-amber-200">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription>
+                <h3 className="font-semibold text-amber-900 mb-2">📋 Next Steps</h3>
+                <ol className="list-decimal list-inside space-y-1 text-sm text-amber-800">
+                  <li>Update Shopify Partner App settings with this URL</li>
+                  <li>Install app in your test store (zunosai-staging-test-store)</li>
+                  <li>Test the end-to-end workflow</li>
+                  <li>Begin generating product descriptions!</li>
+                </ol>
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={() => window.open('https://partners.shopify.com', '_blank')}
+              >
+                Configure Shopify App
+              </Button>
+
+              <Button
+                variant="default"
+                onClick={() => navigateTo('/dashboard')}
+              >
+                Go to Dashboard
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   )
 }

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
+import { guardDebugRoute } from '../_middleware-guard'
 
 export async function POST(request: NextRequest) {
+  const guardResponse = guardDebugRoute('/api/debug/manual-token-exchange');
+  if (guardResponse) return guardResponse;
   try {
     const body = await request.json()
     const { shop, accessToken } = body
@@ -34,7 +38,7 @@ export async function POST(request: NextRequest) {
       .select()
 
     if (dbError) {
-      console.error('❌ Error storing token:', dbError)
+      logger.error('❌ Error storing token:', dbError as Error, { component: 'manual-token-exchange' })
       return NextResponse.json({
         success: false,
         error: 'Failed to store access token',
@@ -42,7 +46,6 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('✅ Access token stored successfully for shop:', fullShopDomain)
 
     return NextResponse.json({
       success: true,
@@ -52,7 +55,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Unexpected error:', error)
+    logger.error('❌ Unexpected error:', error as Error, { component: 'manual-token-exchange' })
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to store token'

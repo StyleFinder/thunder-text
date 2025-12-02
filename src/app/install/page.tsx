@@ -2,19 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import {
-  Page,
-  Layout,
-  Card,
-  Button,
-  Text,
-  BlockStack,
-  Banner,
-  InlineStack,
-  Link,
-  Box,
-  Badge
-} from '@shopify/polaris'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { AlertCircle } from 'lucide-react'
 import { createShopifyOAuthState } from '@/lib/security/oauth-validation'
 
 export default function InstallPage() {
@@ -62,109 +56,95 @@ export default function InstallPage() {
   }
 
   return (
-    <Page title="Install Thunder Text">
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <Text as="h2" variant="headingMd">
-                Welcome to Thunder Text!
-              </Text>
+    <div className="container mx-auto py-8 max-w-4xl">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-oxford-navy mb-2">Install Thunder Text</h1>
+      </div>
 
-              <Text as="p" variant="bodyMd">
-                Thunder Text uses AI to generate compelling product descriptions from your product images.
-                Install the app to get started.
-              </Text>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-oxford-navy">Welcome to Thunder Text!</CardTitle>
+            <CardDescription>
+              Thunder Text uses AI to generate compelling product descriptions from your product images.
+              Install the app to get started.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {error && (
+              <Alert variant="destructive" className="border-berry bg-berry/10">
+                <AlertCircle className="h-4 w-4 text-berry" />
+                <AlertDescription className="text-berry">{error}</AlertDescription>
+              </Alert>
+            )}
 
-              {error && (
-                <Banner tone="critical">
-                  {error}
-                </Banner>
+            <div className="space-y-3">
+              <p className="text-oxford-navy">Enter your Shopify store domain:</p>
+
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  value={shop}
+                  onChange={(e) => setShop(e.target.value)}
+                  placeholder="your-store"
+                  disabled={installing}
+                  className="max-w-xs border-gray-300 focus:border-smart-blue-500 focus:ring-smart-blue-500"
+                />
+                <span className="text-oxford-navy">.myshopify.com</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={handleInstall}
+                disabled={!shop || installing}
+                className="bg-smart-blue-500 hover:bg-smart-blue-600 text-white"
+              >
+                {installing ? 'Installing...' : 'Install App'}
+              </Button>
+
+              {installing && (
+                <Badge variant="secondary" className="bg-smart-blue-100 text-smart-blue-700">
+                  Redirecting to Shopify...
+                </Badge>
               )}
+            </div>
 
-              <BlockStack gap="300">
-                <Text as="p" variant="bodyMd">
-                  Enter your Shopify store domain:
-                </Text>
+            <div className="pt-4 border-t border-gray-200">
+              <div className="space-y-2">
+                <h3 className="font-semibold text-oxford-navy">
+                  What permissions will Thunder Text request?
+                </h3>
+                <ul className="list-disc list-inside space-y-1 text-oxford-navy ml-2">
+                  <li>Read and write products</li>
+                  <li>Read and write product content</li>
+                  <li>Generate AI descriptions</li>
+                  <li>Update product metafields</li>
+                </ul>
+                <p className="text-sm text-gray-600">
+                  Thunder Text will never modify your products without your explicit approval.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-                <InlineStack gap="300" align="start">
-                  <Box width="300px">
-                    <input
-                      type="text"
-                      value={shop}
-                      onChange={(e) => setShop(e.target.value)}
-                      placeholder="your-store"
-                      disabled={installing}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        fontSize: '14px',
-                        border: '1px solid #ddd',
-                        borderRadius: '4px'
-                      }}
-                    />
-                  </Box>
-                  <Text as="span" variant="bodyMd">
-                    .myshopify.com
-                  </Text>
-                </InlineStack>
-              </BlockStack>
-
-              <InlineStack gap="300">
-                <Button
-                  variant="primary"
-                  onClick={handleInstall}
-                  loading={installing}
-                  disabled={!shop || installing}
-                >
-                  Install App
-                </Button>
-
-                {installing && (
-                  <Badge tone="info">
-                    Redirecting to Shopify...
-                  </Badge>
-                )}
-              </InlineStack>
-
-              <Box paddingBlockStart="400" borderBlockStartWidth="025">
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingSm">
-                    What permissions will Thunder Text request?
-                  </Text>
-                  <ul style={{ paddingLeft: '20px', margin: '8px 0' }}>
-                    <li>Read and write products</li>
-                    <li>Read and write product content</li>
-                    <li>Generate AI descriptions</li>
-                    <li>Update product metafields</li>
-                  </ul>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    Thunder Text will never modify your products without your explicit approval.
-                  </Text>
-                </BlockStack>
-              </Box>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <Text as="h3" variant="headingSm">
-                Already installed?
-              </Text>
-              <Text as="p" variant="bodyMd">
-                If you've already installed Thunder Text, you can access it from your Shopify admin:
-              </Text>
-              <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
-                <li>Go to your Shopify admin</li>
-                <li>Click on "Apps" in the left sidebar</li>
-                <li>Select "Thunder Text" from your installed apps</li>
-              </ol>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-oxford-navy">Already installed?</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-oxford-navy">
+              If you've already installed Thunder Text, you can access it from your Shopify admin:
+            </p>
+            <ol className="list-decimal list-inside space-y-1 text-oxford-navy ml-2">
+              <li>Go to your Shopify admin</li>
+              <li>Click on "Apps" in the left sidebar</li>
+              <li>Select "Thunder Text" from your installed apps</li>
+            </ol>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   )
 }

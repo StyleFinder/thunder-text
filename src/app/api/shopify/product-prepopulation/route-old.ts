@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchProductDataForPrePopulation } from '@/lib/shopify/product-prepopulation'
 import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors'
+import { logger } from '@/lib/logger'
 
 export async function OPTIONS(request: NextRequest) {
   return handleCorsPreflightRequest(request)
@@ -21,7 +22,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('📦 API: Fetching product data for prepopulation:', { productId, shop })
 
     // Get session token from Authorization header if provided
     const authHeader = request.headers.get('authorization')
@@ -31,18 +31,17 @@ export async function GET(request: NextRequest) {
     const productData = await fetchProductDataForPrePopulation(productId, shop, sessionToken)
 
     if (!productData) {
-      console.error('❌ API: No product data found for ID:', productId)
+      logger.error('❌ API: No product data found for ID:', productId as Error, { component: 'route-old' })
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404, headers: corsHeaders }
       )
     }
 
-    console.log('✅ API: Successfully fetched product data')
     return NextResponse.json(productData, { headers: corsHeaders })
 
   } catch (error) {
-    console.error('❌ API: Error fetching product data:', error)
+    logger.error('❌ API: Error fetching product data:', error as Error, { component: 'route-old' })
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch product data' },
       { status: 500, headers: corsHeaders }

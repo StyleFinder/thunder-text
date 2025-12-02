@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { queryWithTenant } from "@/lib/postgres";
 import { getUserId } from "@/lib/auth/content-center-auth";
+import { logger } from "@/lib/logger";
 import type {
   ApiResponse,
   SubmitAnswerRequest,
@@ -59,7 +60,9 @@ export async function POST(
 
     // SECURITY: Double-check that profile belongs to authenticated tenant
     if (profile.store_id !== userId) {
-      console.error("🚨 SECURITY VIOLATION: Profile store_id mismatch", {
+      logger.error("SECURITY VIOLATION: Profile store_id mismatch", new Error("Unauthorized access"), {
+        component: "business-profile-answer",
+        operation: "POST",
         authenticated_store: userId,
         profile_store: profile.store_id,
         profile_id: profile.id,
@@ -154,10 +157,6 @@ export async function POST(
       );
 
       newResponse = result.rows[0] as BusinessProfileResponse;
-      console.log("✅ Tenant-scoped INSERT successful:", {
-        id: newResponse?.id,
-        tenant: userId,
-      });
 
       // VERIFY: Immediately query to confirm the record exists and belongs to correct tenant
       const verifyResult = await queryWithTenant(
@@ -169,12 +168,6 @@ export async function POST(
         [newResponse?.id],
       );
 
-      console.log("🔍 Verification query result:", {
-        found: verifyResult.rows.length > 0,
-        record: verifyResult.rows[0],
-        tenant_match: verifyResult.rows[0]?.store_id === userId,
-      });
-
       if (verifyResult.rows.length === 0) {
         throw new Error(
           "CRITICAL: INSERT returned success but record cannot be found immediately after!",
@@ -183,13 +176,12 @@ export async function POST(
 
       // SECURITY: Verify the response belongs to the correct tenant
       if (verifyResult.rows[0].store_id !== userId) {
-        console.error(
-          "🚨 SECURITY VIOLATION: Response created for wrong tenant",
-          {
-            authenticated_tenant: userId,
-            response_tenant: verifyResult.rows[0].store_id,
-          },
-        );
+        logger.error("SECURITY VIOLATION: Response created for wrong tenant", new Error("Tenant isolation violation"), {
+          component: "business-profile-answer",
+          operation: "POST-verifyTenant",
+          authenticated_tenant: userId,
+          response_tenant: verifyResult.rows[0].store_id,
+        });
         throw new Error("SECURITY: Tenant isolation violation detected");
       }
     } catch (error) {
@@ -197,10 +189,11 @@ export async function POST(
     }
 
     if (responseError) {
-      console.error("❌ Error saving response:", {
-        error: responseError,
-        message: responseError.message,
-        stack: responseError.stack,
+      logger.error("Error saving response", responseError, {
+        component: "business-profile-answer",
+        operation: "POST-saveResponse",
+        userId,
+        profileId: profile.id
       });
       return NextResponse.json(
         { success: false, error: "Failed to save response" },
@@ -291,7 +284,10 @@ export async function POST(
       { status: 201 },
     );
   } catch (error) {
-    console.error("Error in POST /api/business-profile/answer:", error);
+    logger.error("Error in POST /api/business-profile/answer", error as Error, {
+      component: "business-profile-answer",
+      operation: "POST"
+    });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

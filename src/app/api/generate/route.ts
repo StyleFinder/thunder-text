@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors'
+import { logger } from '@/lib/logger'
 
 export async function OPTIONS(request: NextRequest) {
   return handleCorsPreflightRequest(request)
@@ -39,7 +40,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('✅ Processing generation request (Shopify/Embedded mode)')
     const storeId = 'shopify-embedded-app'
 
     const body = await request.json()
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     }, { headers: corsHeaders })
 
   } catch (error) {
-    console.error('Generation API error:', error)
+    logger.error('Generation API error:', error as Error, { component: 'generate' })
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }

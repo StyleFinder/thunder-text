@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import createApp from '@shopify/app-bridge'
 import { getSessionToken, authenticatedFetch } from '@shopify/app-bridge/utilities'
 import type { ClientApplication } from '@shopify/app-bridge'
+import { logger } from '@/lib/logger'
 
 interface ShopifyAuthContextType {
   isAuthenticated: boolean
@@ -61,7 +62,10 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
       const hostParam = searchParams?.get('host')
 
       if (!shopParam) {
-        console.error('❌ Missing shop parameter')
+        logger.error('Missing shop parameter', new Error('Shop parameter not found'), {
+          component: 'ShopifyAuthProvider',
+          operation: 'initializeAuth'
+        })
         setError('Missing shop parameter')
         setIsLoading(false)
         return
@@ -76,8 +80,11 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
 
       if (!isEmbedded) {
         if (!isTestStore) {
-          console.error('❌ App must be accessed through Shopify admin (embedded context)')
-          console.error('Direct URL access is not allowed in production')
+          logger.error('App must be accessed through Shopify admin', new Error('Not in embedded context'), {
+            component: 'ShopifyAuthProvider',
+            operation: 'initializeAuth',
+            shop: shopParam
+          })
           setError('This app must be accessed through your Shopify admin panel')
           setIsAuthenticated(false)
           setIsLoading(false)
@@ -85,7 +92,6 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
         }
 
         // For test store in non-embedded mode, set up basic auth
-        console.log('✅ Test store detected in non-embedded mode, using direct authentication')
         setIsAuthenticated(true)
         setIsLoading(false)
         // Use regular fetch as authenticatedFetch
@@ -93,27 +99,32 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
         return
       }
 
-      console.log('✅ Embedded context detected, initializing App Bridge')
 
       // Get API key from environment
       const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY
 
       if (!apiKey) {
-        console.error('❌ NEXT_PUBLIC_SHOPIFY_API_KEY not configured')
+        logger.error('NEXT_PUBLIC_SHOPIFY_API_KEY not configured', new Error('API key missing'), {
+          component: 'ShopifyAuthProvider',
+          operation: 'initializeAuth'
+        })
         setError('App configuration error: API key missing')
         setIsLoading(false)
         return
       }
 
       if (!hostParam) {
-        console.error('❌ Missing host parameter required for App Bridge')
+        logger.error('Missing host parameter required for App Bridge', new Error('Host parameter missing'), {
+          component: 'ShopifyAuthProvider',
+          operation: 'initializeAuth',
+          shop: shopParam
+        })
         setError('Missing host parameter')
         setIsLoading(false)
         return
       }
 
       // Create App Bridge instance (following Shopify documentation)
-      console.log('🔧 Creating App Bridge instance...')
       const appInstance = createApp({
         apiKey: apiKey,
         host: hostParam,
@@ -126,19 +137,20 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
       authFetch.current = authenticatedFetch(appInstance)
 
       // Get initial session token
-      console.log('🔑 Getting session token from App Bridge...')
       const token = await getSessionToken(appInstance)
 
       if (!token) {
-        console.error('❌ Failed to get session token')
+        logger.error('Failed to get session token', new Error('Empty session token'), {
+          component: 'ShopifyAuthProvider',
+          operation: 'initializeAuth',
+          shop: shopParam
+        })
         // Session token might not be available yet, try bounce page
         const bounceUrl = `/api/auth/session-bounce?shop=${shopParam}&host=${hostParam}&return_url=${encodeURIComponent(window.location.pathname + window.location.search)}`
-        console.log('🔄 Redirecting to bounce page to establish session...')
         window.location.href = bounceUrl
         return
       }
 
-      console.log('✅ Got session token successfully')
       setSessionToken(token)
 
       // Store in sessionStorage for other components (optional)
@@ -146,14 +158,6 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
       sessionStorage.setItem('shopify_shop', shopParam)
 
       // Exchange token with backend for access token
-      console.log('🔄 Exchanging session token for access token...')
-      console.log('📝 Token exchange details:', {
-        endpoint: '/api/shopify/token-exchange',
-        shop: shopParam,
-        tokenLength: token.length,
-        tokenPrefix: token.substring(0, 20) + '...'
-      })
-
       const response = await authFetch.current('/api/shopify/token-exchange', {
         method: 'POST',
         headers: {
@@ -165,16 +169,17 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
         })
       })
 
-      console.log('📥 Token exchange response status:', response.status)
 
       const result = await response.json()
 
       if (!response.ok || !result.success) {
-        console.error('❌ Token exchange failed:', {
+        logger.error('Token exchange failed', new Error(result.error || 'Token exchange failed'), {
+          component: 'ShopifyAuthProvider',
+          operation: 'tokenExchange',
           status: response.status,
-          error: result.error,
           details: result.details,
-          debugInfo: result.debugInfo
+          debugInfo: result.debugInfo,
+          shop: shopParam
         })
 
         // More specific error messages based on status
@@ -190,7 +195,6 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
         setError(errorMessage)
         setIsAuthenticated(false)
       } else {
-        console.log('✅ Authentication successful')
         setIsAuthenticated(true)
         setIsLoading(false) // Set loading to false immediately after successful auth
         sessionStorage.setItem('token_exchange_completed', shopParam)
@@ -203,10 +207,13 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
             if (newToken) {
               setSessionToken(newToken)
               sessionStorage.setItem('shopify_session_token', newToken)
-              console.log('🔄 Session token refreshed')
             }
           } catch (err) {
-            console.error('❌ Token refresh failed:', err)
+            logger.error('Token refresh failed', err as Error, {
+              component: 'ShopifyAuthProvider',
+              operation: 'tokenRefresh',
+              shop: shopParam
+            })
           }
         }, 50000) // 50 seconds
 
@@ -214,7 +221,10 @@ function ShopifyAuthProviderContent({ children }: ShopifyAuthProviderProps) {
         return () => clearInterval(refreshInterval)
       }
     } catch (error) {
-      console.error('❌ Authentication initialization error:', error)
+      logger.error('Authentication initialization error', error as Error, {
+        component: 'ShopifyAuthProvider',
+        operation: 'initializeAuth'
+      })
       setError(error instanceof Error ? error.message : 'Authentication failed')
       setIsAuthenticated(false)
       setIsLoading(false)

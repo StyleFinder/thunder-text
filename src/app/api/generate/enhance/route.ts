@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { enhancementGenerator, type EnhancementRequest } from '@/lib/openai-enhancement'
 import { type EnhancementProductData } from '@/lib/shopify/product-enhancement'
+import { logger } from '@/lib/logger'
 
 // POST /api/generate/enhance
 // Generate enhanced description for existing product
@@ -11,14 +12,13 @@ export async function POST(request: NextRequest) {
     const sessionToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined
 
     if (!sessionToken) {
-      console.error('❌ No session token provided for enhance API')
+      logger.error('❌ No session token provided for enhance API', undefined, { component: 'enhance' })
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
       )
     }
 
-    console.log('✅ Session token present for enhance API')
 
     const body = await request.json()
     const {
@@ -44,12 +44,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    console.log('🔄 Generating enhanced description for existing product:', {
-      productId: existingProduct.id,
-      template: template || 'default',
-      hasOriginalDescription: !!(existingProduct.originalDescription || existingProduct.description)
-    })
 
     // Ensure the product has the originalDescription field
     const productData: EnhancementProductData = {
@@ -87,7 +81,6 @@ export async function POST(request: NextRequest) {
     // Generate the enhanced description using OpenAI
     const enhancedContent = await enhancementGenerator.generateEnhancedDescription(enhancementRequest)
 
-    console.log('✅ Enhanced description generated successfully')
 
     return NextResponse.json({
       success: true,
@@ -104,7 +97,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Error generating enhanced description:', error)
+    logger.error('❌ Error generating enhanced description:', error as Error, { component: 'enhance' })
     return NextResponse.json(
       { 
         success: false, 

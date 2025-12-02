@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger'
+
 /**
  * Centralized function to get Shopify access token
  * This ensures consistent token retrieval across all API routes
@@ -7,20 +9,12 @@ export function getShopifyAccessToken(): string | undefined {
   // This avoids GitHub secret detection while we fix proper env access
   const encodedToken = process.env.NEXT_PUBLIC_SHOPIFY_TOKEN_B64
 
-  console.log('🔍 Token retrieval attempt:', {
-    hasEncodedToken: !!encodedToken,
-    encodedTokenLength: encodedToken?.length || 0,
-    nodeEnv: process.env.NODE_ENV
-  })
-
   if (encodedToken) {
     try {
       const decodedToken = Buffer.from(encodedToken, 'base64').toString('utf-8')
-      console.log('✅ Using decoded Shopify access token from environment')
-      console.log('🔑 Decoded token prefix:', decodedToken.substring(0, 10) + '...')
       return decodedToken
     } catch (error) {
-      console.error('❌ Failed to decode token:', error)
+      logger.error('❌ Failed to decode token:', error as Error, { component: 'get-access-token' })
     }
   }
 
@@ -28,16 +22,10 @@ export function getShopifyAccessToken(): string | undefined {
   const envToken = process.env.SHOPIFY_ACCESS_TOKEN
 
   if (envToken && envToken !== '') {
-    console.log('✅ Found Shopify access token from environment')
     return envToken
   }
 
-  console.warn('⚠️ No Shopify access token found in environment')
-  console.log('📝 Environment check:', {
-    NODE_ENV: process.env.NODE_ENV,
-    hasToken: !!envToken,
-    tokenLength: envToken?.length || 0
-  })
+  logger.warn('No Shopify access token found in environment', { component: 'get-access-token' })
 
   return undefined
 }

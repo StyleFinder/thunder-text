@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
+import { guardDebugRoute } from '../_middleware-guard'
 
 export async function GET(request: NextRequest) {
+  const guardResponse = guardDebugRoute('/api/debug/clear-token');
+  if (guardResponse) return guardResponse;
   const { searchParams } = new URL(request.url)
   const shop = searchParams.get('shop')
 
@@ -25,7 +29,7 @@ export async function GET(request: NextRequest) {
       .eq('shop_domain', fullShopDomain)
 
     if (deleteError) {
-      console.error('❌ Error clearing token:', deleteError)
+      logger.error('❌ Error clearing token:', deleteError as Error, { component: 'clear-token' })
       return NextResponse.json({
         success: false,
         error: 'Failed to clear token',
@@ -33,7 +37,6 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('✅ Token cleared for shop:', fullShopDomain)
 
     return NextResponse.json({
       success: true,
@@ -42,7 +45,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Unexpected error:', error)
+    logger.error('❌ Unexpected error:', error as Error, { component: 'clear-token' })
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to clear token'

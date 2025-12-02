@@ -16,6 +16,8 @@ export interface InterviewPrompt {
   min_words: number;
   suggested_words: number;
   is_active: boolean;
+  is_quick_start: boolean;
+  quick_start_order: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -26,12 +28,15 @@ export type InterviewStatus =
   | "completed"
   | "regenerating";
 
+export type InterviewMode = "full" | "quick_start";
+
 export interface BusinessProfile {
   id: string;
-  store_id: string;
+  shop_id: string;
 
   // Interview Progress
   interview_status: InterviewStatus;
+  interview_mode: InterviewMode;
   current_question_number: number;
   questions_completed: number;
   total_questions: number;
@@ -279,6 +284,8 @@ export interface ProfileProgress {
 export interface StartInterviewResponse {
   profile: BusinessProfile;
   first_prompt: InterviewPrompt;
+  interview_mode: InterviewMode;
+  total_questions: number;
 }
 
 // POST /api/business-profile/answer

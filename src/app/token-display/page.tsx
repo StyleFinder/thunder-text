@@ -4,15 +4,18 @@
 export const dynamic = 'force-dynamic'
 
 import { useSearchParams } from 'next/navigation'
-import { Page, Layout, Card, Text, Button, Banner, LegacyStack } from '@shopify/polaris'
 import { useState, Suspense } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { CheckCircle2, Copy, Check } from 'lucide-react'
 
 function TokenDisplayContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
   const shop = searchParams.get('shop')
   const [copied, setCopied] = useState(false)
-  
+
   const copyToken = async () => {
     if (token) {
       await navigator.clipboard.writeText(token)
@@ -20,83 +23,84 @@ function TokenDisplayContent() {
       setTimeout(() => setCopied(false), 2000)
     }
   }
-  
+
   return (
-    <Page 
-      title="Access Token Generated"
-      subtitle={`For shop: ${shop}`}
-    >
-      <Layout>
-        <Layout.Section>
-          <Banner tone="success">
-            <p>Successfully obtained Shopify access token!</p>
-          </Banner>
-        </Layout.Section>
-        
-        <Layout.Section>
-          <Card>
-            <LegacyStack vertical spacing="loose">
-              <Text variant="headingMd" as="h2">
-                Your Shopify Access Token
-              </Text>
-              <Text as="p" tone="subdued">
-                Copy this token and update your .env.local file:
-              </Text>
-              <div style={{ 
-                background: '#f6f6f7', 
-                padding: '12px', 
-                borderRadius: '8px', 
-                fontFamily: 'monospace',
-                wordBreak: 'break-all',
-                border: '1px solid #e1e3e5'
-              }}>
-                {token}
-              </div>
-              <LegacyStack distribution="fillEvenly">
-                <Button 
-                  variant="primary" 
-                  onClick={copyToken}
-                  disabled={!token}
-                >
-                  {copied ? 'Copied!' : 'Copy Token'}
-                </Button>
-                <Button 
-                  url="/create?shop=zunosai-staging-test-store.myshopify.com&authenticated=true"
-                >
-                  Continue to Create Product
-                </Button>
-              </LegacyStack>
-              <Card>
-                <Text variant="headingMd" as="h3">
-                  Next Steps:
-                </Text>
-                <LegacyStack vertical spacing="tight">
-                  <Text as="p">1. Copy the access token above</Text>
-                  <Text as="p">2. Update your .env.local file:</Text>
-                  <div style={{ 
-                    background: '#f6f6f7', 
-                    padding: '8px', 
-                    borderRadius: '4px', 
-                    fontFamily: 'monospace',
-                    fontSize: '12px'
-                  }}>
-                    SHOPIFY_ACCESS_TOKEN={token}
-                  </div>
-                  <Text as="p">3. Restart your development server</Text>
-                  <Text as="p">4. Test product creation</Text>
-                </LegacyStack>
-              </Card>
-            </LegacyStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
+    <div className="container mx-auto py-8 px-4 max-w-4xl">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-oxford-navy mb-2">Access Token Generated</h1>
+          <p className="text-muted-foreground">For shop: {shop}</p>
+        </div>
+
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            Successfully obtained Shopify access token!
+          </AlertDescription>
+        </Alert>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-oxford-navy">Your Shopify Access Token</CardTitle>
+            <CardDescription>
+              Copy this token and update your .env.local file:
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-muted p-4 rounded-lg border font-mono text-sm break-all">
+              {token}
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={copyToken}
+                disabled={!token}
+                className="bg-smart-blue-500 hover:bg-smart-blue-600"
+              >
+                {copied ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy Token
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => window.location.href = `/create?shop=zunosai-staging-test-store.myshopify.com&authenticated=true`}
+              >
+                Continue to Create Product
+              </Button>
+            </div>
+
+            <Card className="bg-muted/50">
+              <CardHeader>
+                <CardTitle className="text-lg text-oxford-navy">Next Steps:</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm">1. Copy the access token above</p>
+                <p className="text-sm">2. Update your .env.local file:</p>
+                <div className="bg-background p-3 rounded-md border font-mono text-xs">
+                  SHOPIFY_ACCESS_TOKEN={token}
+                </div>
+                <p className="text-sm">3. Restart your development server</p>
+                <p className="text-sm">4. Test product creation</p>
+              </CardContent>
+            </Card>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
 
 export default function TokenDisplay() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="container mx-auto py-8 text-center">Loading...</div>}>
       <TokenDisplayContent />
     </Suspense>
   );

@@ -12,6 +12,7 @@ import {
   type CTAType
 } from './content-prompts'
 import type { BrandVoiceProfile } from '@/types/content-center'
+import { logger } from '@/lib/logger'
 
 export interface ContentGenerationParams {
   contentType: ContentType
@@ -257,7 +258,7 @@ export async function batchGenerateContent(
       // Small delay between generations to be respectful of API limits
       await new Promise(resolve => setTimeout(resolve, 500))
     } catch (error) {
-      console.error('Batch generation error:', error)
+      logger.error('Batch generation error:', error as Error, { component: 'content-generator' })
       // Continue with next item even if one fails
     }
   }

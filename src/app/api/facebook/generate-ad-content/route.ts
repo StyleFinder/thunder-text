@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -86,7 +87,7 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks):
     try {
       adContent = JSON.parse(responseText)
     } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', responseText)
+      logger.error('Failed to parse OpenAI response:', responseText as Error, { component: 'generate-ad-content' })
       throw new Error('Invalid response format from AI')
     }
 
@@ -107,7 +108,7 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks):
     })
 
   } catch (error) {
-    console.error('Error generating ad content:', error)
+    logger.error('Error generating ad content:', error as Error, { component: 'generate-ad-content' })
     return NextResponse.json(
       {
         success: false,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getShopToken } from '@/lib/shopify/token-manager'
 import { shopifyGraphQL } from '@/lib/shopify/client'
+import { logger } from '@/lib/logger'
 
 // GET /api/shopify/products/[productId]?shop={shop}
 // Fetch a single product by ID
@@ -30,7 +31,7 @@ export async function GET(
     // Validate productId - prevent invalid values
     const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test']
     if (invalidProductIds.includes(productId.toLowerCase())) {
-      console.error('❌ Invalid productId received:', productId)
+      logger.error('❌ Invalid productId received:', productId as Error, { component: '[productId]' })
       return NextResponse.json(
         {
           success: false,
@@ -41,7 +42,6 @@ export async function GET(
       )
     }
 
-    console.log('🔄 Fetching single product from Shopify:', { shop, productId })
 
     // Get session token from Authorization header if provided
     const authHeader = request.headers.get('authorization')
@@ -170,7 +170,6 @@ export async function GET(
       })) || []
     }
 
-    console.log('✅ Product fetched successfully:', transformedProduct.title)
 
     return NextResponse.json({
       success: true,
@@ -179,7 +178,7 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('❌ Error fetching product:', error)
+    logger.error('❌ Error fetching product:', error as Error, { component: '[productId]' })
 
     // Check for specific error types
     if (error instanceof Error) {

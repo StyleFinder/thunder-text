@@ -2,8 +2,8 @@
 
 client_id = "fa85f3902882734b800968440c27447d"
 name = "Thunder Text Dev911"
-application_url = "https://thunder-text.onrender.com"
-embedded = true
+application_url = "https://app.zunosai.com"
+embedded = false
 handle = "thunder-text-29"
 
 [build]
@@ -28,8 +28,9 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://thunder-text.onrender.com/api/auth/callback",
-  "https://thunder-text.onrender.com/api/auth/shopify/callback"
+  "https://app.zunosai.com/api/auth/callback",
+  "https://app.zunosai.com/api/auth/shopify/callback",
+  "http://localhost:3050/api/auth/shopify/callback"
 ]
 
 [pos]

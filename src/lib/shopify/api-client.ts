@@ -1,39 +1,99 @@
+import { logger } from '@/lib/logger'
+
 // @ts-nocheck - Client-side API utilities with type issues in HeadersInit
 /**
  * Client-side API utilities for making authenticated requests to Shopify API endpoints
- * Following the authentication guide's best practices for token management
+ * Supports both embedded (App Bridge) and external (OAuth) authentication modes
  */
 
 /**
- * Get a fresh Shopify session token
- * Always fetches a new token to avoid expiry issues (tokens expire in 60 seconds)
+ * Get authentication token for API requests
+ * Supports both embedded mode (Shopify App Bridge) and external mode (OAuth tokens)
  */
-export async function getSessionToken(): Promise<string | null> {
-  if (typeof window === 'undefined') return null
+export async function getAuthToken(shop?: string): Promise<{ token: string | null; type: 'session' | 'oauth' | null }> {
+  if (typeof window === 'undefined') return { token: null, type: null }
 
-  // Try to use the global function set up by AppBridgeProvider
+
+  // Try embedded mode first (Shopify App Bridge session token)
   if (window.getShopifySessionToken) {
     try {
-      const freshToken = await window.getShopifySessionToken()
-      return freshToken
+      const sessionToken = await window.getShopifySessionToken()
+      if (sessionToken) {
+        return { token: sessionToken, type: 'session' }
+      }
     } catch (error) {
-      console.error('Failed to get fresh session token:', error)
+      logger.debug('App Bridge not available, trying external auth', { component: 'api-client' })
     }
   }
 
-  // Fallback to sessionStorage (might be stale)
-  return window.sessionStorage.getItem('shopify_session_token')
+  // Fallback to sessionStorage (App Bridge)
+  const storedSessionToken = window.sessionStorage.getItem('shopify_session_token')
+  if (storedSessionToken) {
+    return { token: storedSessionToken, type: 'session' }
+  }
+
+  // External mode: Get OAuth access token from backend
+  if (shop) {
+    try {
+      const response = await fetch(`/api/shopify/token?shop=${encodeURIComponent(shop)}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.token) {
+          return { token: data.token, type: 'oauth' }
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to get OAuth token:', error as Error, { component: 'api-client' })
+    }
+  }
+
+  // Development bypass: Enable in development mode when shop is provided
+  if (typeof window !== 'undefined' && shop) {
+    const urlParams = new URLSearchParams(window.location.search)
+    const isDevelopment = process.env.NODE_ENV === 'development'
+    const hasAuthParam = urlParams.get('authenticated') === 'true'
+
+    // Allow dev-token if either:
+    // 1. authenticated=true is in URL, OR
+    // 2. We're in development mode (NODE_ENV=development)
+    if (hasAuthParam || isDevelopment) {
+      // Return a dev token for testing
+      return { token: 'dev-token', type: 'oauth' }
+    }
+  }
+
+  logger.warn('No authentication token available', { component: 'api-client' })
+  return { token: null, type: null }
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use getAuthToken instead
+ */
+export async function getSessionToken(): Promise<string | null> {
+  const { token } = await getAuthToken()
+  return token
 }
 
 /**
  * Make an authenticated fetch request to our API endpoints
- * Implements retry logic for expired tokens as recommended in the guide
+ * Supports both embedded (App Bridge) and external (OAuth) authentication modes
+ * Implements retry logic for expired tokens with automatic refresh
  */
-export async function authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  // Get fresh session token
-  const sessionToken = await getSessionToken()
+export async function authenticatedFetch(url: string, options: RequestInit = {}, shop?: string): Promise<Response> {
+  // Extract shop from URL if not provided
+  let shopDomain = shop
+  if (!shopDomain && typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search)
+    shopDomain = urlParams.get('shop') || undefined
+  }
 
-  // Add session token to headers if available
+
+  // Get authentication token (App Bridge session token or OAuth access token)
+  const { token: authToken, type: authType } = await getAuthToken(shopDomain)
+
+
+  // Add authentication to headers
   const headers: HeadersInit = {
     ...options.headers
   }
@@ -43,8 +103,13 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
     headers['Content-Type'] = 'application/json'
   }
 
-  if (sessionToken) {
-    headers['Authorization'] = `Bearer ${sessionToken}`
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`
+  }
+
+  // Add shop domain to headers for backend validation
+  if (shopDomain) {
+    headers['X-Shop-Domain'] = shopDomain
   }
 
   // Make initial request
@@ -53,21 +118,44 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
     headers
   })
 
-  // Handle token expiry with retry logic (as per guide line 237-249)
-  if (response.status === 401 && sessionToken) {
-    console.log('🔄 Token expired, retrying with fresh token...')
+  // Handle token expiry with retry logic
+  if (response.status === 401 && authToken) {
 
-    // Get a fresh token
-    const freshToken = await getSessionToken()
+    // For OAuth tokens, try to refresh
+    if (authType === 'oauth' && shopDomain) {
+      try {
+        const refreshResponse = await fetch(`/api/auth/refresh?shop=${encodeURIComponent(shopDomain)}`, {
+          method: 'POST'
+        })
 
-    if (freshToken && freshToken !== sessionToken) {
-      // Retry with fresh token
-      headers['Authorization'] = `Bearer ${freshToken}`
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json()
+          if (refreshData.success && refreshData.token) {
+            // Retry with new token
+            headers['Authorization'] = `Bearer ${refreshData.token}`
 
-      response = await fetch(url, {
-        ...options,
-        headers
-      })
+            response = await fetch(url, {
+              ...options,
+              headers
+            })
+          }
+        }
+      } catch (error) {
+        logger.error('Failed to refresh OAuth token:', error as Error, { component: 'api-client' })
+      }
+    } else {
+      // For session tokens, try to get fresh one
+      const { token: freshToken } = await getAuthToken(shopDomain)
+
+      if (freshToken && freshToken !== authToken) {
+        // Retry with fresh token
+        headers['Authorization'] = `Bearer ${freshToken}`
+
+        response = await fetch(url, {
+          ...options,
+          headers
+        })
+      }
     }
   }
 
@@ -84,7 +172,7 @@ export async function fetchProducts(params: URLSearchParams) {
   if (!response.ok) {
     // Check if it's an auth error that requires app reinstallation
     if (response.status === 401 && result.requiresAuth) {
-      console.error('⚠️ Authentication failed. App may need to be reinstalled.')
+      logger.error('⚠️ Authentication failed. App may need to be reinstalled.', undefined, { component: 'api-client' })
       // In a real app, you might want to trigger a reinstallation flow here
     }
     throw new Error(result.error || 'Failed to fetch products')
@@ -100,7 +188,7 @@ export async function enhanceProduct(productId: string, shop: string, data: Reco
   // Validate productId before making request
   const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test', '']
   if (!productId || invalidProductIds.includes(productId.toLowerCase())) {
-    console.error('❌ Invalid productId in enhanceProduct:', productId)
+    logger.error('❌ Invalid productId in enhanceProduct:', productId as Error, { component: 'api-client' })
     throw new Error(`Invalid product ID: "${productId}"`)
   }
 
@@ -128,7 +216,7 @@ export async function getProductPrepopulation(productId: string, shop: string) {
   // Validate productId before making request
   const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test', '']
   if (!productId || invalidProductIds.includes(productId.toLowerCase())) {
-    console.error('❌ Invalid productId in getProductPrepopulation:', productId)
+    logger.error('❌ Invalid productId in getProductPrepopulation:', productId as Error, { component: 'api-client' })
     throw new Error(`Invalid product ID: "${productId}"`)
   }
 

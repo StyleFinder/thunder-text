@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request);
@@ -52,7 +53,12 @@ export async function GET(request: NextRequest) {
       .order('name');
 
     if (sizesError) {
-      console.error('Shop sizes query error:', sizesError);
+      logger.error('Shop sizes query error', new Error(sizesError.message), {
+        component: 'shop-sizes-api',
+        operation: 'GET',
+        shop: fullShopDomain,
+        errorCode: sizesError.code
+      });
       return NextResponse.json(
         {
           error: 'Failed to fetch shop sizes',
@@ -94,7 +100,11 @@ export async function GET(request: NextRequest) {
     }, { headers: corsHeaders });
 
   } catch (error) {
-    console.error('Shop sizes API error:', error);
+    logger.error('Shop sizes API error', error as Error, {
+      component: 'shop-sizes-api',
+      operation: 'GET',
+      shop: request.nextUrl.searchParams.get('shop') || undefined
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }
@@ -152,7 +162,13 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error('Shop size insert error:', insertError);
+      logger.error('Shop size insert error', new Error(insertError.message), {
+        component: 'shop-sizes-api',
+        operation: 'POST',
+        shop: fullShopDomain,
+        name,
+        errorCode: insertError.code
+      });
       throw insertError;
     }
 
@@ -162,7 +178,11 @@ export async function POST(request: NextRequest) {
     }, { headers: corsHeaders });
 
   } catch (error) {
-    console.error('Shop sizes create API error:', error);
+    logger.error('Shop sizes create API error', error as Error, {
+      component: 'shop-sizes-api',
+      operation: 'POST',
+      shop: (request as any).body?.shop
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }
@@ -230,7 +250,13 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (updateError) {
-      console.error('Shop size update error:', updateError);
+      logger.error('Shop size update error', new Error(updateError.message), {
+        component: 'shop-sizes-api',
+        operation: 'PUT',
+        shop: fullShopDomain,
+        id,
+        errorCode: updateError.code
+      });
       throw updateError;
     }
 
@@ -240,7 +266,10 @@ export async function PUT(request: NextRequest) {
     }, { headers: corsHeaders });
 
   } catch (error) {
-    console.error('Shop sizes update API error:', error);
+    logger.error('Shop sizes update API error', error as Error, {
+      component: 'shop-sizes-api',
+      operation: 'PUT'
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }
@@ -285,7 +314,13 @@ export async function DELETE(request: NextRequest) {
       .eq('store_id', shopData.id);
 
     if (deleteError) {
-      console.error('Shop size delete error:', deleteError);
+      logger.error('Shop size delete error', new Error(deleteError.message), {
+        component: 'shop-sizes-api',
+        operation: 'DELETE',
+        shop: fullShopDomain,
+        id,
+        errorCode: deleteError.code
+      });
       throw deleteError;
     }
 
@@ -295,7 +330,12 @@ export async function DELETE(request: NextRequest) {
     }, { headers: corsHeaders });
 
   } catch (error) {
-    console.error('Shop sizes delete API error:', error);
+    logger.error('Shop sizes delete API error', error as Error, {
+      component: 'shop-sizes-api',
+      operation: 'DELETE',
+      shop: searchParams.get('shop') || undefined,
+      id: searchParams.get('id') || undefined
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }

@@ -4,6 +4,7 @@
  */
 
 import { getShopToken, saveShopToken } from './token-manager'
+import { logger } from '@/lib/logger'
 
 interface TokenExchangeParams {
   shop: string
@@ -45,7 +46,6 @@ export async function exchangeToken(params: TokenExchangeParams): Promise<TokenE
     requestedTokenType = 'offline'
   } = params
 
-  console.log('🔄 Starting token exchange for shop:', shop)
 
   // Determine the token type parameter
   const tokenTypeParam = requestedTokenType === 'online'
@@ -76,29 +76,25 @@ export async function exchangeToken(params: TokenExchangeParams): Promise<TokenE
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('❌ Token exchange failed:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText
+      const errorMessage = response.status === 400
+        ? 'Invalid session token - token may be expired or malformed'
+        : response.status === 401
+        ? 'Invalid client credentials'
+        : `Token exchange failed: ${response.statusText}`
+
+      logger.error('Token exchange failed', new Error(errorMessage), {
+        component: 'shopify-token-exchange',
+        operation: 'exchangeToken',
+        responseStatus: response.status,
+        responseStatusText: response.statusText,
+        error: errorText,
+        shop
       })
 
-      if (response.status === 400) {
-        throw new Error('Invalid session token - token may be expired or malformed')
-      } else if (response.status === 401) {
-        throw new Error('Invalid client credentials')
-      } else {
-        throw new Error(`Token exchange failed: ${response.statusText}`)
-      }
+      throw new Error(errorMessage)
     }
 
     const tokenData: TokenExchangeResponse = await response.json()
-
-    console.log('✅ Token exchange successful:', {
-      shop,
-      scope: tokenData.scope,
-      tokenType: requestedTokenType,
-      expiresIn: tokenData.expires_in || 'permanent'
-    })
 
     // Save the access token to database for future use
     if (requestedTokenType === 'offline') {
@@ -108,12 +104,19 @@ export async function exchangeToken(params: TokenExchangeParams): Promise<TokenE
         'offline',
         tokenData.scope
       )
-      console.log('💾 Offline access token saved to database')
+      logger.info('Offline access token saved to database', {
+        component: 'token-exchange',
+        shop
+      })
     }
 
     return tokenData
   } catch (error) {
-    console.error('❌ Token exchange error:', error)
+    logger.error('Token exchange error', error as Error, {
+      component: 'shopify-token-exchange',
+      operation: 'exchangeToken',
+      shop
+    })
     throw error
   }
 }
@@ -126,24 +129,24 @@ export async function getOrExchangeToken(
   shop: string,
   sessionToken?: string
 ): Promise<string> {
-  console.log('🔍 Getting access token for shop:', shop)
 
   // First try to get from database (for offline tokens)
   const dbToken = await getShopToken(shop)
   if (dbToken.success && dbToken.accessToken) {
-    console.log('✅ Using existing access token from database')
     return dbToken.accessToken
   }
 
   // If no database token and we have a session token, exchange it
   if (sessionToken) {
-    console.log('🔄 No database token found, attempting token exchange')
 
     const clientId = process.env.SHOPIFY_API_KEY
     const clientSecret = process.env.SHOPIFY_API_SECRET
 
     if (!clientId || !clientSecret) {
-      console.error('❌ Missing Shopify API credentials in environment')
+      logger.error('Missing Shopify API credentials in environment', new Error('Missing Shopify API credentials'), {
+        component: 'shopify-token-exchange',
+        operation: 'getOrExchangeToken'
+      })
       throw new Error('Missing Shopify API credentials in environment')
     }
 
@@ -158,12 +161,15 @@ export async function getOrExchangeToken(
 
       return tokenResponse.access_token
     } catch (exchangeError) {
-      console.error('⚠️ Token exchange failed, will check database again:', exchangeError)
+      logger.error('Token exchange failed, checking database again', exchangeError as Error, {
+        component: 'shopify-token-exchange',
+        operation: 'getOrExchangeToken',
+        shop
+      })
 
       // Try database one more time - maybe it was just added
       const retryDbToken = await getShopToken(shop)
       if (retryDbToken.success && retryDbToken.accessToken) {
-        console.log('✅ Found database token on retry after exchange failure')
         return retryDbToken.accessToken
       }
 
@@ -186,7 +192,7 @@ export function validateSessionToken(token: string): boolean {
     // Session tokens are JWT format: header.payload.signature
     const parts = token.split('.')
     if (parts.length !== 3) {
-      console.error('❌ Invalid session token format')
+      logger.error('❌ Invalid session token format', undefined, { component: 'token-exchange' })
       return false
     }
 
@@ -196,20 +202,25 @@ export function validateSessionToken(token: string): boolean {
     // Check expiration
     const now = Math.floor(Date.now() / 1000)
     if (payload.exp && payload.exp < now) {
-      console.error('❌ Session token expired')
+      logger.error('❌ Session token expired', undefined, { component: 'token-exchange' })
       return false
     }
 
     // Check not before
     if (payload.nbf && payload.nbf > now) {
-      console.error('❌ Session token not yet valid')
+      logger.error('Session token not yet valid', new Error('Session token not yet valid'), {
+        component: 'shopify-token-exchange',
+        operation: 'validateSessionToken'
+      })
       return false
     }
 
-    console.log('✅ Session token validation passed')
     return true
   } catch (error) {
-    console.error('❌ Session token validation failed:', error)
+    logger.error('Session token validation failed', error as Error, {
+      component: 'shopify-token-exchange',
+      operation: 'validateSessionToken'
+    })
     return false
   }
 }
