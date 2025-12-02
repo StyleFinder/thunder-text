@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
     const { data: drafts, error: draftsError } = await query
 
     if (draftsError) {
-      console.error('Error fetching ad drafts:', draftsError)
+      logger.error('Error fetching ad drafts:', draftsError as Error, { component: 'ad-drafts' })
       return NextResponse.json(
         { success: false, error: 'Failed to fetch ad drafts' },
         { status: 500 }
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in GET /api/facebook/ad-drafts:', error)
+    logger.error('Error in GET /api/facebook/ad-drafts:', error as Error, { component: 'ad-drafts' })
     return NextResponse.json(
       {
         success: false,
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (draftError) {
-      console.error('Error creating ad draft:', draftError)
+      logger.error('Error creating ad draft:', draftError as Error, { component: 'ad-drafts' })
       return NextResponse.json(
         { success: false, error: 'Failed to create ad draft' },
         { status: 500 }
@@ -205,7 +206,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in POST /api/facebook/ad-drafts:', error)
+    logger.error('Error in POST /api/facebook/ad-drafts:', error as Error, { component: 'ad-drafts' })
     return NextResponse.json(
       {
         success: false,

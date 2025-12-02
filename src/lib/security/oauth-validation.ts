@@ -31,7 +31,7 @@ export const FacebookOAuthStateSchema = z.object({
   ),
   host: z.string().nullable().optional(),
   embedded: z.string().nullable().optional(),
-  return_to: z.enum(['welcome', 'facebook-ads']).optional(),
+  return_to: z.string().nullable().optional(),
   timestamp: z.number().int().positive('Timestamp must be positive'),
   nonce: z.string().min(32, 'Nonce must be at least 32 characters')
 })

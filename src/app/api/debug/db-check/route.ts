@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { guardDebugRoute } from '../_middleware-guard'
 
 export async function GET() {
+  const guardResponse = guardDebugRoute('/api/debug/db-check');
+  if (guardResponse) return guardResponse;
   try {
     // Check multiple things about the database connection
 

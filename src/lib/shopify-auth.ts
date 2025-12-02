@@ -1,5 +1,6 @@
 import { GraphQLClient } from 'graphql-request'
 import crypto from 'crypto'
+import { logger } from '@/lib/logger'
 
 /**
  * Shopify authentication for Next.js using Token Exchange
@@ -49,7 +50,6 @@ async function exchangeToken(sessionToken: string, shop: string): Promise<TokenE
     throw new Error('SHOPIFY_API_SECRET environment variable is not set')
   }
 
-  console.log('🔄 Exchanging session token for access token:', { shop })
 
   const tokenExchangeUrl = `https://${shop}/admin/oauth/access_token`
 
@@ -74,18 +74,19 @@ async function exchangeToken(sessionToken: string, shop: string): Promise<TokenE
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('❌ Token exchange failed:', {
+      logger.error('Token exchange failed', new Error(`${response.status} ${response.statusText}`), {
         status: response.status,
         statusText: response.statusText,
         error: errorText,
         url: tokenExchangeUrl,
         clientId: clientId,
+        component: 'shopify-auth',
+        operation: 'token-exchange'
       })
 
       // Parse error if it's JSON
       try {
         const errorJson = JSON.parse(errorText)
-        console.error('📝 Error details:', errorJson)
         if (errorJson.error_description) {
           throw new Error(`Token exchange failed: ${errorJson.error_description}`)
         }
@@ -101,7 +102,7 @@ async function exchangeToken(sessionToken: string, shop: string): Promise<TokenE
 
     return data
   } catch (error) {
-    console.error('❌ Token exchange error:', error)
+    logger.error('Token exchange error', error as Error, { component: 'shopify-auth', operation: 'token-exchange' })
     throw error
   }
 }
@@ -116,18 +117,22 @@ function verifySessionToken(token: string): boolean {
   const clientSecret = process.env.SHOPIFY_API_SECRET // This is actually the client secret
 
   if (!clientSecret) {
-    console.error('❌ SHOPIFY_API_SECRET (client secret) not configured')
+    logger.error('SHOPIFY_API_SECRET (client secret) not configured', undefined, { component: 'shopify-auth', operation: 'verify-session-token' })
     return false
   }
 
-  console.log('🔐 Using client secret for verification (first 8 chars):', clientSecret.substring(0, 8) + '...')
-  console.log('🔐 Client secret length:', clientSecret.length)
+  logger.debug('Using client secret for verification', {
+    component: 'shopify-auth',
+    operation: 'verify-session-token',
+    secretPreview: clientSecret.substring(0, 8) + '...',
+    secretLength: clientSecret.length
+  })
 
   try {
     const [header, payload, signature] = token.split('.')
 
     if (!header || !payload || !signature) {
-      console.error('❌ Invalid token format')
+      logger.error('Invalid session token format', undefined, { component: 'shopify-auth', operation: 'verify-session-token' })
       return false
     }
 
@@ -148,7 +153,7 @@ function verifySessionToken(token: string): boolean {
 
     // Check length first (fast fail, not timing sensitive)
     if (expected.length !== received.length) {
-      console.error('❌ Session token signature verification failed (length mismatch)')
+      logger.error('Session token signature verification failed (length mismatch)', undefined, { component: 'shopify-auth', operation: 'verify-session-token' })
       return false
     }
 
@@ -156,19 +161,22 @@ function verifySessionToken(token: string): boolean {
     const isValid = crypto.timingSafeEqual(expected, received)
 
     if (!isValid) {
-      console.error('❌ Session token signature verification failed')
+      logger.error('Session token signature verification failed', undefined, {
+        component: 'shopify-auth',
+        operation: 'verify-session-token',
+        isDevelopment: process.env.NODE_ENV === 'development'
+      })
       // Don't log actual signatures in production to avoid leaking them
       if (process.env.NODE_ENV === 'development') {
-        console.error('📝 Expected signature:', calculatedSignature)
-        console.error('📝 Received signature:', signature)
+        logger.error('📝 Expected signature:', calculatedSignature as Error, { component: 'shopify-auth' })
+        logger.error('📝 Received signature:', signature as Error, { component: 'shopify-auth' })
       }
     } else {
-      console.log('✅ Session token signature verified successfully')
     }
 
     return isValid
   } catch (error) {
-    console.error('❌ Error verifying session token:', error)
+    logger.error('Error verifying session token', error as Error, { component: 'shopify-auth', operation: 'verify-session-token' })
     return false
   }
 }
@@ -193,7 +201,7 @@ function parseJWT(token: string): ShopifyJWTPayload | null {
     const [, payload] = token.split('.')
     return JSON.parse(Buffer.from(payload, 'base64').toString()) as ShopifyJWTPayload
   } catch (error) {
-    console.error('❌ Error parsing JWT:', error)
+    logger.error('Error parsing JWT', error as Error, { component: 'shopify-auth', operation: 'parse-jwt' })
     return null
   }
 }
@@ -248,26 +256,20 @@ export async function authenticateRequest(
 
     // Parse the token to check its validity
     const payload = parseJWT(sessionToken)
-    console.log('📝 Session token payload:', {
-      iss: payload?.iss,
-      dest: payload?.dest,
-      aud: payload?.aud,
-      sub: payload?.sub,
-      exp: payload?.exp ? new Date(payload.exp * 1000).toISOString() : 'missing',
-      nbf: payload?.nbf ? new Date(payload.nbf * 1000).toISOString() : 'missing'
-    })
 
     // Validate required fields per Shopify documentation
     if (!payload?.iss || !payload?.dest || !payload?.aud || !payload?.sub) {
-      console.error('❌ Session token missing required fields')
+      logger.error('Session token missing required fields', undefined, { component: 'shopify-auth', operation: 'authenticate-request' })
       throw new Error('Invalid session token: missing required fields')
     }
 
     // Verify the dest field matches the shop
     if (!payload.dest.includes(shop.replace('.myshopify.com', ''))) {
-      console.error('❌ Session token dest does not match shop:', {
+      logger.error('Session token dest does not match shop', undefined, {
         dest: payload.dest,
-        shop
+        shop,
+        component: 'shopify-auth',
+        operation: 'authenticate-request'
       })
       throw new Error('Session token shop mismatch')
     }
@@ -275,41 +277,39 @@ export async function authenticateRequest(
     // Verify the aud field matches our app's client ID
     // Use NEXT_PUBLIC_SHOPIFY_API_KEY which is set per environment
     const expectedClientId = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || process.env.SHOPIFY_API_KEY
-    console.log('🔍 Checking audience:', {
-      tokenAud: payload.aud,
-      expectedClientId: expectedClientId,
-      NEXT_PUBLIC_KEY: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY ? 'set' : 'not set',
-      SHOPIFY_API_KEY: process.env.SHOPIFY_API_KEY ? 'set' : 'not set'
-    })
     if (expectedClientId && payload.aud !== expectedClientId) {
-      console.error('❌ Session token audience does not match app client ID:', {
+      logger.error('Session token audience does not match app client ID', undefined, {
         aud: payload.aud,
-        expected: expectedClientId
+        expected: expectedClientId,
+        component: 'shopify-auth',
+        operation: 'authenticate-request'
       })
       throw new Error('Session token audience mismatch')
     }
 
     // Check token nbf (not before)
     if (payload?.nbf && payload.nbf * 1000 > Date.now()) {
-      console.error('❌ Session token not yet valid')
+      logger.error('Session token not yet valid', undefined, { component: 'shopify-auth', operation: 'authenticate-request' })
       throw new Error('Session token not yet valid')
     }
 
     // Check token expiry
     if (payload?.exp && payload.exp * 1000 < Date.now()) {
-      console.error('❌ Session token expired at:', new Date(payload.exp * 1000))
-      console.error('❌ Current time:', new Date())
+      logger.error('Session token expired', undefined, {
+        expiredAt: new Date(payload.exp * 1000),
+        currentTime: new Date(),
+        component: 'shopify-auth',
+        operation: 'authenticate-request'
+      })
       throw new Error('Session token expired')
     }
 
     // Verify the token signature - REQUIRED for production
     if (!verifySessionToken(sessionToken)) {
-      console.error('❌ Session token signature verification failed')
-      console.error('❌ This is required for production security')
+      logger.error('Session token signature verification failed - required for production security', undefined, { component: 'shopify-auth', operation: 'authenticate-request' })
       throw new Error('Invalid session token signature')
     }
 
-    console.log('✅ Session token validation passed')
 
     // Exchange for access token
     const tokenData = await exchangeToken(sessionToken, shop)
@@ -331,7 +331,7 @@ export async function authenticateRequest(
       shop,
     }
   } catch (error) {
-    console.error('❌ Authentication failed:', error)
+    logger.error('Authentication failed', error as Error, { component: 'shopify-auth', operation: 'authenticate-request' })
     throw error
   }
 }
@@ -348,18 +348,15 @@ export async function getAccessToken(shop: string, sessionToken?: string): Promi
 
   // First, always check database for stored access token
   // This is more efficient and avoids unnecessary token exchanges
-  console.log('🔍 Checking database for stored access token')
   const { getShopToken } = await import('./shopify/token-manager')
   const dbToken = await getShopToken(shop)
 
   if (dbToken.success && dbToken.accessToken) {
-    console.log('✅ Using stored access token from database')
     return dbToken.accessToken
   }
 
   // If no stored token and we have a session token, do token exchange
   if (sessionToken) {
-    console.log('🔑 No stored token, performing Token Exchange')
     try {
       // Create a mock request with the session token
       const request = new Request(`https://${shop}/api/auth`, {
@@ -372,11 +369,10 @@ export async function getAccessToken(shop: string, sessionToken?: string): Promi
       const { accessToken } = await authenticateRequest(request, { sessionToken, shop })
 
       if (accessToken) {
-        console.log('✅ Got access token via Token Exchange')
         return accessToken
       }
     } catch (error) {
-      console.error('❌ Token Exchange failed:', error)
+      logger.error('Token Exchange failed', error as Error, { component: 'shopify-auth', operation: 'get-access-token', shop })
       throw error // Don't fall back, throw the error
     }
   }

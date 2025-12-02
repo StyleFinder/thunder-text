@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 // Lazy-initialized Supabase client to avoid build-time initialization
 let supabase: SupabaseClient | null = null
@@ -15,14 +16,6 @@ function getSupabaseClient() {
   }
 
   // Log which key we're using (without exposing the actual key)
-  if (typeof window === 'undefined') {
-    console.log('🔑 Token Manager initialized with:', {
-      url: supabaseUrl,
-      keyType: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'service_role' : process.env.SUPABASE_SECRET_KEY ? 'secret' : process.env.SUPABASE_SERVICE_KEY ? 'service' : 'anon',
-      keyLength: supabaseKey?.length || 0
-    })
-  }
-
   supabase = createClient(supabaseUrl, supabaseKey, {
     auth: {
       persistSession: false,
@@ -59,7 +52,6 @@ function isTokenCacheValid(cached: CachedToken): boolean {
 function getCachedToken(shopDomain: string): string | null {
   const cached = tokenCache.get(shopDomain)
   if (cached && isTokenCacheValid(cached)) {
-    console.log('✅ Using cached token for shop:', shopDomain)
     return cached.accessToken
   }
   return null
@@ -76,7 +68,7 @@ function setCachedToken(shopDomain: string, accessToken: string, scope?: string)
     cachedAt: now,
     expiresAt: now + CACHE_DURATION
   })
-  console.log('💾 Token cached for shop:', shopDomain)
+  logger.debug('Token cached for shop', { component: 'token-manager', shopDomain })
 }
 
 export interface ShopTokenData {
@@ -98,7 +90,6 @@ export async function storeShopToken(
   scope?: string
 ): Promise<{ success: boolean; error?: string; shopId?: string }> {
   try {
-    console.log('📝 Storing access token for shop:', shopDomain)
 
     // Ensure we have the full shop domain
     const fullShopDomain = shopDomain.includes('.myshopify.com')
@@ -110,8 +101,8 @@ export async function storeShopToken(
       .from('shops')
       .upsert({
         shop_domain: fullShopDomain,
-        access_token: accessToken,
-        scope: scope || null,
+        shopify_access_token: accessToken,
+        shopify_scope: scope || null,
         is_active: true
       }, {
         onConflict: 'shop_domain'
@@ -120,18 +111,17 @@ export async function storeShopToken(
       .single()
 
     if (error) {
-      console.error('❌ Error storing token:', error)
+      logger.error('Error storing token', error as Error, { component: 'token-manager', operation: 'storeShopToken', shopDomain: fullShopDomain })
       return { success: false, error: error.message }
     }
 
     // Update cache with the new token
     setCachedToken(fullShopDomain, accessToken, scope)
 
-    console.log('✅ Token stored successfully for shop:', fullShopDomain)
     return { success: true, shopId: data?.id }
 
   } catch (error) {
-    console.error('❌ Unexpected error storing token:', error)
+    logger.error('Unexpected error storing token', error as Error, { component: 'token-manager', operation: 'storeShopToken', shopDomain })
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to store token'
@@ -158,8 +148,6 @@ export async function getShopToken(
       return { success: true, accessToken: cachedToken }
     }
 
-    console.log('🔑 Retrieving access token from database for shop:', shopDomain)
-    console.log('🔍 Querying shops table for:', fullShopDomain)
 
     // Use RPC function to bypass PostgREST permission issues
     const { data, error } = await getSupabaseClient()
@@ -169,18 +157,20 @@ export async function getShopToken(
       .maybeSingle()
 
     if (error) {
-      console.error('❌ Database error retrieving token:', error)
-      console.error('📝 Error details:', {
+      logger.error('Database error retrieving token', error as Error, {
         code: error.code,
-        message: error.message,
         details: error.details,
-        hint: error.hint
+        hint: error.hint,
+        isRLSError: error.code === '42501',
+        component: 'token-manager',
+        operation: 'getShopToken',
+        shopDomain: fullShopDomain
       })
 
       // Check if it's an RLS policy error
       if (error.code === '42501') {
-        console.error('🔒 RLS Policy Error: The anon key cannot read from shops table')
-        console.error('💡 Solution: Add RLS policy or use service key')
+        logger.error('🔒 RLS Policy Error: The anon key cannot read from shops table', undefined, { component: 'token-manager' })
+        logger.error('💡 Solution: Add RLS policy or use service key', undefined, { component: 'token-manager' })
       }
 
       return { success: false, error: error.message }
@@ -189,20 +179,20 @@ export async function getShopToken(
     const shopData = data as { access_token?: string; scope?: string } | null
 
     if (!shopData || !shopData.access_token) {
-      console.log('⚠️ No token found for shop:', fullShopDomain)
-      console.log('💡 Hint: Make sure the app is installed through Shopify OAuth flow')
-      console.log('📝 Query attempted for:', fullShopDomain)
+      logger.info('No token found for shop - app may not be installed', {
+        component: 'token-manager',
+        shopDomain: fullShopDomain
+      })
       return { success: false, error: `No token found for shop: ${fullShopDomain}` }
     }
 
     // Cache the token for future use
     setCachedToken(fullShopDomain, shopData.access_token, shopData.scope)
 
-    console.log('✅ Token retrieved successfully for shop:', fullShopDomain)
     return { success: true, accessToken: shopData.access_token }
 
   } catch (error) {
-    console.error('❌ Unexpected error retrieving token:', error)
+    logger.error('Unexpected error retrieving token', error as Error, { component: 'token-manager', operation: 'getShopToken', shopDomain })
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to retrieve token'
@@ -238,7 +228,7 @@ export async function getShopDetails(
       .single()
 
     if (error) {
-      console.error('❌ Error getting shop details:', error)
+      logger.error('Error getting shop details', error as Error, { component: 'token-manager', operation: 'getShopDetails', shopDomain: fullShopDomain })
       return { success: false, error: error.message }
     }
 
@@ -249,7 +239,7 @@ export async function getShopDetails(
     return { success: true, shop: data }
 
   } catch (error) {
-    console.error('❌ Unexpected error getting shop details:', error)
+    logger.error('Unexpected error getting shop details', error as Error, { component: 'token-manager', operation: 'getShopDetails', shopDomain })
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get shop details'
@@ -267,7 +257,12 @@ export async function saveShopToken(
   tokenType: 'online' | 'offline' = 'offline',
   scope?: string
 ): Promise<{ success: boolean; error?: string; shopId?: string }> {
-  console.log(`💾 Saving ${tokenType} access token for shop:`, shopDomain)
+  logger.info('Saving access token for shop', {
+    component: 'token-manager',
+    operation: 'saveShopToken',
+    shopDomain,
+    tokenType
+  })
   return storeShopToken(shopDomain, accessToken, scope)
 }
 
@@ -289,15 +284,14 @@ export async function deactivateShopToken(
       .eq('shop_domain', fullShopDomain)
 
     if (error) {
-      console.error('❌ Error deactivating token:', error)
+      logger.error('Error deactivating token', error as Error, { component: 'token-manager', operation: 'deactivateShopToken', shopDomain: fullShopDomain })
       return { success: false, error: error.message }
     }
 
-    console.log('✅ Token deactivated for shop:', fullShopDomain)
     return { success: true }
 
   } catch (error) {
-    console.error('❌ Unexpected error deactivating token:', error)
+    logger.error('Unexpected error deactivating token', error as Error, { component: 'token-manager', operation: 'deactivateShopToken', shopDomain })
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to deactivate token'

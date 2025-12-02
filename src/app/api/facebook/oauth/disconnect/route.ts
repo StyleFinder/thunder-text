@@ -21,6 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { decryptToken } from '@/lib/services/encryption'
+import { logger } from '@/lib/logger'
 
 /**
  * Revoke Facebook access token
@@ -39,14 +40,14 @@ async function revokeToken(accessToken: string): Promise<boolean> {
 
     if (!response.ok) {
       const error = await response.text()
-      console.error('Facebook token revocation failed:', error)
+      logger.error('Facebook token revocation failed:', error as Error, { component: 'disconnect' })
       return false
     }
 
     const result = await response.json()
     return result.success === true
   } catch (error) {
-    console.error('Error revoking Facebook token:', error)
+    logger.error('Error revoking Facebook token:', error as Error, { component: 'disconnect' })
     return false
   }
 }
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (shopError || !shopData) {
-      console.error('Shop not found:', shop, shopError)
+      logger.error('Shop not found:', shop, shopError, undefined, { component: 'disconnect' })
       return NextResponse.json(
         { error: 'Shop not found' },
         { status: 404 }
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
         console.log('Facebook token revocation failed, but continuing with local deletion')
       }
     } catch (error) {
-      console.error('Error during token revocation (continuing anyway):', error)
+      logger.error('Error during token revocation (continuing anyway):', error as Error, { component: 'disconnect' })
     }
 
     // Delete integration from database
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
       .eq('provider', 'facebook')
 
     if (deleteError) {
-      console.error('Failed to delete Facebook integration:', deleteError)
+      logger.error('Failed to delete Facebook integration:', deleteError as Error, { component: 'disconnect' })
       throw deleteError
     }
 
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in Facebook OAuth disconnect:', error)
+    logger.error('Error in Facebook OAuth disconnect:', error as Error, { component: 'disconnect' })
     return NextResponse.json(
       { error: 'Failed to disconnect Facebook account' },
       { status: 500 }

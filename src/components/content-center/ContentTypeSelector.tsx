@@ -93,97 +93,131 @@ export function ContentTypeSelector({
   const [hoveredType, setHoveredType] = useState<ContentType | null>(null)
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={className} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div>
-        <h2 className="text-2xl font-bold mb-2">Choose Content Type</h2>
-        <p className="text-muted-foreground">
+        <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#003366', marginBottom: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Choose Content Type</h2>
+        <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
           Select the type of content you want to create. Each type is optimized for its specific use case.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
         {CONTENT_TYPES.map((option) => {
           const Icon = option.icon
           const isSelected = selectedType === option.type
           const isHovered = hoveredType === option.type
 
           return (
-            <Card
+            <div
               key={option.type}
-              className={`cursor-pointer transition-all duration-200 ${
-                isSelected
-                  ? 'ring-2 ring-primary shadow-lg'
-                  : isHovered
-                  ? 'shadow-md scale-[1.02]'
-                  : 'hover:shadow-md'
-              }`}
               onClick={() => onSelectType(option.type)}
               onMouseEnter={() => setHoveredType(option.type)}
               onMouseLeave={() => setHoveredType(null)}
+              style={{
+                background: '#ffffff',
+                border: isSelected ? '2px solid #0066cc' : '1px solid #e5e7eb',
+                borderRadius: '8px',
+                boxShadow: isSelected ? '0 4px 12px rgba(0, 102, 204, 0.15)' : isHovered ? '0 4px 8px rgba(0, 0, 0, 0.12)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                transform: isHovered && !isSelected ? 'translateY(-2px)' : 'none',
+                minWidth: 0
+              }}
             >
-              <CardHeader className="pb-3">
+              <div style={{ padding: '24px 24px 12px 24px' }}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`p-2 rounded-lg ${
-                        isSelected
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      }`}
+                      style={{
+                        padding: '8px',
+                        borderRadius: '8px',
+                        background: isSelected ? '#0066cc' : '#f0f7ff',
+                        color: isSelected ? '#ffffff' : '#0066cc'
+                      }}
                     >
                       <Icon className="h-5 w-5" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">{option.label}</CardTitle>
+                      <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#003366', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>{option.label}</h3>
                       {option.platforms && (
-                        <div className="flex gap-1 mt-1">
+                        <div className="flex gap-1" style={{ marginTop: '4px' }}>
                           {option.platforms.map((platform) => (
-                            <Badge key={platform} variant="secondary" className="text-xs">
+                            <span
+                              key={platform}
+                              style={{
+                                background: '#f3f4f6',
+                                color: '#6b7280',
+                                fontSize: '11px',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+                              }}
+                            >
                               {platform}
-                            </Badge>
+                            </span>
                           ))}
                         </div>
                       )}
                     </div>
                   </div>
                   {isSelected && (
-                    <div className="bg-primary text-primary-foreground rounded-full p-1">
+                    <div style={{ background: '#0066cc', color: '#ffffff', borderRadius: '50%', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Check className="h-4 w-4" />
                     </div>
                   )}
                 </div>
-                <CardDescription className="mt-2">
+                <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                   {option.description}
-                </CardDescription>
-              </CardHeader>
+                </p>
+              </div>
 
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div style={{ padding: '0 24px 24px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="flex items-center gap-2" style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                   <FileText className="h-4 w-4" />
                   <span>{option.wordCountRange}</span>
                 </div>
 
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Examples:</p>
-                  <ul className="text-xs space-y-0.5">
+                <div>
+                  <p style={{ fontSize: '12px', fontWeight: 600, color: '#6b7280', marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Examples:</p>
+                  <ul style={{ fontSize: '12px', color: '#6b7280', margin: 0, padding: 0, listStyle: 'none', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                     {option.examples.slice(0, 3).map((example, idx) => (
-                      <li key={idx} className="text-muted-foreground">
+                      <li key={idx} style={{ marginBottom: '2px' }}>
                         • {example}
                       </li>
                     ))}
                   </ul>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )
         })}
       </div>
 
       {selectedType && (
         <div className="flex justify-end">
-          <Button onClick={() => onSelectType(selectedType)}>
+          <button
+            onClick={() => onSelectType(selectedType)}
+            style={{
+              background: '#0066cc',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 24px',
+              fontSize: '14px',
+              fontWeight: 600,
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#0052a3'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#0066cc'
+            }}
+          >
             Continue with {CONTENT_TYPES.find(t => t.type === selectedType)?.label}
-          </Button>
+          </button>
         </div>
       )}
     </div>

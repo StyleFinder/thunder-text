@@ -1,4 +1,5 @@
 import { shopifyGraphQL } from './client'
+import { logger } from '@/lib/logger'
 
 // GraphQL response types
 interface ShopifyImageNode {
@@ -114,13 +115,12 @@ export async function fetchProductDataForPrePopulation(
   sessionToken?: string
 ): Promise<PrePopulatedProductData | null> {
   try {
-    console.log('🔍 Fetching comprehensive product data for:', productId)
     
     // Use Shopify Admin API to fetch comprehensive product data
     const productData = await fetchShopifyProduct(productId, shop, sessionToken)
     
     if (!productData) {
-      console.error('❌ No product data returned from Shopify')
+      logger.error('❌ No product data returned from Shopify', undefined, { component: 'product-prepopulation' })
       return null
     }
 
@@ -160,17 +160,9 @@ export async function fetchProductDataForPrePopulation(
       seoDescription: productData.seo?.description,
     }
 
-    console.log('✅ Product data successfully processed:', {
-      title: processedData.title,
-      imageCount: processedData.images.length,
-      variantCount: processedData.variants.length,
-      collectionCount: processedData.category.collections?.length || 0,
-      category: processedData.category.primary,
-    })
-
     return processedData
   } catch (error) {
-    console.error('❌ Failed to fetch product data for pre-population:', error)
+    logger.error('❌ Failed to fetch product data for pre-population:', error as Error, { component: 'product-prepopulation' })
     return null
   }
 }
@@ -183,12 +175,7 @@ async function fetchShopifyProduct(productId: string, shop: string, sessionToken
   if (!productId.startsWith('gid://')) {
     // If it's just a numeric ID, convert to GraphQL format
     formattedProductId = `gid://shopify/Product/${productId}`
-    console.log('📝 Converted numeric ID to GraphQL format:', {
-      original: productId,
-      formatted: formattedProductId
-    })
   } else {
-    console.log('✅ Product ID already in GraphQL format:', formattedProductId)
   }
 
   // Always use real Shopify API - no mock data
@@ -264,38 +251,24 @@ async function fetchShopifyProduct(productId: string, shop: string, sessionToken
     }
   `
 
-  console.log('🔍 Executing GraphQL query for product:', formattedProductId)
 
   try {
-    console.log('🔑 Calling Shopify GraphQL with:', {
-      shop,
-      productId: formattedProductId,
-      hasSessionToken: !!sessionToken
-    })
-
     // Use shopifyGraphQL helper which handles authentication properly
     const response = await shopifyGraphQL<{ product: ShopifyProductData }>(query, { id: formattedProductId }, shop, sessionToken)
 
-    console.log('📦 GraphQL response received:', {
-      hasData: !!response?.data,
-      hasProduct: !!response?.data?.product,
-      productId: response?.data?.product?.id
-    })
-
     if (!response?.data?.product) {
-      console.error('❌ No product found with ID:', formattedProductId)
-      console.error('📝 Full response:', JSON.stringify(response, null, 2))
+      logger.error('❌ No product found with ID:', formattedProductId as Error, { component: 'product-prepopulation' })
+      logger.error('📝 Full response:', JSON.stringify(response, null, 2, undefined, { component: 'product-prepopulation' }))
       return null
     }
 
-    console.log('✅ Product found:', response.data.product.title)
     return response.data.product
   } catch (error) {
-    console.error('❌ Error fetching product from Shopify:', error)
-    console.error('📝 Query details:', {
+    logger.error('❌ Error fetching product from Shopify:', error as Error, { component: 'product-prepopulation' })
+    logger.error('📝 Query details:', undefined, { 
       productId: formattedProductId,
       shop
-    })
+    , component: 'product-prepopulation' })
     throw error
   }
 }
@@ -309,21 +282,17 @@ function extractPrimaryCategory(productData: ShopifyProductData): string {
 
   if (productData.collections.edges.length > 0) {
     const primaryCollection = productData.collections.edges[0].node.title
-    console.log('🏷️ Using collection as primary category:', primaryCollection)
     return primaryCollection
   }
 
   if (productData.productType) {
-    console.log('🏷️ Using product type as primary category:', productData.productType)
     return productData.productType
   }
 
   if (productData.vendor) {
-    console.log('🏷️ Using vendor as primary category:', productData.vendor)
     return productData.vendor
   }
 
-  console.log('🏷️ No specific category found, using general')
   return 'general'
 }
 

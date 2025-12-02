@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 import { useShopifyAuth } from '@/app/components/UnifiedShopifyAuth'
 import type { ContentSample, BrandVoiceProfile } from '@/types/content-center'
+import { logger } from '@/lib/logger'
 
 interface WritingSample {
   id: string
@@ -102,7 +103,11 @@ export default function BrandVoicePage() {
         }
       }
     } catch (error) {
-      console.error('Failed to load samples:', error)
+      logger.error('Failed to load samples', error as Error, {
+        component: 'content-center-voice-page',
+        operation: 'loadSamples',
+        shop: shopDomain
+      })
     } finally {
       setIsLoadingSamples(false)
     }
@@ -123,7 +128,11 @@ export default function BrandVoicePage() {
         }
       }
     } catch (error) {
-      console.error('Failed to load profile:', error)
+      logger.error('Failed to load profile', error as Error, {
+        component: 'content-center-voice-page',
+        operation: 'loadProfile',
+        shop: shopDomain
+      })
     }
   }
 
@@ -160,11 +169,19 @@ export default function BrandVoicePage() {
         }
       } else {
         const error = await response.json()
-        console.error('Profile generation failed:', error)
+        logger.error('Profile generation failed', new Error(error.error || 'Unknown error'), {
+          component: 'content-center-voice-page',
+          operation: 'generateProfile',
+          shop: shopDomain
+        })
       }
     } catch (error) {
-      console.error('Failed to generate profile:', error)
-    } finally {
+      logger.error('Failed to generate profile', error as Error, {
+        component: 'content-center-voice-page',
+        operation: 'generateProfile',
+        shop: shopDomain
+      })
+    } finally{
       setIsGenerating(false)
     }
   }
@@ -203,11 +220,18 @@ export default function BrandVoicePage() {
     for (const file of files) {
       // Validate file
       const extension = file.name.toLowerCase().split('.').pop()
-      const isValidType = ['txt', 'pdf', 'doc', 'docx'].includes(extension || '')
+
+      // Check for legacy .doc files first
+      if (extension === 'doc') {
+        alert(`File "${file.name}" uses legacy .doc format which is not supported. Please save as .docx or .txt format, or copy/paste the text.`)
+        continue
+      }
+
+      const isValidType = ['txt', 'pdf', 'docx'].includes(extension || '')
       const isValidSize = file.size <= 10 * 1024 * 1024 // 10MB
 
       if (!isValidType) {
-        alert(`File "${file.name}" is not supported. Please upload PDF, DOC, DOCX, or TXT files.`)
+        alert(`File "${file.name}" is not supported. Please upload PDF, DOCX, or TXT files.`)
         continue
       }
 
@@ -224,7 +248,7 @@ export default function BrandVoicePage() {
           text = await readFileAsText(file)
         } else if (extension === 'pdf') {
           text = await extractTextFromPDF(file)
-        } else if (extension === 'doc' || extension === 'docx') {
+        } else if (extension === 'docx') {
           text = await extractTextFromWord(file)
         } else {
           continue
@@ -267,7 +291,12 @@ export default function BrandVoicePage() {
           alert(`Failed to upload "${file.name}": ${error.error}`)
         }
       } catch (error) {
-        console.error(`Error processing ${file.name}:`, error)
+        logger.error(`Error processing file`, error as Error, {
+          component: 'content-center-voice-page',
+          operation: 'uploadFiles',
+          fileName: file.name,
+          shop: shopDomain
+        })
         alert(`Failed to process "${file.name}". ${error instanceof Error ? error.message : ''}`)
       }
     }
@@ -328,6 +357,49 @@ export default function BrandVoicePage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
+  const formatProfileText = (text: string): JSX.Element => {
+    // Remove markdown formatting characters
+    const cleaned = text
+      .replace(/\*\*/g, '') // Remove bold markers
+      .replace(/\*/g, '')   // Remove italic markers
+      .replace(/\#\#/g, '') // Remove heading markers
+      .replace(/^- /gm, '') // Remove bullet point dashes at start of lines
+      .replace(/^• /gm, '') // Remove bullet points
+
+    // Split into lines
+    const lines = cleaned.split('\n')
+
+    return (
+      <>
+        {lines.map((line, index) => {
+          const trimmed = line.trim()
+
+          // Skip empty lines
+          if (!trimmed) return <br key={index} />
+
+          // Check if line is a heading (all caps, ends with colon, or specific keywords)
+          const isHeading = (trimmed === trimmed.toUpperCase() && trimmed.length > 3) ||
+                           (trimmed.endsWith(':') && /^[A-Z]/.test(trimmed))
+
+          if (isHeading) {
+            return (
+              <p key={index} style={{ fontSize: '14px', fontWeight: 700, color: '#003366', marginBottom: '8px', marginTop: index > 0 ? '16px' : 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+                {trimmed}
+              </p>
+            )
+          }
+
+          // Regular paragraph - treat former bullet points as regular text
+          return (
+            <p key={index} style={{ fontSize: '14px', color: '#374151', marginBottom: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', paddingLeft: '0' }}>
+              {trimmed}
+            </p>
+          )
+        })}
+      </>
+    )
+  }
+
   const removeSample = (id: string) => {
     setSamples(samples.filter(s => s.id !== id))
   }
@@ -370,7 +442,11 @@ export default function BrandVoicePage() {
         alert(`Failed to save text: ${error.error}`)
       }
     } catch (error) {
-      console.error('Failed to save pasted text:', error)
+      logger.error('Failed to save pasted text', error as Error, {
+        component: 'content-center-voice-page',
+        operation: 'savePastedText',
+        shop: shopDomain
+      })
       alert('Failed to save text. Please try again.')
     } finally {
       setIsUploading(false)
@@ -397,8 +473,8 @@ export default function BrandVoicePage() {
   if (authLoading || isLoadingSamples) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-5xl">
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <div className="flex items-center justify-center" style={{ padding: '80px 0' }}>
+          <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#0066cc' }} />
         </div>
       </div>
     )
@@ -408,21 +484,31 @@ export default function BrandVoicePage() {
   if (!isAuthenticated || !shopDomain) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-5xl">
-        <Alert className="border-red-200 bg-red-50">
-          <AlertCircle className="h-4 w-4 text-red-600" />
-          <div className="ml-2">
-            <p className="text-sm font-medium text-red-800">Authentication Required</p>
-            <p className="text-sm text-red-700 mt-1">Please access this page from your Shopify admin.</p>
+        <div style={{ background: '#fff5f5', border: '1px solid #fecaca', borderRadius: '8px', padding: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+          <AlertCircle className="h-5 w-5" style={{ color: '#dc2626', marginTop: '2px' }} />
+          <div>
+            <p style={{ fontSize: '14px', fontWeight: 600, color: '#991b1b', marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Authentication Required</p>
+            <p style={{ fontSize: '14px', color: '#b91c1c', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Please access this page from your Shopify admin.</p>
           </div>
-        </Alert>
+        </div>
       </div>
     )
   }
 
 
+  const cleanProfileText = (text: string): string => {
+    // Remove markdown formatting characters for editing
+    return text
+      .replace(/\*\*/g, '') // Remove bold markers
+      .replace(/\*/g, '')   // Remove italic markers
+      .replace(/\#\#/g, '') // Remove heading markers
+      .replace(/^- /gm, '') // Remove bullet point dashes at start of lines
+      .replace(/^• /gm, '') // Remove bullet points
+  }
+
   const handleEditProfile = () => {
     if (profile) {
-      setEditedProfileText(profile.profile_text)
+      setEditedProfileText(cleanProfileText(profile.profile_text))
       setIsEditingProfile(true)
     }
   }
@@ -455,7 +541,11 @@ export default function BrandVoicePage() {
         alert(`Failed to update profile: ${error.error}`)
       }
     } catch (error) {
-      console.error('Failed to update profile:', error)
+      logger.error('Failed to update profile', error as Error, {
+        component: 'content-center-voice-page',
+        operation: 'saveProfileEdits',
+        shop: shopDomain
+      })
       alert('Failed to update profile. Please try again.')
     } finally {
       setIsSavingProfile(false)
@@ -473,244 +563,414 @@ export default function BrandVoicePage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <MessageSquare className="h-8 w-8 text-blue-600" />
-          <h1 className="text-3xl font-bold text-gray-900">Brand Voice Profile</h1>
+      <div style={{ marginBottom: '32px' }}>
+        <div className="flex items-center gap-3" style={{ marginBottom: '8px' }}>
+          <div style={{ background: '#f0f7ff', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <MessageSquare className="h-6 w-6" style={{ color: '#0066cc' }} />
+          </div>
+          <h1 style={{ fontSize: '32px', fontWeight: 700, color: '#003366', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Brand Voice Profile</h1>
         </div>
-        <p className="text-gray-600">
+        <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
           Upload writing samples so AI can learn your brand's unique voice
         </p>
       </div>
 
-      <div className="space-y-6">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         {/* Profile Status Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
+          <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 className="flex items-center" style={{ gap: '12px', fontSize: '20px', fontWeight: 700, color: '#003366', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
               {profile ? (
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <CheckCircle2 className="h-5 w-5" style={{ color: '#16a34a' }} />
               ) : isGenerating ? (
-                <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#0066cc' }} />
               ) : (
-                <AlertCircle className="h-5 w-5 text-amber-600" />
+                <AlertCircle className="h-5 w-5" style={{ color: '#d97706' }} />
               )}
               Profile Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+            </h3>
+          </div>
+          <div style={{ padding: '24px' }}>
             {profile ? (
-              <div className="space-y-4">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Badge variant="default" className="bg-green-600">Ready</Badge>
-                    <span className="text-sm text-gray-600">
+                    <span style={{ background: '#16a34a', color: '#ffffff', fontSize: '12px', fontWeight: 600, padding: '4px 12px', borderRadius: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Ready</span>
+                    <span style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                       Generated from {samples.length} samples on {new Date(profile.generated_at).toLocaleDateString()}
                     </span>
                   </div>
                   {!isEditingProfile && (
-                    <Button
-                      variant="outline"
-                      size="sm"
+                    <button
                       onClick={handleEditProfile}
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        padding: '8px 16px',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: '#003366',
+                        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f9fafb'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent'
+                      }}
                     >
                       Edit Profile
-                    </Button>
+                    </button>
                   )}
                 </div>
                 {isEditingProfile ? (
-                  <div className="space-y-4">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <Label htmlFor="profile-text">Brand Voice Profile</Label>
-                      <Textarea
+                      <label htmlFor="profile-text" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#003366', marginBottom: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Brand Voice Profile</label>
+                      <textarea
                         id="profile-text"
                         rows={12}
                         value={editedProfileText}
                         onChange={(e) => setEditedProfileText(e.target.value)}
-                        className="font-mono text-sm"
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                          resize: 'vertical',
+                          outline: 'none',
+                          lineHeight: 1.6
+                        }}
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button
+                      <button
                         onClick={handleSaveProfile}
                         disabled={isSavingProfile || !editedProfileText.trim()}
+                        style={{
+                          background: isSavingProfile || !editedProfileText.trim() ? '#9ca3af' : '#0066cc',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '12px 24px',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                          cursor: isSavingProfile || !editedProfileText.trim() ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSavingProfile && editedProfileText.trim()) {
+                            e.currentTarget.style.background = '#0052a3'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSavingProfile && editedProfileText.trim()) {
+                            e.currentTarget.style.background = '#0066cc'
+                          }
+                        }}
                       >
                         {isSavingProfile ? (
                           <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            <Loader2 className="h-4 w-4 animate-spin" />
                             Saving...
                           </>
                         ) : (
                           'Save Changes'
                         )}
-                      </Button>
-                      <Button
-                        variant="outline"
+                      </button>
+                      <button
                         onClick={handleCancelEdit}
                         disabled={isSavingProfile}
+                        style={{
+                          background: 'transparent',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          padding: '12px 24px',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: '#003366',
+                          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                          cursor: isSavingProfile ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSavingProfile) {
+                            e.currentTarget.style.background = '#f9fafb'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSavingProfile) {
+                            e.currentTarget.style.background = 'transparent'
+                          }
+                        }}
                       >
                         Cancel
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm font-medium text-gray-900 mb-2">Your Brand Voice:</p>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{profile.profile_text}</p>
+                  <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
+                    <p style={{ fontSize: '14px', fontWeight: 600, color: '#003366', marginBottom: '12px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Your Brand Voice:</p>
+                    <div style={{ lineHeight: 1.6 }}>
+                      {formatProfileText(profile.profile_text)}
+                    </div>
                   </div>
                 )}
               </div>
             ) : isGenerating ? (
-              <div className="flex items-center gap-3 text-blue-600">
+              <div className="flex items-center gap-3" style={{ color: '#0066cc' }}>
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span className="text-sm font-medium">Analyzing your writing samples and generating brand voice profile...</span>
+                <span style={{ fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Analyzing your writing samples and generating brand voice profile...</span>
               </div>
             ) : (
               <div>
-                <p className="text-sm text-gray-700 mb-2">
+                <p style={{ fontSize: '14px', color: '#374151', marginBottom: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                   {samplesNeeded > 0 ? (
                     <>Upload <strong>{samplesNeeded} more sample{samplesNeeded > 1 ? 's' : ''}</strong> to generate your brand voice profile.</>
                   ) : (
                     <>You have enough samples! Profile will generate automatically.</>
                   )}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                   Minimum 3 samples required • Current: {samples.length}
                 </p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Writing Samples Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <FileText className="h-8 w-8 text-blue-600" />
+        <div style={{ marginBottom: '32px' }}>
+          <div className="flex items-center gap-3" style={{ marginBottom: '24px' }}>
+            <div style={{ background: '#f0f7ff', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileText className="h-6 w-6" style={{ color: '#0066cc' }} />
+            </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Writing Samples</h2>
-              <p className="text-sm text-gray-600">
+              <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#003366', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Writing Samples</h2>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                 Upload examples to train the AI on your unique style
               </p>
             </div>
           </div>
 
           {/* Info Alert */}
-          <Alert className="mb-6 border-blue-200 bg-blue-50">
-            <Sparkles className="h-4 w-4 text-blue-600" />
-            <div className="ml-2">
-              <p className="text-sm font-medium text-blue-900">Why upload samples?</p>
-              <p className="text-sm text-blue-700 mt-1">
+          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '16px', marginBottom: '24px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+            <Sparkles className="h-5 w-5" style={{ color: '#0066cc', marginTop: '2px' }} />
+            <div>
+              <p style={{ fontSize: '14px', fontWeight: 600, color: '#1e3a8a', marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Why upload samples?</p>
+              <p style={{ fontSize: '14px', color: '#1e40af', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                 The AI learns from your existing content to generate new posts that match your brand's authentic voice
               </p>
             </div>
-          </Alert>
+          </div>
 
           {/* Uploaded Samples - Shown First */}
           {samples.length > 0 && (
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Your Samples ({samples.length})</CardTitle>
-                <CardDescription>
+            <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', marginBottom: '24px' }}>
+              <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#003366', marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Your Samples ({samples.length})</h3>
+                <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                   These samples are used to train the AI on your brand voice
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+                </p>
+              </div>
+              <div style={{ padding: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
                   {samples.map(sample => (
                     <div
                       key={sample.id}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50"
+                      style={{
+                        padding: '16px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        background: '#ffffff',
+                        transition: 'background 0.15s ease',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f9fafb'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#ffffff'
+                      }}
                     >
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-blue-600" />
-                        <div>
-                          <p className="font-medium text-gray-900">{sample.name}</p>
-                          <p className="text-sm text-gray-500">
-                            {sample.type} • {sample.size} • Uploaded {sample.uploadDate}
+                      <div className="flex items-start gap-3">
+                        <FileText className="h-5 w-5" style={{ color: '#0066cc', flexShrink: 0, marginTop: '2px' }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: '14px', fontWeight: 600, color: '#003366', marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sample.name}</p>
+                          <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+                            {sample.type}
+                          </p>
+                          <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+                            {sample.size}
+                          </p>
+                          <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+                            {sample.uploadDate}
                           </p>
                         </div>
+                        <button
+                          onClick={() => removeSample(sample.id)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            padding: '4px',
+                            cursor: 'pointer',
+                            borderRadius: '4px',
+                            transition: 'background 0.15s ease',
+                            flexShrink: 0
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#f3f4f6'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent'
+                          }}
+                        >
+                          <X className="h-4 w-4" style={{ color: '#6b7280' }} />
+                        </button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeSample(sample.id)}
-                      >
-                        <X className="h-4 w-4 text-gray-500" />
-                      </Button>
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
 
           {/* Upload Area */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Upload Samples</CardTitle>
-              <CardDescription>
+          <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', marginBottom: '24px' }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#003366', marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Upload Samples</h3>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                 Drag and drop files or click to browse
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+              </p>
+            </div>
+            <div style={{ padding: '24px' }}>
               <div
-                className={`
-                  border-2 border-dashed rounded-lg p-12 text-center transition-colors
-                  ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white'}
-                  hover:border-blue-400 hover:bg-blue-50 cursor-pointer
-                `}
+                style={{
+                  border: isDragging ? '2px dashed #0066cc' : '2px dashed #d1d5db',
+                  borderRadius: '8px',
+                  padding: '24px',
+                  textAlign: 'center',
+                  transition: 'all 0.15s ease',
+                  background: isDragging ? '#eff6ff' : '#ffffff',
+                  cursor: 'pointer'
+                }}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={() => document.getElementById('file-upload')?.click()}
+                onMouseEnter={(e) => {
+                  if (!isDragging) {
+                    e.currentTarget.style.borderColor = '#60a5fa'
+                    e.currentTarget.style.background = '#eff6ff'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isDragging) {
+                    e.currentTarget.style.borderColor = '#d1d5db'
+                    e.currentTarget.style.background = '#ffffff'
+                  }
+                }}
               >
-                <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-lg font-medium text-gray-900 mb-2">
+                <Upload className="h-10 w-10 mx-auto" style={{ color: '#9ca3af', marginBottom: '12px' }} />
+                <p style={{ fontSize: '14px', fontWeight: 600, color: '#003366', marginBottom: '6px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                   Drop files here or click to upload
                 </p>
-                <p className="text-sm text-gray-500">
-                  Supported formats: PDF, DOC, DOCX, TXT
+                <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+                  Supported formats: PDF, DOCX, TXT
                 </p>
-                <p className="text-xs text-gray-400 mt-2">
-                  Maximum file size: 10MB per file
+                <p style={{ fontSize: '12px', color: '#9ca3af', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+                  For Google Docs: File → Download → Plain Text (.txt) • Max 10MB
                 </p>
 
                 <input
                   id="file-upload"
                   type="file"
                   multiple
-                  accept=".pdf,.doc,.docx,.txt"
+                  accept=".pdf,.docx,.txt"
                   className="hidden"
                   onChange={handleFileSelect}
                 />
               </div>
 
-              <div className="mt-4 flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
+              <div className="flex gap-2" style={{ marginTop: '16px' }}>
+                <button
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowPasteDialog(true)
                   }}
+                  style={{
+                    flex: 1,
+                    background: 'transparent',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#003366',
+                    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#f9fafb'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent'
+                  }}
                 >
-                  <FileText className="h-4 w-4 mr-2" />
+                  <FileText className="h-4 w-4" />
                   Paste Text
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1"
+                </button>
+                <button
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowUrlDialog(true)
                   }}
+                  style={{
+                    flex: 1,
+                    background: 'transparent',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#003366',
+                    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#f9fafb'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent'
+                  }}
                 >
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="h-4 w-4" />
                   Import from URL
-                </Button>
+                </button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -799,11 +1059,11 @@ export default function BrandVoicePage() {
       {/* Success Toast - Bottom Right */}
       {showSuccessToast && (
         <div className="fixed bottom-8 right-8 z-50 animate-in slide-in-from-bottom-5 duration-300">
-          <div className="bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px]">
+          <div style={{ background: '#16a34a', color: '#ffffff', padding: '16px 24px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)', display: 'flex', alignItems: 'center', gap: '12px', minWidth: '300px' }}>
             <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
             <div>
-              <p className="font-semibold">Success!</p>
-              <p className="text-sm text-green-50">{toastMessage}</p>
+              <p style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Success!</p>
+              <p style={{ fontSize: '14px', color: '#dcfce7', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>{toastMessage}</p>
             </div>
           </div>
         </div>
@@ -811,10 +1071,10 @@ export default function BrandVoicePage() {
 
       {/* Uploading Overlay */}
       {isUploading && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 flex items-center gap-3">
-            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-            <span className="font-medium">Uploading samples...</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0, 0, 0, 0.5)' }}>
+          <div style={{ background: '#ffffff', borderRadius: '8px', padding: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Loader2 className="h-6 w-6 animate-spin" style={{ color: '#0066cc' }} />
+            <span style={{ fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Uploading samples...</span>
           </div>
         </div>
       )}

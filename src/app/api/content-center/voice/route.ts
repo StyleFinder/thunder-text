@@ -7,6 +7,7 @@ import {
 import { getUserId } from '@/lib/auth/content-center-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
+import { logger } from '@/lib/logger'
 
 /**
  * GET /api/content-center/voice
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       .eq('is_active', true)
 
     if (samplesError) {
-      console.error('Error fetching samples:', samplesError)
+      logger.error('Error fetching samples:', samplesError as Error, { component: 'voice' })
     }
 
     const activeSampleCount = samples?.length || 0
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 
     // If no profile found, that's okay - return null profile
     if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = no rows returned
-      console.error('Error fetching voice profile:', profileError)
+      logger.error('Error fetching voice profile:', profileError as Error, { component: 'voice' })
       return NextResponse.json(
         { success: false, error: 'Failed to fetch voice profile' },
         { status: 500 }
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     })
 
   } catch (error) {
-    console.error('Error in GET /api/content-center/voice:', error)
+    logger.error('Error in GET /api/content-center/voice:', error as Error, { component: 'voice' })
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

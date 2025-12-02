@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardDebugRoute } from '../_middleware-guard'
 
 export async function GET(request: NextRequest) {
-  // Only allow in development or with special header
-  const isDev = process.env.NODE_ENV === 'development'
-  const hasDebugHeader = request.headers.get('x-debug-token') === 'thunder-text-debug'
-
-  if (!isDev && !hasDebugHeader) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  // Guard: Only allow in development
+  const guardResponse = guardDebugRoute('/api/debug/env');
+  if (guardResponse) return guardResponse;
 
   // Check various environment variables
   const envCheck = {

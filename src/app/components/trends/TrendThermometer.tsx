@@ -1,6 +1,12 @@
 import React from "react";
-import { Card, Text, Tooltip, Icon } from "@shopify/polaris";
-import { InfoIcon } from "@shopify/polaris-icons";
+import { Card, CardContent } from "@/components/ui/card";
+import { Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { TrendStatusBadge } from "./TrendStatusBadge";
 import { TrendSparkline } from "./TrendSparkline";
 
@@ -28,20 +34,25 @@ export function TrendThermometer({
 
   return (
     <Card>
-      <div className="p-4 space-y-3">
+      <CardContent className="p-4 space-y-3">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <Text variant="headingMd" as="h3">
-              {themeName}
-            </Text>
-            <Text variant="bodySm" as="p" tone="subdued">
-              Seasonal Trend
-            </Text>
+            <h3 className="text-lg font-semibold text-ace-black">{themeName}</h3>
+            <p className="text-sm text-ace-gray-dark">Seasonal Trend</p>
           </div>
-          <Tooltip content="Based on Google search interest data">
-            <Icon source={InfoIcon} tone="base" />
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button className="text-ace-gray-dark hover:text-ace-blue transition-colors">
+                  <Info className="h-5 w-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Based on Google search interest data</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* Status Badge */}
@@ -52,32 +63,30 @@ export function TrendThermometer({
 
         {/* Peak Info */}
         {lastPeakDate && peakRecencyDays !== undefined && (
-          <Text variant="bodySm" as="p" tone="subdued">
+          <p className="text-sm text-ace-gray-dark">
             Peak: {new Date(lastPeakDate).toLocaleDateString()} (
             {peakRecencyDays} days ago)
-          </Text>
+          </p>
         )}
 
         {/* Playbook Recommendation */}
-        <div className="bg-blue-50 border border-blue-200 rounded p-3">
-          <Text variant="bodyMd" as="p" fontWeight="semibold">
+        <div className="bg-ace-blue/5 border border-ace-blue/20 rounded-lg p-3 space-y-1">
+          <p className="text-sm font-semibold text-ace-black">
             💡 {playbook.title}
-          </Text>
-          <Text variant="bodySm" as="p" tone="subdued">
-            {playbook.action}
-          </Text>
+          </p>
+          <p className="text-sm text-ace-gray-dark">{playbook.action}</p>
         </div>
 
         {/* View Details Link */}
         {onViewDetails && (
           <button
             onClick={onViewDetails}
-            className="text-sm text-blue-600 hover:underline"
+            className="text-sm text-ace-blue hover:text-ace-blue-dark hover:underline transition-colors"
           >
             View full analysis →
           </button>
         )}
-      </div>
+      </CardContent>
     </Card>
   );
 }

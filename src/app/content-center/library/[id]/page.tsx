@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { GeneratedContent, ContentType } from '@/types/content-center'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 
 const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
   blog: 'Blog Post',
@@ -74,7 +75,7 @@ export default function ContentDetailPage() {
         setEditedText(data.data.generated_text)
       }
     } catch (error) {
-      console.error('Error fetching content:', error)
+      logger.error('Error fetching content:', error as Error, { component: '[id]' })
       alert('Failed to load content')
     } finally {
       setIsLoading(false)
@@ -107,7 +108,7 @@ export default function ContentDetailPage() {
         alert('Content saved successfully!')
       }
     } catch (error) {
-      console.error('Error saving content:', error)
+      logger.error('Error saving content:', error as Error, { component: '[id]' })
       alert('Failed to save content')
     } finally {
       setIsSaving(false)
@@ -133,7 +134,7 @@ export default function ContentDetailPage() {
 
       router.push('/content-center/library')
     } catch (error) {
-      console.error('Error deleting content:', error)
+      logger.error('Error deleting content:', error as Error, { component: '[id]' })
       alert('Failed to delete content')
     }
   }
@@ -172,7 +173,7 @@ export default function ContentDetailPage() {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } catch (error) {
-      console.error('Error exporting:', error)
+      logger.error('Error exporting:', error as Error, { component: '[id]' })
       alert('Failed to export content')
     }
   }

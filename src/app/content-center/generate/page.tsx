@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, Sparkles } from 'lucide-react'
 import { ContentType, GeneratedContent } from '@/types/content-center'
 import { useShopifyAuth } from '@/app/components/UnifiedShopifyAuth'
+import { logger } from '@/lib/logger'
 
 type GenerationStep = 'select-type' | 'configure' | 'result'
 
@@ -75,7 +76,7 @@ export default function GeneratePage() {
         throw new Error(data.error || 'Generation failed')
       }
     } catch (error) {
-      console.error('Error generating content:', error)
+      logger.error('Error generating content:', error as Error, { component: 'generate' })
       alert(`Failed to generate content: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsGenerating(false)
@@ -107,7 +108,7 @@ export default function GeneratePage() {
 
       alert('Content saved successfully!')
     } catch (error) {
-      console.error('Error saving content:', error)
+      logger.error('Error saving content:', error as Error, { component: 'generate' })
       alert('Failed to save content. Please try again.')
     }
   }
@@ -174,7 +175,7 @@ export default function GeneratePage() {
   if (authLoading) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="flex flex-col items-center justify-center py-20 space-y-6">
+        <div className="flex flex-col items-center justify-center" style={{ padding: '80px 0', gap: '24px' }}>
           <ContentLoader
             message="Loading..."
             size="lg"
@@ -189,10 +190,10 @@ export default function GeneratePage() {
   if (!isAuthenticated || !shopDomain) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="flex flex-col items-center justify-center py-20 space-y-6">
-          <div className="text-center space-y-2">
-            <p className="text-lg font-medium">Authentication Required</p>
-            <p className="text-sm text-muted-foreground">
+        <div className="flex flex-col items-center justify-center" style={{ padding: '80px 0', gap: '24px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: '18px', fontWeight: 600, color: '#003366', marginBottom: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Authentication Required</p>
+            <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
               Please access this page from your Shopify admin.
             </p>
           </div>
@@ -204,78 +205,106 @@ export default function GeneratePage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          {currentStep !== 'select-type' && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={
-                currentStep === 'configure'
-                  ? handleBackToTypeSelection
-                  : handleRegenerate
-              }
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          )}
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold">Content Generator</h1>
-          </div>
-        </div>
-        <p className="text-muted-foreground">
-          Create on-brand content powered by AI that matches your unique voice
-        </p>
+      <div style={{ marginBottom: '32px' }}>
+        {currentStep !== 'select-type' && (
+          <button
+            onClick={
+              currentStep === 'configure'
+                ? handleBackToTypeSelection
+                : handleRegenerate
+            }
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 12px',
+              background: 'transparent',
+              color: '#0066cc',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: 600,
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f0f7ff'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent'
+            }}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </button>
+        )}
       </div>
 
       {/* Progress Indicator */}
-      <div className="mb-8 flex items-center justify-center gap-2">
+      <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
         <div className="flex items-center gap-2">
           <div
-            className={`h-2 w-2 rounded-full ${
-              currentStep === 'select-type' ? 'bg-primary' : 'bg-muted'
-            }`}
+            style={{
+              height: '8px',
+              width: '8px',
+              borderRadius: '50%',
+              background: currentStep === 'select-type' ? '#0066cc' : '#e5e7eb'
+            }}
           />
           <span
-            className={`text-sm ${
-              currentStep === 'select-type' ? 'font-semibold' : 'text-muted-foreground'
-            }`}
+            style={{
+              fontSize: '14px',
+              fontWeight: currentStep === 'select-type' ? 600 : 400,
+              color: currentStep === 'select-type' ? '#003366' : '#6b7280',
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+            }}
           >
             Select Type
           </span>
         </div>
 
-        <div className="h-px w-12 bg-border" />
+        <div style={{ height: '1px', width: '48px', background: '#e5e7eb' }} />
 
         <div className="flex items-center gap-2">
           <div
-            className={`h-2 w-2 rounded-full ${
-              currentStep === 'configure' ? 'bg-primary' : 'bg-muted'
-            }`}
+            style={{
+              height: '8px',
+              width: '8px',
+              borderRadius: '50%',
+              background: currentStep === 'configure' ? '#0066cc' : '#e5e7eb'
+            }}
           />
           <span
-            className={`text-sm ${
-              currentStep === 'configure' ? 'font-semibold' : 'text-muted-foreground'
-            }`}
+            style={{
+              fontSize: '14px',
+              fontWeight: currentStep === 'configure' ? 600 : 400,
+              color: currentStep === 'configure' ? '#003366' : '#6b7280',
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+            }}
           >
             Configure
           </span>
         </div>
 
-        <div className="h-px w-12 bg-border" />
+        <div style={{ height: '1px', width: '48px', background: '#e5e7eb' }} />
 
         <div className="flex items-center gap-2">
           <div
-            className={`h-2 w-2 rounded-full ${
-              currentStep === 'result' ? 'bg-primary' : 'bg-muted'
-            }`}
+            style={{
+              height: '8px',
+              width: '8px',
+              borderRadius: '50%',
+              background: currentStep === 'result' ? '#0066cc' : '#e5e7eb'
+            }}
           />
           <span
-            className={`text-sm ${
-              currentStep === 'result' ? 'font-semibold' : 'text-muted-foreground'
-            }`}
+            style={{
+              fontSize: '14px',
+              fontWeight: currentStep === 'result' ? 600 : 400,
+              color: currentStep === 'result' ? '#003366' : '#6b7280',
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+            }}
           >
             Review
           </span>
@@ -300,15 +329,15 @@ export default function GeneratePage() {
         )}
 
         {isGenerating && (
-          <div className="flex flex-col items-center justify-center py-20 space-y-6">
+          <div className="flex flex-col items-center justify-center" style={{ padding: '80px 0', gap: '24px' }}>
             <ContentLoader
               message="Generating your content..."
               size="lg"
               variant="pulse"
             />
-            <div className="text-center space-y-2">
-              <p className="text-lg font-medium">Creating amazing content</p>
-              <p className="text-sm text-muted-foreground">
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: '18px', fontWeight: 600, color: '#003366', marginBottom: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Creating amazing content</p>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                 This usually takes 15-30 seconds
               </p>
             </div>

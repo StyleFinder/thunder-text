@@ -11,6 +11,7 @@ import { withRateLimit, RATE_LIMITS } from "@/lib/middleware/rate-limit";
 import { generateContent } from "@/lib/services/content-generator";
 import { postProcessContent } from "@/lib/services/content-post-processor";
 import { validateWordCountForType } from "@/lib/services/parameter-handler";
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/content-center/generate
@@ -140,7 +141,7 @@ export async function POST(
       .single();
 
     if (contentError) {
-      console.error("Error storing generated content:", contentError);
+      logger.error("Error storing generated content:", contentError as Error, { component: 'generate' });
       return NextResponse.json(
         { success: false, error: "Failed to store generated content" },
         { status: 500 },
@@ -166,7 +167,7 @@ export async function POST(
       { status: 201 },
     );
   } catch (error) {
-    console.error("Error in POST /api/content-center/generate:", error);
+    logger.error("Error in POST /api/content-center/generate:", error as Error, { component: 'generate' });
 
     if (error instanceof VoiceProfileNotFoundError) {
       return NextResponse.json(

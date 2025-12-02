@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Sparkles, FileText, User, Building2, Home } from "lucide-react";
+import { Sparkles, FileText, User, Home } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -32,12 +32,6 @@ const NAV_ITEMS: NavItem[] = [
     description: "Saved content",
   },
   {
-    href: "/content-center/store-profile",
-    label: "Store Profile",
-    icon: Building2,
-    description: "Business identity & foundation",
-  },
-  {
     href: "/content-center/voice",
     label: "Brand Voice",
     icon: User,
@@ -60,20 +54,20 @@ export default function ContentCenterLayout({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
+    <div style={{ minHeight: '100vh', background: '#fafaf9' }}>
       {/* Top Navigation */}
-      <header className="border-b border-gray-200 bg-white">
+      <header style={{ borderBottom: '1px solid #e5e7eb', background: '#ffffff' }}>
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between py-4">
+          <div className="flex items-center justify-between" style={{ padding: '16px 0' }}>
             <div className="flex items-center gap-3">
-              <div className="bg-blue-100 p-2 rounded-lg">
-                <Sparkles className="h-6 w-6 text-blue-600" />
+              <div style={{ background: '#f0f7ff', padding: '8px', borderRadius: '8px' }}>
+                <Sparkles className="h-6 w-6" style={{ color: '#0066cc' }} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">
+                <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#003366', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                   Content Creation Center
                 </h1>
-                <p className="text-sm text-gray-600">
+                <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                   AI-powered content in your brand voice
                 </p>
               </div>
@@ -88,24 +82,43 @@ export default function ContentCenterLayout({
 
               return (
                 <Link key={item.href} href={item.href}>
-                  <Button
-                    variant="ghost"
-                    className={`
-                      relative rounded-b-none h-auto py-3 px-4
-                      ${active ? "text-blue-600 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}
-                    `}
+                  <button
+                    style={{
+                      position: 'relative',
+                      borderRadius: '8px 8px 0 0',
+                      height: 'auto',
+                      padding: '12px 16px',
+                      background: active ? '#f0f7ff' : 'transparent',
+                      color: active ? '#0066cc' : '#6b7280',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active) {
+                        e.currentTarget.style.background = '#f9fafb';
+                        e.currentTarget.style.color = '#003366';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = '#6b7280';
+                      }
+                    }}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center" style={{ gap: '12px' }}>
                       <Icon className="h-4 w-4" />
-                      <div className="text-left">
-                        <div className="text-sm font-medium">{item.label}</div>
-                        <div className="text-xs">{item.description}</div>
+                      <div style={{ textAlign: 'left' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 600 }}>{item.label}</div>
+                        <div style={{ fontSize: '12px', color: active ? '#0066cc' : '#6b7280' }}>{item.description}</div>
                       </div>
                     </div>
                     {active && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '2px', background: '#0066cc' }} />
                     )}
-                  </Button>
+                  </button>
                 </Link>
               );
             })}
@@ -114,7 +127,7 @@ export default function ContentCenterLayout({
       </header>
 
       {/* Main Content */}
-      <main className="bg-gray-50">{children}</main>
+      <main style={{ background: '#fafaf9', paddingTop: '32px' }}>{children}</main>
     </div>
   );
 }

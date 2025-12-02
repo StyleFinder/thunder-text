@@ -1,30 +1,18 @@
 'use client'
 
 import React from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
-  Card,
-  BlockStack,
-  Text,
-  Button,
-  InlineStack,
-  Icon,
-  Box,
-  List,
-  Badge,
-  Banner,
-  MediaCard,
-  VideoThumbnail,
-  Thumbnail
-} from '@shopify/polaris'
-import {
-  MagicIcon,
-  ImageIcon,
-  ClockIcon,
-  SearchIcon,
-  CashDollarIcon,
-  AutomationIcon,
-  CheckIcon
-} from '@shopify/polaris-icons'
+  Sparkles,
+  Image,
+  Clock,
+  Search,
+  DollarSign,
+  Zap,
+  Check
+} from 'lucide-react'
 
 interface AppIntroductionProps {
   onComplete?: () => void
@@ -34,32 +22,32 @@ interface AppIntroductionProps {
 export function AppIntroduction({ onComplete, showSkip = true }: AppIntroductionProps) {
   const features = [
     {
-      icon: ImageIcon,
+      icon: Image,
       title: 'Image Analysis',
       description: 'Upload product photos and our AI analyzes colors, materials, and design details'
     },
     {
-      icon: MagicIcon,
+      icon: Sparkles,
       title: 'AI Generation',
       description: 'GPT-4 Vision creates compelling, accurate descriptions from your images'
     },
     {
-      icon: SearchIcon,
+      icon: Search,
       title: 'SEO Optimization',
       description: 'Automatically optimized for search engines to increase organic traffic'
     },
     {
-      icon: ClockIcon,
+      icon: Clock,
       title: 'Save Time',
       description: 'Generate descriptions in seconds instead of writing for hours'
     },
     {
-      icon: CashDollarIcon,
+      icon: DollarSign,
       title: 'Boost Sales',
       description: 'Better product descriptions lead to higher conversion rates'
     },
     {
-      icon: AutomationIcon,
+      icon: Zap,
       title: 'Bulk Processing',
       description: 'Handle multiple products at once with our batch processing feature'
     }
@@ -74,178 +62,154 @@ export function AppIntroduction({ onComplete, showSkip = true }: AppIntroduction
   ]
 
   return (
-    <BlockStack gap="600">
+    <div className="space-y-6">
       {/* Welcome Hero */}
-      <Card>
-        <Box padding="600">
-          <BlockStack gap="400">
-            <InlineStack align="center" blockAlign="center" gap="300">
-              <div style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                borderRadius: '12px',
-                padding: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Icon source={MagicIcon} tone="base" />
-              </div>
-              <BlockStack gap="100">
-                <Text as="h1" variant="headingLg">
-                  Welcome to Thunder Text
-                </Text>
-                <Text as="p" variant="bodyMd" tone="subdued">
-                  Generate SEO-optimized product descriptions from images. AI-powered content can boost conversions.
-                </Text>
-              </BlockStack>
-            </InlineStack>
-          </BlockStack>
-        </Box>
+      <Card className="border-2">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4">
+            <div
+              className="flex items-center justify-center p-3 rounded-xl"
+              style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+              }}
+            >
+              <Sparkles className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1 space-y-2">
+              <h1 className="text-2xl font-bold">
+                Welcome to Thunder Text
+              </h1>
+              <p className="text-muted-foreground">
+                Generate SEO-optimized product descriptions from images. AI-powered content can boost conversions.
+              </p>
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
       {/* How It Works */}
       <Card>
-        <Box padding="600">
-          <BlockStack gap="400">
-            <Text as="h2" variant="headingMd">
-              How Thunder Text Works
-            </Text>
+        <CardHeader>
+          <CardTitle>How Thunder Text Works</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-start gap-3">
+            <Badge variant="default" className="mt-1">1</Badge>
+            <div className="space-y-1 flex-1">
+              <p className="font-semibold">Upload Product Images</p>
+              <p className="text-sm text-muted-foreground">
+                Add photos of your products - the AI will analyze visual details like colors, materials, and design
+              </p>
+            </div>
+          </div>
 
-            <BlockStack gap="300">
-              <InlineStack gap="300" align="start">
-                <Badge tone="info">1</Badge>
-                <BlockStack gap="100">
-                  <Text as="p" variant="bodyMd" fontWeight="semibold">
-                    Upload Product Images
-                  </Text>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    Add photos of your products - the AI will analyze visual details like colors, materials, and design
-                  </Text>
-                </BlockStack>
-              </InlineStack>
+          <div className="flex items-start gap-3">
+            <Badge variant="default" className="mt-1">2</Badge>
+            <div className="space-y-1 flex-1">
+              <p className="font-semibold">AI Analyzes & Generates</p>
+              <p className="text-sm text-muted-foreground">
+                GPT-4 Vision examines your images and creates detailed, engaging descriptions
+              </p>
+            </div>
+          </div>
 
-              <InlineStack gap="300" align="start">
-                <Badge tone="info">2</Badge>
-                <BlockStack gap="100">
-                  <Text as="p" variant="bodyMd" fontWeight="semibold">
-                    AI Analyzes & Generates
-                  </Text>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    GPT-4 Vision examines your images and creates detailed, engaging descriptions
-                  </Text>
-                </BlockStack>
-              </InlineStack>
-
-              <InlineStack gap="300" align="start">
-                <Badge tone="info">3</Badge>
-                <BlockStack gap="100">
-                  <Text as="p" variant="bodyMd" fontWeight="semibold">
-                    Review & Publish
-                  </Text>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    Review the generated content, make any edits, and publish directly to your products
-                  </Text>
-                </BlockStack>
-              </InlineStack>
-            </BlockStack>
-          </BlockStack>
-        </Box>
+          <div className="flex items-start gap-3">
+            <Badge variant="default" className="mt-1">3</Badge>
+            <div className="space-y-1 flex-1">
+              <p className="font-semibold">Review & Publish</p>
+              <p className="text-sm text-muted-foreground">
+                Review the generated content, make any edits, and publish directly to your products
+              </p>
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
       {/* Key Features Grid */}
-      <Box>
-        <BlockStack gap="400">
-          <Text as="h2" variant="headingMd">
-            Powerful Features
-          </Text>
-
-          <InlineStack gap="400" wrap>
-            {features.map((feature, index) => (
-              <Box key={index} minWidth="280px" maxWidth="320px">
-                <Card>
-                  <Box padding="400">
-                    <BlockStack gap="200">
-                      <InlineStack gap="200" blockAlign="center">
-                        <Icon source={feature.icon} tone="interactive" />
-                        <Text as="h3" variant="headingSm">
-                          {feature.title}
-                        </Text>
-                      </InlineStack>
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        {feature.description}
-                      </Text>
-                    </BlockStack>
-                  </Box>
-                </Card>
-              </Box>
-            ))}
-          </InlineStack>
-        </BlockStack>
-      </Box>
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">Powerful Features</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {features.map((feature, index) => {
+            const IconComponent = feature.icon
+            return (
+              <Card key={index}>
+                <CardContent className="p-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <IconComponent className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold">{feature.title}</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {feature.description}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      </div>
 
       {/* Benefits */}
       <Card>
-        <Box padding="600">
-          <BlockStack gap="400">
-            <InlineStack gap="200" align="space-between">
-              <Text as="h2" variant="headingMd">
-                Why Choose Thunder Text?
-              </Text>
-              <Badge tone="success">Trusted by 500+ Stores</Badge>
-            </InlineStack>
-
-            <List type="bullet">
-              {benefits.map((benefit, index) => (
-                <List.Item key={index}>
-                  <InlineStack gap="200" blockAlign="center">
-                    <Icon source={CheckIcon} tone="success" />
-                    <Text as="span" variant="bodyMd">{benefit}</Text>
-                  </InlineStack>
-                </List.Item>
-              ))}
-            </List>
-          </BlockStack>
-        </Box>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Why Choose Thunder Text?</CardTitle>
+            <Badge variant="default" className="bg-green-600">Trusted by 500+ Stores</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-2">
+            {benefits.map((benefit, index) => (
+              <li key={index} className="flex items-start gap-2">
+                <Check className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+                <span>{benefit}</span>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
       </Card>
 
       {/* Quick Start CTA */}
-      <Card>
-        <Box padding="600" background="bg-surface-secondary">
-          <BlockStack gap="400">
-            <BlockStack gap="200">
-              <Text as="h2" variant="headingMd">
+      <Card className="bg-muted/50">
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold">
                 Ready to Transform Your Product Descriptions?
-              </Text>
-              <Text as="p" variant="bodyMd" tone="subdued">
+              </h2>
+              <p className="text-muted-foreground">
                 Start generating professional product content in seconds. No credit card required for your first 10 products.
-              </Text>
-            </BlockStack>
+              </p>
+            </div>
 
-            <InlineStack gap="300">
-              <Button variant="primary" size="large" onClick={onComplete}>
+            <div className="flex gap-3">
+              <Button size="lg" onClick={onComplete}>
                 Get Started
               </Button>
               {showSkip && (
-                <Button size="large" onClick={onComplete}>
+                <Button size="lg" variant="outline" onClick={onComplete}>
                   Skip Introduction
                 </Button>
               )}
-            </InlineStack>
-          </BlockStack>
-        </Box>
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
       {/* Success Story */}
-      <Banner
-        title="Success Story"
-        tone="success"
-      >
-        <p>
-          "Thunder Text reduced our product listing time by 85% and increased our organic traffic by 40% in just 2 months.
-          The AI-generated descriptions are incredibly accurate and convert better than our manually written ones."
-        </p>
-        <p><strong>- Sarah Chen, Fashion Boutique Owner</strong></p>
-      </Banner>
-    </BlockStack>
+      <Card className="border-green-200 bg-green-50">
+        <CardHeader>
+          <CardTitle className="text-green-800">Success Story</CardTitle>
+        </CardHeader>
+        <CardContent className="text-green-900 space-y-2">
+          <p>
+            "Thunder Text reduced our product listing time by 85% and increased our organic traffic by 40% in just 2 months.
+            The AI-generated descriptions are incredibly accurate and convert better than our manually written ones."
+          </p>
+          <p className="font-semibold">- Sarah Chen, Fashion Boutique Owner</p>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

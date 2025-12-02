@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateShopifyOAuthState } from "@/lib/security/oauth-validation";
 import { ZodError } from "zod";
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   // Check if we're in a build environment without proper configuration
@@ -36,13 +37,13 @@ export async function GET(request: NextRequest) {
       validateShopifyOAuthState(state, shop);
     } catch (error) {
       if (error instanceof ZodError) {
-        console.error("Shopify OAuth state validation failed:", error.errors);
+        logger.error("Shopify OAuth state validation failed:", error.errors, undefined, { component: 'callback' });
         return NextResponse.json(
           { error: "Invalid state parameter format", details: error.errors },
           { status: 400 },
         );
       }
-      console.error("Shopify OAuth state validation error:", error);
+      logger.error("Shopify OAuth state validation error:", error as Error, { component: 'callback' });
       return NextResponse.json(
         {
           error:
@@ -87,7 +88,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (storeError || !shopData) {
-      console.error("Failed to store shop data:", storeError);
+      logger.error("Failed to store shop data:", storeError as Error, { component: 'callback' });
       return NextResponse.json(
         { error: "Failed to store shop information" },
         { status: 500 },
@@ -99,7 +100,7 @@ export async function GET(request: NextRequest) {
       const { initializeDefaultPrompts } = await import("@/lib/prompts");
       await initializeDefaultPrompts(shopData.id);
     } catch (promptError) {
-      console.error("Failed to initialize default prompts:", promptError);
+      logger.error("Failed to initialize default prompts:", promptError as Error, { component: 'callback' });
       // Don't fail the whole installation if prompts fail - they can be initialized later
     }
 
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
       new URL(`/dashboard?shop=${shop}&authenticated=true`, request.url),
     );
   } catch (error) {
-    console.error("OAuth callback error:", error);
+    logger.error("OAuth callback error:", error as Error, { component: 'callback' });
     return NextResponse.json(
       { error: "OAuth callback failed" },
       { status: 500 },

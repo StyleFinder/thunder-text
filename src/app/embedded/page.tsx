@@ -1,30 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import {
-  Page,
-  Layout,
-  Card,
-  BlockStack,
-  Text,
-  Spinner,
-  InlineStack,
-  Button,
-  Banner
-} from '@shopify/polaris'
 import { useRouter } from 'next/navigation'
 import { useShopifyAuth } from '../components/UnifiedShopifyAuth'
+import { Card, CardContent } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Loader2 } from 'lucide-react'
 
 export default function EmbeddedApp() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { isAuthenticated, isEmbedded, shop, isLoading, error } = useShopifyAuth()
 
-  console.log('🚀 Embedded App loaded:', { shop, isEmbedded, isAuthenticated })
 
   useEffect(() => {
-    // Log the current context
     console.log('📍 Embedded context check:', {
       isInIframe: window.top !== window.self,
       hasHost: !!searchParams?.get('host'),
@@ -33,9 +23,7 @@ export default function EmbeddedApp() {
       isAuthenticated
     })
 
-    // Redirect to products page when authenticated
     if (isAuthenticated && shop) {
-      console.log('✅ Authentication successful, redirecting to products page')
       const params = new URLSearchParams({
         shop,
         authenticated: 'true',
@@ -48,85 +36,69 @@ export default function EmbeddedApp() {
 
   if (!shop) {
     return (
-      <Page title="Thunder Text">
-        <Layout>
-          <Layout.Section>
-            <Banner tone="critical">
-              <Text as="p">Missing shop parameter. Please access this app through your Shopify Admin.</Text>
-            </Banner>
-          </Layout.Section>
-        </Layout>
-      </Page>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <Alert variant="destructive">
+              <AlertDescription>
+                Missing shop parameter. Please access this app through your Shopify Admin.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
   if (isLoading) {
     return (
-      <Page title="Thunder Text">
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <InlineStack gap="300" align="center">
-                  <Spinner size="small" />
-                  <Text as="span" variant="bodyMd">Connecting to Shopify...</Text>
-                </InlineStack>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-        </Layout>
-      </Page>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex flex-col items-center gap-4 py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <p className="text-gray-600">Connecting to Shopify...</p>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <Page title="Thunder Text">
-        <Layout>
-          <Layout.Section>
-            <Banner tone="critical">
-              <Text as="p">{error}</Text>
-            </Banner>
-          </Layout.Section>
-        </Layout>
-      </Page>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
   if (isAuthenticated) {
     return (
-      <Page title="Thunder Text">
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <InlineStack gap="300" align="center">
-                  <Spinner size="small" />
-                  <Text as="span" variant="bodyMd">Redirecting to Thunder Text...</Text>
-                </InlineStack>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-        </Layout>
-      </Page>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex flex-col items-center gap-4 py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <p className="text-gray-600">Redirecting to Thunder Text...</p>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
   return (
-    <Page title="Thunder Text">
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <Text as="h2" variant="headingLg">Authenticating...</Text>
-              <InlineStack gap="300" align="center">
-                <Spinner size="small" />
-                <Text as="span" variant="bodyMd">Please wait while we connect to Shopify...</Text>
-              </InlineStack>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardContent className="flex flex-col items-center gap-4 py-12">
+          <h2 className="text-xl font-semibold">Authenticating...</h2>
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <p className="text-gray-600">Please wait while we connect to Shopify...</p>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

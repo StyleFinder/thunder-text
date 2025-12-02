@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors';
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   // Use secure CORS headers that restrict to Shopify domains
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
       .order('name');
 
     if (templatesError) {
-      console.error('Templates query error:', templatesError);
+      logger.error('Templates query error:', templatesError as Error, { component: 'templates' });
       throw templatesError;
     }
 
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
     }, { headers: corsHeaders });
 
   } catch (error) {
-    console.error('Proxy templates API error:', error);
+    logger.error('Proxy templates API error:', error as Error, { component: 'templates' });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }

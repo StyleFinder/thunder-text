@@ -2,6 +2,7 @@
 
 import axios, { AxiosInstance } from 'axios'
 import FormData from 'form-data'
+import { logger } from '@/lib/logger'
 
 interface StagedUploadParameter {
   name: string
@@ -219,7 +220,6 @@ export class ShopifyImageUploader {
   // Combined method: Complete image upload process
   async uploadImageToProduct(productGID: string, imageData: string | Buffer, altText: string = "Product image"): Promise<UploadResult> {
     try {
-      console.log('🔄 Starting proven GraphQL image upload process...')
 
       // Extract filename and mime type
       let filename = `product-image-${Date.now()}.jpg`
@@ -234,20 +234,11 @@ export class ShopifyImageUploader {
         }
       }
 
-      console.log('📤 Step 1: Getting staged upload URL...')
       const uploadTarget = await this.getStagedUpload(filename, mimeType)
       
-      console.log('📤 Step 2: Uploading file to Shopify CDN...')
       await this.uploadFileToShopify(uploadTarget, imageData)
       
-      console.log('📤 Step 3: Attaching image to product...')
       const media = await this.attachImageToProduct(productGID, uploadTarget.resourceUrl, altText)
-      
-      console.log('✅ Image upload completed successfully!', {
-        mediaId: media[0]?.id,
-        status: media[0]?.status,
-        imageUrl: media[0]?.image?.url
-      })
 
       return {
         success: true,
@@ -256,7 +247,7 @@ export class ShopifyImageUploader {
       }
 
     } catch (error) {
-      console.error('❌ Error in proven image upload process:', error)
+      logger.error('❌ Error in proven image upload process:', error as Error, { component: 'shopifyImageUploader' })
       throw error
     }
   }

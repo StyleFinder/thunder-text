@@ -3,7 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useAppBridge } from '@/app/components/AppBridgeProvider'
 import { authenticatedFetch } from '@/lib/shopify/api-client'
-import { Page, Card, Text, BlockStack, Button, Badge } from '@shopify/polaris'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Loader2, AlertCircle, CheckCircle, Info } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 export default function TestSessionPage() {
   const { shop, isEmbedded, isLoading } = useAppBridge()
@@ -42,7 +47,6 @@ export default function TestSessionPage() {
       const response = await authenticatedFetch(`/api/shopify/products?shop=${shop}&limit=1`)
       const data = await response.json()
 
-      console.log('📦 API Response:', data)
 
       if (response.ok) {
         setTestResults(prev => ({ ...prev, apiCall: true }))
@@ -65,7 +69,7 @@ export default function TestSessionPage() {
         }))
       }
     } catch (error) {
-      console.error('❌ Test failed:', error)
+      logger.error('❌ Test failed:', error as Error, { component: 'test-session' })
       setTestResults(prev => ({
         ...prev,
         apiCall: false,
@@ -76,100 +80,141 @@ export default function TestSessionPage() {
 
   if (isLoading) {
     return (
-      <Page title="Session Token Test">
-        <Card>
-          <BlockStack gap="400">
-            <Text as="p">Loading App Bridge...</Text>
-          </BlockStack>
-        </Card>
-      </Page>
+      <div className="p-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">Session Token Test</h1>
+          <Card>
+            <CardContent className="flex items-center justify-center py-12">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                <p className="text-gray-600">Loading App Bridge...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Page title="Session Token Test">
-      <BlockStack gap="600">
+    <div className="p-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <h1 className="text-3xl font-bold text-gray-900">Session Token Test</h1>
+
         <Card>
-          <BlockStack gap="400">
-            <Text variant="headingMd" as="h2">App Bridge Status</Text>
-            <BlockStack gap="200">
-              <Text as="p">Shop: {shop || 'Not detected'}</Text>
-              <Text as="p">Embedded: {isEmbedded ? 'Yes' : 'No'}</Text>
-              <Text as="p">Session Token: {sessionToken ? `Found (${sessionToken.substring(0, 20)}...)` : 'Not found'}</Text>
-            </BlockStack>
-          </BlockStack>
+          <CardHeader>
+            <CardTitle>App Bridge Status</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
+              <span className="text-gray-600">Shop:</span>
+              <span className="font-medium text-gray-900">{shop || 'Not detected'}</span>
+
+              <span className="text-gray-600">Embedded:</span>
+              <span className="font-medium text-gray-900">{isEmbedded ? 'Yes' : 'No'}</span>
+
+              <span className="text-gray-600">Session Token:</span>
+              <span className="font-mono text-xs text-gray-700">
+                {sessionToken ? `Found (${sessionToken.substring(0, 20)}...)` : 'Not found'}
+              </span>
+            </div>
+          </CardContent>
         </Card>
 
         <Card>
-          <BlockStack gap="400">
-            <Text variant="headingMd" as="h2">Test Results</Text>
-            <BlockStack gap="200">
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <Text as="span">Token Found:</Text>
+          <CardHeader>
+            <CardTitle>Test Results</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-900 w-32">Token Found:</span>
                 {testResults.tokenFound === null ? (
-                  <Badge tone="info">Not tested</Badge>
+                  <Badge variant="secondary">
+                    <Info className="mr-1 h-3 w-3" />
+                    Not tested
+                  </Badge>
                 ) : testResults.tokenFound ? (
-                  <Badge tone="success">✅ Pass</Badge>
+                  <Badge className="bg-green-600 hover:bg-green-700">
+                    <CheckCircle className="mr-1 h-3 w-3" />
+                    Pass
+                  </Badge>
                 ) : (
-                  <Badge tone="critical">❌ Fail</Badge>
+                  <Badge variant="destructive">
+                    <AlertCircle className="mr-1 h-3 w-3" />
+                    Fail
+                  </Badge>
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <Text as="span">API Call:</Text>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-900 w-32">API Call:</span>
                 {testResults.apiCall === null ? (
-                  <Badge tone="info">Not tested</Badge>
+                  <Badge variant="secondary">
+                    <Info className="mr-1 h-3 w-3" />
+                    Not tested
+                  </Badge>
                 ) : testResults.apiCall ? (
-                  <Badge tone="success">✅ Pass</Badge>
+                  <Badge className="bg-green-600 hover:bg-green-700">
+                    <CheckCircle className="mr-1 h-3 w-3" />
+                    Pass
+                  </Badge>
                 ) : (
-                  <Badge tone="critical">❌ Fail</Badge>
+                  <Badge variant="destructive">
+                    <AlertCircle className="mr-1 h-3 w-3" />
+                    Fail
+                  </Badge>
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <Text as="span">Real Data:</Text>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-900 w-32">Real Data:</span>
                 {testResults.realData === null ? (
-                  <Badge tone="info">Not tested</Badge>
+                  <Badge variant="secondary">
+                    <Info className="mr-1 h-3 w-3" />
+                    Not tested
+                  </Badge>
                 ) : testResults.realData ? (
-                  <Badge tone="success">✅ Pass</Badge>
+                  <Badge className="bg-green-600 hover:bg-green-700">
+                    <CheckCircle className="mr-1 h-3 w-3" />
+                    Pass
+                  </Badge>
                 ) : (
-                  <Badge tone="warning">⚠️ Mock Data</Badge>
+                  <Badge className="bg-yellow-500 hover:bg-yellow-600">
+                    <AlertCircle className="mr-1 h-3 w-3" />
+                    Mock Data
+                  </Badge>
                 )}
               </div>
 
               {testResults.error && (
-                <Text as="p" tone="critical">
-                  Error: {testResults.error}
-                </Text>
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>Error: {testResults.error}</AlertDescription>
+                </Alert>
               )}
-            </BlockStack>
+            </div>
 
-            <Button onClick={testSessionToken} variant="primary">
+            <Button onClick={testSessionToken} className="w-full" size="lg">
               Run Test
             </Button>
-          </BlockStack>
+          </CardContent>
         </Card>
 
         <Card>
-          <BlockStack gap="400">
-            <Text variant="headingMd" as="h2">Instructions</Text>
-            <BlockStack gap="200">
-              <Text as="p">
-                1. This page tests if session tokens from App Bridge are working correctly.
-              </Text>
-              <Text as="p">
-                2. If you see "Token Found: ✅ Pass", the App Bridge is getting session tokens.
-              </Text>
-              <Text as="p">
-                3. Click "Run Test" to verify the session token works with Shopify API.
-              </Text>
-              <Text as="p">
-                4. If "Real Data: ⚠️ Mock Data" appears, the app may need proper OAuth authorization.
-              </Text>
-            </BlockStack>
-          </BlockStack>
+          <CardHeader>
+            <CardTitle>Instructions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ol className="space-y-2 text-sm text-gray-600 list-decimal list-inside">
+              <li>This page tests if session tokens from App Bridge are working correctly.</li>
+              <li>If you see "Token Found: Pass", the App Bridge is getting session tokens.</li>
+              <li>Click "Run Test" to verify the session token works with Shopify API.</li>
+              <li>If "Real Data: Mock Data" appears, the app may need proper OAuth authorization.</li>
+            </ol>
+          </CardContent>
         </Card>
-      </BlockStack>
-    </Page>
+      </div>
+    </div>
   )
 }

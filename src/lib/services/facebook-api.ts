@@ -7,15 +7,68 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { decryptToken, encryptToken } from './encryption'
-import type {
-  FacebookIntegration,
-  AdAccount,
-  Campaign,
-  CampaignInsight,
-  FacebookAPIResponse,
-  FacebookInsightData,
-  FacebookTokenResponse
-} from '@/types/facebook'
+import { logger } from '@/lib/logger'
+
+// Types
+export interface FacebookIntegration {
+  id: string;
+  shop_id: string;
+  access_token: string;
+  encrypted_access_token?: string;
+  token_encrypted: boolean;
+  expires_at: string | null;
+  token_expires_at?: string | null;
+  provider_account_id?: string;
+  provider_account_name?: string;
+  is_active?: boolean;
+  additional_metadata?: any;
+}
+
+export interface AdAccount {
+  id: string;
+  account_id: string;
+  name: string;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  status: string;
+}
+
+export interface CampaignInsight {
+  campaign_id: string;
+  campaign_name: string;
+  impressions?: string;
+  clicks?: string;
+  spend: string;
+  purchases: string;
+  purchase_value: string;
+  conversion_rate: string;
+  roas: string;
+  ctr?: string;
+  cpc?: string;
+}
+
+export interface FacebookAPIResponse<T> {
+  data: T;
+  paging?: any;
+}
+
+export interface FacebookInsightData {
+  impressions: string;
+  clicks: string;
+  spend: string;
+  actions?: any[];
+  action_values?: any[];
+  campaign_id?: string;
+  campaign_name?: string;
+}
+
+export interface FacebookTokenResponse {
+  access_token: string;
+  expires_in: number;
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
@@ -49,7 +102,7 @@ async function getIntegration(shopId: string): Promise<FacebookIntegration | nul
     .single()
 
   if (error) {
-    console.error('Error fetching Facebook integration:', error)
+    logger.error('Error fetching Facebook integration:', error as Error, { component: 'facebook-api' })
     return null
   }
 
@@ -74,6 +127,9 @@ function isTokenExpired(expiresAt: string | null): boolean {
  */
 async function refreshAccessToken(integration: FacebookIntegration): Promise<string> {
   try {
+    if (!integration.encrypted_access_token) {
+      throw new FacebookAPIError('No encrypted access token found', 500, 'MISSING_TOKEN')
+    }
     const decryptedToken = await decryptToken(integration.encrypted_access_token)
 
     const url = new URL(`${FACEBOOK_GRAPH_URL}/oauth/access_token`)
@@ -109,7 +165,7 @@ async function refreshAccessToken(integration: FacebookIntegration): Promise<str
 
     return data.access_token
   } catch (error) {
-    console.error('Error refreshing Facebook token:', error)
+    logger.error('Error refreshing Facebook token:', error as Error, { component: 'facebook-api' })
     throw error
   }
 }
@@ -125,10 +181,13 @@ async function getAccessToken(shopId: string): Promise<string> {
   }
 
   // Check if token needs refresh
-  if (isTokenExpired(integration.token_expires_at)) {
+  if (integration.token_expires_at && isTokenExpired(integration.token_expires_at)) {
     return await refreshAccessToken(integration)
   }
 
+  if (!integration.encrypted_access_token) {
+    throw new FacebookAPIError('No encrypted access token found', 500, 'MISSING_TOKEN')
+  }
   return await decryptToken(integration.encrypted_access_token)
 }
 
@@ -187,7 +246,7 @@ export async function getAdAccounts(shopId: string): Promise<AdAccount[]> {
 
     return data.data || []
   } catch (error) {
-    console.error('Error fetching ad accounts:', error)
+    logger.error('Error fetching ad accounts:', error as Error, { component: 'facebook-api' })
     throw error
   }
 }
@@ -221,7 +280,7 @@ export async function getCampaigns(
 
     return campaigns
   } catch (error) {
-    console.error('Error fetching campaigns:', error)
+    logger.error('Error fetching campaigns:', error as Error, { component: 'facebook-api' })
     throw error
   }
 }
@@ -243,7 +302,7 @@ export async function getCampaign(
 
     return data
   } catch (error) {
-    console.error('Error fetching campaign:', error)
+    logger.error('Error fetching campaign:', error as Error, { component: 'facebook-api' })
     throw error
   }
 }
@@ -253,7 +312,7 @@ export async function getCampaign(
  */
 export async function isFacebookConnected(shopId: string): Promise<boolean> {
   const integration = await getIntegration(shopId)
-  return integration !== null && integration.is_active
+  return integration !== null && (integration.is_active ?? false)
 }
 
 /**
@@ -280,9 +339,9 @@ export async function getIntegrationInfo(shopId: string): Promise<{
 
   return {
     connected: true,
-    accountName: integration.provider_account_name,
+    accountName: integration.provider_account_name ?? null,
     adAccountsCount: adAccounts.length,
-    adAccounts: adAccounts.map((acc) => ({
+    adAccounts: adAccounts.map((acc: { id: string; name: string }) => ({
       id: acc.id,
       name: acc.name
     }))
@@ -358,19 +417,19 @@ export async function getCampaignInsights(
       const roas = spend > 0 ? purchaseValueAmount / spend : 0
 
       insights.push({
-        campaign_id: insight.campaign_id,
-        campaign_name: insight.campaign_name,
-        spend,
-        purchases,
-        purchase_value: purchaseValueAmount,
-        conversion_rate: conversionRate,
-        roas
+        campaign_id: insight.campaign_id || '',
+        campaign_name: insight.campaign_name || '',
+        spend: spend.toFixed(2),
+        purchases: purchases.toString(),
+        purchase_value: purchaseValueAmount.toFixed(2),
+        conversion_rate: conversionRate.toFixed(2),
+        roas: roas.toFixed(2)
       })
     }
 
     return insights
   } catch (error) {
-    console.error('Error fetching campaign insights:', error)
+    logger.error('Error fetching campaign insights:', error as Error, { component: 'facebook-api' })
     throw error
   }
 }

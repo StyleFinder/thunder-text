@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateWebhook, validateWebhookTopic, extractWebhookMetadata } from '@/lib/middleware/webhook-validation'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
     const validation = await validateWebhook(request)
 
     if (!validation.valid) {
-      console.error('❌ Webhook validation failed:', validation.error)
+      logger.error('❌ Webhook validation failed:', validation.error, undefined, { component: 'shop-update' })
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -34,7 +35,6 @@ export async function POST(request: NextRequest) {
     const webhookData = JSON.parse(validation.body!)
     const shopDomain = webhookData.domain || metadata.shopDomain
 
-    console.log('📦 Processing shop/update webhook for shop:', shopDomain)
 
     // Update shop information in database
     if (shopDomain) {
@@ -72,10 +72,9 @@ export async function POST(request: NextRequest) {
         })
 
       if (updateError) {
-        console.error('❌ Failed to update shop information:', updateError)
+        logger.error('❌ Failed to update shop information:', updateError as Error, { component: 'shop-update' })
         // Don't return error - webhook should still succeed
       } else {
-        console.log('✅ Shop information updated:', shopDomain)
       }
     }
 
@@ -92,7 +91,7 @@ export async function POST(request: NextRequest) {
           status: 'success'
         })
     } catch (err) {
-      console.error('Failed to log webhook:', err)
+      logger.error('Failed to log webhook:', err as Error, { component: 'shop-update' })
     }
 
     // Return success response
@@ -102,7 +101,7 @@ export async function POST(request: NextRequest) {
     )
 
   } catch (error) {
-    console.error('❌ Webhook processing error:', error)
+    logger.error('❌ Webhook processing error:', error as Error, { component: 'shop-update' })
 
     // Log failed webhook
     try {
@@ -119,7 +118,7 @@ export async function POST(request: NextRequest) {
           error: error instanceof Error ? error.message : 'Unknown error'
         })
     } catch (logError) {
-      console.error('Failed to log webhook error:', logError)
+      logger.error('Failed to log webhook error:', logError as Error, { component: 'shop-update' })
     }
 
     // Always return 200 to prevent Shopify from retrying

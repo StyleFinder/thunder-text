@@ -5,6 +5,7 @@ import {
 } from "@/lib/middleware/cors";
 import { ShopifyAPI } from "@/lib/shopify";
 import { getShopToken } from "@/lib/shopify/token-manager";
+import { logger } from '@/lib/logger'
 
 export async function OPTIONS(request: NextRequest) {
   return handleCorsPreflightRequest(request);
@@ -24,7 +25,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("📝 Updating product:", productId, "for shop:", shop);
 
     // Get session token from the request
     const sessionToken = request.headers
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const isTestStore = shop.includes("zunosai-staging-test-store");
 
     if (!sessionToken && !isTestStore) {
-      console.error("❌ No session token provided in request");
+      logger.error("❌ No session token provided in request", undefined, { component: 'update' });
       return NextResponse.json(
         {
           error: "Authentication required",
@@ -53,18 +53,15 @@ export async function POST(request: NextRequest) {
     try {
       // For the test store, use the environment variable access token
       if (isTestStore && process.env.SHOPIFY_ACCESS_TOKEN) {
-        console.log("✅ Using environment access token for test store");
         accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
       } else {
         // For production stores, try to get a stored offline token first
         const tokenResult = await getShopToken(shop);
 
         if (tokenResult.success && tokenResult.accessToken) {
-          console.log("✅ Using stored offline access token for shop:", shop);
           accessToken = tokenResult.accessToken;
         } else if (sessionToken) {
           // If no offline token, perform token exchange with the session token
-          console.log("🔄 Performing token exchange for shop:", shop);
 
           const { exchangeToken } = await import(
             "@/lib/shopify/token-exchange"
@@ -77,7 +74,6 @@ export async function POST(request: NextRequest) {
             requestedTokenType: "offline",
           });
 
-          console.log("✅ Token exchange successful, received access token");
           accessToken = exchangeResult.access_token;
 
           // Save the token for future use
@@ -95,7 +91,7 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (tokenError) {
-      console.error("❌ Failed to obtain access token:", tokenError);
+      logger.error("❌ Failed to obtain access token:", tokenError as Error, { component: 'update' });
       return NextResponse.json(
         {
           error: "Authentication failed",
@@ -122,18 +118,11 @@ export async function POST(request: NextRequest) {
     // Map our updates to Shopify's productUpdate input format
     if (updates.title) {
       productInput.title = updates.title;
-      console.log("✅ Title update prepared:", updates.title.substring(0, 100));
     }
 
     if (updates.description) {
       // Shopify uses descriptionHtml for the product description
       productInput.descriptionHtml = updates.description;
-      console.log("✅ Description update prepared:", {
-        length: updates.description.length,
-        preview: updates.description.substring(0, 200),
-        hasHTMLTags: updates.description.includes("<b>"),
-        hasSections: updates.description.includes("Product Details"),
-      });
     }
 
     // SEO fields are updated through metafields
@@ -167,12 +156,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log("🚀 Sending update to Shopify:", {
-      productId,
-      productInput,
-      metafieldsCount: metafieldsToUpdate.length,
-    });
-
     // Update the product
     let updateResult:
       | { productUpdate?: { product?: unknown; userErrors?: unknown[] } }
@@ -183,13 +166,8 @@ export async function POST(request: NextRequest) {
         productId,
         productInput,
       )) as { productUpdate?: { product?: unknown; userErrors?: unknown[] } };
-      console.log("📥 Shopify API response received:", {
-        hasProduct: !!updateResult.productUpdate?.product,
-        hasErrors: !!updateResult.productUpdate?.userErrors?.length,
-        fullResponse: JSON.stringify(updateResult, null, 2),
-      });
     } catch (apiError) {
-      console.error("❌ Shopify API call failed:", apiError);
+      logger.error("❌ Shopify API call failed:", apiError as Error, { component: 'update' });
       throw new Error(
         `Shopify API error: ${apiError instanceof Error ? apiError.message : "Unknown error"}`,
       );
@@ -199,9 +177,10 @@ export async function POST(request: NextRequest) {
       updateResult.productUpdate?.userErrors &&
       updateResult.productUpdate.userErrors.length > 0
     ) {
-      console.error(
+      logger.error(
         "❌ Shopify API errors:",
-        updateResult.productUpdate.userErrors,
+        undefined,
+        { errors: updateResult.productUpdate.userErrors, component: 'update' }
       );
       return NextResponse.json(
         {
@@ -219,23 +198,21 @@ export async function POST(request: NextRequest) {
 
     // Update metafields if any
     if (metafieldsToUpdate.length > 0) {
-      console.log("📝 Updating metafields:", metafieldsToUpdate);
 
       for (const metafield of metafieldsToUpdate) {
         try {
           await shopifyClient.createProductMetafield(productId, metafield);
         } catch (metaError) {
-          console.error(
-            "⚠️ Error updating metafield:",
-            metafield.key,
-            metaError,
+          logger.error(
+            "⚠️ Error updating metafield",
+            metaError as Error,
+            { metafieldKey: metafield.key, component: 'update' }
           );
           // Continue with other metafields even if one fails
         }
       }
     }
 
-    console.log("✅ Product updated successfully in Shopify");
 
     return NextResponse.json(
       {
@@ -255,7 +232,7 @@ export async function POST(request: NextRequest) {
       { headers: corsHeaders },
     );
   } catch (error) {
-    console.error("Error in update endpoint:", error);
+    logger.error("Error in update endpoint:", error as Error, { component: 'update' });
     return NextResponse.json(
       {
         error: "Internal server error",

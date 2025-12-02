@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Banner, Spinner, InlineStack, Text } from '@shopify/polaris'
+import { logger } from '@/lib/logger'
 
 interface TokenExchangeHandlerProps {
   shop: string
@@ -13,11 +14,9 @@ export function TokenExchangeHandler({ shop, isEmbedded, onSuccess }: TokenExcha
   const [isExchanging, setIsExchanging] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  console.log('🚀 TokenExchangeHandler initialized:', { shop, isEmbedded })
 
   useEffect(() => {
     async function performTokenExchange() {
-      console.log('🔄 performTokenExchange called:', { isEmbedded, shop })
 
       // Only perform token exchange if we're in an embedded context
       if (!isEmbedded || !shop) {
@@ -29,7 +28,6 @@ export function TokenExchangeHandler({ shop, isEmbedded, onSuccess }: TokenExcha
       // Check if we already performed token exchange in this session
       const exchangeCompleted = window.sessionStorage.getItem('token_exchange_completed')
       if (exchangeCompleted === shop) {
-        console.log('✅ Token exchange already completed for this shop')
         onSuccess()
         return
       }
@@ -38,7 +36,6 @@ export function TokenExchangeHandler({ shop, isEmbedded, onSuccess }: TokenExcha
       setError(null)
 
       try {
-        console.log('🔄 Starting token exchange for embedded app...')
 
         // Import Shopify App Bridge from npm package
         const { createApp } = await import('@shopify/app-bridge')
@@ -61,7 +58,6 @@ export function TokenExchangeHandler({ shop, isEmbedded, onSuccess }: TokenExcha
         // Store session token for authenticatedFetch
         window.sessionStorage.setItem('shopify_session_token', sessionToken)
 
-        console.log('📝 Got session token, performing exchange...')
 
         // Perform token exchange
         const response = await fetch('/api/shopify/token-exchange', {
@@ -81,7 +77,6 @@ export function TokenExchangeHandler({ shop, isEmbedded, onSuccess }: TokenExcha
           throw new Error(result.error || 'Token exchange failed')
         }
 
-        console.log('✅ Token exchange successful')
 
         // Mark token exchange as completed for this shop
         window.sessionStorage.setItem('token_exchange_completed', shop)
@@ -94,14 +89,14 @@ export function TokenExchangeHandler({ shop, isEmbedded, onSuccess }: TokenExcha
               window.sessionStorage.setItem('shopify_session_token', newToken)
             }
           } catch (err) {
-            console.error('Failed to refresh session token:', err)
+            logger.error('Failed to refresh session token:', err as Error, { component: 'TokenExchangeHandler' })
           }
         }, 30000) // Refresh every 30 seconds
 
         onSuccess()
 
       } catch (err) {
-        console.error('❌ Token exchange error:', err)
+        logger.error('❌ Token exchange error:', err as Error, { component: 'TokenExchangeHandler' })
         setError(err instanceof Error ? err.message : 'Authentication failed')
       } finally {
         setIsExchanging(false)

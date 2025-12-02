@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getUserId } from "@/lib/auth/content-center-auth";
 import { generateMasterBusinessProfile } from "@/lib/services/business-profile-generator";
+import { logger } from "@/lib/logger";
 import type {
   ApiResponse,
   GenerateProfileResponse,
@@ -49,7 +50,11 @@ export async function POST(
       .order("question_number", { ascending: true });
 
     if (responsesError) {
-      console.error("Error fetching responses:", responsesError);
+      logger.error("Error fetching responses", responsesError as Error, {
+        component: "business-profile-generate",
+        operation: "POST-fetchResponses",
+        profileId: profile.id
+      });
       return NextResponse.json(
         { success: false, error: "Failed to fetch interview responses" },
         { status: 500 },
@@ -102,17 +107,16 @@ export async function POST(
       .single();
 
     if (updateError) {
-      console.error("Error updating profile:", updateError);
+      logger.error("Error updating profile", updateError as Error, {
+        component: "business-profile-generate",
+        operation: "POST-updateProfile",
+        profileId: profile.id
+      });
       return NextResponse.json(
         { success: false, error: "Failed to save generated profile" },
         { status: 500 },
       );
     }
-
-    console.log(`✅ Profile generated successfully:
-      - Stages completed: ${generationMetadata.stagesCompleted}/7
-      - Tokens used: ${generationMetadata.totalTokensUsed}
-      - Time: ${generationMetadata.generationTimeMs}ms`);
 
     // Save generation history for audit trail
     await supabaseAdmin.from("profile_generation_history").insert({
@@ -141,7 +145,10 @@ export async function POST(
       { status: 200 },
     );
   } catch (error) {
-    console.error("Error in POST /api/business-profile/generate:", error);
+    logger.error("Error in POST /api/business-profile/generate", error as Error, {
+      component: "business-profile-generate",
+      operation: "POST"
+    });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger'
+
 // Google Shopping Metafield Definitions
 // Creates structured metafield definitions for better Shopify admin integration
 
@@ -270,7 +272,6 @@ interface ShopifyGraphQLClient {
 
 // Create all metafield definitions via GraphQL
 export async function createMetafieldDefinitions(shopifyClient: ShopifyGraphQLClient) {
-  console.log('🔧 Creating metafield definitions for better admin integration...')
   
   const results = []
   
@@ -311,12 +312,10 @@ export async function createMetafieldDefinitions(shopifyClient: ShopifyGraphQLCl
         )
         
         if (nonExistenceErrors.length > 0) {
-          console.error(`❌ Error creating definition for ${definition.namespace}.${definition.key}:`, nonExistenceErrors)
+          logger.error(`❌ Error creating definition for ${definition.namespace}.${definition.key}:`, nonExistenceErrors as Error, { component: 'google-metafield-definitions' })
         } else {
-          console.log(`✅ Definition exists: ${definition.namespace}.${definition.key}`)
         }
       } else {
-        console.log(`✅ Created definition: ${definition.namespace}.${definition.key}`)
       }
       
       results.push({
@@ -325,7 +324,7 @@ export async function createMetafieldDefinitions(shopifyClient: ShopifyGraphQLCl
       })
       
     } catch (error) {
-      console.error(`❌ Failed to create definition for ${definition.namespace}.${definition.key}:`, error)
+      logger.error(`❌ Failed to create definition for ${definition.namespace}.${definition.key}:`, error as Error, { component: 'google-metafield-definitions' })
       results.push({
         definition: definition.namespace + '.' + definition.key,
         success: false,
@@ -337,7 +336,6 @@ export async function createMetafieldDefinitions(shopifyClient: ShopifyGraphQLCl
   const successful = results.filter(r => r.success).length
   const total = results.length
   
-  console.log(`🎯 Metafield definitions: ${successful}/${total} processed`)
   
   return results
 }

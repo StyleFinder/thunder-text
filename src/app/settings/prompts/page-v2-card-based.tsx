@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { logger } from '@/lib/logger'
 import {
   Page,
   Layout,
@@ -85,7 +86,7 @@ function PromptsSettingsContent() {
           setSystemPromptContent(data.system_prompt.content)
         }
       } catch (err) {
-        console.error('Error loading prompts:', err)
+        logger.error('Error loading prompts:', err as Error, { component: 'page-v2-card-based' })
         setError('Failed to load prompts')
       } finally {
         setLoading(false)
@@ -122,7 +123,7 @@ function PromptsSettingsContent() {
       setSuccess('System prompt saved successfully!')
 
     } catch (err) {
-      console.error('Error saving system prompt:', err)
+      logger.error('Error saving system prompt:', err as Error, { component: 'page-v2-card-based' })
       setError('Failed to save system prompt')
     } finally {
       setSaving(false)
@@ -161,7 +162,7 @@ function PromptsSettingsContent() {
       setSuccess('Template created successfully!')
 
     } catch (err) {
-      console.error('Error creating template:', err)
+      logger.error('Error creating template:', err as Error, { component: 'page-v2-card-based' })
       setError('Failed to create template')
     } finally {
       setSaving(false)
@@ -201,7 +202,7 @@ function PromptsSettingsContent() {
       setSuccess('Template saved successfully!')
 
     } catch (err) {
-      console.error('Error saving template:', err)
+      logger.error('Error saving template:', err as Error, { component: 'page-v2-card-based' })
       setError('Failed to save template')
     } finally {
       setSaving(false)
@@ -233,7 +234,7 @@ function PromptsSettingsContent() {
       setSuccess('Template deleted successfully!')
 
     } catch (err) {
-      console.error('Error deleting template:', err)
+      logger.error('Error deleting template:', err as Error, { component: 'page-v2-card-based' })
       setError('Failed to delete template')
     } finally {
       setSaving(false)
@@ -267,7 +268,7 @@ function PromptsSettingsContent() {
       setSuccess('Default template updated!')
 
     } catch (err) {
-      console.error('Error setting default:', err)
+      logger.error('Error setting default:', err as Error, { component: 'page-v2-card-based' })
       setError('Failed to set template as default')
     } finally {
       setSaving(false)

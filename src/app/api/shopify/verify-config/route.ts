@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getShopToken } from '@/lib/shopify/token-manager'
+import { logger } from '@/lib/logger'
 
 // GET /api/shopify/verify-config?shop={shop}
 // Diagnostic endpoint to verify Shopify configuration
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Config verification error:', error)
+    logger.error('Config verification error:', error as Error, { component: 'verify-config' })
     return NextResponse.json({
       success: false,
       error: 'Failed to verify configuration',

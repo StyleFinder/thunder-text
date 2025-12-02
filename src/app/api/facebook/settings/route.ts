@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
       data: settings,
     })
   } catch (error) {
-    console.error('Error in GET /api/facebook/settings:', error)
+    logger.error('Error in GET /api/facebook/settings:', error as Error, { component: 'settings' })
     return NextResponse.json(
       {
         success: false,
@@ -197,7 +198,7 @@ export async function POST(request: NextRequest) {
       data: settings,
     })
   } catch (error) {
-    console.error('Error in POST /api/facebook/settings:', error)
+    logger.error('Error in POST /api/facebook/settings:', error as Error, { component: 'settings' })
     return NextResponse.json(
       {
         success: false,

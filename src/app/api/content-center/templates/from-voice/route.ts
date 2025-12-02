@@ -8,6 +8,7 @@ import {
 import { getUserId } from '@/lib/auth/content-center-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
+import { logger } from '@/lib/logger'
 
 
 
@@ -85,7 +86,7 @@ NOTE: This is a placeholder template. AI template generation coming in Phase 3.`
       .single()
 
     if (templateError) {
-      console.error('Error creating template:', templateError)
+      logger.error('Error creating template:', templateError as Error, { component: 'from-voice' })
       return NextResponse.json(
         { success: false, error: 'Failed to create template' },
         { status: 500 }
@@ -102,7 +103,7 @@ NOTE: This is a placeholder template. AI template generation coming in Phase 3.`
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Error in POST /api/content-center/templates/from-voice:', error)
+    logger.error('Error in POST /api/content-center/templates/from-voice:', error as Error, { component: 'from-voice' })
 
     if (error instanceof VoiceProfileNotFoundError) {
       return NextResponse.json(

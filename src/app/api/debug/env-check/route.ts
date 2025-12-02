@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
+import { guardDebugRoute } from '../_middleware-guard'
 
 export async function GET() {
+  const guardResponse = guardDebugRoute('/api/debug/env-check');
+  if (guardResponse) return guardResponse;
   // Check critical environment variables for Shopify Token Exchange
   const envCheck = {
     shopifyApiKey: {

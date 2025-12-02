@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { logger } from '@/lib/logger'
 
 export default function EmbedPage() {
   const searchParams = useSearchParams()
@@ -9,10 +10,9 @@ export default function EmbedPage() {
   const host = searchParams?.get('host')
 
   useEffect(() => {
-    console.log('[Embed] Loading with params:', { shop, host })
 
     if (!shop) {
-      console.error('[Embed] Missing shop parameter')
+      logger.error('[Embed] Missing shop parameter', undefined, { component: 'embed' })
       return
     }
 
@@ -25,7 +25,6 @@ export default function EmbedPage() {
 
     // Redirect to main app
     const redirectUrl = `/?${params.toString()}`
-    console.log('[Embed] Redirecting to:', redirectUrl)
 
     // Small delay to ensure proper loading
     setTimeout(() => {

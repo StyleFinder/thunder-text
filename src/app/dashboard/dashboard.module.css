@@ -1,0 +1,121 @@
+.pageWrapper {
+  min-height: 100vh;
+  background: #f3f4f6;
+}
+
+.page {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  border: 1px solid #dcdcdc;
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 22px;
+  box-shadow: 0 18px 32px -29px rgba(0, 0, 0, 0.65);
+}
+
+.row {
+  display: grid;
+  gap: 20px;
+}
+
+@media (min-width: 960px) {
+  .row {
+    grid-template-columns: 1.1fr 0.9fr;
+  }
+}
+
+.sectionTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e1e1e;
+}
+
+.progressTrack {
+  height: 8px;
+  width: 100%;
+  background: #e4e4e4;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: #0066cc;
+}
+
+.upgradeButton {
+  border: 1px solid #d1d1d1;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3f3f3f;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.primaryButton {
+  width: 100%;
+  background: #0066cc;
+  color: #ffffff;
+  border: 1px solid #0066cc;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 10px rgba(0, 102, 204, 0.25);
+}
+
+.secondaryButton {
+  width: 100%;
+  background: #ffffff;
+  color: #1e1e1e;
+  border: 1px solid #d5d5d5;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.roiBox {
+  border: 1px solid #cfe9d4;
+  border-radius: 12px;
+  background: #f4fdf6;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.roiSummary {
+  background: #f5f5f7;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e1e1e;
+}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { initializeDefaultPrompts } from "@/lib/prompts";
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/admin/initialize-prompts
@@ -29,18 +30,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("🚀 Initializing default prompts for shop:", shop);
 
     await initializeDefaultPrompts(shop);
 
-    console.log("✅ Successfully initialized default prompts");
 
     return NextResponse.json({
       success: true,
       message: "Default prompts initialized successfully",
     });
   } catch (error) {
-    console.error("❌ Error initializing prompts:", error);
+    logger.error("❌ Error initializing prompts:", error as Error, { component: 'initialize-prompts' });
     return NextResponse.json(
       {
         error: "Failed to initialize prompts",

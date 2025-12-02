@@ -7,6 +7,7 @@ import {
 import { getUserId } from '@/lib/auth/content-center-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
+import { logger } from '@/lib/logger'
 
 /**
  * PATCH /api/content-center/samples/:id
@@ -76,7 +77,7 @@ export async function PATCH(
       .single()
 
     if (updateError) {
-      console.error('Error updating sample:', updateError)
+      logger.error('Error updating sample:', updateError as Error, { component: '[id]' })
       return NextResponse.json(
         { success: false, error: 'Failed to update sample' },
         { status: 500 }
@@ -89,7 +90,7 @@ export async function PATCH(
     })
 
   } catch (error) {
-    console.error('Error in PATCH /api/content-center/samples/:id:', error)
+    logger.error('Error in PATCH /api/content-center/samples/:id:', error as Error, { component: '[id]' })
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -129,7 +130,7 @@ export async function DELETE(
       .eq('store_id', userId)
 
     if (error) {
-      console.error('Error deleting sample:', error)
+      logger.error('Error deleting sample:', error as Error, { component: '[id]' })
       return NextResponse.json(
         { success: false, error: 'Failed to delete sample' },
         { status: 500 }
@@ -142,7 +143,7 @@ export async function DELETE(
     })
 
   } catch (error) {
-    console.error('Error in DELETE /api/content-center/samples/:id:', error)
+    logger.error('Error in DELETE /api/content-center/samples/:id:', error as Error, { component: '[id]' })
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

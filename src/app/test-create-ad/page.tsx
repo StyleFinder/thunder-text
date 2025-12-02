@@ -8,7 +8,11 @@
 
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Page, Layout, Card, Button, BlockStack, Text, TextField } from '@shopify/polaris'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 import CreateAdModal from '@/components/facebook/CreateAdModal'
 
 export default function TestCreateAdPage() {
@@ -27,73 +31,75 @@ export default function TestCreateAdPage() {
   ])
 
   return (
-    <Page
-      title="Test Create Facebook Ad"
-      subtitle="Test the complete ad creation flow"
-    >
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <Text as="h2" variant="headingMd">Product Description</Text>
+    <div className="p-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Test Create Facebook Ad</h1>
+          <p className="text-gray-600 mt-2">Test the complete ad creation flow</p>
+        </div>
 
-              <TextField
-                label="Title"
-                value={title}
-                onChange={setTitle}
-                autoComplete="off"
-              />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Product Description</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Title</Label>
+                  <Input
+                    id="title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
+                </div>
 
-              <TextField
-                label="Description/Copy"
-                value={copy}
-                onChange={setCopy}
-                multiline={3}
-                autoComplete="off"
-              />
+                <div className="space-y-2">
+                  <Label htmlFor="copy">Description/Copy</Label>
+                  <Textarea
+                    id="copy"
+                    value={copy}
+                    onChange={(e) => setCopy(e.target.value)}
+                    rows={3}
+                  />
+                </div>
 
-              <BlockStack gap="200">
-                <Text as="p" variant="bodyMd" fontWeight="semibold">Product Images:</Text>
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {images.length} images available
-                </Text>
-              </BlockStack>
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-gray-900">Product Images:</p>
+                  <p className="text-sm text-gray-600">
+                    {images.length} images available
+                  </p>
+                </div>
 
-              <Button
-                variant="primary"
-                onClick={() => setModalOpen(true)}
-              >
-                Create Facebook Ad
-              </Button>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
+                <Button
+                  onClick={() => setModalOpen(true)}
+                  size="lg"
+                  className="w-full"
+                >
+                  Create Facebook Ad
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
 
-        <Layout.Section variant="oneThird">
-          <Card>
-            <BlockStack gap="400">
-              <Text as="h3" variant="headingMd">Test Instructions</Text>
-              <BlockStack gap="200">
-                <Text as="p" variant="bodySm">
-                  1. Edit the title and copy if desired
-                </Text>
-                <Text as="p" variant="bodySm">
-                  2. Click "Create Facebook Ad"
-                </Text>
-                <Text as="p" variant="bodySm">
-                  3. Select ad account and campaign
-                </Text>
-                <Text as="p" variant="bodySm">
-                  4. Preview and edit the ad
-                </Text>
-                <Text as="p" variant="bodySm">
-                  5. Submit to Facebook
-                </Text>
-              </BlockStack>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>Test Instructions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ol className="space-y-2 text-sm text-gray-600 list-decimal list-inside">
+                  <li>Edit the title and copy if desired</li>
+                  <li>Click "Create Facebook Ad"</li>
+                  <li>Select ad account and campaign</li>
+                  <li>Preview and edit the ad</li>
+                  <li>Submit to Facebook</li>
+                </ol>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
 
       <CreateAdModal
         open={modalOpen}
@@ -104,6 +110,6 @@ export default function TestCreateAdPage() {
         initialCopy={copy}
         imageUrls={images}
       />
-    </Page>
+    </div>
   )
 }

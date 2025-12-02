@@ -23,6 +23,7 @@ import {
   Frame
 } from '@shopify/polaris'
 import { PRODUCT_CATEGORIES, type ProductCategory } from '@/lib/prompts'
+import { logger } from '@/lib/logger'
 
 interface SystemPrompt {
   id: string
@@ -78,26 +79,21 @@ function PromptsSettingsContent() {
   useEffect(() => {
     async function loadPrompts() {
       try {
-        console.log('🔄 Starting to load prompts for shop:', shop)
         setLoading(true)
         const response = await fetch(`/api/prompts?store_id=${shop}`)
         
-        console.log('📡 API response status:', response.status)
         if (!response.ok) {
           throw new Error('Failed to load prompts')
         }
 
         const data = await response.json()
-        console.log('📦 Raw API response:', JSON.stringify(data, null, 2))
-        console.log('📦 Data received:', {
-          hasSystemPrompt: !!data.system_prompt,
-          systemPromptName: data.system_prompt?.name,
-          systemPromptContent: data.system_prompt?.content ? `${data.system_prompt.content.substring(0, 50)}...` : 'null',
-          categoryTemplatesCount: data.category_templates?.length || 0
-        })
 
         if (!data.system_prompt) {
-          console.error('❌ No system_prompt in API response!')
+          logger.error('No system_prompt in API response', new Error('Missing system prompt'), {
+            component: 'prompts-settings-page-old',
+            operation: 'loadPrompts',
+            shop
+          })
         }
 
         setSystemPrompt(data.system_prompt)
@@ -107,12 +103,14 @@ function PromptsSettingsContent() {
           setSystemPromptContent(data.system_prompt.content)
         }
         
-        console.log('✅ Prompts loaded successfully, setting loading to false')
       } catch (err) {
-        console.error('❌ Error loading prompts:', err)
+        logger.error('Error loading prompts', err as Error, {
+          component: 'prompts-settings-page-old',
+          operation: 'loadPrompts',
+          shop
+        })
         setError('Failed to load prompts')
       } finally {
-        console.log('🏁 Setting loading to false in finally block')
         setLoading(false)
       }
     }
@@ -147,7 +145,11 @@ function PromptsSettingsContent() {
       setSuccess('System prompt saved successfully!')
       
     } catch (err) {
-      console.error('Error saving system prompt:', err)
+      logger.error('Error saving system prompt', err as Error, {
+        component: 'prompts-settings-page-old',
+        operation: 'handleSaveSystemPrompt',
+        shop
+      })
       setError('Failed to save system prompt')
     } finally {
       setSaving(false)
@@ -188,7 +190,12 @@ function PromptsSettingsContent() {
       setSuccess('Template saved successfully!')
       
     } catch (err) {
-      console.error('Error saving template:', err)
+      logger.error('Error saving template', err as Error, {
+        component: 'prompts-settings-page-old',
+        operation: 'handleSaveTemplate',
+        category,
+        shop
+      })
       setError('Failed to save template')
     } finally {
       setSaving(false)
@@ -232,7 +239,13 @@ function PromptsSettingsContent() {
       setSuccess('Reset to defaults successfully!')
       
     } catch (err) {
-      console.error('Error resetting:', err)
+      logger.error('Error resetting to defaults', err as Error, {
+        component: 'prompts-settings-page-old',
+        operation: 'handleReset',
+        resetType,
+        resetCategory,
+        shop
+      })
       setError('Failed to reset to defaults')
     } finally {
       setSaving(false)
@@ -274,7 +287,13 @@ function PromptsSettingsContent() {
       setSuccess(`${PRODUCT_CATEGORIES.find(c => c.value === category)?.label} template set as default!`)
 
     } catch (err) {
-      console.error('Error setting as default:', err)
+      logger.error('Error setting template as default', err as Error, {
+        component: 'prompts-settings-page-old',
+        operation: 'handleDefaultTemplateChange',
+        category,
+        storeId,
+        shop
+      })
       setError('Failed to set template as default')
     } finally {
       setSaving(false)
@@ -319,7 +338,13 @@ function PromptsSettingsContent() {
       setSuccess('Template created successfully!')
 
     } catch (err) {
-      console.error('Error creating template:', err)
+      logger.error('Error creating template', err as Error, {
+        component: 'prompts-settings-page-old',
+        operation: 'handleCreateTemplate',
+        templateName: newTemplateName,
+        templateCategory: newTemplateCategory,
+        shop
+      })
       setError('Failed to create template')
     } finally {
       setSaving(false)
@@ -356,7 +381,13 @@ function PromptsSettingsContent() {
       setSuccess('Template deleted successfully!')
 
     } catch (err) {
-      console.error('Error deleting template:', err)
+      logger.error('Error deleting template', err as Error, {
+        component: 'prompts-settings-page-old',
+        operation: 'handleDeleteTemplate',
+        deleteCategory,
+        templateId: template?.id,
+        shop
+      })
       setError('Failed to delete template')
     } finally {
       setSaving(false)

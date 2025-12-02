@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { logger } from '@/lib/logger'
 
 /**
  * GET /api/trends/themes
@@ -15,7 +16,7 @@ export async function GET() {
       .order("name", { ascending: true });
 
     if (error) {
-      console.error("Error fetching themes:", error);
+      logger.error("Error fetching themes:", error as Error, { component: 'themes' });
       return NextResponse.json(
         { success: false, error: "Failed to fetch themes" },
         { status: 500 },
@@ -34,7 +35,7 @@ export async function GET() {
       themes: enrichedThemes,
     });
   } catch (error) {
-    console.error("Unexpected error in GET /api/trends/themes:", error);
+    logger.error("Unexpected error in GET /api/trends/themes:", error as Error, { component: 'themes' });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

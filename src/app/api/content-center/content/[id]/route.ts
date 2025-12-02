@@ -3,6 +3,7 @@ import { ApiResponse, GeneratedContent } from "@/types/content-center";
 import { getUserId } from "@/lib/auth/content-center-auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { withRateLimit, RATE_LIMITS } from "@/lib/middleware/rate-limit";
+import { logger } from '@/lib/logger'
 
 /**
  * GET /api/content-center/content/:id
@@ -52,7 +53,7 @@ export async function GET(
       data: content as GeneratedContent,
     });
   } catch (error) {
-    console.error("Error in GET /api/content-center/content/:id:", error);
+    logger.error("Error in GET /api/content-center/content/:id:", error as Error, { component: '[id]' });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },
@@ -108,7 +109,7 @@ export async function PATCH(
       .single();
 
     if (error || !content) {
-      console.error("Error updating content:", error);
+      logger.error("Error updating content:", error as Error, { component: '[id]' });
       return NextResponse.json(
         { success: false, error: "Failed to update content" },
         { status: 500 },
@@ -120,7 +121,7 @@ export async function PATCH(
       data: content as GeneratedContent,
     });
   } catch (error) {
-    console.error("Error in PATCH /api/content-center/content/:id:", error);
+    logger.error("Error in PATCH /api/content-center/content/:id:", error as Error, { component: '[id]' });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },
@@ -164,7 +165,7 @@ export async function DELETE(
       .eq("store_id", userId);
 
     if (error) {
-      console.error("Error deleting content:", error);
+      logger.error("Error deleting content:", error as Error, { component: '[id]' });
       return NextResponse.json(
         { success: false, error: "Failed to delete content" },
         { status: 500 },
@@ -176,7 +177,7 @@ export async function DELETE(
       data: { deleted: true },
     });
   } catch (error) {
-    console.error("Error in DELETE /api/content-center/content/:id:", error);
+    logger.error("Error in DELETE /api/content-center/content/:id:", error as Error, { component: '[id]' });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

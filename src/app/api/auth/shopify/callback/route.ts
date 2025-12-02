@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import crypto from 'crypto';
+import { logger } from '@/lib/logger'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -9,10 +10,9 @@ export async function GET(req: NextRequest) {
   const state = searchParams.get('state');
   const hmac = searchParams.get('hmac');
 
-  console.log('[Shopify Callback] Received:', { shop, code: code?.substring(0, 10), state, hmac: hmac?.substring(0, 10) });
 
   if (!code || !shop) {
-    console.error('[Shopify Callback] Missing code or shop parameter');
+    logger.error('[Shopify Callback] Missing code or shop parameter', undefined, { component: 'callback' });
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=oauth_failed`);
   }
 
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       .digest('hex');
 
     if (generatedHash !== hmac) {
-      console.error('[Shopify Callback] HMAC verification failed');
+      logger.error('[Shopify Callback] HMAC verification failed', undefined, { component: 'callback' });
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=invalid_hmac`);
     }
   }
@@ -52,7 +52,6 @@ export async function GET(req: NextRequest) {
 
     const { access_token, scope } = await tokenResponse.json();
 
-    console.log('[Shopify Callback] Got access token for shop:', shop);
 
     // Create or update shop in database (Identity only)
     let shopId: string;
@@ -75,7 +74,6 @@ export async function GET(req: NextRequest) {
         })
         .eq('id', shopId);
 
-      console.log('[Shopify Callback] Updated existing shop identity:', shopId);
     } else {
       // Create new shop
       const { data: newShop, error: insertError } = await supabaseAdmin
@@ -89,12 +87,11 @@ export async function GET(req: NextRequest) {
         .single();
 
       if (insertError || !newShop) {
-        console.error('[Shopify Callback] Error creating shop:', insertError);
+        logger.error('[Shopify Callback] Error creating shop:', insertError as Error, { component: 'callback' });
         throw insertError;
       }
 
       shopId = newShop.id;
-      console.log('[Shopify Callback] Created new shop identity:', shopId);
 
       // Grant Default Trial Subscription (14 Days)
       // This ensures the "Gatekeeper" allows access immediately
@@ -112,7 +109,7 @@ export async function GET(req: NextRequest) {
         });
 
       if (subError) {
-        console.error('[Shopify Callback] Failed to create default subscription:', subError);
+        logger.error('[Shopify Callback] Failed to create default subscription:', subError as Error, { component: 'callback' });
         // We don't throw here, as we want to complete the token save. 
         // The user just won't have access until we fix it or they pay.
       } else {
@@ -138,7 +135,7 @@ export async function GET(req: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error('[Shopify Callback] Error:', error);
+    logger.error('[Shopify Callback] Error:', error as Error, { component: 'callback' });
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=server_error`);
   }
 }

@@ -1,6 +1,7 @@
 import { ShopifyAPI } from '../shopify'
 import { type EnhancementResponse } from '../openai-enhancement'
 import { type EnhancementProductData } from './product-enhancement'
+import { logger } from '@/lib/logger'
 
 export interface ProductUpdateOptions {
   updateTitle?: boolean
@@ -61,7 +62,6 @@ export class ShopifyProductUpdater {
     } = options
 
     try {
-      console.log('🔄 Updating Shopify product with enhanced content:', { productId })
 
       const errors: string[] = []
       const warnings: string[] = []
@@ -99,7 +99,10 @@ export class ShopifyProductUpdater {
             }
           } catch (error) {
             warnings.push('Failed to create backup metafield')
-            console.warn('⚠️ Backup metafield creation failed:', error)
+            logger.warn('Backup metafield creation failed', error as Error, {
+              component: 'product-updater',
+              productId
+            })
           }
         }
       }
@@ -158,11 +161,13 @@ export class ShopifyProductUpdater {
           changes.metafields_updated = true
         } catch (error) {
           warnings.push('Failed to update keywords metafield')
-          console.warn('⚠️ Keywords metafield update failed:', error)
+          logger.warn('Keywords metafield update failed', error as Error, {
+            component: 'product-updater',
+            productId
+          })
         }
       }
 
-      console.log('✅ Product updated successfully in Shopify')
 
       return {
         success: true,
@@ -180,7 +185,7 @@ export class ShopifyProductUpdater {
       }
 
     } catch (error) {
-      console.error('❌ Error updating product in Shopify:', error)
+      logger.error('❌ Error updating product in Shopify:', error as Error, { component: 'product-updater' })
       
       return {
         success: false,
@@ -210,7 +215,7 @@ export class ShopifyProductUpdater {
       // specifically check if the productId is accessible
       return true
     } catch (error) {
-      console.error('❌ Product access validation failed:', error)
+      logger.error('❌ Product access validation failed:', error as Error, { component: 'product-updater' })
       return false
     }
   }

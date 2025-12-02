@@ -4,6 +4,7 @@
  */
 import { exchangeToken } from '@/lib/shopify/token-exchange'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 
 export class TokenRefreshManager {
   private static instance: TokenRefreshManager
@@ -31,13 +32,17 @@ export class TokenRefreshManager {
     // Schedule refresh 5 minutes before expiry (with minimum 1 minute)
     const refreshTime = Math.max((expiresIn - 300) * 1000, 60000)
 
-    console.log(`⏰ Scheduling token refresh for ${shop} in ${refreshTime / 1000} seconds`)
+    logger.info('Scheduling token refresh', {
+      component: 'token-refresh',
+      shop,
+      refreshTimeSeconds: refreshTime / 1000
+    })
 
     const timer = setTimeout(async () => {
       try {
         await this.refreshToken(shop)
       } catch (error) {
-        console.error(`❌ Failed to refresh token for ${shop}:`, error)
+        logger.error(`❌ Failed to refresh token for ${shop}:`, error as Error, { component: 'token-refresh' })
         // Retry with exponential backoff
         this.retryRefresh(shop, 1)
       }
@@ -55,7 +60,6 @@ export class TokenRefreshManager {
     // Check if refresh is already in progress
     const existingPromise = this.refreshPromises.get(shop)
     if (existingPromise) {
-      console.log(`♻️ Token refresh already in progress for ${shop}`)
       return existingPromise
     }
 
@@ -73,7 +77,6 @@ export class TokenRefreshManager {
   }
 
   private async performTokenRefresh(shop: string): Promise<string> {
-    console.log(`🔄 Refreshing token for ${shop}`)
 
     // Get a fresh session token from the client
     // In a real implementation, this would need to be triggered from the client side
@@ -106,18 +109,17 @@ export class TokenRefreshManager {
         .eq('shop_domain', shop)
 
       if (updateError) {
-        console.error('❌ Failed to mark token for refresh:', updateError)
+        logger.error('❌ Failed to mark token for refresh:', updateError as Error, { component: 'token-refresh' })
       }
 
       // In a production app, this would trigger a client-side refresh flow
       // The client would then call token exchange with a fresh session token
-      console.log(`⚠️ Token marked for refresh. Client needs to provide fresh session token for ${shop}`)
 
       // Return existing token for now (client will handle refresh)
       return shopData.access_token
 
     } catch (error) {
-      console.error(`❌ Token refresh failed for ${shop}:`, error)
+      logger.error(`❌ Token refresh failed for ${shop}:`, error as Error, { component: 'token-refresh' })
       throw error
     }
   }
@@ -128,12 +130,15 @@ export class TokenRefreshManager {
   private retryRefresh(shop: string, attempt: number) {
     const maxAttempts = 5
     if (attempt > maxAttempts) {
-      console.error(`❌ Max refresh retries reached for ${shop}`)
+      logger.error('Max refresh retries reached', new Error('Max retries exceeded'), {
+        component: 'token-refresh',
+        shop,
+        attempts: maxAttempts
+      })
       return
     }
 
     const delay = Math.min(1000 * Math.pow(2, attempt), 30000) // Max 30 seconds
-    console.log(`🔄 Retrying token refresh for ${shop} in ${delay / 1000} seconds (attempt ${attempt}/${maxAttempts})`)
 
     setTimeout(async () => {
       try {
@@ -152,7 +157,7 @@ export class TokenRefreshManager {
     if (timer) {
       clearTimeout(timer)
       this.refreshTimers.delete(shop)
-      console.log(`🧹 Cleared token refresh timer for ${shop}`)
+      logger.debug('Cleared token refresh timer', { component: 'token-refresh', shop })
     }
   }
 
@@ -162,7 +167,7 @@ export class TokenRefreshManager {
   clearAllRefreshes() {
     for (const [shop, timer] of this.refreshTimers) {
       clearTimeout(timer)
-      console.log(`🧹 Cleared token refresh timer for ${shop}`)
+      logger.debug('Cleared token refresh timer', { component: 'token-refresh', shop })
     }
     this.refreshTimers.clear()
     this.refreshPromises.clear()
@@ -188,7 +193,7 @@ export class TokenRefreshManager {
     sessionToken: string
   ): Promise<{ success: boolean; accessToken?: string; error?: string }> {
     try {
-      console.log(`📱 Processing client token refresh for ${shop}`)
+      logger.info('Processing client token refresh', { component: 'token-refresh', shop })
 
       // Exchange session token for new access token
       const response = await exchangeToken({
@@ -219,21 +224,20 @@ export class TokenRefreshManager {
         .eq('shop_domain', shop)
 
       if (updateError) {
-        console.error('❌ Failed to update refreshed token:', updateError)
+        logger.error('❌ Failed to update refreshed token:', updateError as Error, { component: 'token-refresh' })
         throw updateError
       }
 
       // Schedule next refresh
       this.scheduleRefresh(shop, 24 * 60 * 60) // 24 hours
 
-      console.log(`✅ Token refreshed successfully for ${shop}`)
       return {
         success: true,
         accessToken: response.access_token
       }
 
     } catch (error) {
-      console.error(`❌ Client token refresh failed for ${shop}:`, error)
+      logger.error(`❌ Client token refresh failed for ${shop}:`, error as Error, { component: 'token-refresh' })
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Token refresh failed'

@@ -14,6 +14,7 @@ import { useSearchParams } from "next/navigation";
 import createApp from "@shopify/app-bridge";
 import { getSessionToken } from "@shopify/app-bridge/utilities";
 import type { ClientApplication } from "@shopify/app-bridge";
+import { logger } from "@/lib/logger";
 
 interface ShopifyAuthContextType {
   isAuthenticated: boolean;
@@ -72,10 +73,12 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       if (newToken) {
         setSessionToken(newToken);
         sessionStorage.setItem("shopify_session_token", newToken);
-        console.log("🔄 Session token refreshed");
       }
     } catch (err) {
-      console.error("❌ Token refresh failed:", err);
+      logger.error("Token refresh failed", err as Error, {
+        component: "UnifiedShopifyAuth",
+        operation: "refreshToken",
+      });
     }
   }, [app]);
 
@@ -86,7 +89,10 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       const hostParam = searchParams?.get("host");
 
       if (!shopParam) {
-        console.error("❌ Missing shop parameter");
+        logger.error("Missing shop parameter", new Error("Shop parameter not found"), {
+          component: "UnifiedShopifyAuth",
+          operation: "initializeAuth",
+        });
         setError("Missing shop parameter");
         setIsLoading(false);
         return;
@@ -99,9 +105,11 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       const isTestStore = shopParam.includes("zunosai-staging-test-store");
 
       if (!isEmbedded && !isTestStore) {
-        console.error(
-          "❌ App must be accessed through Shopify admin (embedded context)",
-        );
+        logger.error("App must be accessed through Shopify admin", new Error("Not in embedded context"), {
+          component: "UnifiedShopifyAuth",
+          operation: "initializeAuth",
+          shop: shopParam,
+        });
         setError("This app must be accessed through your Shopify admin panel");
         setIsAuthenticated(false);
         setIsLoading(false);
@@ -110,38 +118,37 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
 
       // For test store in non-embedded mode
       if (!isEmbedded && isTestStore) {
-        console.log("✅ Test store detected in non-embedded mode");
         setIsAuthenticated(true);
         setIsLoading(false);
         return;
       }
 
       // Embedded context - initialize App Bridge
-      console.log("✅ Embedded context detected, initializing App Bridge");
 
       const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
 
       if (!apiKey) {
-        console.error("❌ NEXT_PUBLIC_SHOPIFY_API_KEY not configured");
+        logger.error("NEXT_PUBLIC_SHOPIFY_API_KEY not configured", new Error("API key missing"), {
+          component: "UnifiedShopifyAuth",
+          operation: "initializeAuth",
+        });
         setError("App configuration error: API key missing");
         setIsLoading(false);
         return;
       }
 
       if (!hostParam) {
-        console.error("❌ Missing host parameter required for App Bridge");
+        logger.error("Missing host parameter required for App Bridge", new Error("Host parameter missing"), {
+          component: "UnifiedShopifyAuth",
+          operation: "initializeAuth",
+          shop: shopParam,
+        });
         setError("Missing host parameter");
         setIsLoading(false);
         return;
       }
 
       // Create App Bridge instance
-      console.log("🔧 Creating App Bridge instance...", {
-        apiKey: apiKey.substring(0, 10) + "...",
-        host: hostParam,
-        shop: shopParam,
-      });
-
       const appInstance = createApp({
         apiKey: apiKey,
         host: hostParam,
@@ -151,31 +158,36 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       setApp(appInstance);
 
       // Get initial session token
-      console.log("🔑 Getting session token from App Bridge...");
 
       let token: string | undefined;
       try {
         token = await getSessionToken(appInstance);
       } catch (tokenErr) {
-        console.error("❌ Failed to get session token:", tokenErr);
+        logger.error("Failed to get session token", tokenErr as Error, {
+          component: "UnifiedShopifyAuth",
+          operation: "initializeAuth",
+          shop: shopParam,
+        });
 
         // If token retrieval fails, the user needs to go through OAuth
         // Redirect to Shopify OAuth to establish session
         const oauthUrl = `https://${shopParam}/admin/oauth/authorize?client_id=${apiKey}&scope=${process.env.SHOPIFY_SCOPES || "read_products,write_products"}&redirect_uri=${encodeURIComponent(window.location.origin + "/api/auth/callback")}`;
 
-        console.log("🔄 Redirecting to OAuth to establish session...");
         window.top!.location.href = oauthUrl;
         return;
       }
 
       if (!token) {
-        console.error("❌ Session token is empty");
+        logger.error("Session token is empty", new Error("Empty session token"), {
+          component: "UnifiedShopifyAuth",
+          operation: "initializeAuth",
+          shop: shopParam,
+        });
         setError("Failed to get session token");
         setIsLoading(false);
         return;
       }
 
-      console.log("✅ Got session token successfully");
       setSessionToken(token);
       sessionStorage.setItem("shopify_session_token", token);
       sessionStorage.setItem("shopify_shop", shopParam);
@@ -197,7 +209,10 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
             }
             throw new Error("No session token available");
           } catch (error) {
-            console.error("Failed to get fresh session token:", error);
+            logger.error("Failed to get fresh session token", error as Error, {
+              component: "UnifiedShopifyAuth",
+              operation: "getShopifySessionToken",
+            });
             const storedToken = sessionStorage.getItem("shopify_session_token");
             if (!storedToken) {
               throw new Error("No session token available");
@@ -205,11 +220,9 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
             return storedToken;
           }
         };
-        console.log("✅ Global session token getter configured");
       }
 
       // Exchange token with backend for access token
-      console.log("🔄 Exchanging session token for access token...");
 
       const response = await fetch("/api/shopify/token-exchange", {
         method: "POST",
@@ -223,15 +236,16 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
         }),
       });
 
-      console.log("📥 Token exchange response status:", response.status);
 
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        console.error("❌ Token exchange failed:", {
+        logger.error("Token exchange failed", new Error(result.error || "Token exchange failed"), {
+          component: "UnifiedShopifyAuth",
+          operation: "tokenExchange",
           status: response.status,
-          error: result.error,
           details: result.details,
+          shop: shopParam,
         });
 
         let errorMessage = "Authentication failed";
@@ -247,7 +261,6 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
         setError(errorMessage);
         setIsAuthenticated(false);
       } else {
-        console.log("✅ Authentication successful");
         setIsAuthenticated(true);
         setIsLoading(false); // Set loading to false immediately after successful auth
 
@@ -266,7 +279,10 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
         };
       }
     } catch (error) {
-      console.error("❌ Authentication initialization error:", error);
+      logger.error("Authentication initialization error", error as Error, {
+        component: "UnifiedShopifyAuth",
+        operation: "initializeAuth",
+      });
       setError(
         error instanceof Error ? error.message : "Authentication failed",
       );

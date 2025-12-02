@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateGoogleProductMetafields, generateGoogleVariantMetafields, validateGoogleMetafields } from '@/lib/google-metafields'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   // Check if we're in a build environment without proper configuration
@@ -19,15 +20,8 @@ export async function POST(request: NextRequest) {
     const url = new URL(request.url)
     const shop = url.searchParams.get('shop')
 
-    console.log('🛒 [PRODUCT-CREATE] Starting product creation request:', {
-      shop,
-      hasShop: !!shop,
-      requestUrl: request.url,
-      timestamp: new Date().toISOString()
-    })
-
     if (!shop) {
-      console.error('❌ [PRODUCT-CREATE] Missing shop parameter')
+      logger.error('Missing shop parameter', undefined, { component: 'product-create', operation: 'POST' })
       return NextResponse.json(
         { error: 'Missing shop parameter' },
         { status: 400 }
@@ -35,27 +29,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Get access token from database (obtained via Token Exchange)
-    console.log('🔑 [PRODUCT-CREATE] Retrieving access token from database for shop:', shop)
     const tokenResult = await getShopToken(shop)
 
-    console.log('🔑 [PRODUCT-CREATE] Token retrieval result:', {
-      success: tokenResult.success,
-      hasAccessToken: !!tokenResult.accessToken,
-      accessTokenLength: tokenResult.accessToken?.length,
-      error: tokenResult.error,
-      shop,
-      fullShopDomain: shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`,
-      timestamp: new Date().toISOString()
-    })
-
     if (!tokenResult.success || !tokenResult.accessToken) {
-      console.error('❌ [PRODUCT-CREATE] No access token found for shop:', {
+      logger.error('No access token found for shop', undefined, {
         shop,
         fullShopDomain: shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`,
         tokenResultSuccess: tokenResult.success,
         tokenResultError: tokenResult.error,
         hasAccessToken: !!tokenResult.accessToken,
-        timestamp: new Date().toISOString()
+        component: 'product-create',
+        operation: 'get-token'
       })
       return NextResponse.json(
         {
@@ -76,9 +60,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { generatedContent, productData, uploadedImages } = body
 
-    console.log('🔍 DEBUG: Request body productData:', JSON.stringify(productData, null, 2))
-    console.log('🔍 DEBUG: productData?.sizing:', productData?.sizing)
-    console.log('🔍 DEBUG: Sizing check result:', !!productData?.sizing)
 
     if (!generatedContent) {
       return NextResponse.json(
@@ -87,8 +68,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('✅ Using access token for shop:', shopDomain)
-    console.log('🔑 Token preview:', accessToken.substring(0, 15) + '...')
 
     const shopify = new ShopifyOfficialAPI(shopDomain, accessToken)
 
@@ -107,15 +86,12 @@ export async function POST(request: NextRequest) {
       
       if (inference.confidence >= 0.6) {
         finalCategory = inference.category
-        console.log('🎯 Category auto-assigned:', finalCategory, 'confidence:', inference.confidence.toFixed(2))
       } else {
-        console.log('⚠️ Category confidence too low:', inference.confidence.toFixed(2), 'keeping default')
       }
     }
 
     // Map category to Shopify's standardized categories
     const { mapToShopifyCategory } = await import('@/lib/shopify-categories')
-    console.log('🎯 About to map category:', finalCategory)
     const shopifyCategoryId = mapToShopifyCategory(finalCategory)
     
     // Use productType from productData if provided, otherwise extract from category
@@ -132,13 +108,6 @@ export async function POST(request: NextRequest) {
         shopifyProductType = finalCategory === 'Fashion & Apparel' ? 'General' : finalCategory
       }
     }
-    
-    console.log('🎯 Category mapping results:', {
-      inferredCategory: finalCategory,
-      shopifyCategoryId,
-      shopifyProductType,
-      willAddCategoryField: !!shopifyCategoryId
-    })
 
     // Parse color variants from detected colors
     let colorVariants: string[] = []
@@ -146,16 +115,13 @@ export async function POST(request: NextRequest) {
       colorVariants = productData.colorVariants.map((variant: { userOverride?: string; standardizedColor: string }) =>
         variant.userOverride || variant.standardizedColor
       )
-      console.log('🎨 DEBUG: Processing color variants:', colorVariants)
     }
 
     // Parse sizing data to get available sizes (for explicit variant creation)
     let sizeVariants: string[] = []
     if (productData?.sizing) {
-      console.log('🔍 DEBUG: Processing sizing for explicit variants:', productData.sizing)
 
       if (productData.sizing.includes(' - ')) {
-        console.log('🔍 DEBUG: Using range format')
         const [startSize, endSize] = productData.sizing.split(' - ')
         const allSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
         const startIndex = allSizes.indexOf(startSize.toUpperCase())
@@ -163,16 +129,11 @@ export async function POST(request: NextRequest) {
 
         if (startIndex !== -1 && endIndex !== -1) {
           sizeVariants = allSizes.slice(startIndex, endIndex + 1)
-          console.log('🔍 DEBUG: Generated size range for variants:', sizeVariants)
         }
       } else if (productData.sizing.includes(',')) {
-        console.log('🔍 DEBUG: Using comma-separated format')
         sizeVariants = productData.sizing.split(',').map((size: string) => size.trim().toUpperCase())
-        console.log('🔍 DEBUG: Generated sizes from comma format:', sizeVariants)
       } else {
-        console.log('🔍 DEBUG: Using single size format')
         sizeVariants = [productData.sizing.toUpperCase()]
-        console.log('🔍 DEBUG: Generated single size:', sizeVariants)
       }
     }
 
@@ -212,7 +173,6 @@ export async function POST(request: NextRequest) {
     // For now, we'll create the product without images
     // In production, you'd want to upload the images to Shopify first
 
-    console.log('Creating product with input:', JSON.stringify(productInput, null, 2))
 
     interface ProductCreateResult {
       data?: {
@@ -232,7 +192,7 @@ export async function POST(request: NextRequest) {
 
     // Handle authentication and API errors
     if (createResult.errors && createResult.errors.length > 0) {
-      console.error('Shopify API error:', createResult.errors)
+      logger.error('Shopify API error', new Error(createResult.errors[0].message), { errors: createResult.errors, component: 'product-create', operation: 'create-product' })
       return NextResponse.json(
         {
           error: 'Shopify API authentication failed',
@@ -243,23 +203,23 @@ export async function POST(request: NextRequest) {
     }
 
     if (createResult.data?.productCreate?.userErrors && createResult.data.productCreate.userErrors.length > 0) {
-      console.error('Shopify product creation errors:', createResult.data.productCreate.userErrors)
+      logger.error('Shopify product creation errors', undefined, { userErrors: createResult.data.productCreate.userErrors, component: 'product-create', operation: 'create-product' })
       return NextResponse.json(
-        { 
-          error: 'Failed to create product in Shopify', 
-          details: createResult.data.productCreate.userErrors 
+        {
+          error: 'Failed to create product in Shopify',
+          details: createResult.data.productCreate.userErrors
         },
         { status: 400 }
       )
     }
 
     const createdProduct = createResult.data?.productCreate?.product
-    
+
     if (!createdProduct) {
-      console.error('No product returned from Shopify API')
+      logger.error('No product returned from Shopify API', undefined, { component: 'product-create', operation: 'create-product' })
       return NextResponse.json(
-        { 
-          error: 'Product creation failed', 
+        {
+          error: 'Product creation failed',
           details: 'No product data returned from Shopify'
         },
         { status: 500 }
@@ -295,9 +255,6 @@ export async function POST(request: NextRequest) {
     ]
 
     // Generate Google Shopping metafields
-    console.log('🔍 Generating Google Shopping metafields for:', finalCategory)
-    console.log('🧵 Fabric material from frontend:', productData.fabricMaterial)
-    console.log('🧵 Description for material inference:', generatedContent.description?.substring(0, 200) + '...')
     
     const googleMetafields = generateGoogleProductMetafields(
       finalCategory,
@@ -313,10 +270,9 @@ export async function POST(request: NextRequest) {
     // Validate Google metafields
     const validation = validateGoogleMetafields(googleMetafields)
     if (validation.warnings.length > 0) {
-      console.log('⚠️ Google metafields warnings:', validation.warnings)
     }
     if (!validation.isValid) {
-      console.error('❌ Google metafields validation failed:', validation.errors)
+      logger.error('❌ Google metafields validation failed:', validation.errors, undefined, { component: 'create' })
     }
 
     // Combine all metafields
@@ -331,13 +287,12 @@ export async function POST(request: NextRequest) {
       await Promise.all(metafieldPromises)
       console.log('Metafields created successfully')
     } catch (metafieldError) {
-      console.error('Error creating metafields:', metafieldError)
+      logger.error('Error creating metafields', metafieldError as Error, { component: 'product-create', operation: 'create-metafields' })
       // Continue anyway, metafields are not critical
     }
 
     // Create explicit variants for color/size combinations (since productOptions alone don't create variants in 2025-01 API)
     if (colorVariants.length > 0 || sizeVariants.length > 0) {
-      console.log('🔍 DEBUG: Creating explicit variants for colors:', colorVariants, 'sizes:', sizeVariants)
       
       try {
         // Generate all combinations of colors and sizes
@@ -345,7 +300,6 @@ export async function POST(request: NextRequest) {
         
         if (colorVariants.length > 0 && sizeVariants.length > 0) {
           // Both colors and sizes - create all combinations
-          console.log('🔍 DEBUG: Creating color + size combinations')
           for (const color of colorVariants) {
             for (const size of sizeVariants) {
               allVariantCombinations.push({
@@ -360,7 +314,6 @@ export async function POST(request: NextRequest) {
           }
         } else if (colorVariants.length > 0) {
           // Only colors
-          console.log('🔍 DEBUG: Creating color-only variants')
           for (const color of colorVariants) {
             allVariantCombinations.push({
               optionValues: [
@@ -372,7 +325,6 @@ export async function POST(request: NextRequest) {
           }
         } else if (sizeVariants.length > 0) {
           // Only sizes
-          console.log('🔍 DEBUG: Creating size-only variants')
           for (const size of sizeVariants) {
             allVariantCombinations.push({
               optionValues: [
@@ -387,7 +339,6 @@ export async function POST(request: NextRequest) {
         // Skip the first variant since Shopify auto-creates it from productOptions
         const additionalVariants = allVariantCombinations.slice(1)
 
-        console.log('🔍 DEBUG: Additional variant input data:', JSON.stringify(additionalVariants, null, 2))
 
         interface OptionValue {
           name: string
@@ -411,16 +362,14 @@ export async function POST(request: NextRequest) {
         let variantResult: VariantCreateResult | null = null
         if (additionalVariants.length > 0) {
           variantResult = await shopify.createProductVariants(createdProduct.id, additionalVariants) as VariantCreateResult
-        
+
           if (variantResult.data?.productVariantsBulkCreate?.userErrors && variantResult.data.productVariantsBulkCreate.userErrors.length > 0) {
-            console.error('⚠️ Variant creation had errors:', variantResult.data.productVariantsBulkCreate.userErrors)
+            logger.error('Variant creation had errors', undefined, { userErrors: variantResult.data.productVariantsBulkCreate.userErrors, component: 'product-create', operation: 'create-variants' })
             // Continue anyway, product was created successfully
           } else {
-            console.log('✅ Additional variants created successfully:', additionalVariants.length, 'variants')
             
             // Create Google metafields for variants
             try {
-              console.log('🔍 Creating Google metafields for variants...')
               const createdVariants = variantResult.data?.productVariantsBulkCreate?.productVariants || []
               
               for (const variant of createdVariants) {
@@ -443,20 +392,18 @@ export async function POST(request: NextRequest) {
                       shopify.createProductVariantMetafield(variant.id!, metafield)
                     )
                     await Promise.all(variantMetafieldPromises)
-                    console.log(`✅ Google metafields created for variant: ${variantTitle}`)
                   }
                 }
               }
             } catch (variantMetafieldError) {
-              console.error('⚠️ Error creating variant metafields:', variantMetafieldError)
+              logger.error('Error creating variant metafields', variantMetafieldError as Error, { component: 'product-create', operation: 'create-variant-metafields' })
               // Continue anyway, variants were created successfully
             }
           }
         } else {
-          console.log('🔍 DEBUG: No additional variants to create (only default variant needed)')
         }
       } catch (variantError) {
-        console.error('⚠️ Error creating variants (product still created):', variantError)
+        logger.error('Error creating variants (product still created)', variantError as Error, { component: 'product-create', operation: 'create-variants' })
         // Continue anyway, product was created successfully
       }
     }
@@ -467,7 +414,6 @@ export async function POST(request: NextRequest) {
       
       try {
         for (const [index, imageData] of uploadedImages.entries()) {
-          console.log(`🔄 Uploading image ${index + 1}/${uploadedImages.length}...`)
           
           const altText = `${generatedContent.title} - Image ${index + 1}`
           const uploadResult = await shopify.createProductImage(
@@ -477,26 +423,22 @@ export async function POST(request: NextRequest) {
           )
           
           if (uploadResult.success) {
-            console.log(`✅ Image ${index + 1} uploaded successfully`)
           } else {
-            console.error(`❌ Failed to upload image ${index + 1}:`, uploadResult)
+            logger.error('Failed to upload image', undefined, { index: index + 1, uploadResult, component: 'product-create', operation: 'upload-image' })
           }
         }
-        
-        console.log('🎉 Image upload process completed!')
-        
+
+
       } catch (imageError) {
-        console.error('⚠️ Error during image upload process:', imageError)
+        logger.error('Error during image upload process', imageError as Error, { component: 'product-create', operation: 'upload-images' })
         console.log('Product created successfully, but images failed to upload. Images can be uploaded manually in Shopify admin.')
         // Continue anyway, the product was created successfully
       }
     } else {
-      console.log('ℹ️ No images to upload')
     }
 
     // Store the generated data in our database
     // Note: This feature is optional - product creation in Shopify is the primary goal
-    console.log('ℹ️ Skipping database storage (not implemented in this version)')
 
     return NextResponse.json({
       success: true,
@@ -508,9 +450,9 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Shopify product creation API error:', error)
+    logger.error('Shopify product creation API error', error as Error, { component: 'product-create', operation: 'POST' })
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to create product',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

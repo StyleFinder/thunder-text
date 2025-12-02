@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createCorsHeaders } from '@/lib/middleware/cors'
 import { getAccessToken } from '@/lib/shopify-auth'
+import { logger } from '@/lib/logger'
+import { guardDebugRoute } from '../_middleware-guard'
 
 export async function GET(request: NextRequest) {
+  const guardResponse = guardDebugRoute('/api/debug/product-detail');
+  if (guardResponse) return guardResponse;
   const corsHeaders = createCorsHeaders(request)
 
   try {
@@ -24,19 +28,12 @@ export async function GET(request: NextRequest) {
     // Ensure shop has .myshopify.com
     const fullShop = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
 
-    console.log('🔍 Debug Product Detail - fetching for:', {
-      shop: fullShop,
-      productId,
-      hasSessionToken: !!sessionToken
-    })
-
     // Get access token using proper Token Exchange
     let accessToken: string
     try {
       accessToken = await getAccessToken(fullShop, sessionToken)
-      console.log('✅ Got access token via Token Exchange')
     } catch (error) {
-      console.error('❌ Failed to get access token:', error)
+      logger.error('❌ Failed to get access token:', error as Error, { component: 'product-detail' })
       return NextResponse.json({
         success: false,
         error: 'Authentication failed',
@@ -50,7 +47,6 @@ export async function GET(request: NextRequest) {
       formattedProductId = `gid://shopify/Product/${productId}`
     }
 
-    console.log('📝 Formatted product ID:', formattedProductId)
 
     // Test with a simple product query
     const { GraphQLClient } = await import('graphql-request')
@@ -86,12 +82,11 @@ export async function GET(request: NextRequest) {
       }
     `
 
-    console.log('🔍 Executing query with ID:', formattedProductId)
 
     const response = await client.request<{ product?: { title?: string; [key: string]: unknown } }>(query, { id: formattedProductId })
 
     if (!response?.product) {
-      console.error('❌ No product found in response')
+      logger.error('❌ No product found in response', undefined, { component: 'product-detail' })
       return NextResponse.json({
         success: false,
         error: 'Product not found',
@@ -100,7 +95,6 @@ export async function GET(request: NextRequest) {
       }, { status: 404, headers: corsHeaders })
     }
 
-    console.log('✅ Product found:', response.product.title)
 
     return NextResponse.json({
       success: true,
@@ -109,7 +103,7 @@ export async function GET(request: NextRequest) {
     }, { headers: corsHeaders })
 
   } catch (error) {
-    console.error('❌ Error in debug endpoint:', error)
+    logger.error('❌ Error in debug endpoint:', error as Error, { component: 'product-detail' })
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch product',

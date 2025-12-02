@@ -2,30 +2,31 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Modal,
-  Card,
-  BlockStack,
-  InlineGrid,
-  Text,
-  Button,
-  Badge,
-  Divider,
-  InlineStack,
-  TextField,
-  Box,
-  Banner,
-  Icon,
-  Checkbox,
-  Tabs,
-} from "@shopify/polaris";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  EditIcon,
-  CheckIcon,
-  XIcon,
-  DuplicateIcon,
-  MagicIcon,
-} from "@shopify/polaris-icons";
-import styles from "./EnhancedContentComparison.module.css";
+  Edit,
+  Check,
+  X,
+  Copy,
+  Sparkles,
+  CheckCircle,
+  Info,
+} from "lucide-react";
+import { colors } from "@/lib/design-system/colors";
 
 interface ContentData {
   title?: string;
@@ -69,7 +70,7 @@ export default function EnhancedContentComparison({
 }: EnhancedContentComparisonProps) {
   const [editedContent, setEditedContent] = useState(enhancedContent);
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [selectedTab, setSelectedTab] = useState(0);
+  const [selectedTab, setSelectedTab] = useState("main");
 
   // Track which fields to apply
   const [fieldsToApply, setFieldsToApply] = useState({
@@ -84,12 +85,6 @@ export default function EnhancedContentComparison({
 
   // Sync editedContent when enhancedContent prop changes
   useEffect(() => {
-    console.log("🔄 EnhancedContent prop changed, updating editedContent:", {
-      "enhancedContent.description length":
-        enhancedContent.description?.length || 0,
-      "enhancedContent.description preview":
-        enhancedContent.description?.substring(0, 100),
-    });
     setEditedContent(enhancedContent);
 
     // Also update fieldsToApply based on new content
@@ -121,43 +116,13 @@ export default function EnhancedContentComparison({
         style={{
           lineHeight: 1.8,
           fontSize: "14px",
-          color: "#202223",
+          color: colors.oxfordNavyDark,
           fontFamily:
             '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
         }}
       />
     );
   };
-
-  // Force modal to be wider when it opens
-  useEffect(() => {
-    if (active) {
-      // Wait for modal to render
-      setTimeout(() => {
-        // Find all modal-related elements and force their width
-        const modalDialog = document.querySelector(".Polaris-Modal-Dialog");
-        const modalContainer = document.querySelector(
-          ".Polaris-Modal-Dialog__Container",
-        );
-        const modalModal = document.querySelector(
-          ".Polaris-Modal-Dialog__Modal",
-        );
-
-        if (modalDialog) {
-          (modalDialog as HTMLElement).style.maxWidth = "95vw";
-          (modalDialog as HTMLElement).style.width = "95vw";
-        }
-        if (modalContainer) {
-          (modalContainer as HTMLElement).style.maxWidth = "100%";
-          (modalContainer as HTMLElement).style.width = "100%";
-        }
-        if (modalModal) {
-          (modalModal as HTMLElement).style.maxWidth = "100%";
-          (modalModal as HTMLElement).style.width = "100%";
-        }
-      }, 100);
-    }
-  }, [active]);
 
   const handleEdit = (field: string) => {
     setEditingField(field);
@@ -179,17 +144,6 @@ export default function EnhancedContentComparison({
   const handleApplyChanges = () => {
     // Only apply fields that are checked
     const contentToApply: ContentData = {};
-
-    console.log("🔧 DEBUG handleApplyChanges:", {
-      fieldsToApply,
-      editedContent,
-      "editedContent.description length":
-        editedContent.description?.length || 0,
-      "editedContent.description preview": editedContent.description?.substring(
-        0,
-        100,
-      ),
-    });
 
     if (fieldsToApply.title && editedContent.title) {
       contentToApply.title = editedContent.title;
@@ -230,163 +184,163 @@ export default function EnhancedContentComparison({
     const hasChanged = original !== enhanced && enhanced;
 
     return (
-      <Card roundedAbove="sm">
-        <Box padding="400">
-          <BlockStack gap="400">
-            {/* Header with checkbox and edit button */}
-            <InlineStack align="space-between" blockAlign="center">
-              <InlineStack gap="300" blockAlign="center">
-                <Checkbox
-                  label=""
-                  checked={
-                    fieldsToApply[fieldName as keyof typeof fieldsToApply]
-                  }
-                  onChange={(checked) =>
-                    setFieldsToApply((prev) => ({
-                      ...prev,
-                      [fieldName]: checked,
-                    }))
-                  }
-                />
-                <BlockStack gap="100">
-                  <InlineStack gap="200" blockAlign="center">
-                    <Text variant="headingMd" as="h3">
-                      {label}
-                    </Text>
-                    {hasChanged && (
-                      <Badge tone="success" icon={MagicIcon}>
-                        AI Enhanced
-                      </Badge>
-                    )}
-                  </InlineStack>
-                  {fieldsToApply[fieldName as keyof typeof fieldsToApply] && (
-                    <Text variant="bodySm" as="p" tone="success">
-                      ✓ Will be applied to product
-                    </Text>
-                  )}
-                </BlockStack>
-              </InlineStack>
-              {!isEditing && enhanced && (
-                <Button
-                  size="slim"
-                  icon={EditIcon}
-                  onClick={() => handleEdit(fieldName)}
-                >
-                  Edit
-                </Button>
-              )}
-            </InlineStack>
-
-            {/* Content comparison */}
-            <InlineGrid columns={2} gap="400">
-              {/* Original Content */}
-              <Box
-                background="bg-surface-secondary"
-                padding="400"
-                borderRadius="200"
-              >
-                <BlockStack gap="200">
-                  <InlineStack gap="200" blockAlign="center">
-                    <Box>
-                      <Icon source={DuplicateIcon} tone="subdued" />
-                    </Box>
-                    <Text variant="headingSm" as="h4" tone="subdued">
-                      Current Version
-                    </Text>
-                  </InlineStack>
-                  <Divider />
-                  <Box paddingBlockStart="200">
-                    {original ? (
-                      isHtml ? (
-                        renderFormattedHTML(original)
-                      ) : (
-                        <Text as="p" breakWord>
-                          {original}
-                        </Text>
-                      )
-                    ) : (
-                      <Text as="p" tone="subdued">
-                        No current content
-                      </Text>
-                    )}
-                  </Box>
-                </BlockStack>
-              </Box>
-
-              {/* Enhanced Content */}
-              <Box
-                background="bg-surface"
-                padding="400"
-                borderRadius="200"
-                borderWidth="025"
-                borderColor={
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                checked={
                   fieldsToApply[fieldName as keyof typeof fieldsToApply]
-                    ? "border-success"
-                    : "border"
                 }
+                onCheckedChange={(checked) =>
+                  setFieldsToApply((prev) => ({
+                    ...prev,
+                    [fieldName]: checked,
+                  }))
+                }
+              />
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-base">{label}</h3>
+                  {hasChanged && (
+                    <Badge
+                      variant="default"
+                      style={{
+                        backgroundColor: colors.success,
+                        color: colors.white,
+                      }}
+                    >
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      AI Enhanced
+                    </Badge>
+                  )}
+                </div>
+                {fieldsToApply[fieldName as keyof typeof fieldsToApply] && (
+                  <p
+                    className="text-sm"
+                    style={{ color: colors.success }}
+                  >
+                    ✓ Will be applied to product
+                  </p>
+                )}
+              </div>
+            </div>
+            {!isEditing && enhanced && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleEdit(fieldName)}
               >
-                <BlockStack gap="200">
-                  <InlineStack gap="200" blockAlign="center">
-                    <Box>
-                      <Icon source={MagicIcon} tone="magic" />
-                    </Box>
-                    <Text variant="headingSm" as="h4" tone="magic">
-                      AI Enhanced Version
-                    </Text>
-                  </InlineStack>
-                  <Divider />
-                  <Box paddingBlockStart="200">
-                    {isEditing ? (
-                      <BlockStack gap="300">
-                        <TextField
-                          label=""
-                          value={currentValue}
-                          onChange={(value) =>
-                            setEditedContent((prev) => ({
-                              ...prev,
-                              [fieldName]: value,
-                            }))
-                          }
-                          multiline={multiline ? 5 : false}
-                          autoComplete="off"
-                        />
-                        <InlineStack gap="200">
-                          <Button
-                            size="slim"
-                            variant="primary"
-                            icon={CheckIcon}
-                            onClick={() => handleSave(fieldName, currentValue)}
-                          >
-                            Save Changes
-                          </Button>
-                          <Button
-                            size="slim"
-                            icon={XIcon}
-                            onClick={handleCancel}
-                          >
-                            Cancel
-                          </Button>
-                        </InlineStack>
-                      </BlockStack>
-                    ) : enhanced ? (
-                      isHtml || fieldName === "description" ? (
-                        renderFormattedHTML(currentValue)
-                      ) : (
-                        <Text as="p" breakWord>
-                          {currentValue}
-                        </Text>
-                      )
+                <Edit className="w-4 h-4 mr-1" />
+                Edit
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Original Content */}
+            <div
+              className="p-4 rounded-lg"
+              style={{ backgroundColor: colors.backgroundLight }}
+            >
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Copy className="w-4 h-4" style={{ color: colors.grayText }} />
+                  <h4 className="font-medium text-sm" style={{ color: colors.grayText }}>
+                    Current Version
+                  </h4>
+                </div>
+                <Separator />
+                <div className="pt-2">
+                  {original ? (
+                    isHtml ? (
+                      renderFormattedHTML(original)
                     ) : (
-                      <Text as="p" tone="subdued">
-                        No enhanced content generated
-                      </Text>
-                    )}
-                  </Box>
-                </BlockStack>
-              </Box>
-            </InlineGrid>
-          </BlockStack>
-        </Box>
+                      <p className="text-sm break-words">{original}</p>
+                    )
+                  ) : (
+                    <p className="text-sm" style={{ color: colors.grayText }}>
+                      No current content
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Enhanced Content */}
+            <div
+              className="p-4 rounded-lg border-2"
+              style={{
+                backgroundColor: colors.white,
+                borderColor: fieldsToApply[fieldName as keyof typeof fieldsToApply]
+                  ? colors.success
+                  : colors.backgroundLight,
+              }}
+            >
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" style={{ color: colors.smartBlue }} />
+                  <h4
+                    className="font-medium text-sm"
+                    style={{ color: colors.smartBlue }}
+                  >
+                    AI Enhanced Version
+                  </h4>
+                </div>
+                <Separator />
+                <div className="pt-2">
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <Textarea
+                        value={currentValue}
+                        onChange={(e) =>
+                          setEditedContent((prev) => ({
+                            ...prev,
+                            [fieldName]: e.target.value,
+                          }))
+                        }
+                        rows={multiline ? 5 : 3}
+                        className="w-full"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleSave(fieldName, currentValue)}
+                          style={{
+                            backgroundColor: colors.smartBlue,
+                            color: colors.white,
+                          }}
+                        >
+                          <Check className="w-4 h-4 mr-1" />
+                          Save Changes
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleCancel}
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : enhanced ? (
+                    isHtml || fieldName === "description" ? (
+                      renderFormattedHTML(currentValue)
+                    ) : (
+                      <p className="text-sm break-words">{currentValue}</p>
+                    )
+                  ) : (
+                    <p className="text-sm" style={{ color: colors.grayText }}>
+                      No enhanced content generated
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
       </Card>
     );
   };
@@ -396,279 +350,267 @@ export default function EnhancedContentComparison({
       return null;
 
     return (
-      <Card roundedAbove="sm">
-        <Box padding="400">
-          <BlockStack gap="400">
-            <InlineStack gap="200" blockAlign="center">
-              <Icon source={MagicIcon} tone="magic" />
-              <Text variant="headingMd" as="h3">
-                Key Features
-              </Text>
-              <Badge tone="info">{`${editedContent.bulletPoints.length} points`}</Badge>
-            </InlineStack>
-            <Box background="bg-surface" padding="400" borderRadius="200">
-              <ul
-                style={{
-                  paddingLeft: "24px",
-                  margin: 0,
-                  lineHeight: "1.8",
-                }}
-              >
-                {editedContent.bulletPoints.map((point, index) => (
-                  <li
-                    key={index}
-                    style={{
-                      marginBottom: "12px",
-                      color: "#202223",
-                      fontSize: "14px",
-                    }}
-                  >
-                    {point}
-                  </li>
-                ))}
-              </ul>
-            </Box>
-          </BlockStack>
-        </Box>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5" style={{ color: colors.smartBlue }} />
+            <h3 className="font-semibold text-base">Key Features</h3>
+            <Badge
+              variant="secondary"
+              style={{
+                backgroundColor: colors.info,
+                color: colors.white,
+              }}
+            >
+              {editedContent.bulletPoints.length} points
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div
+            className="p-4 rounded-lg"
+            style={{ backgroundColor: colors.white }}
+          >
+            <ul className="space-y-3 pl-6 list-disc">
+              {editedContent.bulletPoints.map((point, index) => (
+                <li
+                  key={index}
+                  className="text-sm"
+                  style={{ color: colors.oxfordNavyDark }}
+                >
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </CardContent>
       </Card>
     );
   };
 
-  // Define tabs for content organization
-  const tabs = [
-    {
-      id: "main",
-      content: "Main Content",
-      badge: `${enhancedContent.title ? 1 : 0} + ${enhancedContent.description ? 1 : 0}`,
-      panelID: "main-content",
-    },
-    {
-      id: "seo",
-      content: "SEO & Marketing",
-      badge: `${enhancedContent.seoTitle ? 1 : 0} + ${enhancedContent.seoDescription ? 1 : 0} + ${enhancedContent.promoText ? 1 : 0}`,
-      panelID: "seo-content",
-    },
-    {
-      id: "features",
-      content: "Key Features",
-      badge: `${editedContent.bulletPoints?.length || 0}`,
-      panelID: "features-content",
-    },
-  ];
+  // Calculate selected count
+  const selectedCount = Object.values(fieldsToApply).filter(Boolean).length;
 
   return (
-    <div className={styles.wideModalWrapper}>
-      <Modal
-        open={active}
-        onClose={onClose}
-        title="AI Enhanced Content Review"
-        primaryAction={{
-          content: "Apply Selected Changes",
-          onAction: handleApplyChanges,
-          loading: loading,
-          disabled: !Object.values(fieldsToApply).some(Boolean),
-        }}
-        secondaryActions={[
-          {
-            content: "Cancel",
-            onAction: onClose,
-          },
-        ]}
-        size="large"
-      >
-        <Modal.Section>
-          <BlockStack gap="400">
-            {/* Quick Actions Bar */}
-            <Card>
-              <Box padding="300">
-                <InlineStack align="space-between" blockAlign="center">
-                  <InlineStack gap="300" blockAlign="center">
-                    <Icon source={MagicIcon} tone="magic" />
-                    <Text variant="headingSm" as="h3">
-                      AI-Generated Content Ready
-                    </Text>
-                  </InlineStack>
-                  <InlineStack gap="200">
-                    <Button
-                      size="slim"
-                      onClick={() =>
-                        setFieldsToApply({
-                          title: true,
-                          description: true,
-                          seoTitle: true,
-                          seoDescription: true,
-                          promoText: true,
-                          bulletPoints: true,
-                        })
-                      }
-                    >
-                      Select All
-                    </Button>
-                    <Button
-                      size="slim"
-                      onClick={() =>
-                        setFieldsToApply({
-                          title: false,
-                          description: false,
-                          seoTitle: false,
-                          seoDescription: false,
-                          promoText: false,
-                          bulletPoints: false,
-                        })
-                      }
-                    >
-                      Deselect All
-                    </Button>
-                  </InlineStack>
-                </InlineStack>
-              </Box>
-            </Card>
+    <Dialog open={active} onOpenChange={onClose}>
+      <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold">
+            AI Enhanced Content Review
+          </DialogTitle>
+          <DialogDescription>
+            Review and select which AI-generated content to apply to your product
+          </DialogDescription>
+        </DialogHeader>
 
-            {/* Tabbed Content */}
-            <Card>
-              <Tabs
-                tabs={tabs}
-                selected={selectedTab}
-                onSelect={setSelectedTab}
-              >
-                {/* Main Content Tab */}
-                {selectedTab === 0 && (
-                  <div style={{ minHeight: "600px" }}>
-                    <Box padding="400">
-                      <BlockStack gap="600">
-                        {enhancedContent.title &&
-                          renderModernField(
-                            "Product Title",
-                            "title",
-                            originalContent.title,
-                            enhancedContent.title,
-                            false,
-                            false,
-                          )}
-
-                        {enhancedContent.description &&
-                          renderModernField(
-                            "Product Description",
-                            "description",
-                            originalContent.description,
-                            enhancedContent.description,
-                            true,
-                            true,
-                          )}
-
-                        {!enhancedContent.title &&
-                          !enhancedContent.description && (
-                            <Banner tone="info">
-                              <Text as="p">
-                                No main content was generated. Try enabling
-                                title or description generation in enhancement
-                                options.
-                              </Text>
-                            </Banner>
-                          )}
-                      </BlockStack>
-                    </Box>
-                  </div>
-                )}
-
-                {/* SEO & Marketing Tab */}
-                {selectedTab === 1 && (
-                  <div style={{ minHeight: "600px" }}>
-                    <Box padding="400">
-                      <BlockStack gap="600">
-                        {enhancedContent.seoTitle &&
-                          renderModernField(
-                            "SEO Title",
-                            "seoTitle",
-                            originalContent.seoTitle,
-                            enhancedContent.seoTitle,
-                            false,
-                            false,
-                          )}
-
-                        {enhancedContent.seoDescription &&
-                          renderModernField(
-                            "SEO Meta Description",
-                            "seoDescription",
-                            originalContent.seoDescription,
-                            enhancedContent.seoDescription,
-                            true,
-                            false,
-                          )}
-
-                        {enhancedContent.promoText &&
-                          renderModernField(
-                            "Promotional Copy",
-                            "promoText",
-                            originalContent.promoText,
-                            enhancedContent.promoText,
-                            true,
-                            true,
-                          )}
-
-                        {!enhancedContent.seoTitle &&
-                          !enhancedContent.seoDescription &&
-                          !enhancedContent.promoText && (
-                            <Banner tone="info">
-                              <Text as="p">
-                                No SEO or marketing content was generated.
-                                Enable these options in enhancement settings to
-                                generate them.
-                              </Text>
-                            </Banner>
-                          )}
-                      </BlockStack>
-                    </Box>
-                  </div>
-                )}
-
-                {/* Key Features Tab */}
-                {selectedTab === 2 && (
-                  <div style={{ minHeight: "600px" }}>
-                    <Box padding="400">
-                      {editedContent.bulletPoints &&
-                      editedContent.bulletPoints.length > 0 ? (
-                        renderBulletPoints()
-                      ) : (
-                        <Banner tone="info">
-                          <Text as="p">
-                            No key features were generated. The AI will extract
-                            features when analyzing product images.
-                          </Text>
-                        </Banner>
-                      )}
-                    </Box>
-                  </div>
-                )}
-              </Tabs>
-            </Card>
-
-            {/* Selected Fields Summary */}
-            {(() => {
-              const selectedCount =
-                Object.values(fieldsToApply).filter(Boolean).length;
-              if (selectedCount > 0) {
-                return (
-                  <Box
-                    background="bg-surface-success"
-                    padding="300"
-                    borderRadius="200"
+        <div className="space-y-4">
+          {/* Quick Actions Bar */}
+          <Card>
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="w-5 h-5" style={{ color: colors.smartBlue }} />
+                  <h3 className="font-semibold text-sm">
+                    AI-Generated Content Ready
+                  </h3>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setFieldsToApply({
+                        title: true,
+                        description: true,
+                        seoTitle: true,
+                        seoDescription: true,
+                        promoText: true,
+                        bulletPoints: true,
+                      })
+                    }
                   >
-                    <InlineStack gap="200" blockAlign="center">
-                      <Icon source={CheckIcon} tone="success" />
-                      <Text variant="bodySm" as="p" tone="success">
-                        {selectedCount} field{selectedCount !== 1 ? "s" : ""}{" "}
-                        selected for update
-                      </Text>
-                    </InlineStack>
-                  </Box>
-                );
-              }
-              return null;
-            })()}
-          </BlockStack>
-        </Modal.Section>
-      </Modal>
-    </div>
+                    Select All
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setFieldsToApply({
+                        title: false,
+                        description: false,
+                        seoTitle: false,
+                        seoDescription: false,
+                        promoText: false,
+                        bulletPoints: false,
+                      })
+                    }
+                  >
+                    Deselect All
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tabbed Content */}
+          <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="main">
+                Main Content
+                <Badge variant="secondary" className="ml-2">
+                  {[enhancedContent.title, enhancedContent.description].filter(
+                    Boolean,
+                  ).length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="seo">
+                SEO & Marketing
+                <Badge variant="secondary" className="ml-2">
+                  {[
+                    enhancedContent.seoTitle,
+                    enhancedContent.seoDescription,
+                    enhancedContent.promoText,
+                  ].filter(Boolean).length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="features">
+                Key Features
+                <Badge variant="secondary" className="ml-2">
+                  {editedContent.bulletPoints?.length || 0}
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Main Content Tab */}
+            <TabsContent value="main" className="space-y-6 min-h-[600px]">
+              {enhancedContent.title &&
+                renderModernField(
+                  "Product Title",
+                  "title",
+                  originalContent.title,
+                  enhancedContent.title,
+                  false,
+                  false,
+                )}
+
+              {enhancedContent.description &&
+                renderModernField(
+                  "Product Description",
+                  "description",
+                  originalContent.description,
+                  enhancedContent.description,
+                  true,
+                  true,
+                )}
+
+              {!enhancedContent.title && !enhancedContent.description && (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    No main content was generated. Try enabling title or
+                    description generation in enhancement options.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </TabsContent>
+
+            {/* SEO & Marketing Tab */}
+            <TabsContent value="seo" className="space-y-6 min-h-[600px]">
+              {enhancedContent.seoTitle &&
+                renderModernField(
+                  "SEO Title",
+                  "seoTitle",
+                  originalContent.seoTitle,
+                  enhancedContent.seoTitle,
+                  false,
+                  false,
+                )}
+
+              {enhancedContent.seoDescription &&
+                renderModernField(
+                  "SEO Meta Description",
+                  "seoDescription",
+                  originalContent.seoDescription,
+                  enhancedContent.seoDescription,
+                  true,
+                  false,
+                )}
+
+              {enhancedContent.promoText &&
+                renderModernField(
+                  "Promotional Copy",
+                  "promoText",
+                  originalContent.promoText,
+                  enhancedContent.promoText,
+                  true,
+                  true,
+                )}
+
+              {!enhancedContent.seoTitle &&
+                !enhancedContent.seoDescription &&
+                !enhancedContent.promoText && (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      No SEO or marketing content was generated. Enable these
+                      options in enhancement settings to generate them.
+                    </AlertDescription>
+                  </Alert>
+                )}
+            </TabsContent>
+
+            {/* Key Features Tab */}
+            <TabsContent value="features" className="space-y-6 min-h-[600px]">
+              {editedContent.bulletPoints &&
+              editedContent.bulletPoints.length > 0 ? (
+                renderBulletPoints()
+              ) : (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    No key features were generated. The AI will extract features
+                    when analyzing product images.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          {/* Selected Fields Summary */}
+          {selectedCount > 0 && (
+            <div
+              className="p-3 rounded-lg"
+              style={{
+                backgroundColor: `${colors.success}15`,
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle style={{ color: colors.success }} className="w-4 h-4" />
+                <p className="text-sm" style={{ color: colors.success }}>
+                  {selectedCount} field{selectedCount !== 1 ? "s" : ""} selected
+                  for update
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleApplyChanges}
+            disabled={loading || !Object.values(fieldsToApply).some(Boolean)}
+            style={{
+              backgroundColor: colors.smartBlue,
+              color: colors.white,
+            }}
+          >
+            {loading ? "Applying..." : "Apply Selected Changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

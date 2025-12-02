@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   // Check if we're in a build environment without proper configuration
@@ -104,7 +105,7 @@ Look at the image and respond with ONLY ONE of these exact category names. No ex
     })
 
   } catch (error) {
-    console.error('Category detection error:', error)
+    logger.error('Category detection error:', error as Error, { component: 'detect-category' })
     
     // If OpenAI fails, default to basic clothing category
     return NextResponse.json({

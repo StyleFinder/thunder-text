@@ -1,4 +1,5 @@
 import { shopifyGraphQL } from './shopify/client'
+import { logger } from '@/lib/logger'
 
 export interface ProductImage {
   id: string
@@ -219,7 +220,7 @@ export async function importProductData(productId: string, shopDomain: string, a
 
     return productData
   } catch (error) {
-    console.error('Error importing product data:', error)
+    logger.error('Error importing product data:', error as Error, { component: 'product-data-import' })
     throw new Error('Failed to import product data')
   }
 }

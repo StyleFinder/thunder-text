@@ -23,6 +23,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { createTikTokOAuthState } from '@/lib/security/oauth-validation'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
     // Verify environment variables
     const tiktokClientKey = process.env.TIKTOK_CLIENT_KEY
     if (!tiktokClientKey) {
-      console.error('TIKTOK_CLIENT_KEY not configured')
+      logger.error('TIKTOK_CLIENT_KEY not configured', undefined, { component: 'authorize' })
       return NextResponse.json(
         { error: 'TikTok integration not configured' },
         { status: 500 }
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (shopError || !shopData) {
-      console.error('Shop not found:', shop, shopError)
+      logger.error('Shop not found:', shop, shopError, undefined, { component: 'authorize' })
       return NextResponse.json(
         { error: 'Shop not found' },
         { status: 404 }
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(tiktokAuthUrl.toString())
 
   } catch (error) {
-    console.error('Error in TikTok OAuth authorize:', error)
+    logger.error('Error in TikTok OAuth authorize:', error as Error, { component: 'authorize' })
 
     // Redirect to welcome page with error if shop is known
     if (shop) {

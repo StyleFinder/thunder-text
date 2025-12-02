@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle2, FileText, Target, Users, Gift, ShoppingBag, Facebook } from 'lucide-react';
+import { logger } from '@/lib/logger'
 
 type OnboardingStep = 'welcome' | 'shopify' | 'social' | 'complete';
 
@@ -103,7 +104,7 @@ export default function WelcomePage() {
         }
       }
     } catch (error) {
-      console.error('Error checking connections:', error);
+      logger.error('Error checking connections:', error as Error, { component: 'welcome' });
     }
   };
 
@@ -137,7 +138,7 @@ export default function WelcomePage() {
     const shop = searchParams.get('shop');
 
     if (!shop) {
-      console.error('Missing shop parameter for Facebook OAuth');
+      logger.error('Missing shop parameter for Facebook OAuth', undefined, { component: 'welcome' });
       alert('Unable to connect Facebook. Please reconnect your Shopify store first.');
       return;
     }
@@ -166,8 +167,8 @@ export default function WelcomePage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', padding: '32px 24px', background: 'linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)' }}>
-      <div style={{ maxWidth: '672px', margin: '0 auto', background: 'white', borderRadius: '12px', padding: '32px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}>
+    <div className="min-h-screen bg-gray-50 px-6 py-8">
+      <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-md border border-gray-200 p-8">
         {/* Progress Bar */}
         <div className="mb-8">
           <Progress value={getProgress()} className="h-2" />
@@ -178,44 +179,44 @@ export default function WelcomePage() {
       {currentStep === 'welcome' && (
         <div>
           <div className="text-center pb-4 mb-6">
-            <h1 className="text-3xl font-bold">Welcome to Thunder Text & ACE Suite</h1>
-            <p className="text-lg mt-2 text-muted-foreground">
+            <h1 className="text-3xl font-bold text-gray-900">Welcome to Thunder Text & ACE Suite</h1>
+            <p className="text-lg mt-2 text-gray-600">
               AI-powered product descriptions and ad copy for your e-commerce store
             </p>
           </div>
           <div className="space-y-6">
             {/* Feature Cards */}
             <div className="grid md:grid-cols-3 gap-4">
-              <Card>
-                <CardContent style={{ paddingTop: '24px' }}>
-                  <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <Card className="border-gray-200">
+                <CardContent className="pt-6">
+                  <div className="text-center space-y-3">
                     <FileText className="h-8 w-8 mx-auto text-primary" />
-                    <h3 className="font-semibold">Thunder Text</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="font-semibold text-gray-900">Thunder Text</h3>
+                    <p className="text-sm text-gray-600">
                       Generate compelling product descriptions from your images and product data
                     </p>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent style={{ paddingTop: '24px' }}>
-                  <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <Card className="border-gray-200">
+                <CardContent className="pt-6">
+                  <div className="text-center space-y-3">
                     <Target className="h-8 w-8 mx-auto text-primary" />
-                    <h3 className="font-semibold">ACE (Ad Copy Engine)</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="font-semibold text-gray-900">ACE (Ad Copy Engine)</h3>
+                    <p className="text-sm text-gray-600">
                       Create high-converting Facebook and social media ads with AI
                     </p>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent style={{ paddingTop: '24px' }}>
-                  <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <Card className="border-gray-200">
+                <CardContent className="pt-6">
+                  <div className="text-center space-y-3">
                     <Users className="h-8 w-8 mx-auto text-primary" />
-                    <h3 className="font-semibold">BHB Coaching</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="font-semibold text-gray-900">BHB Coaching</h3>
+                    <p className="text-sm text-gray-600">
                       Your personal coach helps optimize your store and content strategy
                     </p>
                   </div>
@@ -225,11 +226,11 @@ export default function WelcomePage() {
 
             {/* Trial Banner */}
             <Card className="border-primary bg-primary/5">
-              <CardContent style={{ paddingTop: '24px' }}>
-                <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <CardContent className="pt-6">
+                <div className="text-center space-y-3">
                   <Gift className="h-8 w-8 mx-auto text-primary" />
-                  <h3 className="font-semibold text-lg">14-Day Free Trial Included</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="font-semibold text-lg text-gray-900">14-Day Free Trial Included</h3>
+                  <p className="text-sm text-gray-600">
                     Full access to Thunder Text & ACE features, no credit card required
                   </p>
                 </div>
@@ -247,24 +248,24 @@ export default function WelcomePage() {
       {currentStep === 'shopify' && (
         <div>
           <div className="text-center pb-4 mb-6">
-            <h1 className="text-2xl font-bold">Connect Your E-commerce Platform</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Connect Your E-commerce Platform</h1>
           </div>
 
           {!selectedPlatform ? (
             <div className="space-y-6">
-              <p className="text-center text-sm font-semibold">Select your e-commerce platform:</p>
+              <p className="text-center text-sm font-semibold text-gray-900">Select your e-commerce platform:</p>
 
               {/* Platform Selection Cards */}
               <div className="grid md:grid-cols-3 gap-4">
                 {/* Shopify */}
                 <Card
-                  className="cursor-pointer hover:border-primary transition-colors"
+                  className="cursor-pointer hover:border-primary transition-colors border-gray-200"
                   onClick={() => setSelectedPlatform('shopify')}
                 >
-                  <CardContent style={{ paddingTop: '24px', paddingBottom: '24px' }}>
-                    <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                      <div style={{ height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src="/shopify-logo.png" alt="Shopify" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
+                  <CardContent className="pt-6 pb-6">
+                    <div className="text-center space-y-3">
+                      <div className="h-30 flex items-center justify-center">
+                        <img src="/shopify-logo.png" alt="Shopify" className="w-30 h-30 object-contain" />
                       </div>
                     </div>
                   </CardContent>
@@ -272,30 +273,30 @@ export default function WelcomePage() {
 
                 {/* Lightspeed */}
                 <Card
-                  className="cursor-pointer hover:border-primary transition-colors opacity-60"
+                  className="cursor-pointer hover:border-primary transition-colors opacity-60 border-gray-200"
                   onClick={() => setSelectedPlatform('lightspeed')}
                 >
-                  <CardContent style={{ paddingTop: '24px', paddingBottom: '24px' }}>
-                    <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                      <div style={{ height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src="/lightspeed-logo.png" alt="Lightspeed" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
+                  <CardContent className="pt-6 pb-6">
+                    <div className="text-center space-y-3">
+                      <div className="h-30 flex items-center justify-center">
+                        <img src="/lightspeed-logo.png" alt="Lightspeed" className="w-30 h-30 object-contain" />
                       </div>
-                      <p className="text-xs text-muted-foreground">Coming Soon</p>
+                      <p className="text-xs text-gray-500">Coming Soon</p>
                     </div>
                   </CardContent>
                 </Card>
 
                 {/* CommentSold */}
                 <Card
-                  className="cursor-pointer hover:border-primary transition-colors opacity-60"
+                  className="cursor-pointer hover:border-primary transition-colors opacity-60 border-gray-200"
                   onClick={() => setSelectedPlatform('commentsold')}
                 >
-                  <CardContent style={{ paddingTop: '24px', paddingBottom: '24px' }}>
-                    <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                      <div style={{ height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src="/commentsold-logo.png" alt="CommentSold" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
+                  <CardContent className="pt-6 pb-6">
+                    <div className="text-center space-y-3">
+                      <div className="h-30 flex items-center justify-center">
+                        <img src="/commentsold-logo.png" alt="CommentSold" className="w-30 h-30 object-contain" />
                       </div>
-                      <p className="text-xs text-muted-foreground">Coming Soon</p>
+                      <p className="text-xs text-gray-500">Coming Soon</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -312,13 +313,13 @@ export default function WelcomePage() {
                 ← Back to platform selection
               </Button>
 
-              <Card>
-                <CardContent style={{ paddingTop: '24px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                    <h3 className="font-semibold text-center">Enter your Shopify store name</h3>
+              <Card className="border-gray-200">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-center text-gray-900">Enter your Shopify store name</h3>
 
                     <div className="space-y-2">
-                      <Label htmlFor="shop-name">Shop Name</Label>
+                      <Label htmlFor="shop-name" className="text-gray-900">Shop Name</Label>
                       <div className="flex items-center gap-2">
                         <Input
                           id="shop-name"
@@ -334,9 +335,9 @@ export default function WelcomePage() {
                           disabled={isConnecting}
                           className="flex-1"
                         />
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">.myshopify.com</span>
+                        <span className="text-sm text-gray-500 whitespace-nowrap">.myshopify.com</span>
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-gray-500">
                         Enter just the store name (e.g., "my-store" not "my-store.myshopify.com")
                       </p>
                     </div>
@@ -352,19 +353,19 @@ export default function WelcomePage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent style={{ paddingTop: '24px' }}>
-                  <h4 className="font-semibold mb-3">What we'll access:</h4>
+              <Card className="border-gray-200">
+                <CardContent className="pt-6">
+                  <h4 className="font-semibold mb-3 text-gray-900">What we'll access:</h4>
                   <ul className="space-y-2">
-                    <li className="flex items-start gap-2 text-sm">
+                    <li className="flex items-start gap-2 text-sm text-gray-700">
                       <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                       <span>Your product catalog and images</span>
                     </li>
-                    <li className="flex items-start gap-2 text-sm">
+                    <li className="flex items-start gap-2 text-sm text-gray-700">
                       <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                       <span>Product descriptions and metadata</span>
                     </li>
-                    <li className="flex items-start gap-2 text-sm">
+                    <li className="flex items-start gap-2 text-sm text-gray-700">
                       <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                       <span>Store analytics (for your BHB Coach)</span>
                     </li>
@@ -374,10 +375,10 @@ export default function WelcomePage() {
             </div>
           ) : (
             /* Coming Soon for Lightspeed/CommentSold */
-            <Card>
-              <CardContent style={{ paddingTop: '24px', textAlign: 'center' }}>
-                <h3 className="font-semibold mb-4">{selectedPlatform === 'lightspeed' ? 'Lightspeed' : 'CommentSold'} Integration</h3>
-                <p className="text-muted-foreground mb-6">
+            <Card className="border-gray-200">
+              <CardContent className="pt-6 text-center">
+                <h3 className="font-semibold mb-4 text-gray-900">{selectedPlatform === 'lightspeed' ? 'Lightspeed' : 'CommentSold'} Integration</h3>
+                <p className="text-gray-600 mb-6">
                   We're working on {selectedPlatform === 'lightspeed' ? 'Lightspeed' : 'CommentSold'} integration. It will be available soon!
                 </p>
                 <Button variant="outline" onClick={() => setSelectedPlatform(null)}>
@@ -391,25 +392,25 @@ export default function WelcomePage() {
 
       {/* Step 3: Connect Social Platforms */}
       {currentStep === 'social' && (
-        <Card>
+        <Card className="border-gray-200">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Connect Social Ad Platforms</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-2xl text-gray-900">Connect Social Ad Platforms</CardTitle>
+            <CardDescription className="text-gray-600">
               Optional: Connect ad platforms to create and manage campaigns with ACE
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="max-w-md mx-auto space-y-4">
               {/* Shopify */}
-              <Card>
+              <Card className="border-gray-200">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="h-16 w-16 flex items-center justify-center flex-shrink-0">
-                      <img src="/shopify-logo.png" alt="Shopify" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
+                      <img src="/shopify-logo.png" alt="Shopify" className="w-16 h-16 object-contain" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Shopify</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-semibold text-gray-900">Shopify</h3>
+                      <p className="text-sm text-gray-600">
                         {connections.shopifyDomain || 'E-commerce platform'}
                       </p>
                     </div>
@@ -428,15 +429,15 @@ export default function WelcomePage() {
               </Card>
 
               {/* Meta / Facebook Ads */}
-              <Card>
+              <Card className="border-gray-200">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="h-16 w-16 flex items-center justify-center flex-shrink-0">
-                      <img src="/meta-logo.png" alt="Meta" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
+                      <img src="/meta-logo.png" alt="Meta" className="w-16 h-16 object-contain" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Meta Ads</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-semibold text-gray-900">Meta Ads</h3>
+                      <p className="text-sm text-gray-600">
                         Facebook & Instagram campaigns
                       </p>
                     </div>
@@ -455,15 +456,15 @@ export default function WelcomePage() {
               </Card>
 
               {/* Google Ads */}
-              <Card>
+              <Card className="border-gray-200">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="h-16 w-16 flex items-center justify-center flex-shrink-0">
-                      <img src="/google-ads-logo.png" alt="Google Ads" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
+                      <img src="/google-ads-logo.png" alt="Google Ads" className="w-16 h-16 object-contain" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Google Ads</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-semibold text-gray-900">Google Ads</h3>
+                      <p className="text-sm text-gray-600">
                         Search & Display campaigns
                       </p>
                     </div>
@@ -487,38 +488,38 @@ export default function WelcomePage() {
               </Card>
 
               {/* TikTok Ads */}
-              <Card className="opacity-60">
+              <Card className="opacity-60 border-gray-200">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="h-16 w-16 flex items-center justify-center flex-shrink-0">
-                      <img src="/tiktok-ads-logo.png" alt="TikTok Ads" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
+                      <img src="/tiktok-ads-logo.png" alt="TikTok Ads" className="w-16 h-16 object-contain" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">TikTok Ads</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-semibold text-gray-900">TikTok Ads</h3>
+                      <p className="text-sm text-gray-600">
                         Short-form video campaigns
                       </p>
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground text-center">Coming Soon</p>
+                  <p className="text-xs text-gray-500 text-center">Coming Soon</p>
                 </CardContent>
               </Card>
 
               {/* Pinterest Ads */}
-              <Card className="opacity-60">
+              <Card className="opacity-60 border-gray-200">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="h-16 w-16 flex items-center justify-center flex-shrink-0">
-                      <img src="/pinterest-ads-logo.png" alt="Pinterest Ads" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
+                      <img src="/pinterest-ads-logo.png" alt="Pinterest Ads" className="w-16 h-16 object-contain" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Pinterest Ads</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-semibold text-gray-900">Pinterest Ads</h3>
+                      <p className="text-sm text-gray-600">
                         Visual discovery campaigns
                       </p>
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground text-center">Coming Soon</p>
+                  <p className="text-xs text-gray-500 text-center">Coming Soon</p>
                 </CardContent>
               </Card>
 
@@ -537,36 +538,36 @@ export default function WelcomePage() {
 
       {/* Step 4: Complete */}
       {currentStep === 'complete' && (
-        <Card>
+        <Card className="border-gray-200">
           <CardContent className="pt-12 pb-8 text-center">
             <div className="text-6xl mb-6">🎉</div>
 
-            <h2 className="text-3xl font-bold mb-2">You're All Set!</h2>
-            <p className="text-lg text-muted-foreground mb-8">
+            <h2 className="text-3xl font-bold mb-2 text-gray-900">You're All Set!</h2>
+            <p className="text-lg text-gray-600 mb-8">
               Your 14-day free trial has been activated
             </p>
 
-            <Card className="max-w-lg mx-auto mb-8">
+            <Card className="max-w-lg mx-auto mb-8 border-gray-200">
               <CardContent className="pt-6">
-                <h3 className="font-semibold mb-4 text-left">What's included in your trial:</h3>
+                <h3 className="font-semibold mb-4 text-left text-gray-900">What's included in your trial:</h3>
                 <ul className="space-y-3 text-left">
-                  <li className="flex items-start gap-2">
+                  <li className="flex items-start gap-2 text-gray-700">
                     <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                     <span>Unlimited AI product descriptions (Thunder Text)</span>
                   </li>
-                  <li className="flex items-start gap-2">
+                  <li className="flex items-start gap-2 text-gray-700">
                     <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                     <span>AI-powered ad copy generation (ACE)</span>
                   </li>
-                  <li className="flex items-start gap-2">
+                  <li className="flex items-start gap-2 text-gray-700">
                     <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                     <span>Personal BHB Coach support</span>
                   </li>
-                  <li className="flex items-start gap-2">
+                  <li className="flex items-start gap-2 text-gray-700">
                     <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                     <span>Brand voice training & best practices</span>
                   </li>
-                  <li className="flex items-start gap-2">
+                  <li className="flex items-start gap-2 text-gray-700">
                     <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                     <span>Full access to all features</span>
                   </li>

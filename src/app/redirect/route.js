@@ -17,7 +17,7 @@ export async function GET(request) {
     console.log('🔄 Admin Extension Redirect:', productData);
 
     // Build the redirect URL to the create page with all the data
-    const createUrl = new URL('/create', request.url);
+    const createUrl = new URL('/create-pd', request.url);
     
     // Add all product data as query parameters
     Object.entries(productData).forEach(([key, value]) => {

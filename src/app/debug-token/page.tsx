@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { logger } from '@/lib/logger'
 
 interface TokenAnalysis {
   valid: boolean
@@ -54,7 +55,7 @@ export default function DebugTokenPage() {
             setSessionToken(token)
           }
         } catch (err) {
-          console.error('Failed to get session token:', err)
+          logger.error('Failed to get session token:', err as Error, { component: 'debug-token' })
         }
       }
       document.head.appendChild(script)

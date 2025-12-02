@@ -13,6 +13,7 @@
  */
 
 import crypto from 'crypto'
+import { logger } from '@/lib/logger'
 
 // Algorithm and configuration
 const ALGORITHM = 'aes-256-gcm'
@@ -95,7 +96,7 @@ export async function encryptToken(plaintext: string): Promise<string> {
 
     return result
   } catch (error) {
-    console.error('Encryption error:', error)
+    logger.error('Encryption error:', error as Error, { component: 'encryption' })
     throw new Error('Failed to encrypt token')
   }
 }
@@ -148,7 +149,7 @@ export async function decryptToken(encryptedData: string): Promise<string> {
 
     return decrypted
   } catch (error) {
-    console.error('Decryption error:', error)
+    logger.error('Decryption error:', error as Error, { component: 'encryption' })
     throw new Error('Failed to decrypt token - data may be corrupted or key is incorrect')
   }
 }
@@ -190,7 +191,7 @@ export async function testEncryption(): Promise<boolean> {
 
     return true
   } catch (error) {
-    console.error('Encryption test failed:', error)
+    logger.error('Encryption test failed:', error as Error, { component: 'encryption' })
     throw error
   }
 }

@@ -141,9 +141,18 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/settings") ||
     pathname.startsWith("/embed") ||
     pathname.startsWith("/debug-token") ||
-    pathname.startsWith("/create") ||
+    pathname.startsWith("/create-pd") ||
     pathname.startsWith("/products") ||
-    pathname.startsWith("/content-center")
+    pathname.startsWith("/content-center") ||
+    // ACE routes (integrated from ace-app)
+    pathname.startsWith("/aie") ||
+    pathname.startsWith("/create-ad") ||
+    pathname.startsWith("/ads-library") ||
+    pathname.startsWith("/ad-vault") ||
+    pathname.startsWith("/facebook-ads") ||
+    pathname.startsWith("/business-profile") ||
+    pathname.startsWith("/brand-voice") ||
+    pathname.startsWith("/best-practices")
   ) {
     const response = NextResponse.next();
 
@@ -190,5 +199,14 @@ export const config = {
     "/debug-token/:path*",
     "/embed/:path*",
     "/content-center/:path*",
+    // ACE routes (integrated from ace-app)
+    "/aie/:path*",
+    "/create-ad/:path*",
+    "/ads-library/:path*",
+    "/ad-vault/:path*",
+    "/facebook-ads/:path*",
+    "/business-profile/:path*",
+    "/brand-voice/:path*",
+    "/best-practices/:path*",
   ],
 };

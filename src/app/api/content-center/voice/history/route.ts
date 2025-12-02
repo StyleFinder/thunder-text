@@ -8,6 +8,7 @@ import { getUserId } from '@/lib/auth/content-center-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
 import { withRateLimit, RATE_LIMITS } from '@/lib/middleware/rate-limit'
+import { logger } from '@/lib/logger'
 
 
 
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       .limit(3)
 
     if (error) {
-      console.error('Error fetching voice profile history:', error)
+      logger.error('Error fetching voice profile history:', error as Error, { component: 'history' })
       return NextResponse.json(
         { success: false, error: 'Failed to fetch voice profile history' },
         { status: 500 }
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     })
 
   } catch (error) {
-    console.error('Error in GET /api/content-center/voice/history:', error)
+    logger.error('Error in GET /api/content-center/voice/history:', error as Error, { component: 'history' })
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

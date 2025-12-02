@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
+import { guardDebugRoute } from '../_middleware-guard'
 
 export async function POST(request: NextRequest) {
+  const guardResponse = guardDebugRoute('/api/debug/token-exchange-test');
+  if (guardResponse) return guardResponse;
   try {
     const body = await request.json()
     const { sessionToken, shop } = body
@@ -57,13 +61,13 @@ export async function POST(request: NextRequest) {
 
       // Check audience matches our API key
       if (decodedPayload.aud !== process.env.NEXT_PUBLIC_SHOPIFY_API_KEY) {
-        console.error('❌ Audience mismatch:', {
+        logger.error('❌ Audience mismatch:', undefined, { 
           tokenAud: decodedPayload.aud,
           expectedAud: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY
-        })
+        , component: 'token-exchange-test' })
       }
     } catch (error) {
-      console.error('❌ Failed to decode session token:', error)
+      logger.error('❌ Failed to decode session token:', error as Error, { component: 'token-exchange-test' })
     }
 
     // Prepare Token Exchange request
@@ -96,11 +100,6 @@ export async function POST(request: NextRequest) {
     })
 
     const responseText = await response.text()
-    console.log('📥 Token Exchange response:', {
-      status: response.status,
-      statusText: response.statusText,
-      responseText: responseText.substring(0, 200),
-    })
 
     if (!response.ok) {
       // Try to parse as JSON for better error info
@@ -146,7 +145,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Token Exchange test error:', error)
+    logger.error('❌ Token Exchange test error:', error as Error, { component: 'token-exchange-test' })
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

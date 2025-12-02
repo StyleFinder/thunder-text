@@ -12,11 +12,17 @@
  */
 
 import { callChatCompletion } from "./openai-client";
-import type { BusinessProfileResponse } from "@/types/business-profile";
+import { logger } from '@/lib/logger'
 
 // ============================================================================
 // TYPES
 // ============================================================================
+
+export interface BusinessProfileResponse {
+  question_id: string;
+  response_text: string;
+  prompt_key?: string;
+}
 
 export interface ProfileGenerationResult {
   masterProfile: MasterBusinessProfile;
@@ -73,10 +79,12 @@ export async function generateMasterBusinessProfile(
   const stagesCompleted: string[] = [];
 
   // Convert responses to easy-to-access map
-  const responsesMap = responses.reduce((acc, r) => {
-    acc[r.prompt_key] = r.response_text;
+  const responsesMap = responses.reduce<InterviewResponseMap>((acc, r) => {
+    if (r.prompt_key) {
+      acc[r.prompt_key] = r.response_text;
+    }
     return acc;
-  }, {} as InterviewResponseMap);
+  }, {});
 
   console.log(
     "Starting master profile generation with",
@@ -192,7 +200,7 @@ export async function generateMasterBusinessProfile(
       generationMetadata: metadata,
     };
   } catch (error) {
-    console.error("Error generating master business profile:", error);
+    logger.error("Error generating master business profile:", error as Error, { component: 'business-profile-generator' });
     throw new Error(
       `Profile generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
     );

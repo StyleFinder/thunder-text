@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   // Check if we're in a build environment without proper configuration
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (shopError || !shopData) {
-      console.error('Shop lookup error:', shopError)
+      logger.error('Shop lookup error:', shopError as Error, { component: 'children' })
       return NextResponse.json(
         { error: 'Shop not found. Please ensure the app is installed.' },
         { status: 404 }
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
     const { data: categories, error: categoriesError } = await query
 
     if (categoriesError) {
-      console.error('Categories children fetch error:', categoriesError)
+      logger.error('Categories children fetch error:', categoriesError as Error, { component: 'children' })
       return NextResponse.json(
         { error: 'Failed to fetch category children' },
         { status: 500 }
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Categories children API error:', error)
+    logger.error('Categories children API error:', error as Error, { component: 'children' })
     return NextResponse.json(
       { error: 'Failed to fetch category children' },
       { status: 500 }

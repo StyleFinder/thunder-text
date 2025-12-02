@@ -3,6 +3,8 @@
  * Restricts API access to authorized Shopify domains only
  */
 
+import { logger } from '@/lib/logger'
+
 export function createCorsHeaders(request: Request): HeadersInit {
   const origin = request.headers.get('origin') || ''
 
@@ -31,7 +33,7 @@ export function createCorsHeaders(request: Request): HeadersInit {
   })
 
   // Log for debugging
-  console.log('🔒 CORS check:', { origin, isAllowed })
+  logger.debug('CORS check', { component: 'cors', origin, isAllowed })
 
   // For embedded Shopify apps, sometimes origin is not sent
   // Check referer header as fallback
@@ -43,7 +45,7 @@ export function createCorsHeaders(request: Request): HeadersInit {
 
   if (!isAllowed && origin) {
     // Return restrictive headers for unauthorized origins
-    console.warn('⚠️ CORS violation attempt from:', origin)
+    logger.warn('CORS violation attempt', { component: 'cors', origin })
     return {
       'Access-Control-Allow-Origin': 'null',
       'Access-Control-Allow-Methods': 'OPTIONS',
@@ -66,7 +68,6 @@ export function createCorsHeaders(request: Request): HeadersInit {
       })
 
       if (refererAllowed) {
-        console.log('✅ Allowing embedded app request from referer origin:', refererOrigin)
         return {
           'Access-Control-Allow-Origin': refererOrigin,
           'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -76,7 +77,7 @@ export function createCorsHeaders(request: Request): HeadersInit {
         }
       }
     } catch (e) {
-      console.warn('⚠️ Invalid referer URL:', referer)
+      logger.warn('Invalid referer URL', { component: 'cors', referer })
     }
 
     // If referer parsing failed or not allowed, deny

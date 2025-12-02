@@ -11,20 +11,27 @@ export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
 // Server-side Supabase client with service key
 // Prefer SUPABASE_SERVICE_ROLE_KEY (matches Render env var and token-exchange pattern)
-const serviceRoleKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+const getServiceRoleKey = () => {
+  const serviceRoleKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
-if (!serviceRoleKey || serviceRoleKey === "placeholder-service-key") {
-  console.error("❌ CRITICAL: No valid Supabase service role key found!", {
-    hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-    hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
-    env: process.env.NODE_ENV,
-  });
-}
+  // Only warn in server-side context (not during client-side bundle evaluation)
+  if (typeof window === "undefined") {
+    if (!serviceRoleKey || serviceRoleKey === "placeholder-service-key") {
+      console.warn("⚠️ WARNING: No valid Supabase service role key found!", {
+        hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
+        env: process.env.NODE_ENV,
+      });
+    }
+  }
+
+  return serviceRoleKey || "placeholder-service-key";
+};
 
 export const supabaseAdmin = createClient(
   supabaseUrl,
-  serviceRoleKey || "placeholder-service-key",
+  getServiceRoleKey(),
   {
     auth: {
       autoRefreshToken: false,
@@ -40,11 +47,12 @@ export const supabaseAdmin = createClient(
 export interface Shop {
   id: string;
   shop_domain: string;
-  access_token: string;
-  scope: string;
+  shopify_access_token: string | null;
+  shopify_access_token_legacy: string | null;
+  scope: string | null;
   is_active: boolean;
   installed_at: string;
-  last_used_at: string;
+  last_used_at: string | null;
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;

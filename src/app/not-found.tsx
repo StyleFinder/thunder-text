@@ -1,75 +1,52 @@
 'use client'
 
 import { Suspense } from 'react'
-import {
-  Page,
-  Layout,
-  Card,
-  Button,
-  Text,
-  Box,
-  InlineStack,
-  BlockStack,
-  Spinner,
-} from '@shopify/polaris'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 
 function NotFoundContent() {
   return (
-    <Page title="Page Not Found">
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <Box paddingBlockStart="800" paddingBlockEnd="800">
-                <InlineStack align="center">
-                  <BlockStack gap="200" align="center">
-                    <Text as="h1" variant="headingXl" alignment="center">
-                      404
-                    </Text>
-                    <Text as="h2" variant="headingLg" alignment="center">
-                      Page Not Found
-                    </Text>
-                    <Text as="p" variant="bodyMd" alignment="center" tone="subdued">
-                      The page you're looking for doesn't exist or has been moved.
-                    </Text>
-                    <InlineStack gap="300">
-                      <Button
-                        variant="primary"
-                        onClick={() => window.location.href = '/'}
-                      >
-                        Go to Home
-                      </Button>
-                      <Button
-                        onClick={() => window.location.href = '/dashboard'}
-                      >
-                        Go to Dashboard
-                      </Button>
-                    </InlineStack>
-                  </BlockStack>
-                </InlineStack>
-              </Box>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
+    <div className="min-h-screen flex items-center justify-center bg-oxford-50 p-6">
+      <Card className="max-w-md w-full">
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center gap-6 text-center">
+            <div className="space-y-2">
+              <h1 className="text-6xl font-bold text-oxford-900">404</h1>
+              <h2 className="text-2xl font-semibold text-oxford-800">
+                Page Not Found
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                The page you're looking for doesn't exist or has been moved.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => window.location.href = '/'}
+              >
+                Go to Home
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => window.location.href = '/dashboard'}
+              >
+                Go to Dashboard
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 
 function NotFoundFallback() {
   return (
-    <Page title="Loading">
-      <Layout>
-        <Layout.Section>
-          <Box padding="800" minHeight="400px">
-            <InlineStack align="center" blockAlign="center" gap="200">
-              <Spinner size="small" />
-              <Text as="p" variant="bodyMd" tone="subdued">Loading...</Text>
-            </InlineStack>
-          </Box>
-        </Layout.Section>
-      </Layout>
-    </Page>
+    <div className="min-h-screen flex items-center justify-center bg-oxford-50">
+      <div className="flex items-center gap-3">
+        <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-smart-500"></div>
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    </div>
   )
 }
 

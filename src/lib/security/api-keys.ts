@@ -148,7 +148,6 @@ export function logAPIUsage(
   }
 
   // In production, send to monitoring service (Datadog, Sentry, etc.)
-  console.log('[API Usage]', JSON.stringify(logEntry))
 
   // TODO: Implement proper monitoring
   // - Track API costs per user

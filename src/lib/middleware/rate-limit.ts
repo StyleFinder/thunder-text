@@ -7,6 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 /**
  * Rate limit configuration
@@ -164,8 +165,14 @@ export function withRateLimit(config: RateLimitConfig) {
 
     // Log approaching rate limit (when 90% consumed)
     if (remainingRequests !== undefined && remainingRequests < config.maxRequests * 0.1) {
-      console.warn(
-        `User ${userId} approaching rate limit: ${remainingRequests}/${config.maxRequests} remaining`
+      logger.warn(
+        'User approaching rate limit',
+        {
+          component: 'rate-limit',
+          userId,
+          remainingRequests,
+          maxRequests: config.maxRequests
+        }
       )
     }
 

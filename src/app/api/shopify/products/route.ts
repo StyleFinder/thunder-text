@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createCorsHeaders } from '@/lib/middleware/cors'
 import { getProducts } from '@/lib/shopify/get-products'
 import { getAccessToken } from '@/lib/shopify-auth'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request)
@@ -18,17 +19,14 @@ export async function GET(request: NextRequest) {
     // Ensure shop has .myshopify.com
     const fullShop = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`
 
-    console.log('🔍 Products API - fetching for:', fullShop)
     console.log('🔐 Has session token:', !!sessionToken)
-    console.log('🔍 Search query:', query || 'none')
 
     // Get access token using proper Token Exchange
     let accessToken: string
     try {
       accessToken = await getAccessToken(fullShop, sessionToken)
-      console.log('✅ Got access token via Token Exchange')
     } catch (error) {
-      console.error('❌ Failed to get access token:', error)
+      logger.error('❌ Failed to get access token:', error as Error, { component: 'products' })
       return NextResponse.json({
         success: false,
         error: 'Authentication failed',
@@ -40,7 +38,6 @@ export async function GET(request: NextRequest) {
     // Get products using the obtained access token
     const { products, pageInfo } = await getProducts(fullShop, accessToken, query)
 
-    console.log(`✅ Found ${products.length} products${query ? ` matching "${query}"` : ''}`)
 
     return NextResponse.json({
       success: true,
@@ -54,7 +51,7 @@ export async function GET(request: NextRequest) {
     }, { headers: corsHeaders })
 
   } catch (error) {
-    console.error('❌ Error in products API:', error)
+    logger.error('❌ Error in products API:', error as Error, { component: 'products' })
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch products',

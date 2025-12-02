@@ -18,19 +18,16 @@ export const SHOPIFY_CATEGORY_MAPPING = {
  * Returns the appropriate Shopify taxonomy category ID for the category dropdown
  */
 export function mapToShopifyCategory(inferredCategory: string): string | null {
-  console.log('🎯 Category mapping called with:', inferredCategory)
   
   // Note: Shopify taxonomy IDs change frequently and are store-specific
   // For now, we'll let the productType field handle categorization
   // The productType field (like "Tops") is more reliable and visible in admin
-  console.log('🎯 Using productType field for categorization instead of taxonomy IDs')
   return null
   
   // First try exact match
   const categoryId = SHOPIFY_CATEGORY_MAPPING[inferredCategory as keyof typeof SHOPIFY_CATEGORY_MAPPING]
   
   if (categoryId) {
-    console.log('🎯 Mapped to Shopify category ID:', categoryId)
     return categoryId
   }
   
@@ -55,7 +52,6 @@ export function mapToShopifyCategory(inferredCategory: string): string | null {
   }
   
   if (mappedCategory) {
-    console.log('🎯 Mapped individual category to Shopify ID:', mappedCategory)
     return mappedCategory
   }
   
@@ -64,11 +60,9 @@ export function mapToShopifyCategory(inferredCategory: string): string | null {
       lowerCategory.includes('apparel') ||
       lowerCategory.includes('fashion')) {
     const fallbackId = SHOPIFY_CATEGORY_MAPPING['Fashion & Apparel']
-    console.log('🎯 Using fallback apparel category:', fallbackId)
     return fallbackId
   }
   
-  console.log('🎯 No category mapping found, returning null')
   return null
 }
 

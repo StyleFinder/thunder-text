@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardDebugRoute } from '../_middleware-guard'
 
 export async function GET(request: NextRequest) {
+  const guardResponse = guardDebugRoute('/api/debug/app-bridge-test');
+  if (guardResponse) return guardResponse;
   const diagnostics = {
     environment: {
       NODE_ENV: process.env.NODE_ENV,
@@ -21,7 +24,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  console.log('🔍 App Bridge Diagnostics:', diagnostics)
 
   // SECURITY: Rely on middleware.ts for CORS instead of wildcard
   return NextResponse.json(diagnostics)

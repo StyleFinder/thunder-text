@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createCorsHeaders } from '@/lib/middleware/cors'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request)
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
     }, { headers: corsHeaders })
 
   } catch (error) {
-    console.error('❌ Token status check error:', error)
+    logger.error('❌ Token status check error:', error as Error, { component: 'token-status' })
     return NextResponse.json(
       { error: 'Failed to check token status' },
       { status: 500, headers: corsHeaders }

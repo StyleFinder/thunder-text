@@ -23,6 +23,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateGoogleOAuthState, type GoogleOAuthState } from '@/lib/security/oauth-validation'
 import { ZodError } from 'zod'
+import { logger } from '@/lib/logger'
 
 /**
  * Exchange authorization code for access token and refresh token
@@ -58,10 +59,14 @@ async function exchangeCodeForToken(code: string): Promise<{
 
   if (!response.ok) {
     const error = await response.text()
-    console.error('🔴 Google token exchange failed!')
-    console.error('🔴 Response status:', response.status, response.statusText)
-    console.error('🔴 Response body:', error)
-    console.error('🔴 Redirect URI used:', redirectUri)
+    logger.error('Google token exchange failed', new Error(`Failed to exchange code for token: ${error}`), {
+      component: 'google-oauth-callback',
+      operation: 'exchangeCodeForToken',
+      responseStatus: response.status,
+      responseStatusText: response.statusText,
+      responseBody: error,
+      redirectUri
+    })
     throw new Error(`Failed to exchange code for token: ${error}`)
   }
 
@@ -88,7 +93,11 @@ async function getUserInfo(accessToken: string): Promise<{
 
   if (!response.ok) {
     const error = await response.text()
-    console.error('Google user info fetch failed:', error)
+    logger.error('Google user info fetch failed', new Error('Failed to fetch user info'), {
+      component: 'google-oauth-callback',
+      operation: 'getUserInfo',
+      error
+    })
     throw new Error('Failed to fetch user info')
   }
 
@@ -133,7 +142,10 @@ export async function GET(request: NextRequest) {
 
     // Verify environment variables
     if (!process.env.GOOGLE_ADS_CLIENT_ID || !process.env.GOOGLE_ADS_CLIENT_SECRET) {
-      console.error('Google Ads credentials not configured')
+      logger.error('Google Ads credentials not configured', new Error('Missing Google Ads credentials'), {
+        component: 'google-oauth-callback',
+        operation: 'GET'
+      })
       return NextResponse.json(
         { error: 'Google Ads integration not configured' },
         { status: 500 }
@@ -145,13 +157,20 @@ export async function GET(request: NextRequest) {
       stateData = validateGoogleOAuthState(state)
     } catch (error) {
       if (error instanceof ZodError) {
-        console.error('State validation failed:', error.errors)
+        logger.error('State validation failed', error, {
+          component: 'google-oauth-callback',
+          operation: 'validateState',
+          errors: error.errors
+        })
         return NextResponse.json(
           { error: 'Invalid state parameter format', details: error.errors },
           { status: 400 }
         )
       }
-      console.error('State validation error:', error)
+      logger.error('State validation error', error as Error, {
+        component: 'google-oauth-callback',
+        operation: 'validateState'
+      })
       return NextResponse.json(
         { error: error instanceof Error ? error.message : 'Invalid state parameter' },
         { status: 400 }
@@ -176,12 +195,6 @@ export async function GET(request: NextRequest) {
     const { encryptToken } = await import('@/lib/services/encryption')
     const encryptedAccessToken = await encryptToken(access_token)
     const encryptedRefreshToken = refresh_token ? await encryptToken(refresh_token) : undefined
-
-    console.log('🔍 [DEBUG] Saving Google Ads integration:', {
-      shop_id,
-      email: userInfo.email,
-      has_refresh_token: !!refresh_token
-    });
 
     // Save to integrations table using supabaseAdmin directly
     const { supabaseAdmin } = await import('@/lib/supabase/admin')
@@ -209,11 +222,14 @@ export async function GET(request: NextRequest) {
       })
 
     if (saveError) {
-      console.error('Failed to save Google Ads integration:', saveError)
+      logger.error('Failed to save Google Ads integration', saveError as Error, {
+        component: 'google-oauth-callback',
+        operation: 'saveIntegration',
+        shopId: shop_id
+      })
       throw new Error(`Failed to save Google Ads integration: ${saveError.message}`)
     }
 
-    console.log('✅ [DEBUG] Google Ads integration stored successfully');
 
     // Redirect to return_to path or onboarding welcome page
     const redirectUrl = new URL(return_to || '/onboarding/welcome', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
@@ -233,9 +249,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectUrl.toString())
 
   } catch (error) {
-    console.error('🔴 Error in Google OAuth callback:', error)
-    console.error('🔴 Error stack:', error instanceof Error ? error.stack : 'No stack trace')
-    console.error('🔴 Error message:', error instanceof Error ? error.message : String(error))
+    logger.error('Error in Google OAuth callback', error as Error, {
+      component: 'google-oauth-callback',
+      operation: 'GET',
+      shopDomain: stateData?.shop_domain,
+      returnTo: stateData?.return_to
+    })
 
     // Redirect to onboarding welcome page with error message
     const redirectUrl = new URL(stateData?.return_to || '/onboarding/welcome', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')

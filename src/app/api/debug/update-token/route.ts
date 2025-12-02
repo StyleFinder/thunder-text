@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
+import { guardDebugRoute } from '../_middleware-guard'
 
 // This endpoint allows manual token updates for development
 export async function POST(request: NextRequest) {
+  const guardResponse = guardDebugRoute('/api/debug/update-token');
+  if (guardResponse) return guardResponse;
   try {
     const { shop, token } = await request.json()
 
@@ -22,7 +26,6 @@ export async function POST(request: NextRequest) {
       ? shop
       : `${shop}.myshopify.com`
 
-    console.log('📝 Updating token for shop:', fullShopDomain)
 
     // Update the token in the database
     const { data, error } = await supabase
@@ -39,14 +42,13 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('❌ Error updating token:', error)
+      logger.error('❌ Error updating token:', error as Error, { component: 'update-token' })
       return NextResponse.json({
         success: false,
         error: error.message
       }, { status: 500 })
     }
 
-    console.log('✅ Token updated successfully')
 
     return NextResponse.json({
       success: true,
@@ -55,7 +57,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Unexpected error:', error)
+    logger.error('❌ Unexpected error:', error as Error, { component: 'update-token' })
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update token'
@@ -64,6 +66,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
+  const guardResponse = guardDebugRoute('/api/debug/update-token');
+  if (guardResponse) return guardResponse;
+
   return NextResponse.json({
     message: 'Use POST method to update token',
     example: {

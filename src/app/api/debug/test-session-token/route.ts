@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardDebugRoute } from '../_middleware-guard'
 
 export async function POST(request: NextRequest) {
+  const guardResponse = guardDebugRoute('/api/debug/test-session-token');
+  if (guardResponse) return guardResponse;
   try {
     const { sessionToken } = await request.json()
 
@@ -171,6 +174,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
+  const guardResponse = guardDebugRoute('/api/debug/test-session-token');
+  if (guardResponse) return guardResponse;
+
   return NextResponse.json({
     info: 'POST a session token to this endpoint to analyze it',
     example: {

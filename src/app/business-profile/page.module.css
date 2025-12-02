@@ -1,0 +1,12 @@
+.leftAlign,
+.leftAlign h1,
+.leftAlign h2,
+.leftAlign h3,
+.leftAlign h4,
+.leftAlign h5,
+.leftAlign h6,
+.leftAlign p,
+.leftAlign span,
+.leftAlign div {
+  text-align: left !important;
+}

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardDebugRoute } from '../_middleware-guard'
 
 // This endpoint tests Token Exchange with a mock session token to get the exact error
 export async function POST(request: NextRequest) {
+  const guardResponse = guardDebugRoute('/api/debug/test-raw-token-exchange');
+  if (guardResponse) return guardResponse;
   try {
     const body = await request.json()
     const { sessionToken, shop } = body
@@ -23,14 +26,6 @@ export async function POST(request: NextRequest) {
       subject_token_type: 'urn:ietf:params:oauth:token-type:id_token',
       requested_token_type: 'urn:shopify:params:oauth:token-type:online-access-token'
     }
-
-    console.log('🔍 Token Exchange Debug:', {
-      url: tokenExchangeUrl,
-      client_id: exchangeBody.client_id,
-      client_secret_length: exchangeBody.client_secret?.length,
-      client_secret_preview: exchangeBody.client_secret?.substring(0, 8) + '...',
-      session_token_preview: sessionToken.substring(0, 50) + '...',
-    })
 
     // Make the actual Token Exchange request
     const response = await fetch(tokenExchangeUrl, {

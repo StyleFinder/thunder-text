@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getStoreId } from '@/lib/prompts'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     const { error: rpcError } = await supabase.rpc('set_store_context', { store_uuid: actualStoreId })
 
     if (rpcError) {
-      console.error('Error setting store context:', rpcError)
+      logger.error('Error setting store context:', rpcError as Error, { component: 'set-default' })
       return NextResponse.json(
         { success: false, error: 'Failed to set store context' },
         { status: 500 }
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (checkError || !existingTemplate) {
-      console.error('Error checking template:', checkError)
+      logger.error('Error checking template:', checkError as Error, { component: 'set-default' })
       return NextResponse.json(
         { success: false, error: 'Template not found' },
         { status: 404 }
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
       .eq('store_id', actualStoreId)
 
     if (unsetError) {
-      console.error('Error unsetting defaults:', unsetError)
+      logger.error('Error unsetting defaults:', unsetError as Error, { component: 'set-default' })
       return NextResponse.json(
         { success: false, error: 'Failed to unset existing defaults' },
         { status: 500 }
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Error setting default template:', error)
+      logger.error('Error setting default template:', error as Error, { component: 'set-default' })
       return NextResponse.json(
         { success: false, error: 'Failed to set template as default' },
         { status: 500 }
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Set default template error:', error)
+    logger.error('Set default template error:', error as Error, { component: 'set-default' })
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

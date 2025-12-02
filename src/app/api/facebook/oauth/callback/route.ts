@@ -26,6 +26,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { encryptToken } from '@/lib/services/encryption'
 import { validateFacebookOAuthState, type FacebookOAuthState } from '@/lib/security/oauth-validation'
 import { ZodError } from 'zod'
+import { logger } from '@/lib/logger'
 
 /**
  * Exchange authorization code for access token
@@ -53,10 +54,14 @@ async function exchangeCodeForToken(code: string): Promise<{
 
   if (!response.ok) {
     const error = await response.text()
-    console.error('🔴 Facebook token exchange failed!')
-    console.error('🔴 Response status:', response.status, response.statusText)
-    console.error('🔴 Response body:', error)
-    console.error('🔴 Redirect URI used:', redirectUri)
+    logger.error('Facebook token exchange failed', new Error(`${response.status} ${response.statusText}`), {
+      status: response.status,
+      statusText: response.statusText,
+      error,
+      redirectUri,
+      component: 'facebook-oauth',
+      operation: 'token-exchange'
+    })
     throw new Error(`Failed to exchange code for token: ${error}`)
   }
 
@@ -80,7 +85,7 @@ async function getUserInfo(accessToken: string): Promise<{
 
   if (!response.ok) {
     const error = await response.text()
-    console.error('Facebook user info fetch failed:', error)
+    logger.error('Facebook user info fetch failed', new Error(error), { component: 'facebook-oauth', operation: 'get-user-info' })
     throw new Error('Failed to fetch user info')
   }
 
@@ -107,7 +112,7 @@ async function getAdAccounts(accessToken: string, userId: string): Promise<{
 
   if (!response.ok) {
     const error = await response.text()
-    console.error('Facebook ad accounts fetch failed:', error)
+    logger.error('Facebook ad accounts fetch failed', new Error(error), { component: 'facebook-oauth', operation: 'get-ad-accounts', userId })
     // Don't throw - user might not have ad accounts yet
     return { data: [] }
   }
@@ -134,7 +139,7 @@ async function getFacebookPages(accessToken: string, userId: string): Promise<{
 
   if (!response.ok) {
     const error = await response.text()
-    console.error('Facebook pages fetch failed:', error)
+    logger.error('Facebook pages fetch failed', new Error(error), { component: 'facebook-oauth', operation: 'get-facebook-pages', userId })
     // Don't throw - user might not have pages yet
     return { data: [] }
   }
@@ -181,7 +186,7 @@ export async function GET(request: NextRequest) {
 
     // Verify environment variables
     if (!process.env.FACEBOOK_APP_ID || !process.env.FACEBOOK_APP_SECRET) {
-      console.error('Facebook app credentials not configured')
+      logger.error('Facebook app credentials not configured', undefined, { component: 'facebook-oauth', operation: 'callback' })
       return NextResponse.json(
         { error: 'Facebook integration not configured' },
         { status: 500 }
@@ -194,13 +199,13 @@ export async function GET(request: NextRequest) {
       stateData = validateFacebookOAuthState(state)
     } catch (error) {
       if (error instanceof ZodError) {
-        console.error('State validation failed:', error.errors)
+        logger.error('State validation failed', error, { errors: error.errors, component: 'facebook-oauth', operation: 'callback' })
         return NextResponse.json(
           { error: 'Invalid state parameter format', details: error.errors },
           { status: 400 }
         )
       }
-      console.error('State validation error:', error)
+      logger.error('State validation error', error as Error, { component: 'facebook-oauth', operation: 'callback' })
       return NextResponse.json(
         { error: error instanceof Error ? error.message : 'Invalid state parameter' },
         { status: 400 }
@@ -242,7 +247,6 @@ export async function GET(request: NextRequest) {
       : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) // Default: 60 days
 
     // Verify shop exists before attempting upsert
-    console.log('🔍 [DEBUG] Verifying shop exists:', { shop_id, shop_domain })
     const { data: shopExists, error: shopCheckError } = await supabaseAdmin
       .from('shops')
       .select('id, shop_domain')
@@ -250,10 +254,9 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (shopCheckError || !shopExists) {
-      console.error('❌ [DEBUG] Shop does not exist:', { shop_id, shop_domain, error: shopCheckError })
+      logger.error('Shop does not exist', shopCheckError as Error, { shop_id, shop_domain, component: 'facebook-oauth', operation: 'callback' })
       throw new Error(`Shop not found: ${shop_domain}`)
     }
-    console.log('✅ [DEBUG] Shop exists:', shopExists)
 
     // Prepare upsert data
     const upsertData = {
@@ -287,17 +290,6 @@ export async function GET(request: NextRequest) {
       updated_at: new Date().toISOString()
     }
 
-    console.log('🔍 [DEBUG] About to upsert integration:', {
-      shop_id: upsertData.shop_id,
-      provider: upsertData.provider,
-      has_encrypted_token: !!upsertData.encrypted_access_token,
-      token_length: upsertData.encrypted_access_token.length,
-      account_id: upsertData.provider_account_id,
-      account_name: upsertData.provider_account_name,
-      expires_at: upsertData.token_expires_at,
-      metadata_keys: Object.keys(upsertData.additional_metadata)
-    })
-
     // Store integration in database
     const { data: integration, error: dbError, status, statusText } = await supabaseAdmin
       .from('integrations')
@@ -305,37 +297,21 @@ export async function GET(request: NextRequest) {
       .select()
       .single()
 
-    console.log('📊 [DEBUG] Upsert response:', {
-      hasData: !!integration,
-      dataId: integration?.id,
-      hasError: !!dbError,
-      error: dbError,
-      status,
-      statusText
-    })
-
     if (dbError) {
-      console.error('❌ [DEBUG] Failed to store Facebook integration:', {
-        error: dbError,
+      logger.error('Failed to store Facebook integration', dbError as Error, {
         code: (dbError as { code?: string })?.code,
-        message: dbError.message,
         details: (dbError as { details?: string })?.details,
-        hint: (dbError as { hint?: string })?.hint
+        hint: (dbError as { hint?: string })?.hint,
+        component: 'facebook-oauth',
+        operation: 'store-integration'
       })
       throw dbError
     }
 
     if (!integration) {
-      console.error('❌ [DEBUG] No integration data returned from upsert')
+      logger.error('No integration data returned from upsert', undefined, { component: 'facebook-oauth', operation: 'store-integration' })
       throw new Error('Failed to store integration - no data returned')
     }
-
-    console.log('✅ [DEBUG] Facebook integration stored successfully:', {
-      id: integration.id,
-      shop_domain,
-      provider_account_id: integration.provider_account_id,
-      is_active: integration.is_active
-    })
 
     // Verify the record was actually inserted by reading it back
     const { data: verifyIntegration, error: verifyError } = await supabaseAdmin
@@ -345,16 +321,23 @@ export async function GET(request: NextRequest) {
       .eq('provider', 'facebook')
       .single()
 
-    console.log('🔍 [DEBUG] Verification query result:', {
-      found: !!verifyIntegration,
-      data: verifyIntegration,
-      error: verifyError
-    })
-
-    // Redirect to Facebook Ads page with success message
+    // Redirect based on return_to parameter (onboarding, connections, or main app)
     // Restore host and embedded params to maintain Shopify embedded app context (if they exist)
-    const redirectUrl = new URL('/facebook-ads', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+    let redirectPath = '/facebook-ads' // Default
+    if (stateData.return_to === 'welcome') {
+      redirectPath = '/welcome'
+    } else if (stateData.return_to === '/settings/connections') {
+      redirectPath = '/settings/connections'
+    }
+
+    const redirectUrl = new URL(redirectPath, process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+
     redirectUrl.searchParams.set('shop', shop_domain)
+
+    // For onboarding flow, set step=social
+    if (stateData.return_to === 'welcome') {
+      redirectUrl.searchParams.set('step', 'social')
+    }
 
     // Only add host and embedded if they have valid (non-null) values
     if (stateData.host && stateData.host !== 'null') {
@@ -371,9 +354,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectUrl.toString())
 
   } catch (error) {
-    console.error('🔴 Error in Facebook OAuth callback:', error)
-    console.error('🔴 Error stack:', error instanceof Error ? error.stack : 'No stack trace')
-    console.error('🔴 Error message:', error instanceof Error ? error.message : String(error))
+    logger.error('Error in Facebook OAuth callback', error as Error, {
+      component: 'facebook-oauth',
+      operation: 'callback',
+      shopDomain: stateData?.shop_domain
+    })
 
     // Redirect to Facebook Ads page with error message
     // Restore host and embedded params to maintain Shopify embedded app context (if they exist)

@@ -16,7 +16,9 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
   RETURN QUERY
-  SELECT shops.access_token, shops.scope
+  SELECT
+    COALESCE(shops.shopify_access_token, shops.shopify_access_token_legacy) as access_token,
+    shops.shopify_scopes as scope
   FROM shops
   WHERE shops.shop_domain = p_shop_domain
     AND shops.is_active = true

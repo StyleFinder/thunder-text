@@ -31,6 +31,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import type { BrandVoiceProfile } from '@/types/content-center'
+import { logger } from '@/lib/logger'
 
 interface VoiceProfileProps {
   onProfileUpdate?: () => void
@@ -93,7 +94,7 @@ export function VoiceProfile({ onProfileUpdate }: VoiceProfileProps) {
         setVersionHistory(data.data.profiles)
       }
     } catch (err) {
-      console.error('Failed to fetch version history:', err)
+      logger.error('Failed to fetch version history:', err as Error, { component: 'VoiceProfile' })
     }
   }
 

@@ -22,6 +22,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createFacebookOAuthState } from '@/lib/security/oauth-validation'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
     // Verify environment variables
     const facebookAppId = process.env.FACEBOOK_APP_ID
     if (!facebookAppId) {
-      console.error('FACEBOOK_APP_ID not configured')
+      logger.error('FACEBOOK_APP_ID not configured', undefined, { component: 'authorize' })
       return NextResponse.json(
         { error: 'Facebook integration not configured' },
         { status: 500 }
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (shopError || !shopData) {
-      console.error('Shop not found:', shop, shopError)
+      logger.error('Shop not found:', shop, shopError, undefined, { component: 'authorize' })
       return NextResponse.json(
         { error: 'Shop not found' },
         { status: 404 }
@@ -63,11 +64,13 @@ export async function GET(request: NextRequest) {
 
     // Generate secure state parameter with Zod validation
     // Includes cryptographic nonce for CSRF protection and timestamp for replay attack prevention
+    const returnTo = searchParams.get('return_to')
     const state = createFacebookOAuthState({
       shop_id: shopData.id,
       shop_domain: shopData.shop_domain,
       host: searchParams.get('host'),
-      embedded: searchParams.get('embedded')
+      embedded: searchParams.get('embedded'),
+      return_to: returnTo || undefined
     })
 
     // Construct redirect URI
@@ -97,7 +100,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(facebookAuthUrl.toString())
 
   } catch (error) {
-    console.error('Error in Facebook OAuth authorize:', error)
+    logger.error('Error in Facebook OAuth authorize:', error as Error, { component: 'authorize' })
 
     // Redirect to Facebook Ads page with error if shop is known
     if (shop) {

@@ -12,19 +12,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import {
-  Card,
-  BlockStack,
-  Text,
-  TextField,
-  Button,
-  InlineStack,
-  Checkbox,
-  Banner,
-  Spinner,
-  Icon,
-} from '@shopify/polaris'
-import { DeleteIcon } from '@shopify/polaris-icons'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Loader2, AlertCircle, CheckCircle2, Trash2, Info } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 interface FacebookNotificationSettings {
   id?: string
@@ -77,7 +72,7 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
         setSettings(data.data)
       }
     } catch (err) {
-      console.error('Error fetching Facebook settings:', err)
+      logger.error('Error fetching Facebook settings:', err as Error, { component: 'FacebookSettingsCard' })
       setError('Failed to load settings')
     } finally {
       setLoading(false)
@@ -125,7 +120,7 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
-      console.error('Error saving settings:', err)
+      logger.error('Error saving settings:', err as Error, { component: 'FacebookSettingsCard' })
       setError(err instanceof Error ? err.message : 'Failed to save settings')
     } finally {
       setSaving(false)
@@ -169,230 +164,284 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
   if (loading) {
     return (
       <Card>
-        <InlineStack align="center" blockAlign="center" gap="200">
-          <Spinner size="small" />
-          <Text as="p" tone="subdued">
+        <CardContent className="flex items-center justify-center gap-2 py-6">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
             Loading Facebook alert settings...
-          </Text>
-        </InlineStack>
+          </p>
+        </CardContent>
       </Card>
     )
   }
 
   return (
     <Card>
-      <BlockStack gap="400">
-        <BlockStack gap="200">
-          <Text as="h3" variant="headingMd">
-            Facebook Ad Alert Settings
-          </Text>
-          <Text as="p" variant="bodyMd" tone="subdued">
-            Receive daily email alerts at 6 AM ET when campaigns fall below your benchmarks
-          </Text>
-        </BlockStack>
-
+      <CardHeader>
+        <CardTitle>Facebook Ad Alert Settings</CardTitle>
+        <p className="text-sm text-muted-foreground mt-1">
+          Receive daily email alerts at 6 AM ET when campaigns fall below your benchmarks
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
         {error && (
-          <Banner tone="critical" onDismiss={() => setError(null)}>
-            {error}
-          </Banner>
+          <Alert variant="destructive" onDismiss={() => setError(null)}>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {success && (
-          <Banner tone="success" onDismiss={() => setSuccess(false)}>
-            Settings saved successfully! You'll receive alerts starting tomorrow at 6 AM ET.
-          </Banner>
+          <Alert className="border-green-600 bg-green-50">
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-700">
+              Settings saved successfully! You'll receive alerts starting tomorrow at 6 AM ET.
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Email Configuration */}
-        <BlockStack gap="300">
-          <Text as="h4" variant="headingSm">
-            Email Recipients
-          </Text>
+        <div className="space-y-4">
+          <h4 className="text-sm font-semibold text-foreground">Email Recipients</h4>
 
-          <TextField
-            label="Primary Email"
-            value={settings.primary_email}
-            onChange={(value) =>
-              setSettings({ ...settings, primary_email: value })
-            }
-            type="email"
-            placeholder="your-email@example.com"
-            autoComplete="email"
-            requiredIndicator
-            helpText="Daily alerts will be sent to this email address"
-          />
+          <div className="space-y-2">
+            <Label htmlFor="primary-email">
+              Primary Email <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="primary-email"
+              type="email"
+              value={settings.primary_email}
+              onChange={(e) =>
+                setSettings({ ...settings, primary_email: e.target.value })
+              }
+              placeholder="your-email@example.com"
+              autoComplete="email"
+            />
+            <p className="text-xs text-muted-foreground">
+              Daily alerts will be sent to this email address
+            </p>
+          </div>
 
-          <BlockStack gap="200">
-            <Text as="p" variant="bodyMd" fontWeight="semibold">
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-foreground">
               Additional Recipients (Optional)
-            </Text>
+            </p>
             {settings.additional_emails.map((email) => (
               <div
                 key={email}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '8px 12px',
-                  backgroundColor: '#F6F6F7',
-                  borderRadius: '4px',
-                }}
+                className="flex items-center justify-between p-2 bg-secondary/50 rounded-md"
               >
-                <Text as="span" variant="bodyMd">
-                  {email}
-                </Text>
+                <span className="text-sm text-foreground">{email}</span>
                 <Button
-                  icon={DeleteIcon}
                   onClick={() => handleRemoveEmail(email)}
-                  variant="plain"
-                  tone="critical"
-                />
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             ))}
 
-            <InlineStack gap="200" align="start">
-              <div style={{ flex: 1 }}>
-                <TextField
-                  label=""
-                  value={newEmail}
-                  onChange={setNewEmail}
+            <div className="flex items-end gap-2">
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="new-email" className="sr-only">Additional Email</Label>
+                <Input
+                  id="new-email"
                   type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
                   placeholder="additional-email@example.com"
                   autoComplete="off"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleAddEmail()
+                    }
+                  }}
                 />
               </div>
-              <Button onClick={handleAddEmail}>+ Add Email</Button>
-            </InlineStack>
-          </BlockStack>
-        </BlockStack>
+              <Button onClick={handleAddEmail} variant="outline">
+                + Add Email
+              </Button>
+            </div>
+          </div>
+        </div>
 
         {/* Benchmark Configuration */}
-        <BlockStack gap="300">
-          <Text as="h4" variant="headingSm">
-            Performance Benchmarks
-          </Text>
+        <div className="space-y-4">
+          <h4 className="text-sm font-semibold text-foreground">Performance Benchmarks</h4>
 
-          <InlineStack gap="400" align="start">
-            <div style={{ flex: 1 }}>
-              <TextField
-                label="Conversion Rate Benchmark (%)"
-                value={settings.custom_conversion_benchmark.toString()}
-                onChange={(value) =>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="conversion-benchmark">Conversion Rate Benchmark (%)</Label>
+              <div className="relative">
+                <Input
+                  id="conversion-benchmark"
+                  type="number"
+                  value={settings.custom_conversion_benchmark.toString()}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      custom_conversion_benchmark: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  min={0}
+                  step={0.1}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  %
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Alert when conversion rate falls below this value
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="roas-benchmark">ROAS Benchmark (x)</Label>
+              <div className="relative">
+                <Input
+                  id="roas-benchmark"
+                  type="number"
+                  value={settings.custom_roas_benchmark.toString()}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      custom_roas_benchmark: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  min={0}
+                  step={0.1}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  x
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Alert when ROAS falls below this value
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="alert-threshold">Alert Threshold (%)</Label>
+            <div className="relative">
+              <Input
+                id="alert-threshold"
+                type="number"
+                value={settings.alert_threshold_percentage.toString()}
+                onChange={(e) =>
                   setSettings({
                     ...settings,
-                    custom_conversion_benchmark: parseFloat(value) || 0,
+                    alert_threshold_percentage: parseInt(e.target.value) || 0,
                   })
                 }
-                type="number"
                 min={0}
-                step={0.1}
-                suffix="%"
-                helpText="Alert when conversion rate falls below this value"
-                autoComplete="off"
+                max={100}
               />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                %
+              </span>
             </div>
-            <div style={{ flex: 1 }}>
-              <TextField
-                label="ROAS Benchmark (x)"
-                value={settings.custom_roas_benchmark.toString()}
-                onChange={(value) =>
-                  setSettings({
-                    ...settings,
-                    custom_roas_benchmark: parseFloat(value) || 0,
-                  })
-                }
-                type="number"
-                min={0}
-                step={0.1}
-                suffix="x"
-                helpText="Alert when ROAS falls below this value"
-                autoComplete="off"
-              />
-            </div>
-          </InlineStack>
-
-          <TextField
-            label="Alert Threshold (%)"
-            value={settings.alert_threshold_percentage.toString()}
-            onChange={(value) =>
-              setSettings({
-                ...settings,
-                alert_threshold_percentage: parseInt(value) || 0,
-              })
-            }
-            type="number"
-            min={0}
-            max={100}
-            suffix="%"
-            helpText="Trigger alerts when metrics fall this percentage below benchmarks"
-            autoComplete="off"
-          />
-        </BlockStack>
+            <p className="text-xs text-muted-foreground">
+              Trigger alerts when metrics fall this percentage below benchmarks
+            </p>
+          </div>
+        </div>
 
         {/* Alert Triggers */}
-        <BlockStack gap="300">
-          <Text as="h4" variant="headingSm">
-            Alert Triggers
-          </Text>
+        <div className="space-y-4">
+          <h4 className="text-sm font-semibold text-foreground">Alert Triggers</h4>
 
-          <Checkbox
-            label="Alert on Conversion Rate"
-            checked={settings.notify_on_conversion}
-            onChange={(value) =>
-              setSettings({ ...settings, notify_on_conversion: value })
-            }
-            helpText="Receive alerts when conversion rate falls below benchmark"
-          />
+          <div className="space-y-3">
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="notify-conversion"
+                checked={settings.notify_on_conversion}
+                onCheckedChange={(checked) =>
+                  setSettings({ ...settings, notify_on_conversion: checked as boolean })
+                }
+              />
+              <div className="space-y-1">
+                <Label htmlFor="notify-conversion" className="text-sm font-normal cursor-pointer">
+                  Alert on Conversion Rate
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Receive alerts when conversion rate falls below benchmark
+                </p>
+              </div>
+            </div>
 
-          <Checkbox
-            label="Alert on ROAS"
-            checked={settings.notify_on_roas}
-            onChange={(value) =>
-              setSettings({ ...settings, notify_on_roas: value })
-            }
-            helpText="Receive alerts when ROAS falls below benchmark"
-          />
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="notify-roas"
+                checked={settings.notify_on_roas}
+                onCheckedChange={(checked) =>
+                  setSettings({ ...settings, notify_on_roas: checked as boolean })
+                }
+              />
+              <div className="space-y-1">
+                <Label htmlFor="notify-roas" className="text-sm font-normal cursor-pointer">
+                  Alert on ROAS
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Receive alerts when ROAS falls below benchmark
+                </p>
+              </div>
+            </div>
 
-          <Checkbox
-            label="Enable Email Alerts"
-            checked={settings.is_enabled}
-            onChange={(value) =>
-              setSettings({ ...settings, is_enabled: value })
-            }
-            helpText="Turn on/off all Facebook ad alerts"
-          />
-        </BlockStack>
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="enable-alerts"
+                checked={settings.is_enabled}
+                onCheckedChange={(checked) =>
+                  setSettings({ ...settings, is_enabled: checked as boolean })
+                }
+              />
+              <div className="space-y-1">
+                <Label htmlFor="enable-alerts" className="text-sm font-normal cursor-pointer">
+                  Enable Email Alerts
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Turn on/off all Facebook ad alerts
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Save Button */}
-        <InlineStack align="end">
+        <div className="flex justify-end">
           <Button
-            variant="primary"
             onClick={handleSave}
-            loading={saving}
-            disabled={!settings.primary_email}
+            disabled={saving || !settings.primary_email}
+            className="min-w-[120px]"
           >
-            Save Settings
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Settings'
+            )}
           </Button>
-        </InlineStack>
+        </div>
 
         {/* Info Banner */}
-        <Banner tone="info">
-          <BlockStack gap="100">
-            <Text as="p" variant="bodyMd" fontWeight="semibold">
-              How it works:
-            </Text>
-            <Text as="p" variant="bodySm">
-              • Alerts run daily at 6 AM Eastern Time
-            </Text>
-            <Text as="p" variant="bodySm">
-              • You'll receive one email per day for underperforming campaigns
-            </Text>
-            <Text as="p" variant="bodySm">
-              • Alerts include campaign names, metrics, and direct links to Facebook Ads
-            </Text>
-          </BlockStack>
-        </Banner>
-      </BlockStack>
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-semibold text-sm mb-1">How it works:</p>
+            <ul className="text-xs space-y-1 list-disc list-inside">
+              <li>Alerts run daily at 6 AM Eastern Time</li>
+              <li>You'll receive one email per day for underperforming campaigns</li>
+              <li>Alerts include campaign names, metrics, and direct links to Facebook Ads</li>
+            </ul>
+          </AlertDescription>
+        </Alert>
+      </CardContent>
     </Card>
   )
 }

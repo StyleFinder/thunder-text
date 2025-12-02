@@ -11,6 +11,7 @@ import {
 import { supabaseAdmin } from '@/lib/supabase'
 import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors'
 import { sanitizeAndValidateSample } from '@/lib/security/input-sanitization'
+import { logger } from '@/lib/logger'
 
 // Helper function to calculate word count
 function calculateWordCount(text: string): number {
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Error fetching samples:', error)
+      logger.error('Error fetching samples:', error as Error, { component: 'samples' })
       return NextResponse.json(
         { success: false, error: 'Failed to fetch samples' },
         { status: 500, headers: corsHeaders }
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
     }, { headers: corsHeaders })
 
   } catch (error) {
-    console.error('Error in GET /api/content-center/samples:', error)
+    logger.error('Error in GET /api/content-center/samples:', error as Error, { component: 'samples' })
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500, headers: corsHeaders }
@@ -183,7 +184,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Error creating sample:', error)
+      logger.error('Error creating sample:', error as Error, { component: 'samples' })
       return NextResponse.json(
         { success: false, error: 'Failed to create sample' },
         { status: 500, headers: corsHeaders }
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201, headers: corsHeaders })
 
   } catch (error) {
-    console.error('Error in POST /api/content-center/samples:', error)
+    logger.error('Error in POST /api/content-center/samples:', error as Error, { component: 'samples' })
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500, headers: corsHeaders }

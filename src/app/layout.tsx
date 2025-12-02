@@ -3,8 +3,9 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { PolarisProvider } from './components/PolarisProvider';
 import { AppLayout } from './components/AppLayout';
-import { UnifiedShopifyAuth } from './components/UnifiedShopifyAuth';
+import { ConditionalShopifyAuth } from './components/ConditionalShopifyAuth';
 import { ServiceWorkerCleanup } from './components/ServiceWorkerCleanup';
+import { AuthSessionProvider } from '@/lib/auth/session-provider';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -29,14 +30,16 @@ export default function RootLayout({
         <meta name="shopify-api-key" content={apiKey} />
       </head>
       <body className={inter.className}>
-        <PolarisProvider>
-          <UnifiedShopifyAuth>
-            <ServiceWorkerCleanup />
-            <AppLayout>
-              {children}
-            </AppLayout>
-          </UnifiedShopifyAuth>
-        </PolarisProvider>
+        <AuthSessionProvider>
+          <PolarisProvider>
+            <ConditionalShopifyAuth>
+              <ServiceWorkerCleanup />
+              <AppLayout>
+                {children}
+              </AppLayout>
+            </ConditionalShopifyAuth>
+          </PolarisProvider>
+        </AuthSessionProvider>
       </body>
     </html>
   );

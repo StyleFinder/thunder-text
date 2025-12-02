@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { logger } from '@/lib/logger'
 
 interface AuthContextType {
   isAuthenticated: boolean
@@ -68,11 +69,9 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
         return
       }
 
-      console.log('🔄 Starting token exchange for shop:', shopParam)
 
       // Check if App Bridge is already loaded or loading
       if (window.shopify && typeof window.shopify.idToken === 'function') {
-        console.log('✅ App Bridge already loaded, using existing instance')
         try {
           // Use existing shopify global
           if (!document.querySelector('meta[name="shopify-api-key"]')) {
@@ -88,7 +87,6 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
             throw new Error('Failed to get session token from Shopify')
           }
 
-          console.log('📝 Got session token, performing exchange...')
 
           // Exchange session token for access token
           const response = await fetch('/api/shopify/token-exchange', {
@@ -105,16 +103,15 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
           const result = await response.json()
 
           if (result.success) {
-            console.log('✅ Token exchange successful')
             setIsAuthenticated(true)
             setError(null)
           } else {
-            console.error('❌ Token exchange failed:', result.error)
+            logger.error('❌ Token exchange failed:', result.error, undefined, { component: 'ShopifyAuthProvider' })
             setError(result.error || 'Authentication failed')
             setIsAuthenticated(false)
           }
         } catch (err) {
-          console.error('❌ Error during token exchange:', err)
+          logger.error('❌ Error during token exchange:', err as Error, { component: 'ShopifyAuthProvider' })
           setError(err instanceof Error ? err.message : 'Authentication error')
           setIsAuthenticated(false)
         } finally {
@@ -146,7 +143,6 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
             throw new Error('Shopify App Bridge not loaded correctly')
           }
 
-          console.log('✅ App Bridge loaded, using shopify global')
 
           // For the new App Bridge from CDN, we need to use the meta tag approach
           // Create meta tag with API key if it doesn't exist
@@ -164,7 +160,6 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
             throw new Error('Failed to get session token from Shopify')
           }
 
-          console.log('📝 Got session token, performing exchange...')
 
           // Exchange session token for access token
           const response = await fetch('/api/shopify/token-exchange', {
@@ -181,16 +176,15 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
           const result = await response.json()
 
           if (result.success) {
-            console.log('✅ Token exchange successful')
             setIsAuthenticated(true)
             setError(null)
           } else {
-            console.error('❌ Token exchange failed:', result.error)
+            logger.error('❌ Token exchange failed:', result.error, undefined, { component: 'ShopifyAuthProvider' })
             setError(result.error || 'Authentication failed')
             setIsAuthenticated(false)
           }
         } catch (err) {
-          console.error('❌ Error during token exchange:', err)
+          logger.error('❌ Error during token exchange:', err as Error, { component: 'ShopifyAuthProvider' })
           setError(err instanceof Error ? err.message : 'Authentication error')
           setIsAuthenticated(false)
         } finally {
@@ -200,7 +194,7 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
       }
 
       script.onerror = () => {
-        console.error('Failed to load Shopify App Bridge')
+        logger.error('Failed to load Shopify App Bridge')
         setError('Failed to load Shopify App Bridge')
         setIsLoading(false)
         setIsExchanging(false)
@@ -209,7 +203,7 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
       document.head.appendChild(script)
 
     } catch (err) {
-      console.error('❌ Authentication error:', err)
+      logger.error('❌ Authentication error:', err as Error, { component: 'ShopifyAuthProvider' }, undefined, { component: 'ShopifyAuthProvider' })
       setError(err instanceof Error ? err.message : 'Authentication failed')
       setIsAuthenticated(false)
       setIsLoading(false)

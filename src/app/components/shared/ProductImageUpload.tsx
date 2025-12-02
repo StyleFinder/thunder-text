@@ -1,8 +1,14 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { DropZone, Thumbnail, BlockStack, InlineStack, Text, Badge, Card, Checkbox, Button, Box, Icon, Banner } from '@shopify/polaris'
-import { ImageIcon, UploadIcon } from '@shopify/polaris-icons'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Upload, X, Image as ImageIcon, Info } from 'lucide-react'
+import { colors } from '@/lib/design-system/colors'
 
 export interface UploadedFile {
   file: File
@@ -32,20 +38,66 @@ export function ProductImageUpload({
 }: ProductImageUploadProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [rejectedFiles, setRejectedFiles] = useState<File[]>([])
+  const [isDragging, setIsDragging] = useState(false)
 
-  const handleDropZoneDrop = useCallback(
-    (_dropFiles: File[], acceptedFiles: File[], rejectedFiles: File[]) => {
-      const newFiles = acceptedFiles.map(file => ({
+  const validImageTypes = ['image/gif', 'image/jpeg', 'image/png', 'image/webp']
+
+  const handleFiles = useCallback(
+    (files: FileList | File[]) => {
+      const fileArray = Array.from(files)
+      const accepted: File[] = []
+      const rejected: File[] = []
+
+      fileArray.forEach((file) => {
+        if (validImageTypes.includes(file.type)) {
+          accepted.push(file)
+        } else {
+          rejected.push(file)
+        }
+      })
+
+      const newFiles = accepted.map(file => ({
         file,
         preview: URL.createObjectURL(file)
       }))
 
       const updatedFiles = [...uploadedFiles, ...newFiles].slice(0, maxFiles)
       setUploadedFiles(updatedFiles)
-      setRejectedFiles(rejectedFiles)
+      setRejectedFiles(rejected)
       onFilesAdded(updatedFiles)
     },
-    [uploadedFiles, maxFiles, onFilesAdded]
+    [uploadedFiles, maxFiles, onFilesAdded, validImageTypes]
+  )
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault()
+      setIsDragging(false)
+
+      if (e.dataTransfer.files) {
+        handleFiles(e.dataTransfer.files)
+      }
+    },
+    [handleFiles]
+  )
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }, [])
+
+  const handleFileInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files) {
+        handleFiles(e.target.files)
+      }
+    },
+    [handleFiles]
   )
 
   const removeFile = useCallback((index: number) => {
@@ -54,132 +106,155 @@ export function ProductImageUpload({
     onFilesAdded(newFiles)
   }, [uploadedFiles, onFilesAdded])
 
-  const validImageTypes = ['image/gif', 'image/jpeg', 'image/png', 'image/webp']
-
-  const fileUpload = !uploadedFiles.length ? (
-    <DropZone.FileUpload actionHint="Accepts images only" />
-  ) : null
-
-  const uploadedFilesList = uploadedFiles.length > 0 ? (
-    <BlockStack gap="400">
-      <InlineStack gap="400" wrap>
-        {uploadedFiles.map((file, index) => (
-          <div
-            key={index}
-            onClick={() => removeFile(index)}
-            style={{ cursor: 'pointer', position: 'relative' }}
-          >
-            <Thumbnail
-              source={file.preview}
-              alt={file.file.name}
-              size="large"
-            />
-            <div style={{
-              position: 'absolute',
-              top: -8,
-              right: -8,
-              background: 'red',
-              color: 'white',
-              borderRadius: '50%',
-              width: 20,
-              height: 20,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 12
-            }}>
-              ×
-            </div>
-          </div>
-        ))}
-      </InlineStack>
-      <Text as="p" variant="bodyMd" tone="subdued">
-        {uploadedFiles.length} of {maxFiles} images uploaded. Click an image to remove it.
-      </Text>
-    </BlockStack>
-  ) : null
-
   return (
     <Card>
-      <BlockStack gap="400">
-        <InlineStack align="space-between" blockAlign="center">
-          <BlockStack gap="100">
-            <Text as="h2" variant="headingMd">{title}</Text>
-            <Text as="p" variant="bodyMd" tone="subdued">{description}</Text>
-          </BlockStack>
-        </InlineStack>
-
-        {/* Display existing product images as thumbnails */}
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-lg">{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Display existing product images */}
         {existingImages.length > 0 && (
-          <Box>
-            <InlineStack align="space-between" blockAlign="center" gap="400">
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
               <Checkbox
-                label={`Use existing product images (${existingImages.length} available)`}
+                id="use-existing"
                 checked={useExistingImages}
-                onChange={(value) => onExistingImagesToggle?.(value)}
+                onCheckedChange={(checked) => onExistingImagesToggle?.(!!checked)}
               />
-            </InlineStack>
+              <Label
+                htmlFor="use-existing"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Use existing product images ({existingImages.length} available)
+              </Label>
+            </div>
 
             {useExistingImages && (
-              <Box paddingBlockStart="300">
-                <InlineStack gap="300" wrap>
-                  {existingImages.map((image, index) => (
-                    <Box
-                      key={index}
-                      background="bg-surface-secondary"
-                      borderRadius="200"
-                      padding="200"
-                    >
-                      <Thumbnail
-                        source={image}
+              <div className="flex flex-wrap gap-3">
+                {existingImages.map((image, index) => (
+                  <div
+                    key={index}
+                    className="p-2 rounded-lg"
+                    style={{ backgroundColor: colors.backgroundLight }}
+                  >
+                    <div className="w-24 h-24 relative rounded overflow-hidden">
+                      <img
+                        src={image}
                         alt={`Product image ${index + 1}`}
-                        size="large"
+                        className="w-full h-full object-cover"
                       />
-                    </Box>
-                  ))}
-                </InlineStack>
-              </Box>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
-          </Box>
+          </div>
         )}
 
         {/* Upload new images section */}
-        <Box>
-          <BlockStack gap="200">
-            <InlineStack gap="200" blockAlign="center">
-              <Icon source={UploadIcon} />
-              <Text as="h3" variant="headingSm">Upload New Images</Text>
-              <Badge tone="info">Optional</Badge>
-            </InlineStack>
-
-            <DropZone
-              onDrop={handleDropZoneDrop}
-              accept={validImageTypes.join(',')}
-              type="image"
-              allowMultiple={allowMultiple}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Upload className="w-4 h-4" />
+            <h3 className="font-semibold text-sm">Upload New Images</h3>
+            <Badge
+              variant="secondary"
+              style={{
+                backgroundColor: colors.info,
+                color: colors.white,
+              }}
             >
-              {uploadedFilesList || (
-                <DropZone.FileUpload
-                  actionTitle="Add images"
-                  actionHint="or drop images to upload"
-                />
-              )}
-            </DropZone>
+              Optional
+            </Badge>
+          </div>
 
-            {!useExistingImages && uploadedFiles.length === 0 && existingImages.length === 0 && (
-              <Text as="p" variant="bodySm" tone="subdued">
-                AI works best with product images. Either use existing images or upload new ones for better results.
-              </Text>
+          {/* Drop Zone */}
+          <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            className={`
+              border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
+              transition-colors duration-200
+              ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+            `}
+            onClick={() => document.getElementById('file-input')?.click()}
+          >
+            <input
+              id="file-input"
+              type="file"
+              accept={validImageTypes.join(',')}
+              multiple={allowMultiple}
+              onChange={handleFileInput}
+              className="hidden"
+            />
+
+            {uploadedFiles.length === 0 ? (
+              <div className="space-y-2">
+                <ImageIcon className="w-12 h-12 mx-auto" style={{ color: colors.grayText }} />
+                <div>
+                  <p className="text-sm font-medium">Add images</p>
+                  <p className="text-xs" style={{ color: colors.grayText }}>
+                    or drop images to upload
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-3 justify-center">
+                  {uploadedFiles.map((file, index) => (
+                    <div
+                      key={index}
+                      className="relative group"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="w-24 h-24 rounded overflow-hidden">
+                        <img
+                          src={file.preview}
+                          alt={file.file.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <button
+                        onClick={() => removeFile(index)}
+                        className="absolute -top-2 -right-2 rounded-full p-1 shadow-lg transition-opacity"
+                        style={{
+                          backgroundColor: colors.error,
+                          color: colors.white,
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm" style={{ color: colors.grayText }}>
+                  {uploadedFiles.length} of {maxFiles} images uploaded. Click an image to remove it.
+                </p>
+              </div>
             )}
-          </BlockStack>
-        </Box>
+          </div>
+
+          {!useExistingImages && uploadedFiles.length === 0 && existingImages.length === 0 && (
+            <p className="text-xs" style={{ color: colors.grayText }}>
+              AI works best with product images. Either use existing images or upload new ones for better results.
+            </p>
+          )}
+        </div>
 
         {rejectedFiles.length > 0 && (
-          <Banner tone="warning">
-            <p>Some files were rejected. Please upload only images (JPG, PNG, GIF, WebP).</p>
-          </Banner>
+          <Alert variant="destructive">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Some files were rejected. Please upload only images (JPG, PNG, GIF, WebP).
+            </AlertDescription>
+          </Alert>
         )}
-      </BlockStack>
+      </CardContent>
     </Card>
   )
 }

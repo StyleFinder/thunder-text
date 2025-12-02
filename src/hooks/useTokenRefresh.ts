@@ -6,6 +6,7 @@
 
 import { useEffect, useCallback, useRef } from 'react'
 import { useAppBridge } from '@/app/components/AppBridgeProvider'
+import { logger } from '@/lib/logger'
 
 export function useTokenRefresh() {
   const { shop, app } = useAppBridge()
@@ -24,7 +25,6 @@ export function useTokenRefresh() {
       const data = await response.json()
 
       if (data.needsRefresh && !isRefreshingRef.current) {
-        console.log('🔄 Token needs refresh, initiating...')
         await refreshToken()
       } else if (data.expiresIn) {
         // Schedule next check 5 minutes before expiry
@@ -32,7 +32,7 @@ export function useTokenRefresh() {
         scheduleNextCheck(nextCheck)
       }
     } catch (error) {
-      console.error('❌ Failed to check token status:', error)
+      logger.error('❌ Failed to check token status:', error as Error, { component: 'useTokenRefresh' })
       // Retry in 5 minutes
       scheduleNextCheck(5 * 60 * 1000)
     }
@@ -72,7 +72,6 @@ export function useTokenRefresh() {
         throw new Error(result.error || 'Token refresh failed')
       }
 
-      console.log('✅ Token refreshed successfully')
 
       // Update stored session token
       if (typeof window !== 'undefined') {
@@ -83,7 +82,7 @@ export function useTokenRefresh() {
       scheduleNextCheck(23 * 60 * 60 * 1000)
 
     } catch (error) {
-      console.error('❌ Token refresh failed:', error)
+      logger.error('❌ Token refresh failed:', error as Error, { component: 'useTokenRefresh' })
 
       // Retry in 1 minute
       setTimeout(() => {

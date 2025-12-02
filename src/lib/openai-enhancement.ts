@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { type EnhancementProductData } from "./shopify/product-enhancement";
+import { logger } from '@/lib/logger'
 
 // Use the existing OpenAI client
 const openai = new OpenAI({
@@ -64,7 +65,6 @@ export class ProductEnhancementGenerator {
     const startTime = Date.now();
 
     try {
-      console.log("🔄 Generating enhanced product description");
 
       // Build enhancement-specific prompt
       const prompt = await this.buildEnhancementPrompt(request);
@@ -133,10 +133,9 @@ export class ProductEnhancementGenerator {
         },
       };
 
-      console.log("✅ Enhanced description generated successfully");
       return result;
     } catch (error) {
-      console.error("❌ Error generating enhanced description:", error);
+      logger.error("❌ Error generating enhanced description:", error as Error, { component: 'openai-enhancement' });
       throw new Error(
         `Enhancement generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
@@ -163,7 +162,7 @@ export class ProductEnhancementGenerator {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       customPrompts = await getCombinedPrompt(storeId, category as any);
     } catch (error) {
-      console.error("Failed to load custom prompts for enhancement:", error);
+      logger.error("Failed to load custom prompts for enhancement:", error as Error, { component: 'openai-enhancement' });
     }
 
     // Use the same detailed template instructions as create workflow

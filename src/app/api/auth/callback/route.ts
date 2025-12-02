@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 
 /**
  * OAuth Callback Handler
@@ -11,7 +12,6 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const hmac = searchParams.get('hmac')
 
-  console.log('📥 OAuth callback received:', { shop, hasCode: !!code, hasHmac: !!hmac })
 
   if (!shop || !code) {
     return NextResponse.json({
@@ -23,16 +23,6 @@ export async function GET(request: NextRequest) {
   try {
     // Exchange authorization code for access token
     const tokenUrl = `https://${shop}/admin/oauth/access_token`
-
-    console.log('🔑 OAuth credentials check:', {
-      hasApiKey: !!process.env.NEXT_PUBLIC_SHOPIFY_API_KEY,
-      apiKeyPrefix: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY?.substring(0, 8),
-      hasApiSecret: !!process.env.SHOPIFY_API_SECRET,
-      apiSecretPrefix: process.env.SHOPIFY_API_SECRET?.substring(0, 8),
-      apiSecretLength: process.env.SHOPIFY_API_SECRET?.length,
-      hasCode: !!code,
-      codePrefix: code?.substring(0, 20)
-    })
 
     const tokenResponse = await fetch(tokenUrl, {
       method: 'POST',
@@ -46,15 +36,9 @@ export async function GET(request: NextRequest) {
       })
     })
 
-    console.log('📥 OAuth response:', {
-      status: tokenResponse.status,
-      statusText: tokenResponse.statusText,
-      ok: tokenResponse.ok
-    })
-
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text()
-      console.error('❌ OAuth token exchange failed:', {
+      logger.error('❌ OAuth token exchange failed:', undefined, { 
         status: tokenResponse.status,
         statusText: tokenResponse.statusText,
         errorText,
@@ -62,7 +46,7 @@ export async function GET(request: NextRequest) {
         hasApiKey: !!process.env.NEXT_PUBLIC_SHOPIFY_API_KEY,
         hasApiSecret: !!process.env.SHOPIFY_API_SECRET,
         apiSecretLength: process.env.SHOPIFY_API_SECRET?.length
-      })
+      , component: 'callback' })
       return NextResponse.json({
         success: false,
         error: 'Failed to exchange authorization code',
@@ -71,7 +55,6 @@ export async function GET(request: NextRequest) {
     }
 
     const tokenData = await tokenResponse.json()
-    console.log('✅ OAuth token received successfully')
 
     // Store access token in Supabase
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -93,14 +76,13 @@ export async function GET(request: NextRequest) {
       })
 
     if (dbError) {
-      console.error('❌ Error storing token:', dbError)
+      logger.error('❌ Error storing token:', dbError as Error, { component: 'callback' })
       return NextResponse.json({
         success: false,
         error: 'Failed to store access token'
       }, { status: 500 })
     }
 
-    console.log('✅ Access token stored successfully for shop:', fullShopDomain)
 
     // Redirect to app with embedded and authenticated parameters
     const appUrl = `/?shop=${shop}&embedded=1&authenticated=true`
@@ -108,7 +90,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(appUrl, request.url))
 
   } catch (error) {
-    console.error('❌ OAuth callback error:', error)
+    logger.error('❌ OAuth callback error:', error as Error, { component: 'callback' })
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'OAuth callback failed'

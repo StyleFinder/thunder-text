@@ -9,6 +9,7 @@ import { SampleUpload } from '@/components/content-center/SampleUpload'
 import { SampleList } from '@/components/content-center/SampleList'
 import { VoiceAnalysisLoader } from '@/components/ui/loading/VoiceAnalysisLoader'
 import { Sparkles, FileText, Wand2, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 type OnboardingStep = 'welcome' | 'upload' | 'generating' | 'review' | 'complete'
 
@@ -63,7 +64,7 @@ export default function OnboardingPage() {
         throw new Error(data.error || 'Failed to generate profile')
       }
     } catch (error) {
-      console.error('Profile generation error:', error)
+      logger.error('Profile generation error:', error as Error, { component: 'onboarding' })
       alert('Failed to generate voice profile. Please try again.')
       setCurrentStep('upload')
     } finally {

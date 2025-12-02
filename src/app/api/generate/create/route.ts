@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
 import { getCombinedPrompt, type ProductCategory } from "@/lib/prompts";
+import { logger } from '@/lib/logger'
 
 interface CreateProductRequest {
   images: string[]; // base64 encoded images
@@ -24,14 +25,13 @@ export async function POST(request: NextRequest) {
       : undefined;
 
     if (!authToken) {
-      console.error("❌ No auth token provided for generate/create API");
+      logger.error("❌ No auth token provided for generate/create API", undefined, { component: 'create' });
       return NextResponse.json(
         { success: false, error: "Authentication required" },
         { status: 401 },
       );
     }
 
-    console.log("✅ Auth token present for generate/create API");
 
     // Get shop domain from X-Shop-Domain header or decode from token
     let shopDomain: string | null = request.headers.get("x-shop-domain");
@@ -41,13 +41,12 @@ export async function POST(request: NextRequest) {
       // Check if it's a dev token (for development/testing with authenticated=true)
       if (authToken === "dev-token") {
         // Dev token - shop domain must be in header
-        console.log("ℹ️ Dev token detected, X-Shop-Domain header required");
         // Continue - shop domain will be validated below
       }
       // Check if it's an OAuth token (starts with shpat_) or JWT session token
       else if (authToken.startsWith("shpat_")) {
         // OAuth token - shop domain must be in header
-        console.error("❌ OAuth token provided but no X-Shop-Domain header");
+        logger.error("❌ OAuth token provided but no X-Shop-Domain header", undefined, { component: 'create' });
         return NextResponse.json(
           { success: false, error: "Shop domain required for OAuth authentication" },
           { status: 401 },
@@ -60,10 +59,9 @@ export async function POST(request: NextRequest) {
             const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
             const shopMatch = payload.dest?.match(/https:\/\/([^\/]+)/);
             shopDomain = shopMatch ? shopMatch[1] : null;
-            console.log("🔍 Decoded shop from session token:", shopDomain);
           }
         } catch (error) {
-          console.error("❌ Failed to decode session token:", error);
+          logger.error("❌ Failed to decode session token:", error as Error, { component: 'create' });
           return NextResponse.json(
             { success: false, error: "Invalid authentication token" },
             { status: 401 },
@@ -73,14 +71,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (!shopDomain) {
-      console.error("❌ No shop domain found in token or headers");
+      logger.error("❌ No shop domain found in token or headers", undefined, { component: 'create' });
       return NextResponse.json(
         { success: false, error: "Shop domain required" },
         { status: 401 },
       );
     }
 
-    console.log("🔍 Authenticated request for shop:", shopDomain)
 
     const body: CreateProductRequest = await request.json();
 
@@ -96,12 +93,6 @@ export async function POST(request: NextRequest) {
       keyFeatures,
       additionalNotes,
     } = body;
-
-    console.log("🔍 FRONTEND DATA RECEIVED:", {
-      category,
-      template,
-      raw_body: { category: body.category, template: body.template },
-    });
 
     if (!images || images.length === 0) {
       return NextResponse.json(
@@ -125,23 +116,11 @@ export async function POST(request: NextRequest) {
     const productCategory = (template as ProductCategory) || "general";
 
     // Get custom prompts for the store and category
-    console.log("🎯 AI Generation - Building custom prompt for:", {
-      parentCategory: category,
-      productTemplate: template,
-      mappedCategory: productCategory,
-      storeId,
-    });
-
     let customPrompts = null;
     let systemPrompt = "";
 
     try {
       customPrompts = await getCombinedPrompt(storeId, productCategory);
-      console.log("✅ Custom prompts loaded:", {
-        hasSystemPrompt: !!customPrompts?.system_prompt,
-        hasCategoryTemplate: !!customPrompts?.category_template,
-        hasCombo: !!customPrompts?.combined,
-      });
 
       if (customPrompts?.combined) {
         // Add primary product focus if productType is specified
@@ -235,7 +214,7 @@ Closing content in plain text highlighting key benefits.`;
         throw new Error("No custom prompts available");
       }
     } catch (error) {
-      console.error("❌ Failed to load custom prompts, using fallback:", error);
+      logger.error("❌ Failed to load custom prompts, using fallback:", error, undefined, { component: 'create' });
 
       // Add primary product focus for fallback prompt too
       const primaryProductGuidance = productType
@@ -369,11 +348,8 @@ ${additionalNotes ? `Special Instructions: ${additionalNotes}` : ""}`;
     let parsedContent;
     try {
       parsedContent = JSON.parse(generatedContent);
-      console.log("🔍 OpenAI Response - Description preview (first 200 chars):", parsedContent.description?.substring(0, 200));
-      console.log("🔍 Has <b> tags:", parsedContent.description?.includes("<b>"));
-      console.log("🔍 Has <br> tags:", parsedContent.description?.includes("<br>"));
     } catch (parseError) {
-      console.error("Failed to parse OpenAI response:", parseError);
+      logger.error("Failed to parse OpenAI response:", parseError as Error, { component: 'create' });
       return NextResponse.json(
         { success: false, error: "Generated content format error" },
         { status: 500 },
@@ -389,7 +365,7 @@ ${additionalNotes ? `Special Instructions: ${additionalNotes}` : ""}`;
       "keywords",
     ] as const;
     // Safe: requiredFields is a const array we control, not user input
-    // eslint-disable-next-line security/detect-object-injection
+     
     const missingFields = requiredFields.filter(
       (field) => !parsedContent[field],
     );
@@ -444,7 +420,7 @@ ${additionalNotes ? `Special Instructions: ${additionalNotes}` : ""}`;
       usage,
     });
   } catch (error) {
-    console.error("Create product generation error:", error);
+    logger.error("Create product generation error:", error as Error, { component: 'create' });
     return NextResponse.json(
       {
         success: false,

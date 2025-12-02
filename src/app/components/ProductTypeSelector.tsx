@@ -1,8 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Select, Box, InlineStack, TextField } from '@shopify/polaris'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 import { authenticatedFetch } from '@/lib/shopify/api-client'
+import { Loader2 } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 interface ProductTypeSelectorProps {
   value: string
@@ -23,7 +28,6 @@ export function ProductTypeSelector({ value, onChange, shopDomain }: ProductType
         setLoading(true)
         setError(null)
 
-        console.log('🔍 ProductTypeSelector: Fetching product types for shop:', shopDomain)
 
         const params = new URLSearchParams()
         if (shopDomain) {
@@ -31,32 +35,39 @@ export function ProductTypeSelector({ value, onChange, shopDomain }: ProductType
         }
 
         const url = `/api/shopify/product-types?${params.toString()}`
-        console.log('🔍 ProductTypeSelector: Calling URL:', url)
 
         const response = await authenticatedFetch(url)
 
-        console.log('📥 ProductTypeSelector: Response status:', response.status)
 
         if (!response.ok) {
-          const errorData = await response.json()
-          console.error('❌ ProductTypeSelector: API error:', errorData)
-          throw new Error(errorData.error || 'Failed to fetch product types')
+          let errorMessage = 'Failed to fetch product types'
+          try {
+            const errorData = await response.json()
+            console.warn('⚠️ ProductTypeSelector: API returned error (non-critical):', errorData)
+            errorMessage = errorData.error || errorMessage
+          } catch (e) {
+            console.warn('⚠️ ProductTypeSelector: Could not parse error response (non-critical)')
+          }
+          console.warn('⚠️ ProductTypeSelector:', errorMessage, '- Falling back to manual entry')
+          setProductTypes([])
+          setError(null)
+          setLoading(false)
+          return
         }
 
         const data = await response.json()
-        console.log('✅ ProductTypeSelector: Data received:', data)
 
         if (data.success && data.data?.productTypes) {
           setProductTypes(data.data.productTypes)
-          console.log(`✅ ProductTypeSelector: Loaded ${data.data.productTypes.length} product types`)
         } else {
           setProductTypes([])
-          console.log('⚠️ ProductTypeSelector: No product types found, showing dropdown anyway')
         }
       } catch (err) {
-        console.error('❌ ProductTypeSelector: Error:', err)
-        setError(`Unable to load product types: ${err instanceof Error ? err.message : 'Unknown error'}`)
+        logger.error('❌ ProductTypeSelector: Error:', err as Error, { component: 'ProductTypeSelector' })
+        // Don't show error for product types - just fall back to manual entry
+        // This is not a critical failure, users can still type manually
         setProductTypes([])
+        setError(null) // Clear error to allow manual entry
       } finally {
         setLoading(false)
       }
@@ -64,13 +75,6 @@ export function ProductTypeSelector({ value, onChange, shopDomain }: ProductType
 
     fetchProductTypes()
   }, [shopDomain])
-
-  // Build options for the select
-  const options = [
-    { label: 'Select a product type...', value: '' },
-    ...productTypes.map((type) => ({ label: type, value: type })),
-    { label: '+ Add new type...', value: '__custom__' },
-  ]
 
   const handleSelectChange = (selectedValue: string) => {
     if (selectedValue === '__custom__') {
@@ -82,82 +86,94 @@ export function ProductTypeSelector({ value, onChange, shopDomain }: ProductType
     }
   }
 
-  const handleCustomTypeChange = (newValue: string) => {
+  const handleCustomTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value
     setCustomType(newValue)
     onChange(newValue)
   }
 
   if (loading) {
     return (
-      <Box>
-        <Select
-          label="Product Type"
-          options={[{ label: 'Loading product types...', value: '' }]}
-          value=""
-          disabled
-          helpText="Used to organize your products in Shopify"
-        />
-      </Box>
+      <div className="space-y-2">
+        <Label className="text-gray-900">Product Type</Label>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading product types...
+        </div>
+        <p className="text-sm text-gray-500">
+          Used to organize your products in Shopify
+        </p>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <Box>
-        <TextField
-          label="Product Type"
+      <div className="space-y-2">
+        <Label htmlFor="product-type-manual" className="text-gray-900">Product Type</Label>
+        <Input
+          id="product-type-manual"
           value={value}
-          onChange={onChange}
-          helpText={`Error loading types: ${error}. Enter manually instead.`}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Enter product type"
           autoComplete="off"
-          error={error}
         />
-      </Box>
+        <p className="text-sm text-red-600">
+          Error loading types: {error}. Enter manually instead.
+        </p>
+      </div>
     )
   }
 
   return (
-    <Box>
+    <div className="space-y-2">
       {showCustomInput ? (
-        <InlineStack gap="400" blockAlign="end">
-          <Box minWidth="70%">
-            <TextField
-              label="Product Type"
-              value={customType}
-              onChange={handleCustomTypeChange}
-              helpText="Enter a new product type"
-              autoComplete="off"
-              placeholder="e.g., Tops, Dresses, Shoes"
-            />
-          </Box>
-          <Box>
-            <button
+        <>
+          <Label htmlFor="custom-product-type" className="text-gray-900">Product Type</Label>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                id="custom-product-type"
+                value={customType}
+                onChange={handleCustomTypeChange}
+                placeholder="e.g., Tops, Dresses, Shoes"
+                autoComplete="off"
+              />
+            </div>
+            <Button
               type="button"
+              variant="outline"
               onClick={() => {
                 setShowCustomInput(false)
                 onChange('')
               }}
-              style={{
-                padding: '8px 12px',
-                background: '#f6f6f7',
-                border: '1px solid #c9cccf',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
             >
               Cancel
-            </button>
-          </Box>
-        </InlineStack>
+            </Button>
+          </div>
+          <p className="text-sm text-gray-500">Enter a new product type</p>
+        </>
       ) : (
-        <Select
-          label="Product Type"
-          options={options}
-          value={value}
-          onChange={handleSelectChange}
-          helpText="Choose from existing types or add a new one"
-        />
+        <>
+          <Label htmlFor="product-type" className="text-gray-900">Product Type</Label>
+          <Select value={value} onValueChange={handleSelectChange}>
+            <SelectTrigger id="product-type">
+              <SelectValue placeholder="Select a product type..." />
+            </SelectTrigger>
+            <SelectContent>
+              {productTypes.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+              <SelectItem value="__custom__">+ Add new type...</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-gray-500">
+            Choose from existing types or add a new one
+          </p>
+        </>
       )}
-    </Box>
+    </div>
   )
 }
