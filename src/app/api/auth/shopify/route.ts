@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
   const secureState = createShopifyOAuthState(shopDomain);
 
   const scopes = process.env.SCOPES || "read_products,write_products";
-  // Update callback to match the actual callback route
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/shopify/auth/callback`;
+  // Use the whitelisted callback URL
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/shopify/callback`;
 
   const authUrl =
     `https://${shopDomain}/admin/oauth/authorize?` +

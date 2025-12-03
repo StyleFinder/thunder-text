@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import crypto from 'crypto';
-import { logger } from '@/lib/logger'
+import { logger } from '@/lib/logger';
+import { validateShopifyOAuthState } from '@/lib/security/oauth-validation';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -11,9 +12,17 @@ export async function GET(req: NextRequest) {
   const hmac = searchParams.get('hmac');
 
 
-  if (!code || !shop) {
-    logger.error('[Shopify Callback] Missing code or shop parameter', undefined, { component: 'callback' });
+  if (!code || !shop || !state) {
+    logger.error('[Shopify Callback] Missing required parameters', undefined, { component: 'callback' });
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=oauth_failed`);
+  }
+
+  // Validate state parameter (CSRF protection)
+  try {
+    validateShopifyOAuthState(state, shop);
+  } catch (error) {
+    logger.error('[Shopify Callback] State validation failed', error as Error, { component: 'callback' });
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=invalid_state`);
   }
 
   // Verify HMAC (Shopify security check)
