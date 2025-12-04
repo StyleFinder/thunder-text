@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import DOMPurify from "dompurify";
 import {
   Dialog,
   DialogContent,
@@ -100,7 +101,18 @@ export default function EnhancedContentComparison({
     });
   }, [enhancedContent]);
 
-  // Helper function to render HTML content properly
+  /**
+   * SECURITY: Helper function to render HTML content safely
+   *
+   * Uses DOMPurify to sanitize HTML before rendering to prevent XSS attacks.
+   * Only allows safe formatting tags (p, strong, em, br, ul, ol, li).
+   *
+   * Even though content comes from trusted sources (AI API, Shopify),
+   * defense-in-depth requires sanitization to prevent:
+   * - Prompt injection attacks that could embed malicious HTML
+   * - Compromised upstream data sources
+   * - Future code changes that might introduce untrusted data
+   */
   const renderFormattedHTML = (htmlContent: string) => {
     // Process the HTML to ensure proper formatting
     const processedHTML = htmlContent
@@ -110,9 +122,16 @@ export default function EnhancedContentComparison({
       .replace(/^(?!<p>)/, "<p>")
       .replace(/(?!<\/p>)$/, "</p>");
 
+    // SECURITY: Sanitize HTML to prevent XSS attacks
+    // Only allow safe formatting tags - no scripts, event handlers, or dangerous elements
+    const sanitizedHTML = DOMPurify.sanitize(processedHTML, {
+      ALLOWED_TAGS: ["p", "strong", "em", "b", "i", "br", "ul", "ol", "li"],
+      ALLOWED_ATTR: [], // No attributes allowed (prevents onclick, onerror, etc.)
+    });
+
     return (
       <div
-        dangerouslySetInnerHTML={{ __html: processedHTML }}
+        dangerouslySetInnerHTML={{ __html: sanitizedHTML }}
         style={{
           lineHeight: 1.8,
           fontSize: "14px",
@@ -189,9 +208,7 @@ export default function EnhancedContentComparison({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Checkbox
-                checked={
-                  fieldsToApply[fieldName as keyof typeof fieldsToApply]
-                }
+                checked={fieldsToApply[fieldName as keyof typeof fieldsToApply]}
                 onCheckedChange={(checked) =>
                   setFieldsToApply((prev) => ({
                     ...prev,
@@ -216,10 +233,7 @@ export default function EnhancedContentComparison({
                   )}
                 </div>
                 {fieldsToApply[fieldName as keyof typeof fieldsToApply] && (
-                  <p
-                    className="text-sm"
-                    style={{ color: colors.success }}
-                  >
+                  <p className="text-sm" style={{ color: colors.success }}>
                     ✓ Will be applied to product
                   </p>
                 )}
@@ -246,8 +260,14 @@ export default function EnhancedContentComparison({
             >
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Copy className="w-4 h-4" style={{ color: colors.grayText }} />
-                  <h4 className="font-medium text-sm" style={{ color: colors.grayText }}>
+                  <Copy
+                    className="w-4 h-4"
+                    style={{ color: colors.grayText }}
+                  />
+                  <h4
+                    className="font-medium text-sm"
+                    style={{ color: colors.grayText }}
+                  >
                     Current Version
                   </h4>
                 </div>
@@ -273,14 +293,19 @@ export default function EnhancedContentComparison({
               className="p-4 rounded-lg border-2"
               style={{
                 backgroundColor: colors.white,
-                borderColor: fieldsToApply[fieldName as keyof typeof fieldsToApply]
+                borderColor: fieldsToApply[
+                  fieldName as keyof typeof fieldsToApply
+                ]
                   ? colors.success
                   : colors.backgroundLight,
               }}
             >
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" style={{ color: colors.smartBlue }} />
+                  <Sparkles
+                    className="w-4 h-4"
+                    style={{ color: colors.smartBlue }}
+                  />
                   <h4
                     className="font-medium text-sm"
                     style={{ color: colors.smartBlue }}
@@ -399,7 +424,8 @@ export default function EnhancedContentComparison({
             AI Enhanced Content Review
           </DialogTitle>
           <DialogDescription>
-            Review and select which AI-generated content to apply to your product
+            Review and select which AI-generated content to apply to your
+            product
           </DialogDescription>
         </DialogHeader>
 
@@ -409,7 +435,10 @@ export default function EnhancedContentComparison({
             <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Sparkles className="w-5 h-5" style={{ color: colors.smartBlue }} />
+                  <Sparkles
+                    className="w-5 h-5"
+                    style={{ color: colors.smartBlue }}
+                  />
                   <h3 className="font-semibold text-sm">
                     AI-Generated Content Ready
                   </h3>
@@ -458,19 +487,23 @@ export default function EnhancedContentComparison({
               <TabsTrigger value="main">
                 Main Content
                 <Badge variant="secondary" className="ml-2">
-                  {[enhancedContent.title, enhancedContent.description].filter(
-                    Boolean,
-                  ).length}
+                  {
+                    [enhancedContent.title, enhancedContent.description].filter(
+                      Boolean,
+                    ).length
+                  }
                 </Badge>
               </TabsTrigger>
               <TabsTrigger value="seo">
                 SEO & Marketing
                 <Badge variant="secondary" className="ml-2">
-                  {[
-                    enhancedContent.seoTitle,
-                    enhancedContent.seoDescription,
-                    enhancedContent.promoText,
-                  ].filter(Boolean).length}
+                  {
+                    [
+                      enhancedContent.seoTitle,
+                      enhancedContent.seoDescription,
+                      enhancedContent.promoText,
+                    ].filter(Boolean).length
+                  }
                 </Badge>
               </TabsTrigger>
               <TabsTrigger value="features">
@@ -585,7 +618,10 @@ export default function EnhancedContentComparison({
               }}
             >
               <div className="flex items-center gap-2">
-                <CheckCircle style={{ color: colors.success }} className="w-4 h-4" />
+                <CheckCircle
+                  style={{ color: colors.success }}
+                  className="w-4 h-4"
+                />
                 <p className="text-sm" style={{ color: colors.success }}>
                   {selectedCount} field{selectedCount !== 1 ? "s" : ""} selected
                   for update
