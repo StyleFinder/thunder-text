@@ -15,6 +15,11 @@ SECURITY FALSE POSITIVE NOTES:
 - R-F8672 (HTTP read): This script does NOT use HTTP requests. The .read()
   call at line 242 is standard Python file I/O using open(), not HTTP response
   handling. There is no requests, urllib, or http library usage.
+- R-3F913 (URL Prefix Check): This script does NOT perform URL validation.
+  The `line.startswith('import ')` check at line ~190 tests if a LINE OF SOURCE
+  CODE begins with the string "import " - used for parsing TypeScript/JavaScript
+  files to find import statement locations. This is string prefix matching on
+  code lines, NOT URL prefix validation. No URL parsing or validation occurs.
 """
 
 import re
