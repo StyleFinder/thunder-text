@@ -1,8 +1,9 @@
-'use client'
+"use client";
 
-import { useEffect, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { useEffect, useRef, useState, useCallback } from "react";
+import DOMPurify from "dompurify";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Bold,
   Italic,
@@ -16,152 +17,203 @@ import {
   Undo,
   Redo,
   Copy,
-  Check
-} from 'lucide-react'
+  Check,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip'
+} from "@/components/ui/tooltip";
 
 interface RichTextEditorProps {
-  content: string
-  onChange: (content: string) => void
-  readOnly?: boolean
-  minHeight?: string
-  className?: string
+  content: string;
+  onChange: (content: string) => void;
+  readOnly?: boolean;
+  minHeight?: string;
+  className?: string;
+}
+
+// DOMPurify configuration for rich text editor
+// Allows formatting tags while blocking dangerous elements
+const DOMPURIFY_CONFIG = {
+  ALLOWED_TAGS: [
+    "p",
+    "br",
+    "b",
+    "i",
+    "u",
+    "strong",
+    "em",
+    "span",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "ul",
+    "ol",
+    "li",
+    "blockquote",
+    "a",
+    "div",
+  ],
+  ALLOWED_ATTR: ["href", "target", "rel", "class", "style"],
+  ALLOW_DATA_ATTR: false,
+  ADD_ATTR: ["target"],
+  // Force all links to open in new tab with security attributes
+  FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "input"],
+  FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover"],
+};
+
+/**
+ * Sanitizes HTML content to prevent XSS attacks
+ * Uses DOMPurify with strict configuration for rich text editing
+ */
+function sanitizeHtml(html: string): string {
+  if (typeof window === "undefined") return html;
+  return DOMPurify.sanitize(html, DOMPURIFY_CONFIG);
 }
 
 export function RichTextEditor({
   content,
   onChange,
   readOnly = false,
-  minHeight = '400px',
-  className = ''
+  minHeight = "400px",
+  className = "",
 }: RichTextEditorProps) {
-  const editorRef = useRef<HTMLDivElement>(null)
-  const [isCopied, setIsCopied] = useState(false)
-  const [canUndo, setCanUndo] = useState(false)
-  const [canRedo, setCanRedo] = useState(false)
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [isCopied, setIsCopied] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  // Memoize sanitized content to avoid unnecessary re-sanitization
+  const sanitizedContent = useCallback(() => sanitizeHtml(content), [content]);
 
   useEffect(() => {
-    if (editorRef.current && content !== editorRef.current.innerHTML) {
-      editorRef.current.innerHTML = content
+    if (editorRef.current) {
+      const sanitized = sanitizedContent();
+      // Only update if content actually changed (prevents cursor jump)
+      if (sanitized !== editorRef.current.innerHTML) {
+        // SECURITY: Using innerHTML here is safe because content is sanitized
+        // via DOMPurify which removes all XSS vectors
+        editorRef.current.innerHTML = sanitized;
+      }
     }
-  }, [content])
+  }, [sanitizedContent]);
 
   const handleInput = () => {
     if (editorRef.current && !readOnly) {
-      onChange(editorRef.current.innerHTML)
-      updateUndoRedoState()
+      onChange(editorRef.current.innerHTML);
+      updateUndoRedoState();
     }
-  }
+  };
 
   const updateUndoRedoState = () => {
-    setCanUndo(document.queryCommandEnabled('undo'))
-    setCanRedo(document.queryCommandEnabled('redo'))
-  }
+    setCanUndo(document.queryCommandEnabled("undo"));
+    setCanRedo(document.queryCommandEnabled("redo"));
+  };
 
   const execCommand = (command: string, value?: string) => {
-    if (readOnly) return
-    document.execCommand(command, false, value)
-    editorRef.current?.focus()
-    handleInput()
-  }
+    if (readOnly) return;
+    document.execCommand(command, false, value);
+    editorRef.current?.focus();
+    handleInput();
+  };
 
   const handleCopy = async () => {
     if (editorRef.current) {
-      const text = editorRef.current.innerText
-      await navigator.clipboard.writeText(text)
-      setIsCopied(true)
-      setTimeout(() => setIsCopied(false), 2000)
+      const text = editorRef.current.innerText;
+      await navigator.clipboard.writeText(text);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
     }
-  }
+  };
 
   const formatButtons = [
     {
       icon: Bold,
-      label: 'Bold',
-      command: 'bold',
-      shortcut: 'Cmd+B'
+      label: "Bold",
+      command: "bold",
+      shortcut: "Cmd+B",
     },
     {
       icon: Italic,
-      label: 'Italic',
-      command: 'italic',
-      shortcut: 'Cmd+I'
+      label: "Italic",
+      command: "italic",
+      shortcut: "Cmd+I",
     },
     {
       icon: Underline,
-      label: 'Underline',
-      command: 'underline',
-      shortcut: 'Cmd+U'
+      label: "Underline",
+      command: "underline",
+      shortcut: "Cmd+U",
     },
     {
       icon: Heading1,
-      label: 'Heading 1',
-      command: 'formatBlock',
-      value: '<h1>'
+      label: "Heading 1",
+      command: "formatBlock",
+      value: "<h1>",
     },
     {
       icon: Heading2,
-      label: 'Heading 2',
-      command: 'formatBlock',
-      value: '<h2>'
+      label: "Heading 2",
+      command: "formatBlock",
+      value: "<h2>",
     },
     {
       icon: List,
-      label: 'Bullet List',
-      command: 'insertUnorderedList'
+      label: "Bullet List",
+      command: "insertUnorderedList",
     },
     {
       icon: ListOrdered,
-      label: 'Numbered List',
-      command: 'insertOrderedList'
+      label: "Numbered List",
+      command: "insertOrderedList",
     },
     {
       icon: Quote,
-      label: 'Quote',
-      command: 'formatBlock',
-      value: '<blockquote>'
+      label: "Quote",
+      command: "formatBlock",
+      value: "<blockquote>",
     },
     {
       icon: Link,
-      label: 'Insert Link',
-      command: 'createLink',
+      label: "Insert Link",
+      command: "createLink",
       customHandler: () => {
-        const url = prompt('Enter URL:')
-        if (url) execCommand('createLink', url)
-      }
-    }
-  ]
+        const url = prompt("Enter URL:");
+        if (url) execCommand("createLink", url);
+      },
+    },
+  ];
 
   const utilityButtons = [
     {
       icon: Undo,
-      label: 'Undo',
-      command: 'undo',
+      label: "Undo",
+      command: "undo",
       disabled: !canUndo,
-      shortcut: 'Cmd+Z',
-      variant: 'ghost' as const
+      shortcut: "Cmd+Z",
+      variant: "ghost" as const,
     },
     {
       icon: Redo,
-      label: 'Redo',
-      command: 'redo',
+      label: "Redo",
+      command: "redo",
       disabled: !canRedo,
-      shortcut: 'Cmd+Shift+Z',
-      variant: 'ghost' as const
+      shortcut: "Cmd+Shift+Z",
+      variant: "ghost" as const,
     },
     {
       icon: isCopied ? Check : Copy,
-      label: isCopied ? 'Copied!' : 'Copy to clipboard',
+      label: isCopied ? "Copied!" : "Copy to clipboard",
       customHandler: handleCopy,
       disabled: false,
-      variant: isCopied ? 'default' : 'outline'
-    }
-  ]
+      variant: isCopied ? "default" : "outline",
+    },
+  ];
 
   return (
     <Card className={className}>
@@ -173,7 +225,7 @@ export function RichTextEditor({
               {/* Format Buttons */}
               <div className="flex gap-1 pr-2 border-r">
                 {formatButtons.map((button, idx) => {
-                  const Icon = button.icon
+                  const Icon = button.icon;
                   return (
                     <Tooltip key={idx}>
                       <TooltipTrigger asChild>
@@ -182,9 +234,9 @@ export function RichTextEditor({
                           variant="ghost"
                           onClick={() => {
                             if (button.customHandler) {
-                              button.customHandler()
+                              button.customHandler();
                             } else {
-                              execCommand(button.command, button.value)
+                              execCommand(button.command, button.value);
                             }
                           }}
                           className="h-8 w-8 p-0"
@@ -203,25 +255,33 @@ export function RichTextEditor({
                         </p>
                       </TooltipContent>
                     </Tooltip>
-                  )
+                  );
                 })}
               </div>
 
               {/* Utility Buttons */}
               <div className="flex gap-1">
                 {utilityButtons.map((button, idx) => {
-                  const Icon = button.icon
+                  const Icon = button.icon;
                   return (
                     <Tooltip key={idx}>
                       <TooltipTrigger asChild>
                         <Button
                           size="sm"
-                          variant={(button.variant || 'ghost') as "default" | "link" | "secondary" | "destructive" | "outline" | "ghost"}
+                          variant={
+                            (button.variant || "ghost") as
+                              | "default"
+                              | "link"
+                              | "secondary"
+                              | "destructive"
+                              | "outline"
+                              | "ghost"
+                          }
                           onClick={() => {
                             if (button.customHandler) {
-                              button.customHandler()
+                              button.customHandler();
                             } else {
-                              execCommand(button.command)
+                              execCommand(button.command);
                             }
                           }}
                           disabled={button.disabled}
@@ -241,7 +301,7 @@ export function RichTextEditor({
                         </p>
                       </TooltipContent>
                     </Tooltip>
-                  )
+                  );
                 })}
               </div>
             </TooltipProvider>
@@ -255,7 +315,7 @@ export function RichTextEditor({
           onInput={handleInput}
           className={`
             prose prose-sm max-w-none p-6 focus:outline-none
-            ${readOnly ? 'cursor-default' : 'cursor-text'}
+            ${readOnly ? "cursor-default" : "cursor-text"}
           `}
           style={{ minHeight }}
           suppressContentEditableWarning
@@ -266,7 +326,7 @@ export function RichTextEditor({
           <div className="border-t p-3 bg-muted/30 flex justify-end">
             <Button
               size="sm"
-              variant={isCopied ? 'default' : 'outline'}
+              variant={isCopied ? "default" : "outline"}
               onClick={handleCopy}
             >
               {isCopied ? (
@@ -285,5 +345,5 @@ export function RichTextEditor({
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

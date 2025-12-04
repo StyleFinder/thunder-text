@@ -10,10 +10,39 @@
  * - Uses static, known file paths (.env files in cwd)
  * - Uses static, known regex patterns for env var names
  * - Accesses env vars by known keys, not user input
+ *
+ * SECURITY: Path traversal protection is implemented via:
+ * - Whitelisted filenames only (no user input)
+ * - Path resolution and validation against base directory
  */
 
 import { existsSync, readFileSync } from "fs";
-import { join, basename } from "path";
+import { basename, resolve, normalize } from "path";
+
+/**
+ * SECURITY: Safely resolve a file path and validate it stays within the base directory
+ * Prevents path traversal attacks (e.g., ../../../etc/passwd)
+ *
+ * @param {string} baseDir - The base directory that resolved paths must stay within
+ * @param {string} filename - The filename to resolve (from whitelist only)
+ * @returns {string|null} - Resolved path if safe, null if path traversal detected
+ */
+function safeResolvePath(baseDir, filename) {
+  // Normalize and resolve both paths to absolute form
+  const normalizedBase = resolve(normalize(baseDir));
+  const resolvedPath = resolve(normalizedBase, normalize(filename));
+
+  // SECURITY: Verify the resolved path starts with the base directory
+  // This prevents path traversal attacks like "../../../etc/passwd"
+  if (!resolvedPath.startsWith(normalizedBase)) {
+    console.error(
+      `SECURITY: Path traversal attempt detected: ${filename} resolves outside ${baseDir}`,
+    );
+    return null;
+  }
+
+  return resolvedPath;
+}
 
 const DANGEROUS_ENV_VARS = [
   "SHOPIFY_AUTH_BYPASS",
@@ -48,6 +77,7 @@ function checkEnvFile(filePath) {
 function main() {
   console.log("Checking for auth bypass configuration...\n");
 
+  // SECURITY: Whitelist of allowed env files (no user input accepted)
   const envFiles = [
     ".env",
     ".env.local",
@@ -56,9 +86,18 @@ function main() {
   ];
 
   const allIssues = [];
+  const baseDir = process.cwd();
 
   for (const envFile of envFiles) {
-    const filePath = join(process.cwd(), envFile);
+    // SECURITY: Use safe path resolution with traversal protection
+    const filePath = safeResolvePath(baseDir, envFile);
+
+    // Skip if path traversal was detected (should never happen with whitelist)
+    if (!filePath) {
+      console.error(`Skipping ${envFile} due to security validation failure`);
+      continue;
+    }
+
     const result = checkEnvFile(filePath);
 
     if (result.exists) {

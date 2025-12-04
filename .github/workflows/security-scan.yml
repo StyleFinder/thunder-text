@@ -9,6 +9,14 @@ on:
     # Run weekly security scan every Monday at 9 AM UTC
     - cron: "0 9 * * 1"
 
+# SECURITY: Explicitly set minimum required permissions (principle of least privilege)
+# This prevents supply chain attacks where compromised dependencies could abuse default write-all permissions
+permissions:
+  contents: read # Read repository contents for checkout
+  pull-requests: write # Write PR comments with security summary
+  security-events: write # Upload SARIF files to GitHub Security tab
+  actions: read # Read workflow artifacts
+
 jobs:
   security:
     runs-on: ubuntu-latest
@@ -58,8 +66,8 @@ jobs:
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.14.0
         with:
-          target: 'https://thunder-text.onrender.com'
-          rules_file_name: '.zap/rules.tsv'
+          target: "https://thunder-text.onrender.com"
+          rules_file_name: ".zap/rules.tsv"
           fail_action: false
           allow_issue_writing: false
         # SECURITY: DAST scan for runtime vulnerabilities
