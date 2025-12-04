@@ -3,6 +3,7 @@
 // Using native img for blob URL previews - Next.js Image doesn't support blob URLs well
 
 import { Upload, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import type { UploadedFile, ColorVariant } from "../hooks/useColorDetection";
 
 interface PrimaryPhotoUploadProps {
@@ -427,7 +428,7 @@ export function PrimaryPhotoUpload({
                           >
                             Override color name (optional)
                           </label>
-                          <input
+                          <Input
                             id={`override-${variant.standardizedColor}`}
                             type="text"
                             value={variant.userOverride || ""}
@@ -438,22 +439,7 @@ export function PrimaryPhotoUpload({
                               )
                             }
                             placeholder={`Leave blank to use "${variant.standardizedColor}"`}
-                            style={{
-                              padding: "12px",
-                              fontSize: "14px",
-                              fontFamily:
-                                'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                              border: "1px solid #e5e7eb",
-                              borderRadius: "8px",
-                              outline: "none",
-                              transition: "border-color 0.15s ease",
-                            }}
-                            onFocus={(e) => {
-                              e.currentTarget.style.borderColor = "#0066cc";
-                            }}
-                            onBlur={(e) => {
-                              e.currentTarget.style.borderColor = "#e5e7eb";
-                            }}
+                            className="h-11 rounded-lg focus:ring-2 focus:ring-[#0066cc] focus:border-[#0066cc]"
                           />
                         </div>
                       </div>
