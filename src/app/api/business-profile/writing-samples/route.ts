@@ -3,6 +3,14 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireAuth } from '@/lib/auth/ace-compat';
 import { logger } from '@/lib/logger'
 
+/**
+ * Route segment config - file upload limits
+ * - 10MB body size limit for file uploads
+ * - 60s timeout for upload processing
+ */
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 const MAX_SAMPLES = 3;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 

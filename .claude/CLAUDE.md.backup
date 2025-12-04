@@ -1,0 +1,198 @@
+# Thunder Text - Project Instructions
+
+## Design System Compliance
+
+**CRITICAL**: When creating or modifying UI components, pages, or any visual elements, you MUST follow the [Master Design System](../ace-app/docs/MASTER_DESIGN_SYSTEM.md).
+
+### Design System Rules
+
+1. **ALWAYS Reference First**: Before writing any UI code, review the relevant sections of `../ace-app/docs/MASTER_DESIGN_SYSTEM.md`
+
+2. **Component Standards**:
+   - Use **Shadcn UI components** (not custom implementations)
+   - Use **Lucide icons** (not custom SVGs or other icon libraries)
+   - Follow the exact color palette defined in the design system
+   - Use Tailwind utility classes (not inline styles)
+
+3. **Color Usage**:
+   - Page backgrounds: `bg-gray-50` (never stark white)
+   - Cards: `bg-white` with proper shadows
+   - Primary actions: `bg-smart-500` (Smart Blue)
+   - Headings: `text-gray-900` or `text-oxford-800`
+   - Body text: `text-gray-900`
+   - Secondary text: `text-gray-500`
+
+4. **Spacing**:
+   - Follow the 4px base unit system
+   - Card padding: `p-6` or `p-8` (24px or 32px)
+   - Section spacing: `mb-8` to `mb-12` (32-48px)
+   - Element gaps: `gap-4` or `gap-6` (16px or 24px)
+   - **Main container**: `max-w-7xl mx-auto px-8 py-12`
+   - **Constrained cards**: `max-w-3xl mx-auto`
+
+5. **Typography**:
+   - Font family: Inter (already configured)
+   - Headings: Use proper hierarchy (h1, h2, h3)
+   - Font weights: 400 (normal), 500 (medium), 600 (semibold), 700 (bold)
+
+6. **Component Checklist**:
+   - [ ] Uses Shadcn UI components
+   - [ ] Uses Lucide icons
+   - [ ] Follows brand color palette
+   - [ ] Uses Tailwind classes (no inline styles)
+   - [ ] Proper spacing (4px grid)
+   - [ ] Cards are constrained (not full-width)
+   - [ ] Responsive design (mobile-first)
+   - [ ] Accessible (ARIA labels, focus states)
+   - [ ] Consistent with existing pages
+
+### Layout Rules (Critical for Thunder Text)
+
+**From THUNDER_TEXT_LAYOUT_FIXES.md**:
+
+1. **NEVER Let Cards Be Full Width**: Always constrain with `max-w-3xl mx-auto`
+2. **Main Container Must Have Max Width**: Use `max-w-7xl mx-auto px-8 py-12`
+3. **Consistent Card Spacing**: Use `flex flex-col gap-6` on main container
+
+### When to Consult the Design System
+
+**Always consult before**:
+- Creating new pages
+- Creating new components
+- Modifying existing UI
+- Adding buttons, cards, forms, tables
+- Choosing colors or spacing
+- Adding icons
+
+**Quick Reference Paths**:
+- Master Design System: `../ace-app/docs/MASTER_DESIGN_SYSTEM.md`
+- Layout Fixes: `../ace-app/docs/THUNDER_TEXT_LAYOUT_FIXES.md`
+- Modernization Guide: `../ace-app/docs/THUNDER_TEXT_MODERNIZATION.md`
+
+### Example Component Creation Flow
+
+```
+1. User asks: "Create a product upload page"
+2. You think: "I need to check the design system first"
+3. You review: ../ace-app/docs/MASTER_DESIGN_SYSTEM.md (Section 7: Patterns & Templates)
+4. You review: ../ace-app/docs/THUNDER_TEXT_LAYOUT_FIXES.md for spacing rules
+5. You implement: Using the page structure template and components
+6. You verify: Against the implementation checklist
+```
+
+### Component Installation
+
+Before using Shadcn components, ensure they're installed:
+
+```bash
+# Check if component exists in components/ui/
+# If not, install it:
+npx shadcn@latest add [component-name]
+```
+
+Common components:
+- `button`, `card`, `badge`, `alert`, `table`, `select`, `input`, `label`, `dialog`
+
+### Verification
+
+Before submitting any UI code, verify:
+
+✅ Matches design system color palette
+✅ Uses Shadcn UI components
+✅ Uses Lucide icons
+✅ Follows spacing system
+✅ Cards are constrained (max-w-3xl mx-auto)
+✅ Main container is constrained (max-w-7xl mx-auto)
+✅ Uses Tailwind classes
+✅ Responsive design tested
+✅ Accessible (keyboard navigation, ARIA labels)
+
+---
+
+## Project-Specific Guidelines
+
+### Tech Stack
+- **Framework**: Next.js 14+ (App Router)
+- **UI Library**: Shadcn UI
+- **Icons**: Lucide React
+- **Styling**: Tailwind CSS
+- **Database**: Supabase
+- **API**: OpenAI GPT-4 Vision, Shopify API
+
+### Thunder Text Specific
+- **AI Engine**: OpenAI GPT-4 Vision for product description generation
+- **Image Processing**: Multi-image analysis for color detection
+- **Product Types**: Apparel, accessories, home goods
+- **Features**: Color detection, size variants, multi-photo support
+
+### File Organization
+- **Components**: `/components/ui/` (Shadcn), `/components/` (custom)
+- **Pages**: `/app/` (App Router)
+- **API Routes**: `/app/api/`
+- **Documentation**: `../ace-app/docs/` (shared with ACE Suite)
+- **Tests**: `/__tests__/` or `.test.ts` files
+
+### Code Quality
+- TypeScript strict mode enabled
+- ESLint configured
+- Prettier for formatting
+- Follow existing patterns in codebase
+
+### Naming Conventions
+- **Components**: PascalCase (`ProductUploadCard.tsx`)
+- **Files**: kebab-case for routes (`create-product/page.tsx`)
+- **Functions**: camelCase (`generateDescription()`)
+- **Constants**: UPPER_SNAKE_CASE (`MAX_IMAGES`)
+
+---
+
+## Development Workflow
+
+1. **Read design system** before implementing UI
+2. **Follow layout rules** from THUNDER_TEXT_LAYOUT_FIXES.md
+3. **Use Shadcn components** instead of building from scratch
+4. **Constrain card widths** (never full-width)
+5. **Test responsive design** at breakpoints: 375px, 768px, 1280px
+6. **Verify accessibility** with keyboard navigation
+
+---
+
+## Common Thunder Text Patterns
+
+### Page Structure
+```tsx
+<div className="min-h-screen bg-gray-50">
+  <nav>{/* Navigation */}</nav>
+
+  <main className="max-w-7xl mx-auto px-8 py-12">
+    {/* Page Header */}
+    <div className="mb-8">
+      <h1 className="text-4xl font-bold text-gray-900">Page Title</h1>
+      <p className="mt-2 text-base text-gray-500">Subtitle</p>
+    </div>
+
+    {/* Cards Container */}
+    <div className="flex flex-col gap-6">
+      <Card className="max-w-3xl mx-auto w-full">
+        {/* Card content */}
+      </Card>
+    </div>
+  </main>
+</div>
+```
+
+### Upload Area Pattern
+```tsx
+<div className="border-2 border-dashed border-gray-200 rounded-lg p-12 text-center bg-gray-50">
+  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+    <Upload className="h-6 w-6 text-blue-600" />
+  </div>
+  <p className="text-sm font-medium text-gray-900 mb-1">Upload Photos</p>
+  <p className="text-xs text-gray-500 mb-4">PNG, JPG up to 10MB</p>
+  <Button>Select Files</Button>
+</div>
+```
+
+---
+
+**Remember**: The design system is not optional—it's the foundation of UI consistency across Thunder Text and the entire ACE Suite application.

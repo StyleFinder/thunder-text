@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { useNavigation } from '../hooks/useNavigation'
 import { Loader2, Sparkles, FileText, Megaphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { HotTakesCard } from '../components/HotTakesCard'
 import styles from './dashboard.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -58,6 +59,8 @@ function DashboardContent() {
               Welcome to Thunder Text & ACE— generate compelling product descriptions and social media ads using AI to boost your sales, increase productivity, boost profits.
             </p>
           </div>
+
+          <HotTakesCard />
 
           <div className={styles.card}>
             <div className="flex justify-between items-center mb-3">

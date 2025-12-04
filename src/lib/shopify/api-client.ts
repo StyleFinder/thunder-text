@@ -94,8 +94,8 @@ export async function authenticatedFetch(url: string, options: RequestInit = {},
 
 
   // Add authentication to headers
-  const headers: HeadersInit = {
-    ...options.headers
+  const headers: Record<string, string> = {
+    ...(options.headers as Record<string, string> || {})
   }
 
   // Only set Content-Type if not sending FormData
@@ -188,7 +188,7 @@ export async function enhanceProduct(productId: string, shop: string, data: Reco
   // Validate productId before making request
   const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test', '']
   if (!productId || invalidProductIds.includes(productId.toLowerCase())) {
-    logger.error('❌ Invalid productId in enhanceProduct:', productId as Error, { component: 'api-client' })
+    logger.error(`Invalid productId in enhanceProduct: ${productId}`, new Error(`Invalid product ID: ${productId}`), { component: 'api-client' })
     throw new Error(`Invalid product ID: "${productId}"`)
   }
 
@@ -216,7 +216,7 @@ export async function getProductPrepopulation(productId: string, shop: string) {
   // Validate productId before making request
   const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test', '']
   if (!productId || invalidProductIds.includes(productId.toLowerCase())) {
-    logger.error('❌ Invalid productId in getProductPrepopulation:', productId as Error, { component: 'api-client' })
+    logger.error(`Invalid productId in getProductPrepopulation: ${productId}`, new Error(`Invalid product ID: ${productId}`), { component: 'api-client' })
     throw new Error(`Invalid product ID: "${productId}"`)
   }
 

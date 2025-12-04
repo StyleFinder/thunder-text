@@ -220,7 +220,8 @@ export async function POST(
       .eq("is_current", true);
 
     const questionsCompleted = allResponses?.length || 0;
-    const totalQuestions = 21;
+    // Use interview mode to determine total questions: quick_start = 7, full = 21
+    const totalQuestions = profile.interview_mode === "quick_start" ? 7 : 21;
     const percentageComplete = Math.round(
       (questionsCompleted / totalQuestions) * 100,
     );
@@ -241,14 +242,21 @@ export async function POST(
     if (!interviewComplete) {
       const answeredKeys = allResponses?.map((r) => r.prompt_key) || [];
 
-      const { data: nextPromptData } = await supabaseAdmin
+      // Build query based on interview mode
+      let query = supabaseAdmin
         .from("interview_prompts")
         .select("*")
         .eq("is_active", true)
-        .not("prompt_key", "in", `(${answeredKeys.join(",")})`)
-        .order("display_order", { ascending: true })
-        .limit(1)
-        .single();
+        .not("prompt_key", "in", `(${answeredKeys.join(",")})`);
+
+      // Filter by quick_start if in quick_start mode
+      if (profile.interview_mode === "quick_start") {
+        query = query.eq("is_quick_start", true).order("quick_start_order", { ascending: true });
+      } else {
+        query = query.order("display_order", { ascending: true });
+      }
+
+      const { data: nextPromptData } = await query.limit(1).single();
 
       if (nextPromptData) {
         nextPrompt = nextPromptData as InterviewPrompt;

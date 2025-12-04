@@ -31,15 +31,15 @@ jobs:
 
       - name: Security lint check
         run: npm run security:lint
-        continue-on-error: true
+        # SECURITY: Fail the build if security lint issues are found
 
       - name: NPM audit
         run: npm run security:audit
-        continue-on-error: true
+        # SECURITY: Fail the build if high/critical vulnerabilities are found
 
       - name: Snyk security scan
         uses: snyk/actions/node@master
-        continue-on-error: true
+        # SECURITY: Fail the build if high severity vulnerabilities are found
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
@@ -54,6 +54,17 @@ jobs:
           path: ./
           base: ${{ github.event.repository.default_branch }}
           head: HEAD
+
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: 'https://thunder-text.onrender.com'
+          rules_file_name: '.zap/rules.tsv'
+          fail_action: false
+          allow_issue_writing: false
+        # SECURITY: DAST scan for runtime vulnerabilities
+        # Scans public routes for missing headers, cookie issues, injection points
+        # Set fail_action: true once baseline is established
 
       - name: Upload security reports
         if: always()

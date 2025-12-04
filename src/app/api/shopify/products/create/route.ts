@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
     if (validation.warnings.length > 0) {
     }
     if (!validation.isValid) {
-      logger.error('❌ Google metafields validation failed:', validation.errors, undefined, { component: 'create' })
+      logger.error(`Google metafields validation failed: ${JSON.stringify(validation.errors)}`, undefined, { component: 'create' })
     }
 
     // Combine all metafields

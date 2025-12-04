@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const responseData = await tokenResponse.text()
 
     if (!tokenResponse.ok) {
-      logger.error('[Token Exchange] Failed:', responseData as Error, { component: 'token' })
+      logger.error(`[Token Exchange] Failed: ${responseData}`, undefined, { component: 'token' })
 
       // Parse error if it's JSON
       try {

@@ -333,8 +333,8 @@ export async function DELETE(request: NextRequest) {
     logger.error('Shop sizes delete API error', error as Error, {
       component: 'shop-sizes-api',
       operation: 'DELETE',
-      shop: searchParams.get('shop') || undefined,
-      id: searchParams.get('id') || undefined
+      shop: request.nextUrl.searchParams.get('shop') || undefined,
+      id: request.nextUrl.searchParams.get('id') || undefined
     });
     return NextResponse.json(
       { error: 'Internal server error' },

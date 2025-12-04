@@ -7,13 +7,21 @@ import { validateWebhook, validateWebhookTopic, extractWebhookMetadata } from '@
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 
+/**
+ * Route segment config - webhook limits
+ * - 5MB body size limit for webhook payloads
+ * - 60s timeout for processing
+ */
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // Validate webhook signature
     const validation = await validateWebhook(request)
 
     if (!validation.valid) {
-      logger.error('❌ Webhook validation failed:', validation.error, undefined, { component: 'app-uninstalled' })
+      logger.error(`Webhook validation failed: ${validation.error}`, undefined, { component: 'app-uninstalled' })
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

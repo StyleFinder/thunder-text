@@ -1,103 +1,107 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useNavigation } from './hooks/useNavigation'
-import { CheckCircle2, Info, AlertTriangle } from 'lucide-react'
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { RefreshCw } from 'lucide-react';
 
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic';
 
-export default function HomePage() {
-  const [deploymentStatus, setDeploymentStatus] = useState('checking')
-  const { navigateTo } = useNavigation()
-  const searchParams = useSearchParams()
-  const router = useRouter()
-
-  // Get parameters
-  const shop = searchParams?.get('shop') || ''
-  const host = searchParams?.get('host') || ''
+/**
+ * Root route handler
+ * Determines user type and onboarding status, then redirects accordingly:
+ * - First-time store users → /welcome
+ * - Returning store users → /dashboard
+ * - Coaches → /coach/login (or /bhb if authenticated)
+ */
+export default function RootPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('🏠 Home page - checking shop parameter:', { shop, host })
+    const determineRoute = async () => {
+      try {
+        // Get shop parameter from URL
+        const shop = searchParams?.get('shop');
 
-    // If shop parameter exists, redirect to dashboard immediately
-    if (shop) {
-      navigateTo('/dashboard')
-    }
-  }, [shop, host, navigateTo])
+        if (!shop) {
+          // No shop parameter - assume coach trying to access
+          console.log('[Root] No shop parameter, redirecting to coach login');
+          router.replace('/coach/login');
+          return;
+        }
+
+        // Check onboarding status for store users
+        const response = await fetch('/api/onboarding/status', {
+          headers: {
+            'Authorization': `Bearer ${shop}`,
+          },
+        });
+
+        if (!response.ok) {
+          // Shop not found or error - redirect to welcome for new setup
+          console.log('[Root] Shop not found, redirecting to welcome');
+          router.replace(`/welcome?shop=${shop}`);
+          return;
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          const { onboarding_completed, user_type } = data.data;
+
+          if (user_type === 'coach') {
+            // Coach user - redirect to coach portal
+            console.log('[Root] Coach user detected, redirecting to coach login');
+            router.replace('/coach/login');
+            return;
+          }
+
+          // Store user - check onboarding status
+          if (onboarding_completed) {
+            console.log('[Root] Onboarding complete, redirecting to dashboard');
+            router.replace(`/dashboard?shop=${shop}`);
+          } else {
+            console.log('[Root] Onboarding not complete, redirecting to welcome');
+            router.replace(`/welcome?shop=${shop}`);
+          }
+        } else {
+          // Default to welcome for store users
+          router.replace(`/welcome?shop=${shop}`);
+        }
+      } catch (error) {
+        console.error('[Root] Error determining route:', error);
+        setError('Failed to load. Please try again.');
+        setIsLoading(false);
+      }
+    };
+
+    determineRoute();
+  }, [router, searchParams]);
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-oxford-900">Welcome to Thunder Text</h1>
-          <p className="text-muted-foreground mt-2">AI-Powered Product Description Generator</p>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Deployment Complete - Services Ready</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert className="bg-dodger-50 border-dodger-200">
-              <Info className="h-4 w-4 text-dodger-600" />
-              <AlertDescription>
-                🚀 <strong>Version:</strong> Render Build (2025-10-09) |
-                🌐 <strong>Source:</strong> thunder-text.onrender.com |
-                ⚡ <strong>Status:</strong> Live Production
-              </AlertDescription>
-            </Alert>
-
-            <p className="text-sm text-foreground">
-              Thunder Text is now deployed and ready to generate AI-powered product descriptions for your Shopify store.
-            </p>
-
-            <Alert className="bg-green-50 border-green-200">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertDescription>
-                <h3 className="font-semibold text-green-900 mb-2">✅ System Status</h3>
-                <ul className="list-disc list-inside space-y-1 text-sm text-green-800">
-                  <li>Database: Connected to Supabase</li>
-                  <li>AI Engine: OpenAI GPT-4 Vision Ready</li>
-                  <li>Shopify API: Authentication Configured</li>
-                  <li>Deployment: Live on Render</li>
-                </ul>
-              </AlertDescription>
-            </Alert>
-
-            <Alert className="bg-amber-50 border-amber-200">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertDescription>
-                <h3 className="font-semibold text-amber-900 mb-2">📋 Next Steps</h3>
-                <ol className="list-decimal list-inside space-y-1 text-sm text-amber-800">
-                  <li>Update Shopify Partner App settings with this URL</li>
-                  <li>Install app in your test store (zunosai-staging-test-store)</li>
-                  <li>Test the end-to-end workflow</li>
-                  <li>Begin generating product descriptions!</li>
-                </ol>
-              </AlertDescription>
-            </Alert>
-
-            <div className="flex gap-3">
-              <Button
-                onClick={() => window.open('https://partners.shopify.com', '_blank')}
-              >
-                Configure Shopify App
-              </Button>
-
-              <Button
-                variant="default"
-                onClick={() => navigateTo('/dashboard')}
-              >
-                Go to Dashboard
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+        <p className="text-gray-600">Loading Thunder Text...</p>
       </div>
     </div>
-  )
+  );
 }

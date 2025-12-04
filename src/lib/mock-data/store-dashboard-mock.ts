@@ -8,11 +8,15 @@ export interface Campaign {
   name: string;
   platform: 'meta' | 'google' | 'tiktok' | 'pinterest';
   status: 'active' | 'paused' | 'completed';
+  budget?: number;
   spend: number;
   impressions: number;
   clicks: number;
   ctr: number;
+  cpc?: number;
   conversions: number;
+  conversionRate?: number;
+  revenue?: number;
   roas: number;
   startDate: string;
   endDate?: string;
@@ -348,7 +352,7 @@ export function getMockStoreDashboard(shopId: string): StoreDashboardData | null
       cpc: spend / clicks,
       conversionRate: (purchases / clicks) * 100,
       startDate: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString(),
-      endDate: null,
+      endDate: undefined,
     });
   }
 

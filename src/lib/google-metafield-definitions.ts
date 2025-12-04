@@ -312,7 +312,7 @@ export async function createMetafieldDefinitions(shopifyClient: ShopifyGraphQLCl
         )
         
         if (nonExistenceErrors.length > 0) {
-          logger.error(`❌ Error creating definition for ${definition.namespace}.${definition.key}:`, nonExistenceErrors as Error, { component: 'google-metafield-definitions' })
+          logger.error(`Error creating definition for ${definition.namespace}.${definition.key}: ${JSON.stringify(nonExistenceErrors)}`, new Error('Metafield definition creation failed'), { component: 'google-metafield-definitions' })
         } else {
         }
       } else {

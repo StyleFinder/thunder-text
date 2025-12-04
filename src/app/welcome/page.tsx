@@ -151,8 +151,34 @@ export default function WelcomePage() {
     setCurrentStep('complete');
   };
 
-  const handleGoToDashboard = () => {
-    router.push('/dashboard');
+  const handleGoToDashboard = async () => {
+    const shop = searchParams.get('shop');
+
+    if (!shop) {
+      router.push('/dashboard');
+      return;
+    }
+
+    try {
+      // Mark onboarding as complete
+      const response = await fetch('/api/onboarding/complete', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${shop}`,
+        },
+      });
+
+      if (response.ok) {
+        console.log('[Welcome] Onboarding marked as complete');
+      } else {
+        console.error('[Welcome] Failed to mark onboarding complete');
+      }
+    } catch (error) {
+      console.error('[Welcome] Error marking onboarding complete:', error);
+    }
+
+    // Navigate to dashboard regardless of API result
+    router.push(`/dashboard?shop=${shop}`);
   };
 
   // Progress calculation

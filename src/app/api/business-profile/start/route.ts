@@ -26,6 +26,10 @@ export async function POST(
       );
     }
 
+    // Get mode from request body (quick_start or full)
+    const body = await request.json();
+    const mode = body.mode === "quick_start" ? "quick_start" : "full";
+
     // Check if profile already exists
     const { data: existingProfile } = await supabaseAdmin
       .from("business_profiles")
@@ -47,6 +51,7 @@ export async function POST(
           .update({
             interview_status: "in_progress",
             interview_started_at: new Date().toISOString(),
+            interview_mode: mode,
           })
           .eq("id", profile.id)
           .select()
@@ -64,6 +69,7 @@ export async function POST(
           store_id: userId,
           interview_status: "in_progress",
           interview_started_at: new Date().toISOString(),
+          interview_mode: mode,
         })
         .select()
         .single();
@@ -79,14 +85,19 @@ export async function POST(
       profile = newProfile as BusinessProfile;
     }
 
-    // Get first prompt
-    const { data: firstPrompt, error: promptError } = await supabaseAdmin
+    // Get first prompt based on mode
+    let query = supabaseAdmin
       .from("interview_prompts")
       .select("*")
-      .eq("is_active", true)
-      .order("display_order", { ascending: true })
-      .limit(1)
-      .single();
+      .eq("is_active", true);
+
+    if (mode === "quick_start") {
+      query = query.eq("is_quick_start", true).order("quick_start_order", { ascending: true });
+    } else {
+      query = query.order("display_order", { ascending: true });
+    }
+
+    const { data: firstPrompt, error: promptError } = await query.limit(1).single();
 
     if (promptError || !firstPrompt) {
       logger.error("Error fetching first prompt:", promptError as Error, { component: 'start' });
@@ -102,6 +113,8 @@ export async function POST(
         data: {
           profile,
           first_prompt: firstPrompt as InterviewPrompt,
+          interview_mode: mode,
+          total_questions: mode === "quick_start" ? 7 : 21,
         },
       },
       { status: 201 },

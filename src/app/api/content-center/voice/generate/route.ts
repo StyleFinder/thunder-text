@@ -61,7 +61,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     // Validate profile quality
     const validation = validateVoiceProfile(profileText)
     if (!validation.valid) {
-      logger.error('Generated profile failed quality validation:', validation.issues, undefined, { component: 'generate' })
+      logger.error(`Generated profile failed quality validation: ${JSON.stringify(validation.issues)}`, undefined, { component: 'generate' })
       // Still save the profile but log the issues
     }
 

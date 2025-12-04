@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth/auth-options';
 import { logger } from '@/lib/logger'
 
 /**
@@ -23,9 +23,10 @@ export interface AuthenticatedRequest extends NextRequest {
 }
 
 /**
- * Route handler type
+ * Route handler type - supports context parameter for dynamic routes
  */
-type RouteHandler = (req: AuthenticatedRequest) => Promise<Response>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type RouteHandler = (req: AuthenticatedRequest, context?: any) => Promise<Response>;
 
 /**
  * Require authentication with specific role
@@ -43,7 +44,8 @@ type RouteHandler = (req: AuthenticatedRequest) => Promise<Response>;
  */
 export function requireAuth(requiredRole: 'user' | 'coach' | 'admin' = 'user') {
   return function (handler: RouteHandler) {
-    return async (req: NextRequest): Promise<Response> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return async (req: NextRequest, context?: any): Promise<Response> => {
       try {
         // Get NextAuth session
         const session = await getServerSession(authOptions);
@@ -76,7 +78,7 @@ export function requireAuth(requiredRole: 'user' | 'coach' | 'admin' = 'user') {
         };
 
         // Call the wrapped handler
-        return await handler(authenticatedReq);
+        return await handler(authenticatedReq, context);
       } catch (error) {
         logger.error('Auth error:', error as Error, { component: 'ace-compat' });
         return NextResponse.json(

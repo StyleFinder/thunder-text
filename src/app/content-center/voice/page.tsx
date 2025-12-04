@@ -357,7 +357,7 @@ export default function BrandVoicePage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
-  const formatProfileText = (text: string): JSX.Element => {
+  const formatProfileText = (text: string): React.ReactElement => {
     // Remove markdown formatting characters
     const cleaned = text
       .replace(/\*\*/g, '') // Remove bold markers

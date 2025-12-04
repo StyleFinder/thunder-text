@@ -106,7 +106,7 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
             setIsAuthenticated(true)
             setError(null)
           } else {
-            logger.error('❌ Token exchange failed:', result.error, undefined, { component: 'ShopifyAuthProvider' })
+            logger.error(`Token exchange failed: ${result.error}`, new Error(result.error), { component: 'ShopifyAuthProvider' })
             setError(result.error || 'Authentication failed')
             setIsAuthenticated(false)
           }
@@ -179,7 +179,7 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
             setIsAuthenticated(true)
             setError(null)
           } else {
-            logger.error('❌ Token exchange failed:', result.error, undefined, { component: 'ShopifyAuthProvider' })
+            logger.error(`Token exchange failed: ${result.error}`, new Error(result.error), { component: 'ShopifyAuthProvider' })
             setError(result.error || 'Authentication failed')
             setIsAuthenticated(false)
           }
@@ -203,7 +203,7 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
       document.head.appendChild(script)
 
     } catch (err) {
-      logger.error('❌ Authentication error:', err as Error, { component: 'ShopifyAuthProvider' }, undefined, { component: 'ShopifyAuthProvider' })
+      logger.error('Authentication error', err as Error, { component: 'ShopifyAuthProvider' })
       setError(err instanceof Error ? err.message : 'Authentication failed')
       setIsAuthenticated(false)
       setIsLoading(false)

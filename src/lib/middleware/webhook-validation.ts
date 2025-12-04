@@ -83,8 +83,8 @@ export async function validateWebhook(
       })
       // Don't log actual signatures in production
       if (process.env.NODE_ENV === 'development') {
-        logger.error('Expected HMAC:', hash as Error, { component: 'webhook-validation' })
-        logger.error('Received HMAC:', hmacHeader as Error, { component: 'webhook-validation' })
+        logger.debug(`Expected HMAC: ${hash}`, { component: 'webhook-validation' })
+        logger.debug(`Received HMAC: ${hmacHeader}`, { component: 'webhook-validation' })
       }
       return {
         valid: false,

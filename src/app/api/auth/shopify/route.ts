@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createShopifyOAuthState } from "@/lib/security/oauth-validation";
+import { createShopifyOAuthState, storeOAuthState } from "@/lib/security/oauth-validation";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -19,6 +19,10 @@ export async function GET(req: NextRequest) {
 
   // Use the same secure state generation as /install flow
   const secureState = createShopifyOAuthState(shopDomain);
+
+  // SECURITY: Store state hash in cookie for replay attack prevention
+  // This ensures we can verify the returned state is the exact one we generated
+  await storeOAuthState(secureState, 'shopify');
 
   const scopes = process.env.SCOPES || "read_products,write_products";
   // Use the whitelisted callback URL

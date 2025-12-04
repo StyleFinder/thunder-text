@@ -32,7 +32,7 @@ export default function CoachLoginPage() {
     });
 
     if (result?.error) {
-      logger.error('[Coach Login] Login failed:', result.error, undefined, { component: 'login' });
+      logger.error(`[Coach Login] Login failed: ${result.error}`, undefined, { component: 'login' });
       setError('Invalid coach credentials');
       setLoading(false);
       return;

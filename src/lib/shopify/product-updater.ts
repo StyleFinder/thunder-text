@@ -2,6 +2,7 @@ import { ShopifyAPI } from '../shopify'
 import { type EnhancementResponse } from '../openai-enhancement'
 import { type EnhancementProductData } from './product-enhancement'
 import { logger } from '@/lib/logger'
+import { getShopToken } from './token-manager'
 
 export interface ProductUpdateOptions {
   updateTitle?: boolean
@@ -252,12 +253,19 @@ export class ShopifyProductUpdater {
 }
 
 export async function createShopifyProductUpdater(shop: string): Promise<ShopifyProductUpdater> {
-  // TODO: Implement proper OAuth token retrieval from database
-  const accessToken = process.env.SHOPIFY_ACCESS_TOKEN
+  // Retrieve OAuth token from database
+  const tokenResult = await getShopToken(shop)
 
-  if (!accessToken) {
-    throw new Error('Shopify access token not available - ensure proper OAuth authentication')
+  if (!tokenResult.success || !tokenResult.accessToken) {
+    logger.error('Failed to retrieve Shopify access token', undefined, {
+      component: 'product-updater',
+      shop,
+      error: tokenResult.error
+    })
+    throw new Error(
+      tokenResult.error || 'Shopify access token not available - ensure shop is properly authenticated'
+    )
   }
 
-  return new ShopifyProductUpdater(shop, accessToken)
+  return new ShopifyProductUpdater(shop, tokenResult.accessToken)
 }

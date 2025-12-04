@@ -61,12 +61,13 @@ export async function POST(
       );
     }
 
-    // Validate all 21 questions answered
-    if (!responses || responses.length < 21) {
+    // Validate all questions answered based on interview mode
+    const expectedQuestions = profile.interview_mode === "quick_start" ? 7 : 21;
+    if (!responses || responses.length < expectedQuestions) {
       return NextResponse.json(
         {
           success: false,
-          error: `Interview incomplete: ${responses?.length || 0}/21 questions answered`,
+          error: `Interview incomplete: ${responses?.length || 0}/${expectedQuestions} questions answered`,
         },
         { status: 400 },
       );

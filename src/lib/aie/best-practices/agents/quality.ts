@@ -35,7 +35,7 @@ export class QualityAgent {
       const [qualityScores, duplicateCheck] = await Promise.all([
         this.scoreQuality(extractionResult, analysisResult),
         context.original_input.skip_duplicate_check
-          ? Promise.resolve({ is_duplicate: false })
+          ? Promise.resolve({ is_duplicate: false, duplicate_id: undefined, similarity: undefined } as { is_duplicate: boolean; duplicate_id?: string; similarity?: number })
           : this.checkDuplicates(analysisResult, extractionResult),
       ]);
 
@@ -68,11 +68,11 @@ export class QualityAgent {
       }
 
       // Check for duplicates
-      if (duplicateCheck.is_duplicate) {
+      if (duplicateCheck.is_duplicate && duplicateCheck.similarity !== undefined) {
         issues.push({
           severity: 'critical',
           type: 'duplicate',
-          message: `Duplicate of existing best practice (${(duplicateCheck.similarity! * 100).toFixed(1)}% similar)`,
+          message: `Duplicate of existing best practice (${(duplicateCheck.similarity * 100).toFixed(1)}% similar)`,
         });
       }
 
@@ -130,8 +130,8 @@ export class QualityAgent {
         scores: qualityScores,
         issues,
         recommendations,
-        duplicate_of: duplicateCheck.duplicate_id,
-        duplicate_similarity: duplicateCheck.similarity,
+        duplicate_of: duplicateCheck.is_duplicate ? duplicateCheck.duplicate_id : undefined,
+        duplicate_similarity: duplicateCheck.is_duplicate ? duplicateCheck.similarity : undefined,
       };
 
       console.log(

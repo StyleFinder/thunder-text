@@ -176,12 +176,12 @@ export default function ConnectionsPage() {
 
       if (!response.ok) {
         const responseText = await response.text()
-        logger.error('Disconnect failed:', response.status, responseText, undefined, { component: 'connections' })
+        logger.error(`Disconnect failed: ${response.status} - ${responseText}`, new Error('Disconnect failed'), { component: 'connections' })
         let errorData: any = {}
         try {
           errorData = JSON.parse(responseText)
         } catch (e) {
-          logger.error('Response is not JSON:', responseText as Error, { component: 'connections' })
+          logger.debug(`Response is not JSON: ${responseText}`, { component: 'connections' })
         }
         throw new Error(`Failed to disconnect: ${errorData.error || response.statusText}`)
       }

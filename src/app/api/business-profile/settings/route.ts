@@ -120,7 +120,7 @@ export const GET = requireAuth('user')(async (request: NextRequest) => {
           if (valuesSection) {
             // Extract values from bullet points like "- **Empowerment:** ..."
             const valueMatches = valuesSection[1].matchAll(/[-•]\s*\*?\*?([^:*\n]+)/g);
-            extractedData.valuePillars = Array.from(valueMatches)
+            extractedData.valuePillars = [...valueMatches]
               .map(m => m[1].trim())
               .filter(v => v.length > 2 && v.length < 50)
               .slice(0, 6);
@@ -129,7 +129,7 @@ export const GET = requireAuth('user')(async (request: NextRequest) => {
           // If no bullet points found, try to extract from numbered list
           if (extractedData.valuePillars.length === 0) {
             const numberedValues = mvv.matchAll(/\d+\.\s*\*?\*?([^:*\n]+)/g);
-            extractedData.valuePillars = Array.from(numberedValues)
+            extractedData.valuePillars = [...numberedValues]
               .map(m => m[1].trim())
               .filter(v => v.length > 2 && v.length < 50)
               .slice(0, 6);

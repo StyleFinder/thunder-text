@@ -66,7 +66,7 @@ export function ThemeSelector({ onThemeEnabled }: ThemeSelectorProps) {
           onThemeEnabled();
         }
       } else {
-        logger.error("Failed to enable theme:", data.error, undefined, { component: 'ThemeSelector' });
+        logger.error(`Failed to enable theme: ${data.error}`, undefined, { component: 'ThemeSelector' });
       }
     } catch (error) {
       logger.error("Error enabling theme:", error as Error, { component: 'ThemeSelector' });

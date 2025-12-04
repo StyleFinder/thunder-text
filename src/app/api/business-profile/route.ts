@@ -12,6 +12,14 @@ import type {
 } from "@/types/business-profile";
 
 /**
+ * Route segment config - standard JSON API limits
+ * - 1MB body size limit for standard JSON payloads
+ * - 30s timeout
+ */
+export const maxDuration = 30;
+export const dynamic = 'force-dynamic';
+
+/**
  * GET /api/business-profile
  * Get current business profile, responses, and progress for authenticated store
  */
@@ -69,8 +77,8 @@ export async function GET(
       );
     }
 
-    // Get responses if profile exists
-    let responses: BusinessProfileResponse[] = [];
+    // Get responses with prompt details if profile exists
+    let responses: any[] = [];
     if (profile) {
       const { data: responsesData, error: responsesError } = await supabaseAdmin
         .from("business_profile_responses")
@@ -80,13 +88,28 @@ export async function GET(
         .order("response_order", { ascending: true });
 
       if (!responsesError && responsesData) {
-        responses = responsesData as BusinessProfileResponse[];
+        // Fetch prompt details for each response
+        const enrichedResponses = await Promise.all(
+          responsesData.map(async (resp: any) => {
+            const { data: promptData } = await supabaseAdmin
+              .from("interview_prompts")
+              .select("question_text, question_number, prompt_key")
+              .eq("prompt_key", resp.prompt_key)
+              .single();
+
+            return {
+              ...resp,
+              prompt: promptData,
+            };
+          })
+        );
+        responses = enrichedResponses;
       }
     }
 
-    // Calculate progress
+    // Calculate progress based on interview mode
     const questionsCompleted = responses.length;
-    const totalQuestions = 21;
+    const totalQuestions = profile.interview_mode === "quick_start" ? 7 : 21;
     const percentageComplete = Math.round(
       (questionsCompleted / totalQuestions) * 100,
     );
@@ -102,7 +125,7 @@ export async function GET(
       // Get answered prompt keys
       const answeredKeys = responses.map((r) => r.prompt_key);
 
-      // Get next unanswered prompt
+      // Get next unanswered prompt based on interview mode
       let query = supabaseAdmin
         .from("interview_prompts")
         .select("*")
@@ -113,10 +136,14 @@ export async function GET(
         query = query.not("prompt_key", "in", `(${answeredKeys.join(",")})`);
       }
 
-      const { data: nextPromptData } = await query
-        .order("display_order", { ascending: true })
-        .limit(1)
-        .single();
+      // Filter by quick_start if in quick_start mode
+      if (profile.interview_mode === "quick_start") {
+        query = query.eq("is_quick_start", true).order("quick_start_order", { ascending: true });
+      } else {
+        query = query.order("display_order", { ascending: true });
+      }
+
+      const { data: nextPromptData } = await query.limit(1).single();
 
       if (nextPromptData) {
         nextPrompt = nextPromptData as InterviewPrompt;
@@ -124,7 +151,7 @@ export async function GET(
     }
 
     const progress: ProfileProgress = {
-      current_question: questionsCompleted + 1,
+      current_question: questionsCompleted,
       total_questions: totalQuestions,
       percentage_complete: percentageComplete,
       is_complete: questionsCompleted >= totalQuestions,

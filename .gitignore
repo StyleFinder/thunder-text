@@ -50,3 +50,8 @@ next-env.d.ts
 audit-report.json
 .snyk
 backups/
+packages/node_modules
+
+# Package build artifacts
+packages/*/.next
+packages/*/node_modules

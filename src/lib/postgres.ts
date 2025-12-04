@@ -32,8 +32,8 @@ console.log("Expected Project:", "***REMOVED*** (Thunder Text)");
 console.log("=".repeat(80));
 
 if (projectId !== "***REMOVED***") {
-  logger.error("❌ WRONG DATABASE! Connected to:", projectId as Error, { component: 'postgres' });
-  logger.error("   Expected: ***REMOVED*** (Thunder Text, undefined, { component: 'postgres' })");
+  logger.error(`WRONG DATABASE! Connected to: ${projectId}`, new Error(`Wrong database project: ${projectId}`), { component: 'postgres' });
+  logger.error(`Expected: ***REMOVED*** (Thunder Text)`, undefined, { component: 'postgres' });
   throw new Error(
     `DATABASE_URL points to wrong project: ${projectId}. Expected: ***REMOVED***`,
   );
@@ -41,7 +41,11 @@ if (projectId !== "***REMOVED***") {
 
 const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false },
+  // SECURITY: Verify SSL certificates in production to prevent MITM attacks
+  // In development, we allow self-signed certs for local testing
+  ssl: process.env.NODE_ENV === 'production'
+    ? { rejectUnauthorized: true }
+    : { rejectUnauthorized: false },
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,

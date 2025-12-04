@@ -87,7 +87,7 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks):
     try {
       adContent = JSON.parse(responseText)
     } catch (parseError) {
-      logger.error('Failed to parse OpenAI response:', responseText as Error, { component: 'generate-ad-content' })
+      logger.error(`Failed to parse OpenAI response: ${responseText}`, undefined, { component: 'generate-ad-content' })
       throw new Error('Invalid response format from AI')
     }
 

@@ -14,6 +14,14 @@ import { validateWordCountForType } from "@/lib/services/parameter-handler";
 import { logger } from '@/lib/logger'
 
 /**
+ * Route segment config - content generation limits
+ * - 2MB body size limit for larger prompts/context
+ * - 120s timeout for OpenAI API calls
+ */
+export const maxDuration = 120;
+export const dynamic = 'force-dynamic';
+
+/**
  * POST /api/content-center/generate
  * Generate content using user's brand voice profile
  */

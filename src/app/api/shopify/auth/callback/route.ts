@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       validateShopifyOAuthState(state, shop);
     } catch (error) {
       if (error instanceof ZodError) {
-        logger.error("Shopify OAuth state validation failed:", error.errors, undefined, { component: 'callback' });
+        logger.error(`Shopify OAuth state validation failed: ${JSON.stringify(error.errors)}`, error, { component: 'callback' });
         return NextResponse.json(
           { error: "Invalid state parameter format", details: error.errors },
           { status: 400 },
