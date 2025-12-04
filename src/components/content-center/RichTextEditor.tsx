@@ -34,9 +34,24 @@ interface RichTextEditorProps {
   className?: string;
 }
 
-// DOMPurify configuration for rich text editor
-// Allows formatting tags while blocking dangerous elements
+/**
+ * SECURITY [R-09CB5]: DOMPurify configuration for XSS-safe rich text editing
+ *
+ * This component MUST use innerHTML for WYSIWYG functionality (textContent strips formatting).
+ * XSS is prevented via DOMPurify sanitization with defense-in-depth configuration:
+ *
+ * 1. ALLOWED_TAGS whitelist - Only safe formatting tags permitted
+ * 2. ALLOWED_ATTR whitelist - Only safe attributes permitted
+ * 3. FORBID_TAGS blacklist - Dangerous tags explicitly blocked
+ * 4. FORBID_ATTR blacklist - All event handlers blocked
+ * 5. ALLOW_DATA_ATTR: false - Prevents data attribute abuse
+ * 6. RETURN_DOM_FRAGMENT: false - Returns string, not DOM (default)
+ *
+ * DOMPurify is the industry-standard sanitization library recommended by OWASP.
+ * See: https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+ */
 const DOMPURIFY_CONFIG = {
+  // SECURITY: Strict allowlist of safe formatting tags only
   ALLOWED_TAGS: [
     "p",
     "br",
@@ -59,12 +74,68 @@ const DOMPURIFY_CONFIG = {
     "a",
     "div",
   ],
+  // SECURITY: Strict allowlist of safe attributes only
   ALLOWED_ATTR: ["href", "target", "rel", "class", "style"],
+  // SECURITY: Block data-* attributes which can be abused for data exfiltration
   ALLOW_DATA_ATTR: false,
+  // Add target attribute for links (opens in new tab)
   ADD_ATTR: ["target"],
-  // Force all links to open in new tab with security attributes
-  FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "input"],
-  FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover"],
+  // SECURITY: Explicit blocklist of dangerous elements (defense-in-depth)
+  FORBID_TAGS: [
+    "script",
+    "iframe",
+    "object",
+    "embed",
+    "form",
+    "input",
+    "svg",
+    "math",
+    "template",
+    "noscript",
+  ],
+  // SECURITY: Block ALL event handlers (comprehensive list for defense-in-depth)
+  FORBID_ATTR: [
+    "onerror",
+    "onload",
+    "onclick",
+    "onmouseover",
+    "onmouseout",
+    "onmousedown",
+    "onmouseup",
+    "onfocus",
+    "onblur",
+    "onchange",
+    "onsubmit",
+    "onreset",
+    "onselect",
+    "onkeydown",
+    "onkeypress",
+    "onkeyup",
+    "ondblclick",
+    "oncontextmenu",
+    "ondrag",
+    "ondragend",
+    "ondragenter",
+    "ondragleave",
+    "ondragover",
+    "ondragstart",
+    "ondrop",
+    "onscroll",
+    "oncopy",
+    "oncut",
+    "onpaste",
+    "onwheel",
+    "ontouchstart",
+    "ontouchend",
+    "ontouchmove",
+    "onanimationstart",
+    "onanimationend",
+    "ontransitionend",
+    "onpointerdown",
+  ],
+  // SECURITY: Sanitize href attributes to prevent javascript: URLs
+  ALLOWED_URI_REGEXP:
+    /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
 };
 
 /**
@@ -96,8 +167,14 @@ export function RichTextEditor({
       const sanitized = sanitizedContent();
       // Only update if content actually changed (prevents cursor jump)
       if (sanitized !== editorRef.current.innerHTML) {
-        // SECURITY: Using innerHTML here is safe because content is sanitized
-        // via DOMPurify which removes all XSS vectors
+        // SECURITY [R-09CB5]: innerHTML is REQUIRED for WYSIWYG rich text editing.
+        // textContent would strip all formatting (bold, italic, links, etc.).
+        // XSS is prevented by DOMPurify sanitization with:
+        // - Strict tag allowlist (only formatting tags)
+        // - Strict attribute allowlist (no event handlers)
+        // - javascript: URL blocking via ALLOWED_URI_REGEXP
+        // - Comprehensive event handler blocklist
+
         editorRef.current.innerHTML = sanitized;
       }
     }
