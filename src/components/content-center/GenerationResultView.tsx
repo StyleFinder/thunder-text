@@ -1,10 +1,16 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { RichTextEditor } from './RichTextEditor'
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { RichTextEditor } from "./RichTextEditor";
 import {
   Sparkles,
   Clock,
@@ -18,24 +24,24 @@ import {
   Share2,
   Eye,
   Edit3,
-  Check
-} from 'lucide-react'
+  Check,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { GeneratedContent } from '@/types/content-center'
+} from "@/components/ui/tooltip";
+import { GeneratedContent } from "@/types/content-center";
 
 interface GenerationResultViewProps {
-  result: GeneratedContent
-  generationTimeMs: number
-  costEstimate: number
-  onSave?: (content: GeneratedContent) => void
-  onRegenerate?: () => void
-  onExport?: (format: 'txt' | 'html' | 'md') => void
-  className?: string
+  result: GeneratedContent;
+  generationTimeMs: number;
+  costEstimate: number;
+  onSave?: (content: GeneratedContent) => void;
+  onRegenerate?: () => void;
+  onExport?: (format: "txt" | "html" | "md") => void;
+  className?: string;
 }
 
 export function GenerationResultView({
@@ -45,61 +51,65 @@ export function GenerationResultView({
   onSave,
   onRegenerate,
   onExport,
-  className = ''
+  className = "",
 }: GenerationResultViewProps) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [editedContent, setEditedContent] = useState(result.generated_text)
-  const [isSaved, setIsSaved] = useState(result.is_saved)
-  const [feedback, setFeedback] = useState<'positive' | 'negative' | null>(null)
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState(result.generated_text);
+  const [isSaved, setIsSaved] = useState(result.is_saved);
+  const [feedback, setFeedback] = useState<"positive" | "negative" | null>(
+    null,
+  );
 
   const handleSave = () => {
     if (onSave) {
       onSave({
         ...result,
         generated_text: editedContent,
-        is_saved: true
-      })
-      setIsSaved(true)
-      setIsEditing(false)
+        is_saved: true,
+      });
+      setIsSaved(true);
+      setIsEditing(false);
     }
-  }
+  };
 
-  const handleFeedback = (type: 'positive' | 'negative') => {
-    setFeedback(type)
+  const handleFeedback = (type: "positive" | "negative") => {
+    setFeedback(type);
     // In real implementation, send feedback to backend
-  }
+  };
 
   const formatTime = (ms: number) => {
-    const seconds = Math.round(ms / 1000)
-    return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`
-  }
+    const seconds = Math.round(ms / 1000);
+    return seconds < 60
+      ? `${seconds}s`
+      : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+  };
 
   const metadata = [
     {
       icon: FileText,
-      label: 'Word Count',
+      label: "Word Count",
       value: result.word_count.toString(),
-      tooltip: 'Number of words in generated content'
+      tooltip: "Number of words in generated content",
     },
     {
       icon: Clock,
-      label: 'Generation Time',
+      label: "Generation Time",
       value: formatTime(generationTimeMs),
-      tooltip: 'Time taken to generate this content'
+      tooltip: "Time taken to generate this content",
     },
     {
       icon: DollarSign,
-      label: 'Cost',
+      label: "Cost",
       value: `$${costEstimate.toFixed(4)}`,
-      tooltip: 'Estimated API cost for this generation'
+      tooltip: "Estimated API cost for this generation",
     },
     {
       icon: Sparkles,
-      label: 'Content Type',
-      value: result.content_type.replace('_', ' '),
-      tooltip: 'Type of content generated'
-    }
-  ]
+      label: "Content Type",
+      value: result.content_type.replace(/_/g, " "),
+      tooltip: "Type of content generated",
+    },
+  ];
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -113,7 +123,7 @@ export function GenerationResultView({
         </div>
         <div className="flex gap-2">
           <Button
-            variant={isEditing ? 'default' : 'outline'}
+            variant={isEditing ? "default" : "outline"}
             size="sm"
             onClick={() => setIsEditing(!isEditing)}
           >
@@ -135,7 +145,7 @@ export function GenerationResultView({
       {/* Metadata Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {metadata.map((item, idx) => {
-          const Icon = item.icon
+          const Icon = item.icon;
           return (
             <TooltipProvider key={idx}>
               <Tooltip>
@@ -147,7 +157,9 @@ export function GenerationResultView({
                           <Icon className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">{item.label}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.label}
+                          </p>
                           <p className="text-lg font-semibold">{item.value}</p>
                         </div>
                       </div>
@@ -159,7 +171,7 @@ export function GenerationResultView({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-          )
+          );
         })}
       </div>
 
@@ -204,7 +216,7 @@ export function GenerationResultView({
           <Button
             onClick={handleSave}
             disabled={!isEditing && isSaved}
-            variant={isSaved ? 'default' : 'outline'}
+            variant={isSaved ? "default" : "outline"}
           >
             {isSaved ? (
               <>
@@ -231,7 +243,7 @@ export function GenerationResultView({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onExport('txt')}
+                onClick={() => onExport("txt")}
               >
                 <Download className="h-4 w-4 mr-2" />
                 .txt
@@ -239,7 +251,7 @@ export function GenerationResultView({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onExport('html')}
+                onClick={() => onExport("html")}
               >
                 <Download className="h-4 w-4 mr-2" />
                 .html
@@ -247,7 +259,7 @@ export function GenerationResultView({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onExport('md')}
+                onClick={() => onExport("md")}
               >
                 <Download className="h-4 w-4 mr-2" />
                 .md
@@ -263,18 +275,20 @@ export function GenerationResultView({
 
         {/* Feedback */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Rate this generation:</span>
+          <span className="text-sm text-muted-foreground">
+            Rate this generation:
+          </span>
           <Button
-            variant={feedback === 'positive' ? 'default' : 'outline'}
+            variant={feedback === "positive" ? "default" : "outline"}
             size="sm"
-            onClick={() => handleFeedback('positive')}
+            onClick={() => handleFeedback("positive")}
           >
             <ThumbsUp className="h-4 w-4" />
           </Button>
           <Button
-            variant={feedback === 'negative' ? 'default' : 'outline'}
+            variant={feedback === "negative" ? "default" : "outline"}
             size="sm"
-            onClick={() => handleFeedback('negative')}
+            onClick={() => handleFeedback("negative")}
           >
             <ThumbsDown className="h-4 w-4" />
           </Button>
@@ -290,16 +304,21 @@ export function GenerationResultView({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Word Count</p>
-              <p className="font-medium">{result.generation_params?.word_count || 'N/A'}</p>
+              <p className="font-medium">
+                {result.generation_params?.word_count || "N/A"}
+              </p>
             </div>
             <div>
               <p className="text-muted-foreground">Tone Intensity</p>
-              <p className="font-medium">{result.generation_params?.tone_intensity || 'N/A'}/5</p>
+              <p className="font-medium">
+                {result.generation_params?.tone_intensity || "N/A"}/5
+              </p>
             </div>
             <div>
               <p className="text-muted-foreground">CTA Type</p>
               <p className="font-medium capitalize">
-                {result.generation_params?.cta_type?.replace('_', ' ') || 'None'}
+                {result.generation_params?.cta_type?.replace(/_/g, " ") ||
+                  "None"}
               </p>
             </div>
             <div>
@@ -312,5 +331,5 @@ export function GenerationResultView({
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
