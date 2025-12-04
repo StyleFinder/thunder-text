@@ -13,8 +13,8 @@ Based on code analysis and environment inspection, I can confirm:
 
 Both applications use the same Supabase project:
 
-- **Project ID**: `***REMOVED***`
-- **URL**: `https://***REMOVED***.supabase.co`
+- **Project ID**: `[REDACTED - see environment variables]`
+- **URL**: `https://[PROJECT_ID].supabase.co`
 - **Environment**: Production (verified in both `.env.local` files)
 
 ---
@@ -24,9 +24,9 @@ Both applications use the same Supabase project:
 ### 1. Environment Variables (ThunderTex)
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://***REMOVED***.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIs...
+NEXT_PUBLIC_SUPABASE_URL=https://[PROJECT_ID].supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=[REDACTED]...
+SUPABASE_SERVICE_ROLE_KEY=[REDACTED]...
 ```
 
 ### 2. Database Connection (PostgreSQL)
@@ -34,7 +34,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIs...
 The `src/lib/postgres.ts` file enforces connection to the correct project:
 
 ```typescript
-if (projectId !== "***REMOVED***") {
+if (projectId !== "[PROJECT_ID]") {
   throw new Error(`DATABASE_URL points to wrong project`);
 }
 ```
@@ -233,7 +233,7 @@ When migrating ACE features:
 
 **Status**: ✅ **Database Access Verified**
 
-- Both apps share Supabase project `***REMOVED***`
+- Both apps share the same Supabase project (see environment variables)
 - ACE tables already exist and are used by ThunderTex infrastructure
 - No schema changes or migrations needed
 - Auth layer migration is the only required database-related work
