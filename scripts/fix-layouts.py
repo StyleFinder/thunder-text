@@ -48,14 +48,43 @@ def safe_resolve_path(base_dir: str, relative_path: str) -> str | None:
     Returns:
         Resolved absolute path if safe, None if path traversal detected
     """
-    # Normalize and resolve both paths to absolute form
-    normalized_base = os.path.normpath(os.path.abspath(base_dir))
-    resolved_path = os.path.normpath(os.path.abspath(os.path.join(base_dir, relative_path)))
+    # SECURITY: Reject paths with null bytes (can bypass checks in some systems)
+    if '\x00' in relative_path or '\x00' in base_dir:
+        print(f"SECURITY: Null byte injection attempt detected: {relative_path}")
+        return None
 
-    # SECURITY: Verify the resolved path starts with the base directory
-    # This prevents path traversal attacks
+    # SECURITY: Reject absolute paths in relative_path (should never happen with whitelist)
+    if os.path.isabs(relative_path):
+        print(f"SECURITY: Absolute path rejected: {relative_path}")
+        return None
+
+    # Normalize and resolve both paths to absolute form
+    # Use realpath to resolve symlinks, preventing symlink-based escapes
+    try:
+        normalized_base = os.path.realpath(os.path.abspath(base_dir))
+        resolved_path = os.path.realpath(os.path.abspath(os.path.join(base_dir, relative_path)))
+    except (OSError, ValueError) as e:
+        print(f"SECURITY: Path resolution error: {e}")
+        return None
+
+    # SECURITY: Use os.path.commonpath() for proper path containment validation
+    # This is the recommended approach over startswith() which can be bypassed
+    # Example bypass: startswith("/safe/path") would match "/safe/pathevil"
+    try:
+        common = os.path.commonpath([normalized_base, resolved_path])
+        if common != normalized_base:
+            print(f"SECURITY: Path traversal attempt detected: {relative_path}")
+            return None
+    except ValueError:
+        # commonpath raises ValueError if paths are on different drives (Windows)
+        # or if the list is empty
+        print(f"SECURITY: Path validation failed (different roots): {relative_path}")
+        return None
+
+    # Additional check: ensure the resolved path is actually under base_dir
+    # This handles edge cases where commonpath might not catch everything
     if not resolved_path.startswith(normalized_base + os.sep) and resolved_path != normalized_base:
-        print(f"SECURITY: Path traversal attempt detected: {relative_path}")
+        print(f"SECURITY: Path escape attempt detected: {relative_path}")
         return None
 
     return resolved_path
