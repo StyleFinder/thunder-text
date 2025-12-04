@@ -81,8 +81,17 @@ def safe_resolve_path(base_dir: str, relative_path: str) -> str | None:
         print(f"SECURITY: Path validation failed (different roots): {relative_path}")
         return None
 
-    # Additional check: ensure the resolved path is actually under base_dir
-    # This handles edge cases where commonpath might not catch everything
+    # SECURITY NOTE [R-3F913 FALSE POSITIVE]: This startswith() check is for FILE SYSTEM
+    # path validation, NOT URL prefix checking. The scanner incorrectly flags this as
+    # "unsafe URL prefix check" but urllib.parse.urljoin is irrelevant for file paths.
+    #
+    # Security layers in this function:
+    # 1. os.path.commonpath() (line 74) - PRIMARY: OWASP-recommended path containment
+    # 2. os.path.realpath() (line 64-65) - Resolves symlinks to prevent symlink attacks
+    # 3. This startswith() check - DEFENSE-IN-DEPTH: Secondary validation layer
+    #
+    # The + os.sep ensures "/safe/path" won't match "/safe/pathevil" (a known bypass)
+    # nosec: This is intentional defense-in-depth, not a URL check
     if not resolved_path.startswith(normalized_base + os.sep) and resolved_path != normalized_base:
         print(f"SECURITY: Path escape attempt detected: {relative_path}")
         return None
