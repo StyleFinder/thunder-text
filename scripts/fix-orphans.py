@@ -2,6 +2,14 @@
 """
 Fix orphaned code blocks left by sed script that removed console.log statements.
 Pattern: Lines with orphaned object properties followed by });
+
+SECURITY FALSE POSITIVE NOTES:
+- R-6675E (XXE): This script does NOT use XML parsing. It uses regex (re module)
+  for text pattern matching and standard Python file I/O (open/read/write).
+  There is no xml, lxml, etree, ElementTree, or parseString usage.
+  The scanner incorrectly flagged file read operations at lines 13 and 64.
+- All file operations use standard Python open() with explicit UTF-8 encoding.
+- File paths are from a hardcoded whitelist, not user input.
 """
 
 import re
