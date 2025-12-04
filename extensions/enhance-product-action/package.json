@@ -7,7 +7,7 @@
     "build": "shopify app build"
   },
   "dependencies": {
-    "@shopify/ui-extensions-react": "^2024.4.0",
+    "@shopify/ui-extensions-react": "^2025.7.1",
     "react": "^18.0.0"
   },
   "devDependencies": {},
