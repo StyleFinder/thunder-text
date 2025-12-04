@@ -30,5 +30,8 @@
     "npm": ">=9.0.0"
   },
   "author": "Thunder Text Team",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "overrides": {
+    "next@<=15.5.7": "15.5.7"
+  }
 }
