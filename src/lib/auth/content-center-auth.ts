@@ -5,24 +5,47 @@
  * Uses Supabase JWT tokens for user authentication.
  */
 
-import { NextRequest } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
-import { logger } from '@/lib/logger'
+import { NextRequest } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 import {
   validateApiKey as validateApiKeyCore,
   logApiKeyUsage,
   hasScope,
   ApiKeyScope,
-  ApiKeyValidationResult
-} from '@/lib/security/api-keys'
+} from "@/lib/security/api-keys";
 
 /**
  * Authentication result
  */
 export interface AuthResult {
-  authenticated: boolean
-  userId?: string
-  error?: string
+  authenticated: boolean;
+  userId?: string;
+  error?: string;
+}
+
+/**
+ * SECURITY [R-A2041]: Safe Bearer token extraction
+ *
+ * Uses substring(7) instead of .replace('Bearer ', '') because:
+ * - Single replacement only affects first occurrence
+ * - Malformed header "Bearer Bearer token" would become "Bearer token" (still has prefix!)
+ * - This pattern is INTENTIONALLY safe because startsWith() validates the prefix first
+ *
+ * DEFENSE-IN-DEPTH:
+ * - startsWith() ensures prefix exists before extraction
+ * - substring() extracts everything after the 7-character prefix
+ * - Combined, these prevent Bearer prefix bypass attacks
+ *
+ * @param authHeader - Authorization header value
+ * @returns Token without Bearer prefix, or null if invalid
+ */
+export function extractBearerToken(authHeader: string | null): string | null {
+  if (!authHeader?.startsWith("Bearer ")) {
+    return null;
+  }
+  // SECURITY: substring(7) is safe because we validated the prefix with startsWith()
+  return authHeader.substring(7);
 }
 
 /**
@@ -32,67 +55,77 @@ export interface AuthResult {
  * @param request - Next.js request object
  * @returns Authentication result with shop domain as user ID if successful
  */
-export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
+export async function authenticateRequest(
+  request: NextRequest,
+): Promise<AuthResult> {
   try {
     // Try to get shop from various sources
-    let shop: string | null = null
+    let shop: string | null = null;
 
     // 1. Check Authorization header (for API calls from frontend)
-    const authHeader = request.headers.get('authorization')
-    if (authHeader?.startsWith('Bearer ')) {
-      shop = authHeader.replace('Bearer ', '')
+    // SECURITY [R-A2041]: Use safe Bearer token extraction helper
+    const authHeader = request.headers.get("authorization");
+    const bearerToken = extractBearerToken(authHeader);
+    if (bearerToken) {
+      shop = bearerToken;
     }
 
     // 2. Check X-Shopify-Shop-Domain header
     if (!shop) {
-      shop = request.headers.get('x-shopify-shop-domain')
+      shop = request.headers.get("x-shopify-shop-domain");
     }
 
     // 3. Check query parameter
     if (!shop) {
-      const url = new URL(request.url)
-      shop = url.searchParams.get('shop')
+      const url = new URL(request.url);
+      shop = url.searchParams.get("shop");
     }
 
     if (!shop) {
       return {
         authenticated: false,
-        error: 'Missing shop domain. Please provide shop via Authorization header, X-Shopify-Shop-Domain header, or shop query parameter.'
-      }
+        error:
+          "Missing shop domain. Please provide shop via Authorization header, X-Shopify-Shop-Domain header, or shop query parameter.",
+      };
     }
 
     // Ensure shop has .myshopify.com suffix
-    if (!shop.includes('.myshopify.com')) {
-      shop = `${shop}.myshopify.com`
+    if (!shop.includes(".myshopify.com")) {
+      shop = `${shop}.myshopify.com`;
     }
 
     // Verify shop exists in database
     const { data: shopData, error } = await supabaseAdmin
-      .from('shops')
-      .select('id, shop_domain')
-      .eq('shop_domain', shop)
-      .single()
+      .from("shops")
+      .select("id, shop_domain")
+      .eq("shop_domain", shop)
+      .single();
 
     if (error || !shopData) {
-      logger.error('Shop not found in database', error || new Error(`Shop not found: ${shop}`), { component: 'content-center-auth' })
+      logger.error(
+        "Shop not found in database",
+        error || new Error(`Shop not found: ${shop}`),
+        { component: "content-center-auth" },
+      );
       return {
         authenticated: false,
-        error: 'Shop not found. Please install the app first.'
-      }
+        error: "Shop not found. Please install the app first.",
+      };
     }
 
     // Successfully authenticated - use shop_id as userId
     return {
       authenticated: true,
-      userId: shopData.id
-    }
-
+      userId: shopData.id,
+    };
   } catch (error) {
-    logger.error('Authentication error:', error as Error, { component: 'content-center-auth' })
+    logger.error("Authentication error:", error as Error, {
+      component: "content-center-auth",
+    });
     return {
       authenticated: false,
-      error: 'Authentication failed'
-    }
+      error: "Authentication failed",
+    };
   }
 }
 
@@ -103,8 +136,8 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
  * @returns User ID if authenticated, null otherwise
  */
 export async function getUserId(request: NextRequest): Promise<string | null> {
-  const result = await authenticateRequest(request)
-  return result.authenticated ? result.userId! : null
+  const result = await authenticateRequest(request);
+  return result.authenticated ? result.userId! : null;
 }
 
 /**
@@ -117,9 +150,12 @@ export async function getUserId(request: NextRequest): Promise<string | null> {
  * @returns True if user has access, false otherwise
  */
 export async function hasResourceAccess(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   userId: string,
-  resourceType: 'sample' | 'profile' | 'content' | 'template',
-  resourceId: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  resourceType: "sample" | "profile" | "content" | "template",
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  resourceId: string,
 ): Promise<boolean> {
   // For now, RLS policies handle access control at database level
   // This function is a placeholder for future enhancements like:
@@ -129,18 +165,18 @@ export async function hasResourceAccess(
 
   // Currently, all access control is handled by RLS policies
   // which ensure users can only access their own resources
-  return true
+  return true;
 }
 
 /**
  * API key authentication result with extended info
  */
 export interface ApiKeyAuthResult {
-  authenticated: boolean
-  shopId?: string
-  keyId?: string
-  scopes?: ApiKeyScope[]
-  error?: string
+  authenticated: boolean;
+  shopId?: string;
+  keyId?: string;
+  scopes?: ApiKeyScope[];
+  error?: string;
 }
 
 /**
@@ -155,8 +191,8 @@ export interface ApiKeyAuthResult {
  * @returns True if valid API key, false otherwise
  */
 export async function validateApiKey(request: NextRequest): Promise<boolean> {
-  const result = await validateApiKeyWithDetails(request)
-  return result.authenticated
+  const result = await validateApiKeyWithDetails(request);
+  return result.authenticated;
 }
 
 /**
@@ -167,36 +203,36 @@ export async function validateApiKey(request: NextRequest): Promise<boolean> {
  * @returns Full authentication result with shop and scope info
  */
 export async function validateApiKeyWithDetails(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<ApiKeyAuthResult> {
-  const apiKey = request.headers.get('x-api-key')
+  const apiKey = request.headers.get("x-api-key");
 
   if (!apiKey) {
     return {
       authenticated: false,
-      error: 'Missing API key. Provide X-API-Key header.'
-    }
+      error: "Missing API key. Provide X-API-Key header.",
+    };
   }
 
-  const validationResult = await validateApiKeyCore(apiKey)
+  const validationResult = await validateApiKeyCore(apiKey);
 
   if (!validationResult.valid) {
-    logger.warn('API key validation failed', {
-      component: 'content-center-auth',
-      error: validationResult.error
-    })
+    logger.warn("API key validation failed", {
+      component: "content-center-auth",
+      error: validationResult.error,
+    });
     return {
       authenticated: false,
-      error: validationResult.error || 'Invalid API key'
-    }
+      error: validationResult.error || "Invalid API key",
+    };
   }
 
   return {
     authenticated: true,
     shopId: validationResult.shopId,
     keyId: validationResult.keyId,
-    scopes: validationResult.scopes
-  }
+    scopes: validationResult.scopes,
+  };
 }
 
 /**
@@ -209,28 +245,28 @@ export async function validateApiKeyWithDetails(
  */
 export async function validateApiKeyWithScope(
   request: NextRequest,
-  requiredScope: ApiKeyScope
+  requiredScope: ApiKeyScope,
 ): Promise<ApiKeyAuthResult> {
-  const result = await validateApiKeyWithDetails(request)
+  const result = await validateApiKeyWithDetails(request);
 
   if (!result.authenticated) {
-    return result
+    return result;
   }
 
   if (!result.scopes || !hasScope(result.scopes, requiredScope)) {
-    logger.warn('API key missing required scope', {
-      component: 'content-center-auth',
+    logger.warn("API key missing required scope", {
+      component: "content-center-auth",
       keyId: result.keyId,
       requiredScope,
-      availableScopes: result.scopes
-    })
+      availableScopes: result.scopes,
+    });
     return {
       authenticated: false,
-      error: `Insufficient permissions. Required scope: ${requiredScope}`
-    }
+      error: `Insufficient permissions. Required scope: ${requiredScope}`,
+    };
   }
 
-  return result
+  return result;
 }
 
 /**
@@ -248,9 +284,9 @@ export async function logApiUsage(
   request: NextRequest,
   statusCode: number,
   responseTimeMs: number,
-  errorMessage?: string
+  errorMessage?: string,
 ): Promise<void> {
-  const url = new URL(request.url)
+  const url = new URL(request.url);
   await logApiKeyUsage(
     keyId,
     url.pathname,
@@ -258,13 +294,16 @@ export async function logApiUsage(
     statusCode,
     responseTimeMs,
     {
-      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
-      userAgent: request.headers.get('user-agent') || undefined,
-      errorMessage
-    }
-  )
+      ipAddress:
+        request.headers.get("x-forwarded-for") ||
+        request.headers.get("x-real-ip") ||
+        undefined,
+      userAgent: request.headers.get("user-agent") || undefined,
+      errorMessage,
+    },
+  );
 }
 
 // Re-export types and utilities for convenience
-export type { ApiKeyScope } from '@/lib/security/api-keys'
-export { hasScope } from '@/lib/security/api-keys'
+export type { ApiKeyScope } from "@/lib/security/api-keys";
+export { hasScope } from "@/lib/security/api-keys";

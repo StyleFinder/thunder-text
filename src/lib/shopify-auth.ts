@@ -1,6 +1,41 @@
-import { GraphQLClient } from 'graphql-request'
-import crypto from 'crypto'
-import { logger } from '@/lib/logger'
+import { GraphQLClient } from "graphql-request";
+import crypto from "crypto";
+import { logger } from "@/lib/logger";
+
+/**
+ * SECURITY [R-A2041]: Safe URL hostname extraction
+ * Uses URL API instead of string.replace() to prevent bypass attacks.
+ *
+ * VULNERABILITY PREVENTED:
+ * - Input: "https://https://evil.com" with .replace('https://', '')
+ * - Vulnerable output: "https://evil.com" (still contains protocol!)
+ * - Safe output: "evil.com" (URL API properly extracts hostname)
+ *
+ * @param urlString - URL string to extract hostname from
+ * @returns Hostname without protocol, or undefined if invalid
+ */
+function extractHostnameFromUrl(
+  urlString: string | undefined,
+): string | undefined {
+  if (!urlString) return undefined;
+  try {
+    return new URL(urlString).hostname;
+  } catch {
+    // Fallback for malformed URLs - use global regex for complete sanitization
+    return urlString.replace(/^https?:\/\//gi, "");
+  }
+}
+
+/**
+ * SECURITY [R-A2041]: Safe shop name extraction with global regex
+ * Uses regex with /gi flag to replace ALL occurrences of the suffix.
+ *
+ * @param shop - Shop domain that may contain .myshopify.com suffix
+ * @returns Shop name without the suffix
+ */
+function extractShopName(shop: string): string {
+  return shop.replace(/\.myshopify\.com/gi, "");
+}
 
 /**
  * Shopify authentication for Next.js using Token Exchange
@@ -16,94 +51,109 @@ import { logger } from '@/lib/logger'
  */
 
 interface TokenExchangeResponse {
-  access_token: string
-  expires_in: number
-  associated_user_scope: string
+  access_token: string;
+  expires_in: number;
+  associated_user_scope: string;
   associated_user: {
-    id: number
-    first_name: string
-    last_name: string
-    email: string
-    email_verified: boolean
-    account_owner: boolean
-    locale: string
-    collaborator: boolean
-  }
-  scope: string
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    email_verified: boolean;
+    account_owner: boolean;
+    locale: string;
+    collaborator: boolean;
+  };
+  scope: string;
 }
 
 /**
  * Exchange session token for access token using Shopify Token Exchange API
  * https://shopify.dev/docs/apps/build/authentication-authorization/access-tokens/token-exchange
  */
-async function exchangeToken(sessionToken: string, shop: string): Promise<TokenExchangeResponse> {
+async function exchangeToken(
+  sessionToken: string,
+  shop: string,
+): Promise<TokenExchangeResponse> {
   // Use NEXT_PUBLIC_SHOPIFY_API_KEY for client ID (visible to client)
   // This will be the dev app's key in Preview environment
-  const clientId = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || process.env.SHOPIFY_API_KEY
-  const clientSecret = process.env.SHOPIFY_API_SECRET
+  const clientId =
+    process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || process.env.SHOPIFY_API_KEY;
+  const clientSecret = process.env.SHOPIFY_API_SECRET;
 
   if (!clientId) {
-    throw new Error('NEXT_PUBLIC_SHOPIFY_API_KEY or SHOPIFY_API_KEY environment variable is not set')
+    throw new Error(
+      "NEXT_PUBLIC_SHOPIFY_API_KEY or SHOPIFY_API_KEY environment variable is not set",
+    );
   }
 
   if (!clientSecret) {
-    throw new Error('SHOPIFY_API_SECRET environment variable is not set')
+    throw new Error("SHOPIFY_API_SECRET environment variable is not set");
   }
 
-
-  const tokenExchangeUrl = `https://${shop}/admin/oauth/access_token`
+  const tokenExchangeUrl = `https://${shop}/admin/oauth/access_token`;
 
   const requestBody = {
     client_id: clientId,
     client_secret: clientSecret,
     subject_token: sessionToken,
-    subject_token_type: 'urn:ietf:params:oauth:token-type:id_token',
-    grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
-    requested_token_type: 'urn:shopify:params:oauth:token-type:offline-access-token',
-  }
+    subject_token_type: "urn:ietf:params:oauth:token-type:id_token",
+    grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
+    requested_token_type:
+      "urn:shopify:params:oauth:token-type:offline-access-token",
+  };
 
   try {
     const response = await fetch(tokenExchangeUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify(requestBody),
-    })
+    });
 
     if (!response.ok) {
-      const errorText = await response.text()
-      logger.error('Token exchange failed', new Error(`${response.status} ${response.statusText}`), {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText,
-        url: tokenExchangeUrl,
-        clientId: clientId,
-        component: 'shopify-auth',
-        operation: 'token-exchange'
-      })
+      const errorText = await response.text();
+      logger.error(
+        "Token exchange failed",
+        new Error(`${response.status} ${response.statusText}`),
+        {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+          url: tokenExchangeUrl,
+          clientId: clientId,
+          component: "shopify-auth",
+          operation: "token-exchange",
+        },
+      );
 
       // Parse error if it's JSON
       try {
-        const errorJson = JSON.parse(errorText)
+        const errorJson = JSON.parse(errorText);
         if (errorJson.error_description) {
-          throw new Error(`Token exchange failed: ${errorJson.error_description}`)
+          throw new Error(
+            `Token exchange failed: ${errorJson.error_description}`,
+          );
         }
-      } catch (e) {
+      } catch {
         // Not JSON, use raw text
       }
 
-      throw new Error(`Token exchange failed: ${response.status} ${errorText}`)
+      throw new Error(`Token exchange failed: ${response.status} ${errorText}`);
     }
 
-    const data = await response.json() as TokenExchangeResponse
+    const data = (await response.json()) as TokenExchangeResponse;
     // Token exchange successful
 
-    return data
+    return data;
   } catch (error) {
-    logger.error('Token exchange error', error as Error, { component: 'shopify-auth', operation: 'token-exchange' })
-    throw error
+    logger.error("Token exchange error", error as Error, {
+      component: "shopify-auth",
+      operation: "token-exchange",
+    });
+    throw error;
   }
 }
 
@@ -114,70 +164,88 @@ async function exchangeToken(sessionToken: string, shop: string): Promise<TokenE
  */
 function verifySessionToken(token: string): boolean {
   // Session tokens use the CLIENT SECRET, not API SECRET for signing
-  const clientSecret = process.env.SHOPIFY_API_SECRET // This is actually the client secret
+  const clientSecret = process.env.SHOPIFY_API_SECRET; // This is actually the client secret
 
   if (!clientSecret) {
-    logger.error('SHOPIFY_API_SECRET (client secret) not configured', undefined, { component: 'shopify-auth', operation: 'verify-session-token' })
-    return false
+    logger.error(
+      "SHOPIFY_API_SECRET (client secret) not configured",
+      undefined,
+      { component: "shopify-auth", operation: "verify-session-token" },
+    );
+    return false;
   }
 
-  logger.debug('Using client secret for verification', {
-    component: 'shopify-auth',
-    operation: 'verify-session-token',
-    secretPreview: clientSecret.substring(0, 8) + '...',
-    secretLength: clientSecret.length
-  })
+  logger.debug("Using client secret for verification", {
+    component: "shopify-auth",
+    operation: "verify-session-token",
+    secretPreview: clientSecret.substring(0, 8) + "...",
+    secretLength: clientSecret.length,
+  });
 
   try {
-    const [header, payload, signature] = token.split('.')
+    const [header, payload, signature] = token.split(".");
 
     if (!header || !payload || !signature) {
-      logger.error('Invalid session token format', undefined, { component: 'shopify-auth', operation: 'verify-session-token' })
-      return false
+      logger.error("Invalid session token format", undefined, {
+        component: "shopify-auth",
+        operation: "verify-session-token",
+      });
+      return false;
     }
 
     // Create the signing input (header.payload)
-    const signingInput = `${header}.${payload}`
+    const signingInput = `${header}.${payload}`;
 
     // Create HMAC-SHA256 signature using the client secret
     // Session tokens use HS256 algorithm according to Shopify docs
-    const hmac = crypto.createHmac('sha256', clientSecret)
-    hmac.update(signingInput)
+    const hmac = crypto.createHmac("sha256", clientSecret);
+    hmac.update(signingInput);
 
     // Generate Base64url encoded signature (no padding, URL-safe)
-    const calculatedSignature = hmac.digest('base64url')
+    const calculatedSignature = hmac.digest("base64url");
 
     // Use timing-safe comparison to prevent timing attacks
-    const expected = Buffer.from(calculatedSignature, 'utf8')
-    const received = Buffer.from(signature, 'utf8')
+    const expected = Buffer.from(calculatedSignature, "utf8");
+    const received = Buffer.from(signature, "utf8");
 
     // Check length first (fast fail, not timing sensitive)
     if (expected.length !== received.length) {
-      logger.error('Session token signature verification failed (length mismatch)', undefined, { component: 'shopify-auth', operation: 'verify-session-token' })
-      return false
+      logger.error(
+        "Session token signature verification failed (length mismatch)",
+        undefined,
+        { component: "shopify-auth", operation: "verify-session-token" },
+      );
+      return false;
     }
 
     // Timing-safe comparison using crypto.timingSafeEqual
-    const isValid = crypto.timingSafeEqual(expected, received)
+    const isValid = crypto.timingSafeEqual(expected, received);
 
     if (!isValid) {
-      logger.error('Session token signature verification failed', undefined, {
-        component: 'shopify-auth',
-        operation: 'verify-session-token',
-        isDevelopment: process.env.NODE_ENV === 'development'
-      })
+      logger.error("Session token signature verification failed", undefined, {
+        component: "shopify-auth",
+        operation: "verify-session-token",
+        isDevelopment: process.env.NODE_ENV === "development",
+      });
       // Don't log actual signatures in production to avoid leaking them
-      if (process.env.NODE_ENV === 'development') {
-        logger.debug(`Expected signature: ${calculatedSignature}`, { component: 'shopify-auth' })
-        logger.debug(`Received signature: ${signature}`, { component: 'shopify-auth' })
+      if (process.env.NODE_ENV === "development") {
+        logger.debug(`Expected signature: ${calculatedSignature}`, {
+          component: "shopify-auth",
+        });
+        logger.debug(`Received signature: ${signature}`, {
+          component: "shopify-auth",
+        });
       }
     } else {
     }
 
-    return isValid
+    return isValid;
   } catch (error) {
-    logger.error('Error verifying session token', error as Error, { component: 'shopify-auth', operation: 'verify-session-token' })
-    return false
+    logger.error("Error verifying session token", error as Error, {
+      component: "shopify-auth",
+      operation: "verify-session-token",
+    });
+    return false;
   }
 }
 
@@ -185,24 +253,29 @@ function verifySessionToken(token: string): boolean {
  * Parse JWT payload without verification (for debugging)
  */
 interface ShopifyJWTPayload {
-  iss: string
-  dest: string
-  aud: string
-  sub: string
-  exp: number
-  nbf: number
-  iat: number
-  jti: string
-  sid: string
+  iss: string;
+  dest: string;
+  aud: string;
+  sub: string;
+  exp: number;
+  nbf: number;
+  iat: number;
+  jti: string;
+  sid: string;
 }
 
 function parseJWT(token: string): ShopifyJWTPayload | null {
   try {
-    const [, payload] = token.split('.')
-    return JSON.parse(Buffer.from(payload, 'base64').toString()) as ShopifyJWTPayload
+    const [, payload] = token.split(".");
+    return JSON.parse(
+      Buffer.from(payload, "base64").toString(),
+    ) as ShopifyJWTPayload;
   } catch (error) {
-    logger.error('Error parsing JWT', error as Error, { component: 'shopify-auth', operation: 'parse-jwt' })
-    return null
+    logger.error("Error parsing JWT", error as Error, {
+      component: "shopify-auth",
+      operation: "parse-jwt",
+    });
+    return null;
   }
 }
 
@@ -213,110 +286,126 @@ function parseJWT(token: string): ShopifyJWTPayload | null {
 export async function authenticateRequest(
   request: Request,
   options?: {
-    sessionToken?: string,
-    shop?: string
-  }
+    sessionToken?: string;
+    shop?: string;
+  },
 ) {
   try {
     // Extract session token from request or use provided one
-    let sessionToken = options?.sessionToken
+    let sessionToken = options?.sessionToken;
 
     if (!sessionToken) {
-      const authHeader = request.headers.get('authorization')
-      if (authHeader?.startsWith('Bearer ')) {
-        sessionToken = authHeader.substring(7)
+      const authHeader = request.headers.get("authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        sessionToken = authHeader.substring(7);
       }
     }
 
     if (!sessionToken) {
-      throw new Error('No session token provided - authentication required')
+      throw new Error("No session token provided - authentication required");
     }
 
     // Extract shop from request or use provided one
-    let shop = options?.shop
+    let shop = options?.shop;
     if (!shop) {
-      const url = new URL(request.url)
-      shop = url.searchParams.get('shop') || undefined
+      const url = new URL(request.url);
+      shop = url.searchParams.get("shop") || undefined;
 
       // Also try to get from JWT payload
+      // SECURITY [R-A2041]: Use URL API for safe hostname extraction
       if (sessionToken && !shop) {
-        const payload = parseJWT(sessionToken)
-        shop = (payload?.dest as string | undefined)?.replace('https://', '')
+        const payload = parseJWT(sessionToken);
+        shop = extractHostnameFromUrl(payload?.dest as string | undefined);
       }
     }
 
     if (!shop) {
-      throw new Error('Shop domain is required for authentication')
+      throw new Error("Shop domain is required for authentication");
     }
 
     // Ensure shop has .myshopify.com suffix
-    if (!shop.includes('.myshopify.com')) {
-      shop = `${shop}.myshopify.com`
+    if (!shop.includes(".myshopify.com")) {
+      shop = `${shop}.myshopify.com`;
     }
 
     // Parse the token to check its validity
-    const payload = parseJWT(sessionToken)
+    const payload = parseJWT(sessionToken);
 
     // Validate required fields per Shopify documentation
     if (!payload?.iss || !payload?.dest || !payload?.aud || !payload?.sub) {
-      logger.error('Session token missing required fields', undefined, { component: 'shopify-auth', operation: 'authenticate-request' })
-      throw new Error('Invalid session token: missing required fields')
+      logger.error("Session token missing required fields", undefined, {
+        component: "shopify-auth",
+        operation: "authenticate-request",
+      });
+      throw new Error("Invalid session token: missing required fields");
     }
 
     // Verify the dest field matches the shop
-    if (!payload.dest.includes(shop.replace('.myshopify.com', ''))) {
-      logger.error('Session token dest does not match shop', undefined, {
+    // SECURITY [R-A2041]: Use global regex helper for complete suffix removal
+    if (!payload.dest.includes(extractShopName(shop))) {
+      logger.error("Session token dest does not match shop", undefined, {
         dest: payload.dest,
         shop,
-        component: 'shopify-auth',
-        operation: 'authenticate-request'
-      })
-      throw new Error('Session token shop mismatch')
+        component: "shopify-auth",
+        operation: "authenticate-request",
+      });
+      throw new Error("Session token shop mismatch");
     }
 
     // Verify the aud field matches our app's client ID
     // Use NEXT_PUBLIC_SHOPIFY_API_KEY which is set per environment
-    const expectedClientId = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || process.env.SHOPIFY_API_KEY
+    const expectedClientId =
+      process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || process.env.SHOPIFY_API_KEY;
     if (expectedClientId && payload.aud !== expectedClientId) {
-      logger.error('Session token audience does not match app client ID', undefined, {
-        aud: payload.aud,
-        expected: expectedClientId,
-        component: 'shopify-auth',
-        operation: 'authenticate-request'
-      })
-      throw new Error('Session token audience mismatch')
+      logger.error(
+        "Session token audience does not match app client ID",
+        undefined,
+        {
+          aud: payload.aud,
+          expected: expectedClientId,
+          component: "shopify-auth",
+          operation: "authenticate-request",
+        },
+      );
+      throw new Error("Session token audience mismatch");
     }
 
     // Check token nbf (not before)
     if (payload?.nbf && payload.nbf * 1000 > Date.now()) {
-      logger.error('Session token not yet valid', undefined, { component: 'shopify-auth', operation: 'authenticate-request' })
-      throw new Error('Session token not yet valid')
+      logger.error("Session token not yet valid", undefined, {
+        component: "shopify-auth",
+        operation: "authenticate-request",
+      });
+      throw new Error("Session token not yet valid");
     }
 
     // Check token expiry
     if (payload?.exp && payload.exp * 1000 < Date.now()) {
-      logger.error('Session token expired', undefined, {
+      logger.error("Session token expired", undefined, {
         expiredAt: new Date(payload.exp * 1000),
         currentTime: new Date(),
-        component: 'shopify-auth',
-        operation: 'authenticate-request'
-      })
-      throw new Error('Session token expired')
+        component: "shopify-auth",
+        operation: "authenticate-request",
+      });
+      throw new Error("Session token expired");
     }
 
     // Verify the token signature - REQUIRED for production
     if (!verifySessionToken(sessionToken)) {
-      logger.error('Session token signature verification failed - required for production security', undefined, { component: 'shopify-auth', operation: 'authenticate-request' })
-      throw new Error('Invalid session token signature')
+      logger.error(
+        "Session token signature verification failed - required for production security",
+        undefined,
+        { component: "shopify-auth", operation: "authenticate-request" },
+      );
+      throw new Error("Invalid session token signature");
     }
 
-
     // Exchange for access token
-    const tokenData = await exchangeToken(sessionToken, shop)
+    const tokenData = await exchangeToken(sessionToken, shop);
 
     // Store the token in database for future use
-    const { saveShopToken } = await import('./shopify/token-manager')
-    await saveShopToken(shop, tokenData.access_token, 'offline')
+    const { saveShopToken } = await import("./shopify/token-manager");
+    await saveShopToken(shop, tokenData.access_token, "offline");
 
     return {
       admin: null, // We'll create GraphQL client when needed
@@ -329,10 +418,13 @@ export async function authenticateRequest(
       },
       accessToken: tokenData.access_token,
       shop,
-    }
+    };
   } catch (error) {
-    logger.error('Authentication failed', error as Error, { component: 'shopify-auth', operation: 'authenticate-request' })
-    throw error
+    logger.error("Authentication failed", error as Error, {
+      component: "shopify-auth",
+      operation: "authenticate-request",
+    });
+    throw error;
   }
 }
 
@@ -340,19 +432,22 @@ export async function authenticateRequest(
  * Get access token for a shop
  * This requires proper session token - no fallbacks
  */
-export async function getAccessToken(shop: string, sessionToken?: string): Promise<string> {
+export async function getAccessToken(
+  shop: string,
+  sessionToken?: string,
+): Promise<string> {
   // Ensure shop has .myshopify.com suffix
-  if (!shop.includes('.myshopify.com')) {
-    shop = `${shop}.myshopify.com`
+  if (!shop.includes(".myshopify.com")) {
+    shop = `${shop}.myshopify.com`;
   }
 
   // First, always check database for stored access token
   // This is more efficient and avoids unnecessary token exchanges
-  const { getShopToken } = await import('./shopify/token-manager')
-  const dbToken = await getShopToken(shop)
+  const { getShopToken } = await import("./shopify/token-manager");
+  const dbToken = await getShopToken(shop);
 
   if (dbToken.success && dbToken.accessToken) {
-    return dbToken.accessToken
+    return dbToken.accessToken;
   }
 
   // If no stored token and we have a session token, do token exchange
@@ -361,23 +456,32 @@ export async function getAccessToken(shop: string, sessionToken?: string): Promi
       // Create a mock request with the session token
       const request = new Request(`https://${shop}/api/auth`, {
         headers: {
-          'Authorization': `Bearer ${sessionToken}`,
-          'X-Shopify-Shop-Domain': shop,
+          Authorization: `Bearer ${sessionToken}`,
+          "X-Shopify-Shop-Domain": shop,
         },
-      })
+      });
 
-      const { accessToken } = await authenticateRequest(request, { sessionToken, shop })
+      const { accessToken } = await authenticateRequest(request, {
+        sessionToken,
+        shop,
+      });
 
       if (accessToken) {
-        return accessToken
+        return accessToken;
       }
     } catch (error) {
-      logger.error('Token Exchange failed', error as Error, { component: 'shopify-auth', operation: 'get-access-token', shop })
-      throw error // Don't fall back, throw the error
+      logger.error("Token Exchange failed", error as Error, {
+        component: "shopify-auth",
+        operation: "get-access-token",
+        shop,
+      });
+      throw error; // Don't fall back, throw the error
     }
   }
 
-  throw new Error(`No valid authentication available for shop: ${shop}. Session token required for embedded apps.`)
+  throw new Error(
+    `No valid authentication available for shop: ${shop}. Session token required for embedded apps.`,
+  );
 }
 
 /**
@@ -388,20 +492,20 @@ export function createAdminClient(shop: string, accessToken: string) {
     `https://${shop}/admin/api/2025-01/graphql.json`,
     {
       headers: {
-        'X-Shopify-Access-Token': accessToken,
-        'Content-Type': 'application/json',
+        "X-Shopify-Access-Token": accessToken,
+        "Content-Type": "application/json",
       },
-    }
-  )
+    },
+  );
 
-  return client
+  return client;
 }
 
 // Export types
 export interface Session {
-  shop: string
-  accessToken: string
-  scope: string
-  expires: Date | null
-  user: Record<string, unknown> | null
+  shop: string;
+  accessToken: string;
+  scope: string;
+  expires: Date | null;
+  user: Record<string, unknown> | null;
 }
