@@ -33,8 +33,16 @@ export default function LoginPage() {
     });
 
     if (result?.error) {
-      logger.error('[Login Page] Login failed:', result.error, undefined, { component: 'login' });
-      setError('Invalid email or password');
+      logger.error(`[Login Page] Login failed: ${result.error}`, undefined, { component: 'login' });
+
+      // Check for account lockout
+      if (result.error.includes('ACCOUNT_LOCKED')) {
+        const lockoutSeconds = parseInt(result.error.split(':')[1]) || 900;
+        const lockoutMinutes = Math.ceil(lockoutSeconds / 60);
+        setError(`Account temporarily locked due to too many failed attempts. Please try again in ${lockoutMinutes} minute${lockoutMinutes > 1 ? 's' : ''}.`);
+      } else {
+        setError('Invalid email or password');
+      }
       setLoading(false);
       return;
     }
@@ -83,14 +91,28 @@ export default function LoginPage() {
               required
             />
 
-            <Input
-              label="Password"
-              type="password"
-              value={password}
-              onChange={setPassword}
-              placeholder="••••••••"
-              required
-            />
+            <div>
+              <Input
+                label="Password"
+                type="password"
+                value={password}
+                onChange={setPassword}
+                placeholder="••••••••"
+                required
+              />
+              <div style={{ textAlign: 'right', marginTop: layout.spacing.xs }}>
+                <Link
+                  href="/auth/forgot-password"
+                  style={{
+                    color: colors.smartBlue,
+                    textDecoration: 'none',
+                    fontSize: '13px'
+                  }}
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            </div>
 
             <Button
               type="submit"

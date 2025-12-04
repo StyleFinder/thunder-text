@@ -9,6 +9,8 @@ const buttonVariants = cva(
       variant: {
         default:
           "bg-primary text-white shadow hover:bg-primary/90 font-medium",
+        primary:
+          "bg-primary text-white shadow hover:bg-primary/90 font-medium",
         destructive:
           "bg-destructive text-white shadow-sm hover:bg-destructive/90 font-medium",
         outline:
@@ -22,27 +24,34 @@ const buttonVariants = cva(
         default: "h-9 px-4 py-2",
         sm: "h-8 rounded-md px-3 text-xs",
         lg: "h-11 rounded-md px-8",
+        large: "h-11 rounded-md px-8",
         icon: "h-9 w-9",
+      },
+      fullWidth: {
+        true: "w-full",
+        false: "",
       },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      fullWidth: false,
     },
   }
 )
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+    Omit<VariantProps<typeof buttonVariants>, 'fullWidth'> {
   asChild?: boolean
+  fullWidth?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => {
+  ({ className, variant, size, fullWidth, ...props }, ref) => {
     return (
       <button
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(buttonVariants({ variant, size, fullWidth, className }))}
         ref={ref}
         {...props}
       />

@@ -131,7 +131,7 @@ export default function CreateFacebookAdFlow({
 
         setProducts(transformedProducts);
       } else {
-        logger.error("❌ Products API error:", data.error, undefined, { component: 'CreateFacebookAdFlow' });
+        logger.error(`❌ Products API error: ${data.error}`, undefined, { component: 'CreateFacebookAdFlow' });
         setError(data.error || "Failed to load products from Shopify");
       }
     } catch (err) {

@@ -510,25 +510,25 @@ export default function UnifiedEnhancePage() {
                     <AlertDescription>{successMessage}</AlertDescription>
                   </Alert>
                 )}
-                {updateResult?.shopifyResult && (
+                {updateResult && Boolean(updateResult.shopifyResult) && (
                   <div className="space-y-2">
                     <p className="text-sm text-gray-600">The following changes have been applied:</p>
                     <div className="space-y-1 text-sm">
                       {updateResult.updates && typeof updateResult.updates === "object" ? (
                         <>
-                          {"title" in updateResult.updates && updateResult.updates.title ? (
+                          {"title" in updateResult.updates && (updateResult.updates as Record<string, unknown>).title ? (
                             <p>• Title updated</p>
                           ) : null}
-                          {"description" in updateResult.updates && updateResult.updates.description ? (
+                          {"description" in updateResult.updates && (updateResult.updates as Record<string, unknown>).description ? (
                             <p>• Description updated</p>
                           ) : null}
-                          {"seoTitle" in updateResult.updates && updateResult.updates.seoTitle ? (
+                          {"seoTitle" in updateResult.updates && (updateResult.updates as Record<string, unknown>).seoTitle ? (
                             <p>• SEO title updated</p>
                           ) : null}
-                          {"seoDescription" in updateResult.updates && updateResult.updates.seoDescription ? (
+                          {"seoDescription" in updateResult.updates && (updateResult.updates as Record<string, unknown>).seoDescription ? (
                             <p>• SEO meta description updated</p>
                           ) : null}
-                          {"bulletPoints" in updateResult.updates && updateResult.updates.bulletPoints ? (
+                          {"bulletPoints" in updateResult.updates && (updateResult.updates as Record<string, unknown>).bulletPoints ? (
                             <p>• Bullet points added</p>
                           ) : null}
                         </>

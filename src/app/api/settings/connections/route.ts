@@ -25,6 +25,31 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // SECURITY: Verify the request is authenticated via session cookie
+    const authenticatedShop = request.cookies.get('shopify_shop')?.value
+
+    if (!authenticatedShop) {
+      // No session cookie - user is not authenticated
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // SECURITY: Verify the authenticated user owns this shop
+    // This prevents information disclosure via shop enumeration
+    if (authenticatedShop !== shop) {
+      logger.warn('[Connections API] Shop mismatch - possible enumeration attempt', {
+        component: 'connections',
+        requestedShop: shop,
+        // Don't log the authenticated shop to avoid info leak in logs
+      })
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
+      )
+    }
+
     // First, get the shop_id and is_active from shop_domain
     const { data: shopData, error: shopError } = await supabaseAdmin
       .from('shops')

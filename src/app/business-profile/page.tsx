@@ -109,31 +109,19 @@ export default function BrandVoicePage() {
         const data = await response.json();
         if (data.success && data.data.profile) {
           setProfile(data.data.profile);
-          setInterviewStatus(data.data.profile.interview_status);
-          setProgress(data.data.progress.percentage_complete);
 
-          if (data.data.progress.next_prompt) {
-            setCurrentPrompt(data.data.progress.next_prompt);
-          }
-
-          // If interview is completed with generated profile, show completion
+          // If interview is completed with generated profile, redirect to settings
           if (
             data.data.profile.interview_status === 'completed' &&
             data.data.profile.master_profile_text
           ) {
-            showCompletionState();
+            router.replace('/brand-voice/settings');
+            return;
           }
-          // If all questions answered but profile not yet generated, trigger generation
-          else if (
-            data.data.progress.percentage_complete >= 100 &&
-            data.data.profile.interview_status === 'in_progress' &&
-            !data.data.profile.master_profile_text
-          ) {
-            console.log('[BusinessProfile] All questions answered, triggering profile generation...');
-            setInterviewStatus('in_progress');
-            addAIMessage("All questions completed! Now generating your Business Profile...");
-            setTimeout(() => generateProfile(), 1000);
-          }
+
+          // Don't auto-load responses - let user choose mode first
+          // Just store the profile data for when they start
+          setInterviewStatus(data.data.profile.interview_status || 'not_started');
         }
       }
     } catch (error) {
@@ -167,6 +155,7 @@ export default function BrandVoicePage() {
   // Track interview mode and total questions
   const [interviewMode, setInterviewMode] = useState<'full' | 'quick_start'>('full');
   const [totalQuestions, setTotalQuestions] = useState(19);
+  const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
 
   const startInterview = async (mode: 'full' | 'quick_start' = 'full') => {
 
@@ -180,6 +169,7 @@ export default function BrandVoicePage() {
     setInterviewMode(mode);
 
     try {
+      // First, start/update the interview with selected mode
       const response = await fetch('/api/business-profile/start', {
         method: 'POST',
         headers: {
@@ -193,21 +183,79 @@ export default function BrandVoicePage() {
 
       if (data.success) {
         setProfile(data.data.profile);
-        setCurrentPrompt(data.data.first_prompt);
         setInterviewStatus('in_progress');
-        setTotalQuestions(data.data.total_questions || (mode === 'quick_start' ? 7 : 19));
+        setTotalQuestions(data.data.total_questions || (mode === 'quick_start' ? 7 : 21));
 
-        const timeEstimate = mode === 'quick_start' ? '5-7 minutes' : '15-20 minutes';
-        addAIMessage(
-          `Hi! I'm here to learn about your business so we can create content that truly represents your brand. This ${mode === 'quick_start' ? 'quick' : ''} conversation will take about ${timeEstimate}. Ready to get started?`
-        );
+        // Now load any existing responses for this mode
+        const profileResponse = await fetch('/api/business-profile', {
+          headers: {
+            'Authorization': `Bearer ${shopDomain}`,
+          },
+        });
 
-        setTimeout(() => {
-          addAIMessage(
-            data.data.first_prompt.question_text,
-            data.data.first_prompt.prompt_key
-          );
-        }, 1500);
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+
+          if (profileData.success && profileData.data.responses && profileData.data.responses.length > 0) {
+            // User has existing responses - load chat history
+            const chatHistory: ChatMessage[] = [];
+
+            const timeEstimate = mode === 'quick_start' ? '5-7 minutes' : '15-20 minutes';
+            chatHistory.push({
+              id: 'welcome',
+              type: 'ai',
+              content: `Hi! I'm here to learn about your business so we can create content that truly represents your brand. This ${mode === 'quick_start' ? 'quick' : ''} conversation will take about ${timeEstimate}. Ready to get started?`,
+              timestamp: new Date(profileData.data.profile.interview_started_at || Date.now()),
+            });
+
+            // Add question-answer pairs from existing responses
+            profileData.data.responses.forEach((resp: any) => {
+              chatHistory.push({
+                id: `q-${resp.id}`,
+                type: 'ai',
+                content: resp.prompt?.question_text || resp.prompt_key,
+                timestamp: new Date(resp.created_at),
+                prompt_key: resp.prompt_key,
+              });
+
+              chatHistory.push({
+                id: `a-${resp.id}`,
+                type: 'user',
+                content: resp.response_text,
+                timestamp: new Date(resp.created_at),
+              });
+            });
+
+            setMessages(chatHistory);
+            setProgress(profileData.data.progress.percentage_complete);
+            setCurrentQuestionNumber(profileData.data.progress.current_question);
+
+            // If there's a next prompt, show it
+            if (profileData.data.progress.next_prompt) {
+              setCurrentPrompt(profileData.data.progress.next_prompt);
+              setTimeout(() => {
+                addAIMessage(
+                  profileData.data.progress.next_prompt.question_text,
+                  profileData.data.progress.next_prompt.prompt_key
+                );
+              }, 500);
+            }
+          } else {
+            // No existing responses - start fresh
+            setCurrentPrompt(data.data.first_prompt);
+            const timeEstimate = mode === 'quick_start' ? '5-7 minutes' : '15-20 minutes';
+            addAIMessage(
+              `Hi! I'm here to learn about your business so we can create content that truly represents your brand. This ${mode === 'quick_start' ? 'quick' : ''} conversation will take about ${timeEstimate}. Ready to get started?`
+            );
+
+            setTimeout(() => {
+              addAIMessage(
+                data.data.first_prompt.question_text,
+                data.data.first_prompt.prompt_key
+              );
+            }, 1500);
+          }
+        }
       } else {
         setError(data.error || 'Failed to start interview');
       }
@@ -255,21 +303,12 @@ export default function BrandVoicePage() {
 
       if (data.success) {
         setProgress(data.data.progress.percentage_complete);
+        setCurrentQuestionNumber(data.data.progress.current_question);
 
         if (data.data.interview_complete) {
           setTimeout(() => {
             addAIMessage("Excellent! You've completed all questions. 🎉");
           }, 800);
-
-          setTimeout(() => {
-            addAIMessage(
-              "Now I'll analyze your responses to create your comprehensive Business Profile. This will take about 30-60 seconds..."
-            );
-          }, 2000);
-
-          setTimeout(() => {
-            generateProfile();
-          }, 3000);
         } else if (data.data.next_prompt) {
           setCurrentPrompt(data.data.next_prompt);
 
@@ -450,8 +489,8 @@ export default function BrandVoicePage() {
     );
   }
 
-  // Welcome screen
-  if (messages.length === 0 && interviewStatus !== 'completed') {
+  // Welcome screen - always show mode selection if no messages loaded
+  if (messages.length === 0) {
     return (
       <div className="w-full flex flex-col items-center" style={{ padding: '32px', background: '#fafaf9', minHeight: '100vh' }}>
         <div className="w-full" style={{ maxWidth: '1000px' }}>
@@ -576,7 +615,7 @@ export default function BrandVoicePage() {
             <CardContent style={{ padding: '24px' }}>
               <div className="flex items-center justify-between" style={{ marginBottom: '16px' }}>
                 <Badge variant="secondary" style={{ background: '#f3f4f6', color: '#003366', padding: '4px 12px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-                  Question {currentPrompt?.question_number || 0} of {totalQuestions}
+                  Question {currentQuestionNumber} of {totalQuestions}
                 </Badge>
                 <Button
                   variant="outline"
@@ -640,7 +679,30 @@ export default function BrandVoicePage() {
             </CardContent>
           </Card>
 
-          {!isGeneratingProfile && currentPrompt && (
+          {/* Show Generate Profile button when 100% complete */}
+          {!isGeneratingProfile && progress >= 100 && (
+            <Card style={{ background: '#ffffff', border: '2px solid #0066cc', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
+              <CardContent style={{ padding: '24px' }}>
+                <div className="flex flex-col items-center" style={{ gap: '16px', textAlign: 'center' }}>
+                  <CheckCircle className="h-12 w-12" style={{ color: '#0066cc' }} />
+                  <div>
+                    <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#003366', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginBottom: '8px' }}>All Questions Complete!</h3>
+                    <p style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>You've answered all {totalQuestions} questions. Ready to generate your Business Profile?</p>
+                  </div>
+                  <Button
+                    onClick={generateProfile}
+                    className="w-full"
+                    style={{ background: '#0066cc', color: '#ffffff', borderRadius: '8px', padding: '16px 24px', fontSize: '16px', fontWeight: 600, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', border: 'none', cursor: 'pointer' }}
+                  >
+                    Generate Business Profile
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Show answer input when interview in progress */}
+          {!isGeneratingProfile && currentPrompt && progress < 100 && (
             <Card style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
               <CardContent style={{ padding: '24px' }}>
                 <div style={{ marginBottom: '16px' }}>

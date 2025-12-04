@@ -7,9 +7,10 @@ interface CardProps {
   className?: string;
   padding?: keyof typeof layout.spacing | string;
   background?: string;
+  style?: React.CSSProperties;
 }
 
-export function Card({ children, className = '', padding = 'xl', background = colors.white }: CardProps) {
+export function Card({ children, className = '', padding = 'xl', background = colors.white, style }: CardProps) {
   const paddingValue = typeof padding === 'string' && padding in layout.spacing
     ? layout.spacing[padding as keyof typeof layout.spacing]
     : padding;
@@ -22,6 +23,7 @@ export function Card({ children, className = '', padding = 'xl', background = co
         borderRadius: layout.cornerRadius,
         boxShadow: layout.shadow,
         padding: paddingValue,
+        ...style,
       }}
     >
       {children}

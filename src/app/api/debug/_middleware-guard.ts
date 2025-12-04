@@ -1,20 +1,30 @@
 /**
  * Debug Route Guard
  *
- * Protect all debug routes from production access.
+ * SECURITY: Protects all debug routes from production access.
+ * Debug routes expose sensitive information (env vars, tokens, auth state)
+ * and must NEVER be accessible in production environments.
+ *
  * Import and use this in every debug route handler.
  */
 
 import { NextResponse } from 'next/server';
-import { isDebugEnabled } from '@/lib/env-config';
+import { isDebugEnabled, isProduction } from '@/lib/env-config';
 
 export function guardDebugRoute(routeName: string) {
+  // SECURITY: Double-check production environment
+  if (isProduction) {
+    return NextResponse.json(
+      { error: 'Not found' },
+      { status: 404 }
+    );
+  }
+
   if (!isDebugEnabled) {
     return NextResponse.json(
       {
-        error: 'Debug routes are not available in production',
+        error: 'Debug routes are only available in development mode',
         route: routeName,
-        hint: 'Set ENABLE_DEBUG_ROUTES=true in environment to enable (use with caution)'
       },
       { status: 403 }
     );

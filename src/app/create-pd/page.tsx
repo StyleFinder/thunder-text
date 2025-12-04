@@ -754,7 +754,7 @@ function CreateProductContent() {
         component: 'create-pd-page',
         operation: 'handleGenerateDescription',
         category: selectedTemplate,
-        photosCount: allPhotos.length,
+        photosCount: primaryPhotos.length + secondaryPhotos.length,
         shop
       })
       setError('Failed to generate product description. Please try again.')
@@ -845,7 +845,7 @@ function CreateProductContent() {
         component: 'create-pd-page',
         operation: 'handleCreateInShopify',
         shop,
-        photosCount: allPhotos.length
+        photosCount: primaryPhotos.length + secondaryPhotos.length
       })
       setError(`Failed to create product in Shopify: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
@@ -1688,7 +1688,7 @@ function CreateProductContent() {
                 <Label htmlFor="generated-description" style={{ fontSize: '14px', fontWeight: 600, color: '#003366', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Description</Label>
                 <ReactQuill
                   theme="snow"
-                  value={generatedContent.description || ''}
+                  value={(typeof generatedContent.description === 'string' ? generatedContent.description : '') as string}
                   onChange={(content) => setGeneratedContent(prev => prev ? { ...prev, description: content } : null)}
                   modules={{
                     toolbar: [

@@ -28,7 +28,7 @@ export async function GET(
     // Validate productId - prevent invalid values
     const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test']
     if (invalidProductIds.includes(productId.toLowerCase())) {
-      logger.error('❌ Invalid productId received in GET:', productId as Error, { component: 'enhance' })
+      logger.error(`Invalid productId received in GET: ${productId}`, undefined, { component: 'enhance' })
       return NextResponse.json(
         {
           success: false,
@@ -103,7 +103,7 @@ export async function PUT(
     // Validate productId - prevent invalid values
     const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test']
     if (invalidProductIds.includes(productId.toLowerCase())) {
-      logger.error('❌ Invalid productId received in PUT:', productId as Error, { component: 'enhance' })
+      logger.error(`Invalid productId received in PUT: ${productId}`, undefined, { component: 'enhance' })
       return NextResponse.json(
         {
           success: false,

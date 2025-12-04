@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import bcrypt from 'bcrypt';
 import { logger } from '@/lib/logger'
+import { validatePassword } from '@/lib/security/password-validation';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,8 +13,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
     }
 
-    if (password.length < 8) {
-      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
+    // SECURITY: Comprehensive password validation
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      return NextResponse.json({
+        error: 'Password does not meet requirements',
+        details: passwordValidation.errors,
+        strength: passwordValidation.strength
+      }, { status: 400 });
     }
 
     // Check if email already exists

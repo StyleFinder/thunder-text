@@ -5,12 +5,14 @@ import { layout } from '@/lib/design-system/layout';
 
 interface ButtonProps {
   children: React.ReactNode;
-  onClick?: () => void;
+  onClick?: () => void | Promise<void>;
   variant?: 'primary' | 'secondary' | 'outline' | 'text';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   className?: string;
   type?: 'button' | 'submit' | 'reset';
+  fullWidth?: boolean;
+  style?: React.CSSProperties;
 }
 
 export function Button({
@@ -21,6 +23,8 @@ export function Button({
   disabled = false,
   className = '',
   type = 'button',
+  fullWidth = false,
+  style,
 }: ButtonProps) {
   const getVariantStyles = () => {
     switch (variant) {
@@ -78,8 +82,10 @@ export function Button({
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.5 : 1,
     transition: 'all 0.2s ease',
+    width: fullWidth ? '100%' : 'auto',
     ...getVariantStyles(),
     ...getSizeStyles(),
+    ...style,
   };
 
   return (

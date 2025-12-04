@@ -11,19 +11,27 @@ export const isTest = process.env.NODE_ENV === 'test';
 
 /**
  * Debug mode configuration
- * Debug routes and features are ONLY available when:
- * 1. NODE_ENV is 'development', OR
- * 2. ENABLE_DEBUG_ROUTES is explicitly set to 'true'
+ *
+ * SECURITY: Debug routes are COMPLETELY DISABLED in production.
+ * No environment variable can override this - if NODE_ENV is 'production',
+ * debug routes will NEVER be accessible. This protects against accidental
+ * exposure of sensitive information (env vars, tokens, auth state).
+ *
+ * Debug routes are ONLY available when NODE_ENV is 'development'.
  */
-export const isDebugEnabled = isDevelopment || process.env.ENABLE_DEBUG_ROUTES === 'true';
+export const isDebugEnabled = isDevelopment && !isProduction;
 
 /**
  * Check if debug routes should be accessible
  * This should be used in middleware or route handlers to protect debug endpoints
  */
 export function requireDebugMode(routePath: string): boolean {
+  if (isProduction) {
+    // SECURITY: Always block in production, no exceptions
+    return false;
+  }
   if (!isDebugEnabled) {
-    console.warn(`[Security] Blocked access to debug route: ${routePath} (production mode)`);
+    console.warn(`[Security] Blocked access to debug route: ${routePath} (not in development mode)`);
     return false;
   }
   return true;

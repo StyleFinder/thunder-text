@@ -2,10 +2,12 @@
  * GET /api/bhb/insights
  *
  * Aggregates campaign performance across ALL shops for BHB Dashboard
- * Updated with debug logging
+ * Requires admin or coach authentication
  */
 
 import { NextResponse } from "next/server";
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-options';
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logger } from '@/lib/logger'
 
@@ -68,10 +70,39 @@ function calculatePerformanceTier(
 }
 
 export async function GET() {
-  console.log('[BHB Insights] Starting GET request');
-
   try {
-    // TODO: Add authentication check here
+    // Require admin or coach authentication
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      logger.warn('Unauthorized access attempt to BHB insights', {
+        component: 'bhb-insights'
+      });
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Verify user is admin or coach
+    const userType = (session.user as { userType?: string }).userType;
+    if (userType !== 'admin' && userType !== 'coach') {
+      logger.warn('Forbidden access attempt to BHB insights', {
+        component: 'bhb-insights',
+        userId: session.user.id,
+        userType
+      });
+      return NextResponse.json(
+        { success: false, error: 'Admin or coach access required' },
+        { status: 403 }
+      );
+    }
+
+    logger.info('BHB insights accessed', {
+      component: 'bhb-insights',
+      userId: session.user.id,
+      userType
+    });
 
     // Get all active shops - try with new columns first, fallback if they don't exist
     let shops;
@@ -86,7 +117,7 @@ export async function GET() {
 
     // If columns don't exist yet, fallback to basic query
     if (result.error?.code === '42703') {
-      console.log('New columns not found, using fallback query...');
+      logger.debug('New columns not found, using fallback query', { component: 'bhb-insights' });
       const fallbackResult = await supabaseAdmin
         .from("shops")
         .select("id, shop_domain, is_active")
@@ -141,7 +172,11 @@ export async function GET() {
           .maybeSingle();
 
         if (adAccountError) {
-          console.log(`Ad account error for shop ${shop.id}:`, adAccountError);
+          logger.debug('Ad account error for shop', {
+            component: 'bhb-insights',
+            shopId: shop.id,
+            error: adAccountError.message
+          });
         }
 
         // Get campaigns for this shop
@@ -151,10 +186,12 @@ export async function GET() {
           .eq("shop_id", shop.id);
 
         if (campaignsError) {
-          console.log(`Campaigns error for shop ${shop.id}:`, campaignsError);
+          logger.debug('Campaigns error for shop', {
+            component: 'bhb-insights',
+            shopId: shop.id,
+            error: campaignsError.message
+          });
         }
-
-        console.log(`Shop ${shop.id}: Found ${campaigns?.length || 0} campaigns`);
 
         // Calculate campaign metrics
         const campaignMetrics =

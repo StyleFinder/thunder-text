@@ -7,9 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { AlertCircle } from 'lucide-react'
-import { createShopifyOAuthState } from '@/lib/security/oauth-validation'
 
 export default function InstallPage() {
   const searchParams = useSearchParams()
@@ -36,23 +34,9 @@ export default function InstallPage() {
       ? shop
       : `${shop}.myshopify.com`
 
-    // Generate secure state parameter with cryptographic nonce and timestamp
-    // This prevents CSRF and replay attacks
-    const secureState = createShopifyOAuthState(shopDomain)
-
-    // Construct OAuth authorization URL
-    const params = new URLSearchParams({
-      client_id: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY!,
-      scope: 'read_products,write_products,read_content,write_content',
-      redirect_uri: `${window.location.origin}/api/shopify/auth/callback`,
-      state: secureState,
-      'grant_options[]': 'per-user'
-    })
-
-    const authUrl = `https://${shopDomain}/admin/oauth/authorize?${params.toString()}`
-
-    // Redirect to Shopify OAuth flow
-    window.location.href = authUrl
+    // Redirect to the server-side OAuth initiation endpoint
+    // The server will generate secure state parameters and redirect to Shopify
+    window.location.href = `/api/auth/shopify?shop=${encodeURIComponent(shopDomain)}`
   }
 
   return (

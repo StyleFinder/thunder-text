@@ -167,8 +167,8 @@ describe('Shopify Authentication', () => {
       }
 
       const missingFields =
-        !invalidPayload.iss ||
-        !invalidPayload.dest ||
+        !(invalidPayload as any).iss ||
+        !(invalidPayload as any).dest ||
         !(invalidPayload as any).aud ||
         !(invalidPayload as any).sub
 

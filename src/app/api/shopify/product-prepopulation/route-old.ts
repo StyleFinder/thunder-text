@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const productData = await fetchProductDataForPrePopulation(productId, shop, sessionToken)
 
     if (!productData) {
-      logger.error('❌ API: No product data found for ID:', productId as Error, { component: 'route-old' })
+      logger.error(`API: No product data found for ID: ${productId}`, undefined, { component: 'route-old' })
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404, headers: corsHeaders }

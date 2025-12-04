@@ -12,6 +12,7 @@ export const colors = {
 
   // Neutral Colors
   background: '#fafaf9',       // Warm off-white - page background
+  backgroundLight: '#f5f5f4',  // Light gray background - secondary surfaces
   white: '#ffffff',            // Pure white - card backgrounds
   grayText: '#6b7280',         // Medium gray - secondary text
   border: '#e5e7eb',           // Light gray - borders, dividers

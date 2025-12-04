@@ -40,7 +40,7 @@ async function revokeToken(accessToken: string): Promise<boolean> {
 
     if (!response.ok) {
       const error = await response.text()
-      logger.error('Facebook token revocation failed:', error as Error, { component: 'disconnect' })
+      logger.error(`Facebook token revocation failed: ${error}`, undefined, { component: 'disconnect' })
       return false
     }
 
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (shopError || !shopData) {
-      logger.error('Shop not found:', shop, shopError, undefined, { component: 'disconnect' })
+      logger.error(`Shop not found: ${shop}`, shopError as Error, { component: 'disconnect' })
       return NextResponse.json(
         { error: 'Shop not found' },
         { status: 404 }

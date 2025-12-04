@@ -1,0 +1,34 @@
+# OWASP ZAP Baseline Scan Rules Configuration
+# Format: RULE_ID	ACTION	DESCRIPTION
+# Actions: IGNORE (don't report), WARN (report but don't fail), FAIL (report and fail)
+#
+# These rules are tuned for ThunderText - a Next.js app on Render
+# Review and adjust based on scan results
+
+# Headers already configured in next.config.ts
+10021	IGNORE	X-Content-Type-Options Header Missing - Set in next.config.ts
+10038	IGNORE	Content Security Policy (CSP) Header Not Set - CSP configured for non-embedded app
+
+# Common false positives for SPAs/Next.js apps
+10027	WARN	Information Disclosure - Suspicious Comments - Review manually
+10096	WARN	Timestamp Disclosure - Usually benign in APIs
+10055	WARN	CSP: Wildcard Directive - Review if reported
+10063	WARN	Permissions Policy Header Not Set - Not critical for this app
+
+# Cookie-related (NextAuth handles these securely)
+10010	WARN	Cookie No HttpOnly Flag - Verify against NextAuth config
+10011	WARN	Cookie Without Secure Flag - Only in production
+10054	WARN	Cookie without SameSite Attribute - NextAuth sets SameSite=lax
+
+# Server information disclosure
+10036	WARN	Server Leaks Version Information - Render may add headers
+
+# These should fail if found
+90033	FAIL	Loosely Scoped Cookie
+10020	FAIL	X-Frame-Options Header Not Set
+10023	FAIL	Information Disclosure - Debug Error Messages
+40012	FAIL	Cross Site Scripting (Reflected)
+40014	FAIL	Cross Site Scripting (Persistent)
+40016	FAIL	Cross Site Scripting (Persistent) - Prime
+40017	FAIL	Cross Site Scripting (Persistent) - Spider
+90022	FAIL	Application Error Disclosure

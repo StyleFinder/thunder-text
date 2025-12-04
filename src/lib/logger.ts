@@ -7,7 +7,17 @@
 
 import * as Sentry from '@sentry/nextjs'
 
-type LogLevel = 'error' | 'warn' | 'info' | 'debug'
+import type { SeverityLevel } from '@sentry/nextjs'
+
+type LogLevel = 'error' | 'warning' | 'info' | 'debug'
+
+// Map our log levels to Sentry severity levels
+const logLevelToSeverity: Record<LogLevel, SeverityLevel> = {
+  error: 'error',
+  warning: 'warning',
+  info: 'info',
+  debug: 'debug'
+}
 
 interface LogContext {
   [key: string]: unknown
@@ -47,17 +57,26 @@ class Logger {
   /**
    * Log warning with Sentry tracking
    * @param message - Warning message
-   * @param context - Additional context data
+   * @param errorOrContext - Error object or context data
+   * @param context - Additional context data (if error provided)
    */
-  warn(message: string, context?: LogContext): void {
+  warn(message: string, errorOrContext?: Error | unknown | LogContext, context?: LogContext): void {
+    // Determine if second param is an error or context
+    const isError = errorOrContext instanceof Error ||
+      (errorOrContext && typeof errorOrContext === 'object' && 'message' in errorOrContext && 'stack' in errorOrContext)
+
+    const actualContext = isError ? context : (errorOrContext as LogContext | undefined)
+    const error = isError ? errorOrContext : undefined
+
     if (this.isDevelopment) {
-      console.warn(`⚠️ ${message}`, context)
+      console.warn(`⚠️ ${message}`, error, actualContext)
     }
 
     Sentry.captureMessage(message, {
       level: 'warning',
       contexts: {
-        details: context || {},
+        details: actualContext || {},
+        error: error ? { message: String(error), stack: (error as Error)?.stack } : undefined,
       },
     })
   }
@@ -117,7 +136,7 @@ class Logger {
     Sentry.addBreadcrumb({
       message,
       category,
-      level,
+      level: logLevelToSeverity[level],
       timestamp: Date.now() / 1000,
     })
   }

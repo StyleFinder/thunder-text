@@ -11,10 +11,12 @@
  * - Timestamp validation (max 10 min age)
  * - Zod schema validation for type safety
  * - Base64url encoding/decoding
+ * - Server-side state storage for replay attack prevention
  */
 
 import { z } from 'zod'
-import { randomBytes } from 'crypto'
+import { randomBytes, createHash } from 'crypto'
+import { cookies } from 'next/headers'
 
 // Maximum age of state parameter (10 minutes)
 const MAX_STATE_AGE_MS = 10 * 60 * 1000
@@ -388,4 +390,90 @@ export function validateTikTokOAuthState(stateParam: string): TikTokOAuthState {
   }
 
   return validated
+}
+
+// =============================================================================
+// OAuth State Storage (Cookie-based)
+// =============================================================================
+
+/**
+ * Cookie name for storing OAuth state
+ * Uses a hash prefix to prevent enumeration attacks
+ */
+const OAUTH_STATE_COOKIE_PREFIX = 'oauth_state_'
+
+/**
+ * Generate a hash of the state for cookie naming
+ * This prevents the full state from being visible in cookie names
+ */
+function getStateHash(state: string): string {
+  return createHash('sha256').update(state).digest('hex').substring(0, 16)
+}
+
+/**
+ * Store OAuth state in an HttpOnly cookie before redirecting to OAuth provider
+ *
+ * SECURITY: This enables verification that the state returned from the OAuth
+ * provider is the exact same state we generated, preventing replay attacks.
+ *
+ * @param state - The full base64url encoded state string
+ * @param provider - OAuth provider name (shopify, facebook, google, tiktok)
+ */
+export async function storeOAuthState(state: string, provider: string): Promise<void> {
+  const cookieStore = await cookies()
+  const cookieName = `${OAUTH_STATE_COOKIE_PREFIX}${provider}`
+
+  // Store a hash of the state (we don't need to store the full state,
+  // just enough to verify it matches what we sent)
+  const stateHash = getStateHash(state)
+
+  cookieStore.set(cookieName, stateHash, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: MAX_STATE_AGE_MS / 1000, // Convert to seconds
+    path: '/'
+  })
+}
+
+/**
+ * Verify that the returned OAuth state matches what we stored
+ *
+ * SECURITY: This is the critical check that prevents replay attacks.
+ * An attacker cannot use a stolen/intercepted state because they won't
+ * have the corresponding cookie.
+ *
+ * @param state - The state parameter returned from OAuth provider
+ * @param provider - OAuth provider name (shopify, facebook, google, tiktok)
+ * @returns true if state matches stored value, false otherwise
+ */
+export async function verifyStoredOAuthState(state: string, provider: string): Promise<boolean> {
+  const cookieStore = await cookies()
+  const cookieName = `${OAUTH_STATE_COOKIE_PREFIX}${provider}`
+
+  const storedHash = cookieStore.get(cookieName)?.value
+
+  if (!storedHash) {
+    // No stored state - either expired, already used, or attack attempt
+    return false
+  }
+
+  // Compare hashes
+  const receivedHash = getStateHash(state)
+  return storedHash === receivedHash
+}
+
+/**
+ * Clear the stored OAuth state after successful verification
+ *
+ * SECURITY: States are single-use. Once verified, delete immediately
+ * to prevent replay attacks.
+ *
+ * @param provider - OAuth provider name (shopify, facebook, google, tiktok)
+ */
+export async function clearStoredOAuthState(provider: string): Promise<void> {
+  const cookieStore = await cookies()
+  const cookieName = `${OAUTH_STATE_COOKIE_PREFIX}${provider}`
+
+  cookieStore.delete(cookieName)
 }

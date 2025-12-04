@@ -8,6 +8,13 @@
 import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
+import {
+  validateApiKey as validateApiKeyCore,
+  logApiKeyUsage,
+  hasScope,
+  ApiKeyScope,
+  ApiKeyValidationResult
+} from '@/lib/security/api-keys'
 
 /**
  * Authentication result
@@ -67,7 +74,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
       .single()
 
     if (error || !shopData) {
-      logger.error('Shop not found in database:', shop as Error, { component: 'content-center-auth' })
+      logger.error('Shop not found in database', error || new Error(`Shop not found: ${shop}`), { component: 'content-center-auth' })
       return {
         authenticated: false,
         error: 'Shop not found. Please install the app first.'
@@ -126,28 +133,138 @@ export async function hasResourceAccess(
 }
 
 /**
- * Validate API key for server-to-server requests (future feature)
+ * API key authentication result with extended info
+ */
+export interface ApiKeyAuthResult {
+  authenticated: boolean
+  shopId?: string
+  keyId?: string
+  scopes?: ApiKeyScope[]
+  error?: string
+}
+
+/**
+ * Validate API key for server-to-server requests
+ *
+ * Supports:
+ * - Webhook callbacks
+ * - Third-party integrations
+ * - Automated content generation
  *
  * @param request - Next.js request object
  * @returns True if valid API key, false otherwise
  */
 export async function validateApiKey(request: NextRequest): Promise<boolean> {
-  // Placeholder for future API key authentication
-  // Useful for:
-  // - Webhook callbacks
-  // - Third-party integrations
-  // - Automated content generation
+  const result = await validateApiKeyWithDetails(request)
+  return result.authenticated
+}
 
+/**
+ * Validate API key with full details
+ * Returns shop ID, scopes, and other metadata for authorization checks
+ *
+ * @param request - Next.js request object
+ * @returns Full authentication result with shop and scope info
+ */
+export async function validateApiKeyWithDetails(
+  request: NextRequest
+): Promise<ApiKeyAuthResult> {
   const apiKey = request.headers.get('x-api-key')
 
   if (!apiKey) {
-    return false
+    return {
+      authenticated: false,
+      error: 'Missing API key. Provide X-API-Key header.'
+    }
   }
 
-  // TODO: Implement API key validation
-  // - Check against api_keys table
-  // - Verify not expired
-  // - Log API key usage
+  const validationResult = await validateApiKeyCore(apiKey)
 
-  return false
+  if (!validationResult.valid) {
+    logger.warn('API key validation failed', {
+      component: 'content-center-auth',
+      error: validationResult.error
+    })
+    return {
+      authenticated: false,
+      error: validationResult.error || 'Invalid API key'
+    }
+  }
+
+  return {
+    authenticated: true,
+    shopId: validationResult.shopId,
+    keyId: validationResult.keyId,
+    scopes: validationResult.scopes
+  }
 }
+
+/**
+ * Validate API key and check for required scope
+ * Use this for endpoints that need specific permissions
+ *
+ * @param request - Next.js request object
+ * @param requiredScope - The scope required for this operation
+ * @returns Authentication result with scope check
+ */
+export async function validateApiKeyWithScope(
+  request: NextRequest,
+  requiredScope: ApiKeyScope
+): Promise<ApiKeyAuthResult> {
+  const result = await validateApiKeyWithDetails(request)
+
+  if (!result.authenticated) {
+    return result
+  }
+
+  if (!result.scopes || !hasScope(result.scopes, requiredScope)) {
+    logger.warn('API key missing required scope', {
+      component: 'content-center-auth',
+      keyId: result.keyId,
+      requiredScope,
+      availableScopes: result.scopes
+    })
+    return {
+      authenticated: false,
+      error: `Insufficient permissions. Required scope: ${requiredScope}`
+    }
+  }
+
+  return result
+}
+
+/**
+ * Log API usage for monitoring and rate limiting
+ * Call this after successful API operations
+ *
+ * @param keyId - API key ID from validation result
+ * @param request - Next.js request object
+ * @param statusCode - HTTP response status code
+ * @param responseTimeMs - Response time in milliseconds
+ * @param errorMessage - Optional error message if request failed
+ */
+export async function logApiUsage(
+  keyId: string,
+  request: NextRequest,
+  statusCode: number,
+  responseTimeMs: number,
+  errorMessage?: string
+): Promise<void> {
+  const url = new URL(request.url)
+  await logApiKeyUsage(
+    keyId,
+    url.pathname,
+    request.method,
+    statusCode,
+    responseTimeMs,
+    {
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+      errorMessage
+    }
+  )
+}
+
+// Re-export types and utilities for convenience
+export type { ApiKeyScope } from '@/lib/security/api-keys'
+export { hasScope } from '@/lib/security/api-keys'

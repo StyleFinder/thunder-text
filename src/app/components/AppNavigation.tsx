@@ -16,6 +16,7 @@ import {
   File,
   Menu,
   X,
+  Flame,
 } from "lucide-react";
 import { useNavigation } from "../hooks/useNavigation";
 import { Button } from "@/components/ui/button";
@@ -43,11 +44,39 @@ interface NavItem {
 function NavigationContent({ children }: AppNavigationProps) {
   const [mobileNavigationActive, setMobileNavigationActive] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState(true);
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { buildUrl, navigateTo, isActive, getAuthParams } = useNavigation();
 
-  const { hasAuth } = getAuthParams();
-  const userRole = session?.user?.role || 'user'; // 'user', 'coach', or 'admin'
+  const { hasAuth, shop } = getAuthParams();
+
+  // Determine user role:
+  // PRIORITY: Shop param means store owner (always 'user' role)
+  // - If has shop param -> store owner (role: 'user')
+  // - If has session with role -> use session role (coach/admin)
+  // - Default to 'user'
+  let userRole: string;
+
+  if (shop) {
+    // Shop parameter present = store owner accessing via Shopify
+    // Always treat as 'user' role regardless of session
+    userRole = 'user';
+  } else if (session?.user?.role) {
+    // No shop param, but has session with role = coach or admin
+    userRole = session.user.role;
+  } else {
+    // Default to user
+    userRole = 'user';
+  }
+
+  // Debug log (remove in production)
+  useEffect(() => {
+    console.log('[AppNavigation] Role determination:', {
+      shop,
+      sessionRole: session?.user?.role,
+      sessionStatus: status,
+      determinedRole: userRole,
+    });
+  }, [shop, session?.user?.role, status, userRole]);
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -169,6 +198,19 @@ function NavigationContent({ children }: AppNavigationProps) {
       allowedRoles: ['coach'], // Coaches only
     },
     {
+      url: buildUrl("/bhb/hot-takes"),
+      label: "Hot Takes",
+      icon: Flame,
+      onClick: () => navigateTo("/bhb/hot-takes"),
+      matches: isActive({
+        label: "Hot Takes",
+        url: buildUrl("/bhb/hot-takes"),
+        matchPaths: ["/bhb/hot-takes"],
+        exactMatch: false,
+      }),
+      allowedRoles: ['coach'], // Coaches only
+    },
+    {
       url: buildUrl("/trends"),
       label: "Seasonal Trends",
       icon: TrendingUp,
@@ -272,11 +314,7 @@ function NavigationContent({ children }: AppNavigationProps) {
                   }}
                 >
                   <Icon
-                    className="h-5 w-5"
-                    style={{
-                      flexShrink: 0,
-                      color: item.matches ? '#0066cc' : '#6b7280'
-                    }}
+                    className={`h-5 w-5 flex-shrink-0 ${item.matches ? 'text-[#0066cc]' : 'text-[#6b7280]'}`}
                   />
                   <span>{item.label}</span>
                 </button>
@@ -480,11 +518,7 @@ function NavigationContent({ children }: AppNavigationProps) {
                       }}
                     >
                       <Icon
-                        className="h-5 w-5"
-                        style={{
-                          flexShrink: 0,
-                          color: item.matches ? '#0066cc' : '#6b7280'
-                        }}
+                        className={`h-5 w-5 flex-shrink-0 ${item.matches ? 'text-[#0066cc]' : 'text-[#6b7280]'}`}
                       />
                       {item.label}
                     </button>

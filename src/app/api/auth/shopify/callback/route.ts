@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import crypto from 'crypto';
 import { logger } from '@/lib/logger';
-import { validateShopifyOAuthState } from '@/lib/security/oauth-validation';
+import { validateShopifyOAuthState, verifyStoredOAuthState, clearStoredOAuthState } from '@/lib/security/oauth-validation';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -17,7 +17,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=oauth_failed`);
   }
 
-  // Validate state parameter (CSRF protection)
+  // SECURITY: Verify stored state to prevent replay attacks
+  // This checks that the returned state matches exactly what we generated
+  const stateMatchesStored = await verifyStoredOAuthState(state, 'shopify');
+  if (!stateMatchesStored) {
+    logger.error('[Shopify Callback] State replay attack detected - state does not match stored value', undefined, { component: 'callback' });
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=invalid_state`);
+  }
+
+  // SECURITY: Clear the stored state immediately (single-use)
+  await clearStoredOAuthState('shopify');
+
+  // Validate state parameter format and contents (CSRF protection)
   try {
     validateShopifyOAuthState(state, shop);
   } catch (error) {

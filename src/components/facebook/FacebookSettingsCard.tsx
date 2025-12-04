@@ -184,9 +184,12 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
       </CardHeader>
       <CardContent className="space-y-6">
         {error && (
-          <Alert variant="destructive" onDismiss={() => setError(null)}>
+          <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription className="flex items-center justify-between">
+              <span>{error}</span>
+              <button onClick={() => setError(null)} className="ml-2 text-sm underline">Dismiss</button>
+            </AlertDescription>
           </Alert>
         )}
 

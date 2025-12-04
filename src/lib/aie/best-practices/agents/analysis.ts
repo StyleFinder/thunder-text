@@ -81,13 +81,12 @@ Focus on extracting practical, actionable information that can be used to improv
 
   private buildUserPrompt(
     content: string,
-    originalInput: {
-      platform?: string;
-      category?: string;
-      goal?: string;
-      tags?: string[];
-      [key: string]: unknown;
-    }
+    originalInput: Partial<{
+      platform: string;
+      category: string;
+      goal: string;
+      tags: string[];
+    }>
   ): string {
     // Include any hints from the original input
     const hints: string[] = [];
@@ -206,7 +205,7 @@ Guidelines:
       };
     } catch (error) {
       logger.error('[AnalysisAgent] Failed to parse response:', error as Error, { component: 'analysis' });
-      logger.error('Raw response:', response as Error, { component: 'analysis' });
+      logger.error(`Raw response: ${response}`, undefined, { component: 'analysis' });
       throw new Error(
         `Failed to parse analysis response: ${error instanceof Error ? error.message : 'Unknown error'}`
       );

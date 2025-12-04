@@ -8,6 +8,7 @@ declare module 'next-auth' {
     name?: string;
     role: 'admin' | 'coach' | 'user';
     shopDomain?: string;
+    twoFactorEnabled?: boolean;
   }
 
   interface Session {
@@ -17,7 +18,9 @@ declare module 'next-auth' {
       name?: string;
       role: 'admin' | 'coach' | 'user';
       shopDomain?: string;
+      twoFactorEnabled?: boolean;
     };
+    accessTokenExpired?: boolean;
   }
 }
 
@@ -26,5 +29,8 @@ declare module 'next-auth/jwt' {
     id: string;
     role: 'admin' | 'coach' | 'user';
     shopDomain?: string;
+    twoFactorEnabled?: boolean;
+    accessTokenIssuedAt?: number;
+    accessTokenExpired?: boolean;
   }
 }

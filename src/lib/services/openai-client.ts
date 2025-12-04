@@ -29,6 +29,7 @@ export interface ChatCompletionOptions {
   topP?: number
   frequencyPenalty?: number
   presencePenalty?: number
+  response_format?: { type: 'text' | 'json_object' }
 }
 
 export interface RetryOptions {
@@ -62,7 +63,8 @@ export async function callChatCompletion(
     maxTokens = 4000,
     topP = 1,
     frequencyPenalty = 0,
-    presencePenalty = 0
+    presencePenalty = 0,
+    response_format
   } = options
 
   let lastError: Error | null = null
@@ -79,7 +81,8 @@ export async function callChatCompletion(
         max_tokens: maxTokens,
         top_p: topP,
         frequency_penalty: frequencyPenalty,
-        presence_penalty: presencePenalty
+        presence_penalty: presencePenalty,
+        ...(response_format && { response_format })
       })
 
       const responseTime = Date.now() - startTime

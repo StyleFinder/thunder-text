@@ -257,18 +257,18 @@ async function fetchShopifyProduct(productId: string, shop: string, sessionToken
     const response = await shopifyGraphQL<{ product: ShopifyProductData }>(query, { id: formattedProductId }, shop, sessionToken)
 
     if (!response?.data?.product) {
-      logger.error('❌ No product found with ID:', formattedProductId as Error, { component: 'product-prepopulation' })
-      logger.error('📝 Full response:', JSON.stringify(response, null, 2, undefined, { component: 'product-prepopulation' }))
+      logger.error(`No product found with ID: ${formattedProductId}`, new Error('Product not found'), { component: 'product-prepopulation' })
+      logger.debug(`Full response: ${JSON.stringify(response, null, 2)}`, { component: 'product-prepopulation' })
       return null
     }
 
     return response.data.product
   } catch (error) {
-    logger.error('❌ Error fetching product from Shopify:', error as Error, { component: 'product-prepopulation' })
-    logger.error('📝 Query details:', undefined, { 
+    logger.error('Error fetching product from Shopify', error as Error, {
+      component: 'product-prepopulation',
       productId: formattedProductId,
       shop
-    , component: 'product-prepopulation' })
+    })
     throw error
   }
 }

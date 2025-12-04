@@ -49,7 +49,7 @@ export default function SignupPage() {
       });
 
       if (signInResult?.error) {
-        logger.error('[Signup Page] Auto-login failed:', signInResult.error, undefined, { component: 'signup' });
+        logger.error(`[Signup Page] Auto-login failed: ${signInResult.error}`, undefined, { component: 'signup' });
         throw new Error('Signup successful but login failed. Please login manually.');
       }
 

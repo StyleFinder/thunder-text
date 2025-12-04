@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
 
     const accessToken = store.shopify_access_token || store.shopify_access_token_legacy
     if (!accessToken) {
-      logger.error('❌ No access token found for shop:', fullShopDomain as Error, { component: 'product-types' })
+      logger.error(`No access token found for shop: ${fullShopDomain}`, undefined, { component: 'product-types' })
       return NextResponse.json(
         { error: 'Shop access token not configured' },
         { status: 500, headers: corsHeaders }
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (!shopifyResponse.ok) {
-      logger.error('❌ Shopify API error:', shopifyResponse.status, shopifyResponse.statusText, undefined, { component: 'product-types' })
+      logger.error(`Shopify API error: ${shopifyResponse.status} ${shopifyResponse.statusText}`, undefined, { component: 'product-types' })
       throw new Error(`Shopify API error: ${shopifyResponse.statusText}`)
     }
 

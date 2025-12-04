@@ -6,13 +6,14 @@ import { layout } from '@/lib/design-system/layout';
 interface InputProps {
   label?: string;
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string) => void | React.Dispatch<React.SetStateAction<string>>;
   placeholder?: string;
   type?: 'text' | 'email' | 'password' | 'number';
   multiline?: boolean | number;
   disabled?: boolean;
   className?: string;
   error?: string;
+  required?: boolean;
 }
 
 export function Input({
@@ -25,6 +26,7 @@ export function Input({
   disabled = false,
   className = '',
   error,
+  required = false,
 }: InputProps) {
   const baseStyles: React.CSSProperties = {
     width: '100%',
@@ -75,6 +77,7 @@ export function Input({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
+          required={required}
           style={baseStyles}
         />
       )}

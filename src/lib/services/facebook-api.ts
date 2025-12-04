@@ -28,12 +28,20 @@ export interface AdAccount {
   id: string;
   account_id: string;
   name: string;
+  account_status?: number;
+  currency?: string;
+  timezone_name?: string;
 }
 
 export interface Campaign {
   id: string;
   name: string;
   status: string;
+  objective?: string;
+  daily_budget?: string;
+  lifetime_budget?: string;
+  created_time?: string;
+  updated_time?: string;
 }
 
 export interface CampaignInsight {

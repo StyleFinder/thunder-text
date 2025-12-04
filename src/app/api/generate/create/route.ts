@@ -214,7 +214,7 @@ Closing content in plain text highlighting key benefits.`;
         throw new Error("No custom prompts available");
       }
     } catch (error) {
-      logger.error("❌ Failed to load custom prompts, using fallback:", error, undefined, { component: 'create' });
+      logger.error("Failed to load custom prompts, using fallback", error as Error, { component: 'create' });
 
       // Add primary product focus for fallback prompt too
       const primaryProductGuidance = productType

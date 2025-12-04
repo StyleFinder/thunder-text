@@ -101,8 +101,9 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       setShop(shopParam);
       setHost(hostParam);
 
-      // Check if test store (allow non-embedded access)
-      const isTestStore = shopParam.includes("zunosai-staging-test-store");
+      // Check if test store or manual setup store (allow non-embedded access)
+      const isTestStore = shopParam.includes("zunosai-staging-test-store") ||
+                          shopParam.includes("shopstylefinder.myshopify.com");
 
       if (!isEmbedded && !isTestStore) {
         logger.error("App must be accessed through Shopify admin", new Error("Not in embedded context"), {
@@ -116,7 +117,7 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
         return;
       }
 
-      // For test store in non-embedded mode
+      // For test store or manual setup in non-embedded mode
       if (!isEmbedded && isTestStore) {
         setIsAuthenticated(true);
         setIsLoading(false);

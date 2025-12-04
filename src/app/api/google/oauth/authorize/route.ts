@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (shopError || !shopData) {
-      logger.error('Shop not found:', shop, shopError, undefined, { component: 'authorize' })
+      logger.error(`Shop not found: ${shop}`, shopError as Error, { component: 'authorize' })
       return NextResponse.json(
         { error: 'Shop not found' },
         { status: 404 }

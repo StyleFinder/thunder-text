@@ -31,7 +31,7 @@ export async function GET(
     // Validate productId - prevent invalid values
     const invalidProductIds = ['undefined', 'null', 'metafields', 'staging-test']
     if (invalidProductIds.includes(productId.toLowerCase())) {
-      logger.error('❌ Invalid productId received:', productId as Error, { component: '[productId]' })
+      logger.error(`Invalid productId received: ${productId}`, undefined, { component: '[productId]' })
       return NextResponse.json(
         {
           success: false,

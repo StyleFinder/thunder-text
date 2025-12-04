@@ -168,8 +168,8 @@ function verifySessionToken(token: string): boolean {
       })
       // Don't log actual signatures in production to avoid leaking them
       if (process.env.NODE_ENV === 'development') {
-        logger.error('📝 Expected signature:', calculatedSignature as Error, { component: 'shopify-auth' })
-        logger.error('📝 Received signature:', signature as Error, { component: 'shopify-auth' })
+        logger.debug(`Expected signature: ${calculatedSignature}`, { component: 'shopify-auth' })
+        logger.debug(`Received signature: ${signature}`, { component: 'shopify-auth' })
       }
     } else {
     }
