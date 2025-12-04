@@ -1,16 +1,17 @@
-import { requireAuth } from '@/lib/auth/ace-compat';
+import { requireAuth } from "@/lib/auth/ace-compat";
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
+import { isStoragePathSafe } from "@/lib/security/input-sanitization";
 
 /**
  * DELETE /api/business-profile/writing-samples/[id]
  * Delete a writing sample
  */
-export const DELETE = requireAuth('user')(async (
+export const DELETE = requireAuth("user")(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) => {
   try {
     const { id } = await params;
@@ -20,7 +21,7 @@ export const DELETE = requireAuth('user')(async (
     if (!shopDomain) {
       return NextResponse.json(
         { success: false, error: "Authorization required" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -34,7 +35,7 @@ export const DELETE = requireAuth('user')(async (
     if (shopError || !shop) {
       return NextResponse.json(
         { success: false, error: "Shop not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -49,19 +50,33 @@ export const DELETE = requireAuth('user')(async (
     if (sampleError || !sample) {
       return NextResponse.json(
         { success: false, error: "Sample not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    // Delete from storage
+    // SECURITY: Validate storage path from database before using in storage operation
+    // Even though the path comes from our database, it could have been corrupted
+    // or the original input may not have been properly sanitized
     if (sample.storage_path) {
-      const { error: storageError } = await supabaseAdmin.storage
-        .from("writing-samples")
-        .remove([sample.storage_path]);
+      if (!isStoragePathSafe(sample.storage_path)) {
+        logger.error(
+          "Unsafe storage path detected",
+          new Error(`Path traversal attempt: ${sample.storage_path}`),
+          { component: "[id]" },
+        );
+        // Don't delete from storage, but continue to delete DB record
+        // This prevents exploitation while still cleaning up the database
+      } else {
+        const { error: storageError } = await supabaseAdmin.storage
+          .from("writing-samples")
+          .remove([sample.storage_path]);
 
-      if (storageError) {
-        logger.error("Storage delete error:", storageError as Error, { component: '[id]' });
-        // Continue anyway - we still want to delete the DB record
+        if (storageError) {
+          logger.error("Storage delete error:", storageError as Error, {
+            component: "[id]",
+          });
+          // Continue anyway - we still want to delete the DB record
+        }
       }
     }
 
@@ -73,22 +88,26 @@ export const DELETE = requireAuth('user')(async (
       .eq("shop_id", shop.id);
 
     if (deleteError) {
-      logger.error("Database delete error:", deleteError as Error, { component: '[id]' });
+      logger.error("Database delete error:", deleteError as Error, {
+        component: "[id]",
+      });
       return NextResponse.json(
         { success: false, error: "Failed to delete sample" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: "Sample deleted successfully"
+      message: "Sample deleted successfully",
     });
   } catch (error) {
-    logger.error("Error deleting writing sample:", error as Error, { component: '[id]' });
+    logger.error("Error deleting writing sample:", error as Error, {
+      component: "[id]",
+    });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });
@@ -97,9 +116,9 @@ export const DELETE = requireAuth('user')(async (
  * GET /api/business-profile/writing-samples/[id]
  * Get a specific writing sample's extracted text
  */
-export const GET = requireAuth('user')(async (
+export const GET = requireAuth("user")(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) => {
   try {
     const { id } = await params;
@@ -109,7 +128,7 @@ export const GET = requireAuth('user')(async (
     if (!shopDomain) {
       return NextResponse.json(
         { success: false, error: "Authorization required" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -123,7 +142,7 @@ export const GET = requireAuth('user')(async (
     if (shopError || !shop) {
       return NextResponse.json(
         { success: false, error: "Shop not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -138,19 +157,21 @@ export const GET = requireAuth('user')(async (
     if (sampleError || !sample) {
       return NextResponse.json(
         { success: false, error: "Sample not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     return NextResponse.json({
       success: true,
-      data: { sample }
+      data: { sample },
     });
   } catch (error) {
-    logger.error("Error fetching writing sample:", error as Error, { component: '[id]' });
+    logger.error("Error fetching writing sample:", error as Error, {
+      component: "[id]",
+    });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });

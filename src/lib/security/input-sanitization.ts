@@ -151,6 +151,82 @@ export function sanitizeFilename(filename: string): string {
 }
 
 /**
+ * SECURITY: Sanitize storage path segment to prevent path traversal attacks
+ *
+ * This function should be used on ANY user-controlled value that will be
+ * used as part of a Supabase Storage path. The Supabase SDK resolves paths
+ * internally, so "../" sequences could allow access to other folders.
+ *
+ * @param segment - A single path segment (folder name, category, etc.)
+ * @returns Sanitized segment safe for use in storage paths
+ */
+export function sanitizeStoragePathSegment(segment: string): string {
+  if (!segment) return "";
+
+  // Remove path traversal sequences (both forward and back)
+  // Use multiple passes to catch nested attempts like "....///"
+  let sanitized = segment;
+
+  // Remove all instances of ".." (path traversal)
+  while (sanitized.includes("..")) {
+    sanitized = sanitized.replace(/\.\./g, "");
+  }
+
+  // Remove all forward and back slashes (prevents path injection)
+  sanitized = sanitized.replace(/[/\\]/g, "");
+
+  // Remove null bytes and control characters
+  sanitized = sanitized.replace(/[\x00-\x1f]/g, "");
+
+  // Remove other potentially dangerous characters for storage paths
+  sanitized = sanitized.replace(/[<>:"|?*]/g, "");
+
+  // Collapse multiple underscores/dashes (from character removal)
+  sanitized = sanitized.replace(/[_-]{2,}/g, "_");
+
+  // Remove leading/trailing underscores and dashes
+  sanitized = sanitized.replace(/^[_-]+|[_-]+$/g, "");
+
+  return sanitized.trim();
+}
+
+/**
+ * SECURITY: Validate a storage path retrieved from the database
+ *
+ * When deleting files using paths stored in the database, we should still
+ * validate them since the original input may not have been sanitized, or
+ * the database could have been compromised.
+ *
+ * @param storagePath - Full storage path from database
+ * @returns True if path is safe, false if it contains traversal attempts
+ */
+export function isStoragePathSafe(storagePath: string): boolean {
+  if (!storagePath) return false;
+
+  // Check for path traversal attempts
+  if (storagePath.includes("..")) {
+    return false;
+  }
+
+  // Check for null bytes
+  if (storagePath.includes("\x00")) {
+    return false;
+  }
+
+  // Check for backslashes (normalize to forward slashes only)
+  if (storagePath.includes("\\")) {
+    return false;
+  }
+
+  // Path should not start with a slash (relative paths only)
+  if (storagePath.startsWith("/")) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Validate word count is within acceptable range
  *
  * @param text - Text to count words in

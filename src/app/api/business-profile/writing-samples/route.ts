@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { requireAuth } from '@/lib/auth/ace-compat';
-import { logger } from '@/lib/logger'
+import { requireAuth } from "@/lib/auth/ace-compat";
+import { logger } from "@/lib/logger";
+import { sanitizeStoragePathSegment } from "@/lib/security/input-sanitization";
 
 /**
  * Route segment config - file upload limits
@@ -9,26 +10,26 @@ import { logger } from '@/lib/logger'
  * - 60s timeout for upload processing
  */
 export const maxDuration = 60;
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 const MAX_SAMPLES = 3;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const ALLOWED_TYPES = [
-  'text/plain',
-  'text/markdown',
-  'text/csv',
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/rtf',
+  "text/plain",
+  "text/markdown",
+  "text/csv",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/rtf",
 ];
 
 /**
  * GET /api/business-profile/writing-samples
  * List all writing samples for the shop
  */
-export const GET = requireAuth('user')(async (request: NextRequest) => {
+export const GET = requireAuth("user")(async (request: NextRequest) => {
   try {
     const authHeader = request.headers.get("Authorization");
     const shopDomain = authHeader?.replace("Bearer ", "");
@@ -36,7 +37,7 @@ export const GET = requireAuth('user')(async (request: NextRequest) => {
     if (!shopDomain) {
       return NextResponse.json(
         { success: false, error: "Authorization required" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -50,7 +51,7 @@ export const GET = requireAuth('user')(async (request: NextRequest) => {
     if (shopError || !shop) {
       return NextResponse.json(
         { success: false, error: "Shop not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -62,10 +63,12 @@ export const GET = requireAuth('user')(async (request: NextRequest) => {
       .order("created_at", { ascending: false });
 
     if (samplesError) {
-      logger.error("Error fetching samples:", samplesError as Error, { component: 'writing-samples' });
+      logger.error("Error fetching samples:", samplesError as Error, {
+        component: "writing-samples",
+      });
       return NextResponse.json(
         { success: false, error: "Failed to fetch samples" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -75,13 +78,15 @@ export const GET = requireAuth('user')(async (request: NextRequest) => {
         samples: samples || [],
         maxSamples: MAX_SAMPLES,
         canUpload: (samples?.length || 0) < MAX_SAMPLES,
-      }
+      },
     });
   } catch (error) {
-    logger.error("Error fetching writing samples:", error as Error, { component: 'writing-samples' });
+    logger.error("Error fetching writing samples:", error as Error, {
+      component: "writing-samples",
+    });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });
@@ -90,7 +95,7 @@ export const GET = requireAuth('user')(async (request: NextRequest) => {
  * POST /api/business-profile/writing-samples
  * Upload a new writing sample
  */
-export const POST = requireAuth('user')(async (request: NextRequest) => {
+export const POST = requireAuth("user")(async (request: NextRequest) => {
   try {
     const authHeader = request.headers.get("Authorization");
     const shopDomain = authHeader?.replace("Bearer ", "");
@@ -98,7 +103,7 @@ export const POST = requireAuth('user')(async (request: NextRequest) => {
     if (!shopDomain) {
       return NextResponse.json(
         { success: false, error: "Authorization required" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -112,7 +117,7 @@ export const POST = requireAuth('user')(async (request: NextRequest) => {
     if (shopError || !shop) {
       return NextResponse.json(
         { success: false, error: "Shop not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -124,8 +129,11 @@ export const POST = requireAuth('user')(async (request: NextRequest) => {
 
     if ((count || 0) >= MAX_SAMPLES) {
       return NextResponse.json(
-        { success: false, error: `Maximum ${MAX_SAMPLES} samples allowed. Delete one before uploading.` },
-        { status: 400 }
+        {
+          success: false,
+          error: `Maximum ${MAX_SAMPLES} samples allowed. Delete one before uploading.`,
+        },
+        { status: 400 },
       );
     }
 
@@ -136,15 +144,19 @@ export const POST = requireAuth('user')(async (request: NextRequest) => {
     if (!file) {
       return NextResponse.json(
         { success: false, error: "No file provided" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { success: false, error: "Invalid file type. Allowed: TXT, MD, CSV, PDF, DOC, DOCX, RTF" },
-        { status: 400 }
+        {
+          success: false,
+          error:
+            "Invalid file type. Allowed: TXT, MD, CSV, PDF, DOC, DOCX, RTF",
+        },
+        { status: 400 },
       );
     }
 
@@ -152,7 +164,7 @@ export const POST = requireAuth('user')(async (request: NextRequest) => {
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
         { success: false, error: "File too large. Maximum 10MB allowed." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -164,9 +176,24 @@ export const POST = requireAuth('user')(async (request: NextRequest) => {
       .eq("is_current", true)
       .single();
 
-    // Generate storage path
+    // SECURITY: Sanitize filename to prevent path traversal attacks
+    // User-controlled file.name could contain "../" sequences
+    const sanitizedFileName = sanitizeStoragePathSegment(
+      file.name.replace(/[^a-zA-Z0-9.-]/g, "_"),
+    );
+
+    if (!sanitizedFileName) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid filename. Filename must contain valid characters.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Generate storage path using validated shop.id (from DB) and sanitized filename
     const timestamp = Date.now();
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const storagePath = `${shop.id}/${timestamp}_${sanitizedFileName}`;
 
     // Convert file to buffer
@@ -182,17 +209,23 @@ export const POST = requireAuth('user')(async (request: NextRequest) => {
       });
 
     if (uploadError) {
-      logger.error("Storage upload error:", uploadError as Error, { component: 'writing-samples' });
+      logger.error("Storage upload error:", uploadError as Error, {
+        component: "writing-samples",
+      });
       return NextResponse.json(
         { success: false, error: "Failed to upload file" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     // Extract text for plain text files
     let extractedText: string | null = null;
-    if (file.type === 'text/plain' || file.type === 'text/markdown' || file.type === 'text/csv') {
-      extractedText = buffer.toString('utf-8').substring(0, 50000); // Limit to 50k chars
+    if (
+      file.type === "text/plain" ||
+      file.type === "text/markdown" ||
+      file.type === "text/csv"
+    ) {
+      extractedText = buffer.toString("utf-8").substring(0, 50000); // Limit to 50k chars
     }
 
     // Create database record
@@ -211,24 +244,28 @@ export const POST = requireAuth('user')(async (request: NextRequest) => {
       .single();
 
     if (insertError) {
-      logger.error("Database insert error:", insertError as Error, { component: 'writing-samples' });
+      logger.error("Database insert error:", insertError as Error, {
+        component: "writing-samples",
+      });
       // Try to clean up uploaded file
       await supabaseAdmin.storage.from("writing-samples").remove([storagePath]);
       return NextResponse.json(
         { success: false, error: "Failed to save sample record" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     return NextResponse.json({
       success: true,
-      data: { sample }
+      data: { sample },
     });
   } catch (error) {
-    logger.error("Error uploading writing sample:", error as Error, { component: 'writing-samples' });
+    logger.error("Error uploading writing sample:", error as Error, {
+      component: "writing-samples",
+    });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });
