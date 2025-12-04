@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
+import { Input } from "@/components/ui/input";
 
 // Force dynamic rendering for this page
 export const dynamic = "force-dynamic";
@@ -89,7 +90,7 @@ function PromptsSettingsContent() {
         logger.error("Error loading prompts", err as Error, {
           component: "prompts-settings-page",
           operation: "loadPrompts",
-          shop
+          shop,
         });
         setError("Failed to load prompts");
       } finally {
@@ -141,7 +142,7 @@ function PromptsSettingsContent() {
       logger.error("Error saving system prompt", err as Error, {
         component: "prompts-settings-page",
         operation: "handleSaveSystemPrompt",
-        shop
+        shop,
       });
       setError("Failed to save system prompt");
     } finally {
@@ -192,7 +193,7 @@ function PromptsSettingsContent() {
         component: "prompts-settings-page",
         operation: "handleSaveTemplate",
         templateId: selectedTemplateId,
-        shop
+        shop,
       });
       setError("Failed to save template");
     } finally {
@@ -240,7 +241,7 @@ function PromptsSettingsContent() {
         component: "prompts-settings-page",
         operation: "handleCreateTemplate",
         templateName: newTemplateName,
-        shop
+        shop,
       });
       setError("Failed to create template");
     } finally {
@@ -290,7 +291,7 @@ function PromptsSettingsContent() {
         component: "prompts-settings-page",
         operation: "handleDeleteTemplate",
         templateId: selectedTemplateId,
-        shop
+        shop,
       });
       setError("Failed to delete template");
     } finally {
@@ -334,7 +335,7 @@ function PromptsSettingsContent() {
         component: "prompts-settings-page",
         operation: "handleSetDefault",
         templateId: selectedTemplateId,
-        shop
+        shop,
       });
       setError("Failed to set template as default");
     } finally {
@@ -371,7 +372,7 @@ function PromptsSettingsContent() {
       logger.error("Error resetting system prompt", err as Error, {
         component: "prompts-settings-page",
         operation: "handleResetSystemPrompt",
-        shop
+        shop,
       });
       setError("Failed to reset system prompt");
     } finally {
@@ -423,7 +424,7 @@ function PromptsSettingsContent() {
         component: "prompts-settings-page",
         operation: "handleResetTemplate",
         templateId: selectedTemplateId,
-        shop
+        shop,
       });
       setError("Failed to reset template");
     } finally {
@@ -738,7 +739,7 @@ function PromptsSettingsContent() {
                         >
                           Template Name
                         </label>
-                        <input
+                        <Input
                           id="template-name"
                           type="text"
                           value={editingTemplateName}
@@ -746,15 +747,8 @@ function PromptsSettingsContent() {
                             setEditingTemplateName(e.target.value)
                           }
                           disabled={!editingTemplate}
+                          className="h-11 rounded-lg"
                           style={{
-                            width: "100%",
-                            padding: "12px",
-                            fontSize: "14px",
-                            fontFamily:
-                              'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                            border: "1px solid #e5e7eb",
-                            borderRadius: "8px",
-                            outline: "none",
                             background: editingTemplate ? "#ffffff" : "#f9fafb",
                             color: "#003366",
                             cursor: editingTemplate ? "text" : "not-allowed",
@@ -1276,22 +1270,13 @@ function PromptsSettingsContent() {
                   >
                     Template Name
                   </label>
-                  <input
+                  <Input
                     id="new-template-name"
                     type="text"
                     value={newTemplateName}
                     onChange={(e) => setNewTemplateName(e.target.value)}
                     placeholder="e.g., Summer Dresses, Casual Jewelry, Formal Wear"
-                    style={{
-                      width: "100%",
-                      padding: "12px",
-                      fontSize: "14px",
-                      fontFamily:
-                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "8px",
-                      outline: "none",
-                    }}
+                    className="h-11 rounded-lg"
                   />
                 </div>
                 <div
