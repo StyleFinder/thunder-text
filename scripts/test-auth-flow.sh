@@ -124,7 +124,7 @@ echo ""
 # Test 6: Auth Bypass Check
 print_step "Test 6: Verifying auth bypass is disabled"
 
-node scripts/check-auth-bypass.js
+node scripts/check-auth-bypass.mjs
 
 if [ $? -eq 0 ]; then
   print_success "Auth bypass check passed"
