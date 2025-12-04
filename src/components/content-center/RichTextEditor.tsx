@@ -35,9 +35,10 @@ interface RichTextEditorProps {
 }
 
 /**
- * SECURITY [R-09CB5]: DOMPurify configuration for XSS-safe rich text editing
+ * SECURITY [R-09CB5, R-269DC]: DOMPurify configuration for XSS-safe rich text editing
  *
  * This component MUST use innerHTML for WYSIWYG functionality (textContent strips formatting).
+ * Scanner suggestions to use textContent are INCORRECT - it would break rich text editing.
  * XSS is prevented via DOMPurify sanitization with defense-in-depth configuration:
  *
  * 1. ALLOWED_TAGS whitelist - Only safe formatting tags permitted
@@ -167,14 +168,20 @@ export function RichTextEditor({
       const sanitized = sanitizedContent();
       // Only update if content actually changed (prevents cursor jump)
       if (sanitized !== editorRef.current.innerHTML) {
-        // SECURITY [R-09CB5]: innerHTML is REQUIRED for WYSIWYG rich text editing.
-        // textContent would strip all formatting (bold, italic, links, etc.).
-        // XSS is prevented by DOMPurify sanitization with:
-        // - Strict tag allowlist (only formatting tags)
-        // - Strict attribute allowlist (no event handlers)
-        // - javascript: URL blocking via ALLOWED_URI_REGEXP
-        // - Comprehensive event handler blocklist
-
+        // SECURITY [R-09CB5, R-269DC]: innerHTML is REQUIRED for WYSIWYG rich text editing.
+        // Scanner suggestion to use textContent is INCORRECT for this use case because:
+        // - textContent would strip ALL formatting (bold, italic, links, lists, etc.)
+        // - Users would see raw HTML tags as plain text instead of formatted content
+        //
+        // XSS is PREVENTED by DOMPurify sanitization (OWASP-recommended) with:
+        // - ALLOWED_TAGS: Strict whitelist of safe formatting tags only
+        // - ALLOWED_ATTR: Only href, target, rel, class, style permitted
+        // - FORBID_TAGS: script, iframe, svg, math, template, etc. blocked
+        // - FORBID_ATTR: 30+ event handlers (onclick, onerror, etc.) blocked
+        // - ALLOWED_URI_REGEXP: Blocks javascript: and data: URL protocols
+        // - ALLOW_DATA_ATTR: false - prevents data attribute abuse
+        //
+        // See DOMPURIFY_CONFIG at top of file for full security configuration.
         editorRef.current.innerHTML = sanitized;
       }
     }
