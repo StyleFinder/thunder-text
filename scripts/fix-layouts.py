@@ -12,6 +12,9 @@ SECURITY FALSE POSITIVE NOTES:
 - R-6675E (XXE): This script does NOT use XML parsing. It uses regex (re.sub)
   for simple text replacement in TSX files. There is no xml, lxml, etree,
   or ElementTree usage. The scanner incorrectly flagged exception handlers.
+- R-F8672 (HTTP read): This script does NOT use HTTP requests. The .read()
+  call at line 242 is standard Python file I/O using open(), not HTTP response
+  handling. There is no requests, urllib, or http library usage.
 """
 
 import re
