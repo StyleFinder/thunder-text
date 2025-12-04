@@ -89,10 +89,14 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       const hostParam = searchParams?.get("host");
 
       if (!shopParam) {
-        logger.error("Missing shop parameter", new Error("Shop parameter not found"), {
-          component: "UnifiedShopifyAuth",
-          operation: "initializeAuth",
-        });
+        logger.error(
+          "Missing shop parameter",
+          new Error("Shop parameter not found"),
+          {
+            component: "UnifiedShopifyAuth",
+            operation: "initializeAuth",
+          },
+        );
         setError("Missing shop parameter");
         setIsLoading(false);
         return;
@@ -102,15 +106,20 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       setHost(hostParam);
 
       // Check if test store or manual setup store (allow non-embedded access)
-      const isTestStore = shopParam.includes("zunosai-staging-test-store") ||
-                          shopParam.includes("shopstylefinder.myshopify.com");
+      const isTestStore =
+        shopParam.includes("zunosai-staging-test-store") ||
+        shopParam.includes("shopstylefinder.myshopify.com");
 
       if (!isEmbedded && !isTestStore) {
-        logger.error("App must be accessed through Shopify admin", new Error("Not in embedded context"), {
-          component: "UnifiedShopifyAuth",
-          operation: "initializeAuth",
-          shop: shopParam,
-        });
+        logger.error(
+          "App must be accessed through Shopify admin",
+          new Error("Not in embedded context"),
+          {
+            component: "UnifiedShopifyAuth",
+            operation: "initializeAuth",
+            shop: shopParam,
+          },
+        );
         setError("This app must be accessed through your Shopify admin panel");
         setIsAuthenticated(false);
         setIsLoading(false);
@@ -129,21 +138,29 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
 
       if (!apiKey) {
-        logger.error("NEXT_PUBLIC_SHOPIFY_API_KEY not configured", new Error("API key missing"), {
-          component: "UnifiedShopifyAuth",
-          operation: "initializeAuth",
-        });
+        logger.error(
+          "NEXT_PUBLIC_SHOPIFY_API_KEY not configured",
+          new Error("API key missing"),
+          {
+            component: "UnifiedShopifyAuth",
+            operation: "initializeAuth",
+          },
+        );
         setError("App configuration error: API key missing");
         setIsLoading(false);
         return;
       }
 
       if (!hostParam) {
-        logger.error("Missing host parameter required for App Bridge", new Error("Host parameter missing"), {
-          component: "UnifiedShopifyAuth",
-          operation: "initializeAuth",
-          shop: shopParam,
-        });
+        logger.error(
+          "Missing host parameter required for App Bridge",
+          new Error("Host parameter missing"),
+          {
+            component: "UnifiedShopifyAuth",
+            operation: "initializeAuth",
+            shop: shopParam,
+          },
+        );
         setError("Missing host parameter");
         setIsLoading(false);
         return;
@@ -171,19 +188,23 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
         });
 
         // If token retrieval fails, the user needs to go through OAuth
-        // Redirect to Shopify OAuth to establish session
-        const oauthUrl = `https://${shopParam}/admin/oauth/authorize?client_id=${apiKey}&scope=${process.env.SHOPIFY_SCOPES || "read_products,write_products"}&redirect_uri=${encodeURIComponent(window.location.origin + "/api/auth/callback")}`;
+        // Redirect to unified OAuth initiation route (handles state generation and security)
+        const oauthInitUrl = `${window.location.origin}/api/auth/shopify?shop=${encodeURIComponent(shopParam)}`;
 
-        window.top!.location.href = oauthUrl;
+        window.top!.location.href = oauthInitUrl;
         return;
       }
 
       if (!token) {
-        logger.error("Session token is empty", new Error("Empty session token"), {
-          component: "UnifiedShopifyAuth",
-          operation: "initializeAuth",
-          shop: shopParam,
-        });
+        logger.error(
+          "Session token is empty",
+          new Error("Empty session token"),
+          {
+            component: "UnifiedShopifyAuth",
+            operation: "initializeAuth",
+            shop: shopParam,
+          },
+        );
         setError("Failed to get session token");
         setIsLoading(false);
         return;
@@ -237,17 +258,20 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
         }),
       });
 
-
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        logger.error("Token exchange failed", new Error(result.error || "Token exchange failed"), {
-          component: "UnifiedShopifyAuth",
-          operation: "tokenExchange",
-          status: response.status,
-          details: result.details,
-          shop: shopParam,
-        });
+        logger.error(
+          "Token exchange failed",
+          new Error(result.error || "Token exchange failed"),
+          {
+            component: "UnifiedShopifyAuth",
+            operation: "tokenExchange",
+            status: response.status,
+            details: result.details,
+            shop: shopParam,
+          },
+        );
 
         let errorMessage = "Authentication failed";
         if (response.status === 401) {
