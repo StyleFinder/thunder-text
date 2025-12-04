@@ -12,6 +12,8 @@ SECURITY NOTES:
 import re
 import os
 import stat
+import tempfile
+import shutil
 
 # Pages to update (SECURITY: whitelist of allowed files)
 PAGES = [
@@ -61,8 +63,11 @@ def safe_resolve_path(base_dir: str, relative_path: str) -> str | None:
 
 def secure_write_file(file_path: str, content: str) -> bool:
     """
-    SECURITY: Write file with secure permissions.
-    Uses os.open with explicit permissions instead of open().
+    SECURITY: Atomic file write with secure permissions.
+    Uses write-to-temp-then-rename pattern to prevent:
+    - Race conditions (TOCTOU vulnerabilities)
+    - Partial writes on crash/interrupt
+    - Data corruption from concurrent access
 
     Args:
         file_path: Path to write to (must be validated first)
@@ -71,20 +76,54 @@ def secure_write_file(file_path: str, content: str) -> bool:
     Returns:
         True if successful, False otherwise
     """
+    # Get the directory of the target file for temp file placement
+    target_dir = os.path.dirname(file_path)
+    temp_fd = None
+    temp_path = None
+
     try:
-        # SECURITY: Open file with explicit permissions (0o644)
-        # This prevents world-writable files
-        fd = os.open(file_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, SECURE_FILE_PERMISSIONS)
-        try:
-            with os.fdopen(fd, 'w') as f:
-                f.write(content)
-            return True
-        except Exception:
-            os.close(fd)
-            raise
+        # SECURITY: Create temp file in same directory as target
+        # This ensures atomic rename will work (same filesystem)
+        # Using delete=False so we control cleanup
+        temp_fd, temp_path = tempfile.mkstemp(
+            dir=target_dir,
+            prefix='.tmp_',
+            suffix='.tmp'
+        )
+
+        # Write content to temp file
+        with os.fdopen(temp_fd, 'w', encoding='utf-8') as f:
+            temp_fd = None  # fdopen takes ownership, prevent double-close
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())  # Ensure data is written to disk
+
+        # SECURITY: Set secure permissions before making visible
+        os.chmod(temp_path, SECURE_FILE_PERMISSIONS)
+
+        # SECURITY: Atomic rename - this is the key to preventing race conditions
+        # On POSIX systems, rename() is atomic when source and dest are on same filesystem
+        shutil.move(temp_path, file_path)
+        temp_path = None  # Rename succeeded, prevent cleanup
+
+        return True
+
     except Exception as e:
         print(f"Error writing file {file_path}: {e}")
         return False
+
+    finally:
+        # Cleanup: close fd if still open, remove temp file if it exists
+        if temp_fd is not None:
+            try:
+                os.close(temp_fd)
+            except OSError:
+                pass
+        if temp_path is not None and os.path.exists(temp_path):
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
 
 
 def add_import(content: str) -> str:
