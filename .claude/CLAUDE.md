@@ -1,5 +1,14 @@
 # Thunder Text - SuperClaude Development Framework
 
+## Platform Overview
+
+Thunder Text is an AI-powered **standalone SaaS platform** (NOT an embedded Shopify app) that:
+- Generates SEO-optimized product descriptions using GPT-4 Vision
+- Creates high-converting ads via the **ACE (Ad Creation Engine)**
+- Integrates with **Shopify, Lightspeed**, and other e-commerce platforms via OAuth
+- Hosts externally on Render (https://thunder-text.onrender.com)
+- Uses NextAuth.js for multi-provider OAuth authentication
+
 ## 🎨 Design System Compliance (CRITICAL - READ FIRST)
 
 **MANDATORY**: When creating or modifying UI components, pages, or any visual elements, you MUST follow the [Master Design System](../ace-app/docs/MASTER_DESIGN_SYSTEM.md).

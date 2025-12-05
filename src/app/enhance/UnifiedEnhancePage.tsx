@@ -1,6 +1,5 @@
 "use client";
 
-// Force dynamic rendering for this page
 export const dynamic = "force-dynamic";
 
 import { useState, useCallback, useEffect } from "react";
@@ -17,15 +16,30 @@ import {
 import { useShopifyAuth } from "@/app/components/ShopifyAuthProvider";
 import { ProductSelector } from "./components/ProductSelector";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Loader2, X, ChevronLeft, CheckCircle2 } from "lucide-react";
+import {
+  Loader2,
+  X,
+  ArrowLeft,
+  CheckCircle2,
+  PenTool,
+  Zap,
+  Package,
+  Sparkles,
+  ExternalLink,
+  AlertCircle
+} from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
-import { PAGE_HEADER_STYLES, PAGE_SECTION_STYLES } from '@/app/styles/layout-constants';
 import { logger } from '@/lib/logger'
 
 interface EnhancementOptions {
@@ -423,6 +437,7 @@ export default function UnifiedEnhancePage() {
     return !!productData;
   };
 
+  // Product selection state
   if (!productId) {
     return (
       <ProductSelector
@@ -436,58 +451,83 @@ export default function UnifiedEnhancePage() {
     );
   }
 
+  // Loading state
   if (loading) {
     return (
-      <div className="w-full flex flex-col items-center">
-        <div style={PAGE_HEADER_STYLES}>
-          <h1 className="text-3xl font-bold text-gray-900">Enhance Product</h1>
-        </div>
-        <Card style={PAGE_SECTION_STYLES}>
-          <CardContent className="flex items-center justify-center py-12">
-            <div className="flex flex-col items-center gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-              <p className="text-gray-600">Loading product data...</p>
+      <div className="min-h-screen bg-gray-50">
+        <main className="max-w-4xl mx-auto px-6 py-8">
+          {/* Header skeleton */}
+          <div className="mb-8">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-gray-200 animate-pulse" />
+              <div>
+                <div className="h-7 w-64 bg-gray-200 rounded animate-pulse mb-2" />
+                <div className="h-4 w-48 bg-gray-100 rounded animate-pulse" />
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Content skeleton */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="h-6 w-32 bg-gray-200 rounded animate-pulse mb-4" />
+              <div className="h-40 bg-gray-100 rounded animate-pulse" />
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-4" />
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-5 bg-gray-100 rounded animate-pulse" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
     <>
-      <div style={{
-        maxWidth: '800px',
-        margin: '0 auto 16px auto',
-        width: '100%'
-      }}>
-        <div className="flex items-center gap-4 mb-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => (window.location.href = `/dashboard?shop=${shop}`)}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back to Dashboard
-          </Button>
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900">Enhance Product Description</h1>
-        {productData && (
-          <p className="text-gray-600 mt-1">{productData.title}</p>
-        )}
-      </div>
+      <div className="min-h-screen bg-gray-50">
+        <main className="max-w-4xl mx-auto px-6 py-8">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)' }}
+                >
+                  <PenTool className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Enhance Product</h1>
+                  {productData && (
+                    <p className="text-gray-500 text-sm">{productData.title}</p>
+                  )}
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                className="border-gray-200 hover:bg-gray-50"
+                onClick={() => (window.location.href = `/dashboard?shop=${shop}`)}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Dashboard
+              </Button>
+            </div>
+          </div>
 
-      <div style={{ display: 'contents' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto 32px auto', width: '100%' }}>
-          <div className="space-y-6">
+          {/* Error Alert */}
           {error && (
-            <Alert variant="destructive">
-              <X className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="flex-1">{error}</AlertDescription>
               <Button
                 variant="ghost"
                 size="sm"
-                className="absolute right-2 top-2"
+                className="ml-auto"
                 onClick={() => setError(null)}
               >
                 <X className="h-4 w-4" />
@@ -495,282 +535,332 @@ export default function UnifiedEnhancePage() {
             </Alert>
           )}
 
-          {/* Success Modal */}
-          <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  Product Updated Successfully
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                {successMessage && (
-                  <Alert>
-                    <AlertDescription>{successMessage}</AlertDescription>
-                  </Alert>
-                )}
-                {updateResult && Boolean(updateResult.shopifyResult) && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">The following changes have been applied:</p>
-                    <div className="space-y-1 text-sm">
-                      {updateResult.updates && typeof updateResult.updates === "object" ? (
-                        <>
-                          {"title" in updateResult.updates && (updateResult.updates as Record<string, unknown>).title ? (
-                            <p>• Title updated</p>
-                          ) : null}
-                          {"description" in updateResult.updates && (updateResult.updates as Record<string, unknown>).description ? (
-                            <p>• Description updated</p>
-                          ) : null}
-                          {"seoTitle" in updateResult.updates && (updateResult.updates as Record<string, unknown>).seoTitle ? (
-                            <p>• SEO title updated</p>
-                          ) : null}
-                          {"seoDescription" in updateResult.updates && (updateResult.updates as Record<string, unknown>).seoDescription ? (
-                            <p>• SEO meta description updated</p>
-                          ) : null}
-                          {"bulletPoints" in updateResult.updates && (updateResult.updates as Record<string, unknown>).bulletPoints ? (
-                            <p>• Bullet points added</p>
-                          ) : null}
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
-                )}
-                <p className="text-sm text-gray-600">
-                  Click "View Product" to see the updated product in your Shopify admin, or
-                  "Continue Editing" to make more changes.
-                </p>
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowSuccessModal(false);
-                    setSuccessMessage(null);
-                    setUpdateResult(null);
-                  }}
-                >
-                  Continue Editing
-                </Button>
-                <Button
-                  onClick={() => {
-                    const shopDomain = shop?.replace(".myshopify.com", "");
-                    const adminUrl = `https://admin.shopify.com/store/${shopDomain}/products/${productId?.split("/").pop()}`;
-                    window.open(adminUrl, "_blank");
-                  }}
-                >
-                  View Product
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
+          {/* Product Info Card */}
           {productData && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{productData.title}</CardTitle>
-                <CardDescription>
-                  SKU: {productData.variants[0]?.sku || "N/A"} | Type:{" "}
-                  {productData.productType || "N/A"} | Vendor:{" "}
-                  {productData.vendor || "N/A"}
-                </CardDescription>
-              </CardHeader>
-            </Card>
+            <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+              <div className="flex items-start gap-4">
+                {productData.images?.[0]?.url && (
+                  <img
+                    src={productData.images[0].url}
+                    alt={productData.title}
+                    className="w-20 h-20 object-cover rounded-lg"
+                  />
+                )}
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                    {productData.title}
+                  </h2>
+                  <div className="flex flex-wrap gap-2 text-sm text-gray-500">
+                    <span className="px-2 py-1 bg-gray-100 rounded">
+                      SKU: {productData.variants[0]?.sku || "N/A"}
+                    </span>
+                    <span className="px-2 py-1 bg-gray-100 rounded">
+                      Type: {productData.productType || "N/A"}
+                    </span>
+                    <span className="px-2 py-1 bg-gray-100 rounded">
+                      Vendor: {productData.vendor || "N/A"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
-          <ProductImageUpload
-            title="Product Images"
-            description="Add new images or use existing ones for AI analysis"
-            existingImages={productData?.images?.map((img) => img.url) || []}
-            useExistingImages={useExistingImages}
-            onFilesAdded={setUploadedFiles}
-            onExistingImagesToggle={setUseExistingImages}
-            maxFiles={5}
-          />
+          {/* Main Form */}
+          <div className="space-y-6">
+            {/* Images Section */}
+            <ProductImageUpload
+              title="Product Images"
+              description="Add new images or use existing ones for AI analysis"
+              existingImages={productData?.images?.map((img) => img.url) || []}
+              useExistingImages={useExistingImages}
+              onFilesAdded={setUploadedFiles}
+              onExistingImagesToggle={setUseExistingImages}
+              maxFiles={5}
+            />
 
-          <Card>
-            <CardContent className="space-y-6 pt-6">
-              {/* Enhancement Options Section */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">Enhancement Options</h2>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const allSelected =
-                        enhancementOptions.generateTitle &&
-                        enhancementOptions.enhanceDescription &&
-                        enhancementOptions.generateSEO &&
-                        enhancementOptions.createPromo;
-
-                      setEnhancementOptions({
-                        generateTitle: !allSelected,
-                        enhanceDescription: !allSelected,
-                        generateSEO: !allSelected,
-                        createPromo: !allSelected,
-                        updateImages: false,
-                      });
-                    }}
+            {/* Enhancement Options */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{ background: 'rgba(0, 102, 204, 0.1)' }}
                   >
-                    {enhancementOptions.generateTitle &&
+                    <Sparkles className="w-5 h-5" style={{ color: '#0066cc' }} />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">Enhancement Options</h2>
+                    <p className="text-sm text-gray-500">Choose what to generate</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-200"
+                  onClick={() => {
+                    const allSelected =
+                      enhancementOptions.generateTitle &&
                       enhancementOptions.enhanceDescription &&
                       enhancementOptions.generateSEO &&
-                      enhancementOptions.createPromo
-                      ? "Deselect All"
-                      : "Select All"}
-                  </Button>
+                      enhancementOptions.createPromo;
+
+                    setEnhancementOptions({
+                      generateTitle: !allSelected,
+                      enhanceDescription: !allSelected,
+                      generateSEO: !allSelected,
+                      createPromo: !allSelected,
+                      updateImages: false,
+                    });
+                  }}
+                >
+                  {enhancementOptions.generateTitle &&
+                    enhancementOptions.enhanceDescription &&
+                    enhancementOptions.generateSEO &&
+                    enhancementOptions.createPromo
+                    ? "Deselect All"
+                    : "Select All"}
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { id: 'generateTitle', label: 'Generate new title', checked: enhancementOptions.generateTitle },
+                  { id: 'enhanceDescription', label: 'Enhance description', checked: enhancementOptions.enhanceDescription },
+                  { id: 'generateSEO', label: 'Generate SEO metadata', checked: enhancementOptions.generateSEO },
+                  { id: 'createPromo', label: 'Create promotional copy', checked: enhancementOptions.createPromo },
+                ].map((option) => (
+                  <div
+                    key={option.id}
+                    className={`flex items-center space-x-3 p-4 rounded-lg border transition-colors ${
+                      option.checked
+                        ? 'border-blue-200 bg-blue-50/50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <Checkbox
+                      id={option.id}
+                      checked={option.checked}
+                      onCheckedChange={(checked) =>
+                        setEnhancementOptions((prev) => ({
+                          ...prev,
+                          [option.id]: checked as boolean,
+                        }))
+                      }
+                    />
+                    <Label htmlFor={option.id} className="cursor-pointer">
+                      {option.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Product Details */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ background: 'rgba(0, 102, 204, 0.1)' }}
+                >
+                  <Package className="w-5 h-5" style={{ color: '#0066cc' }} />
                 </div>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="generateTitle"
-                      checked={enhancementOptions.generateTitle}
-                      onCheckedChange={(checked) =>
-                        setEnhancementOptions((prev) => ({
-                          ...prev,
-                          generateTitle: checked as boolean,
-                        }))
-                      }
-                    />
-                    <Label htmlFor="generateTitle">Generate new title</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="enhanceDescription"
-                      checked={enhancementOptions.enhanceDescription}
-                      onCheckedChange={(checked) =>
-                        setEnhancementOptions((prev) => ({
-                          ...prev,
-                          enhanceDescription: checked as boolean,
-                        }))
-                      }
-                    />
-                    <Label htmlFor="enhanceDescription">Enhance description</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="generateSEO"
-                      checked={enhancementOptions.generateSEO}
-                      onCheckedChange={(checked) =>
-                        setEnhancementOptions((prev) => ({
-                          ...prev,
-                          generateSEO: checked as boolean,
-                        }))
-                      }
-                    />
-                    <Label htmlFor="generateSEO">Generate SEO metadata</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="createPromo"
-                      checked={enhancementOptions.createPromo}
-                      onCheckedChange={(checked) =>
-                        setEnhancementOptions((prev) => ({
-                          ...prev,
-                          createPromo: checked as boolean,
-                        }))
-                      }
-                    />
-                    <Label htmlFor="createPromo">Create promotional copy</Label>
-                  </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Product Details</h2>
+                  <p className="text-sm text-gray-500">Category and template settings</p>
                 </div>
               </div>
+              <ProductDetailsForm
+                mode="enhance"
+                parentCategory={parentCategory}
+                setParentCategory={setParentCategory}
+                parentCategoryOptions={parentCategoryOptions}
+                availableSizing={availableSizing}
+                setAvailableSizing={setAvailableSizing}
+                sizingOptions={sizingOptions}
+                selectedTemplate={selectedTemplate}
+                setSelectedTemplate={setSelectedTemplate}
+                templatePreview={templatePreview}
+                setTemplatePreview={setTemplatePreview}
+              />
+            </div>
 
-              <Separator />
+            {/* Additional Information */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <AdditionalInfoForm
+                mode="enhance"
+                fabricMaterial={fabricMaterial}
+                setFabricMaterial={setFabricMaterial}
+                occasionUse={occasionUse}
+                setOccasionUse={setOccasionUse}
+                targetAudience={targetAudience}
+                setTargetAudience={setTargetAudience}
+                keyFeatures={keyFeatures}
+                setKeyFeatures={setKeyFeatures}
+                additionalNotes={additionalNotes}
+                setAdditionalNotes={setAdditionalNotes}
+                prefilled={!!productData}
+              />
+            </div>
 
-              {/* Product Details Section */}
-              <div>
-                <ProductDetailsForm
-                  mode="enhance"
-                  parentCategory={parentCategory}
-                  setParentCategory={setParentCategory}
-                  parentCategoryOptions={parentCategoryOptions}
-                  availableSizing={availableSizing}
-                  setAvailableSizing={setAvailableSizing}
-                  sizingOptions={sizingOptions}
-                  selectedTemplate={selectedTemplate}
-                  setSelectedTemplate={setSelectedTemplate}
-                  templatePreview={templatePreview}
-                  setTemplatePreview={setTemplatePreview}
-                />
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-4 pb-8">
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-gray-200"
+                onClick={() => (window.location.href = `/dashboard?shop=${shop}`)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="lg"
+                className="px-8"
+                style={{
+                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                  border: 'none'
+                }}
+                onClick={handleGenerate}
+                disabled={!isFormValid() || generating}
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : !productData ? (
+                  "Loading Product Data..."
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate Enhanced Content
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* Progress Modal */}
+      <Dialog open={generating} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5" style={{ color: '#0066cc' }} />
+              Generating Enhanced Content
+            </DialogTitle>
+            <DialogDescription>
+              AI is analyzing your product and generating enhanced content...
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Progress value={progress} className="w-full h-2" />
+            <p className="text-sm text-gray-600 text-center">
+              {progress < 30
+                ? "🔍 Preparing images for analysis..."
+                : progress < 60
+                  ? "🤖 Analyzing with GPT-4 Vision..."
+                  : progress < 90
+                    ? "✍️ Generating enhanced descriptions..."
+                    : "✨ Finalizing your content..."}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              Product Updated Successfully
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {successMessage && (
+              <Alert className="bg-green-50 border-green-200">
+                <AlertDescription className="text-green-700">{successMessage}</AlertDescription>
+              </Alert>
+            )}
+            {updateResult && Boolean(updateResult.shopifyResult) && (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">The following changes have been applied:</p>
+                <div className="space-y-1 text-sm">
+                  {updateResult.updates && typeof updateResult.updates === "object" ? (
+                    <>
+                      {"title" in updateResult.updates && (updateResult.updates as Record<string, unknown>).title ? (
+                        <p className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          Title updated
+                        </p>
+                      ) : null}
+                      {"description" in updateResult.updates && (updateResult.updates as Record<string, unknown>).description ? (
+                        <p className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          Description updated
+                        </p>
+                      ) : null}
+                      {"seoTitle" in updateResult.updates && (updateResult.updates as Record<string, unknown>).seoTitle ? (
+                        <p className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          SEO title updated
+                        </p>
+                      ) : null}
+                      {"seoDescription" in updateResult.updates && (updateResult.updates as Record<string, unknown>).seoDescription ? (
+                        <p className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          SEO meta description updated
+                        </p>
+                      ) : null}
+                      {"bulletPoints" in updateResult.updates && (updateResult.updates as Record<string, unknown>).bulletPoints ? (
+                        <p className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          Bullet points added
+                        </p>
+                      ) : null}
+                    </>
+                  ) : null}
+                </div>
               </div>
-
-              <Separator />
-
-              {/* Additional Information Section */}
-              <div>
-                <AdditionalInfoForm
-                  mode="enhance"
-                  fabricMaterial={fabricMaterial}
-                  setFabricMaterial={setFabricMaterial}
-                  occasionUse={occasionUse}
-                  setOccasionUse={setOccasionUse}
-                  targetAudience={targetAudience}
-                  setTargetAudience={setTargetAudience}
-                  keyFeatures={keyFeatures}
-                  setKeyFeatures={setKeyFeatures}
-                  additionalNotes={additionalNotes}
-                  setAdditionalNotes={setAdditionalNotes}
-                  prefilled={!!productData}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-end gap-3 pb-8">
+            )}
+            <p className="text-sm text-gray-500">
+              Click &quot;View Product&quot; to see the updated product in your Shopify admin, or
+              &quot;Continue Editing&quot; to make more changes.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
-              size="lg"
-              onClick={() => (window.location.href = `/dashboard?shop=${shop}`)}
+              onClick={() => {
+                setShowSuccessModal(false);
+                setSuccessMessage(null);
+                setUpdateResult(null);
+              }}
             >
-              Cancel
+              Continue Editing
             </Button>
             <Button
-              size="lg"
-              onClick={handleGenerate}
-              disabled={!isFormValid() || generating}
+              style={{
+                background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                border: 'none'
+              }}
+              onClick={() => {
+                const shopDomain = shop?.replace(".myshopify.com", "");
+                const adminUrl = `https://admin.shopify.com/store/${shopDomain}/products/${productId?.split("/").pop()}`;
+                window.open(adminUrl, "_blank");
+              }}
             >
-              {generating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : !productData ? (
-                "Loading Product Data..."
-              ) : (
-                "Generate Enhanced Description"
-              )}
+              View Product
+              <ExternalLink className="w-4 h-4 ml-2" />
             </Button>
-          </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          {/* Progress Modal */}
-          <Dialog open={generating} onOpenChange={() => { }}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Generating Enhanced Content</DialogTitle>
-                <DialogDescription>
-                  AI is analyzing your product and generating enhanced content...
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <Progress value={progress} className="w-full" />
-                <p className="text-sm text-gray-600 text-center">
-                  {progress < 30
-                    ? "🔍 Preparing images for analysis..."
-                    : progress < 60
-                      ? "🤖 Analyzing with GPT-4 Vision..."
-                      : progress < 90
-                        ? "✍️ Generating enhanced descriptions..."
-                        : "✨ Finalizing your content..."}
-                </p>
-              </div>
-            </DialogContent>
-          </Dialog>
-          </div>
-        </div>
-
-        <EnhancedContentComparison
+      {/* Content Comparison Modal */}
+      <EnhancedContentComparison
         active={showPreviewModal}
         onClose={() => {
           setShowPreviewModal(false);
@@ -787,7 +877,6 @@ export default function UnifiedEnhancePage() {
         enhancedContent={generatedContent || {}}
         loading={applying}
       />
-      </div>
     </>
   );
 }

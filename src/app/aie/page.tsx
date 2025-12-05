@@ -6,8 +6,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Search, Package, Loader2, X, Check } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Search, Package, Loader2, X, Check, Megaphone, ArrowLeft, Sparkles, Zap } from 'lucide-react';
 import { authenticatedFetch } from '@/lib/shopify/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,233 +79,85 @@ function ImageSelectionModal({ product, onComplete, onCancel, isOpen }: ImageSel
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
-      <DialogContent style={{
-        maxWidth: '960px',
-        width: '90vw',
-        maxHeight: '80vh',
-        borderRadius: '12px',
-        padding: 0,
-        overflow: 'hidden',
-        background: 'white',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        border: '1px solid #d1d5db',
-        zIndex: 60
-      }}>
-        <DialogHeader style={{
-          padding: '20px 32px 16px 32px',
-          borderBottom: '1px solid #e5e7eb',
-          background: 'white',
-          flexShrink: 0,
-          position: 'relative'
-        }}>
+      <DialogContent className="max-w-4xl w-[90vw] max-h-[80vh] rounded-xl p-0 overflow-hidden flex flex-col z-[60]">
+        <DialogHeader className="px-6 py-5 border-b border-gray-200 bg-white flex-shrink-0 relative">
           <button
             onClick={handleCancel}
-            style={{
-              position: 'absolute',
-              right: '24px',
-              top: '20px',
-              width: '32px',
-              height: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-              borderRadius: '6px',
-              transition: 'all 0.15s ease',
-              color: '#6b7280'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f3f4f6';
-              e.currentTarget.style.color = '#111827';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#6b7280';
-            }}
+            className="absolute right-6 top-5 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M6 6L14 14M6 14L14 6" />
-            </svg>
+            <X className="w-5 h-5" />
           </button>
-          <DialogTitle style={{
-            fontSize: '20px',
-            fontWeight: 600,
-            color: '#111827',
-            paddingRight: '40px'
-          }}>
+          <DialogTitle className="text-lg font-semibold text-gray-900 pr-10">
             Select Images from {product.title}
           </DialogTitle>
         </DialogHeader>
 
-        <div style={{
-          padding: '24px 32px 32px 32px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '20px',
-          overflowY: 'auto',
-          flex: 1,
-          background: '#f9fafb',
-          minHeight: 0
-        }}>
+        <div className="p-6 flex flex-col gap-5 overflow-y-auto flex-1 bg-gray-50">
           {product.images.length === 0 ? (
-            <Alert className="bg-amber-50 border-amber-500">
-              <AlertDescription className="text-amber-500">
+            <Alert className="bg-amber-50 border-amber-200 rounded-lg">
+              <AlertDescription className="text-amber-700">
                 This product has no images. You can still add it, but consider adding images to your product first.
               </AlertDescription>
             </Alert>
           ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-              gap: '16px'
-            }}>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
               {product.images.map((image, idx) => {
                 const isSelected = tempSelectedImages.includes(image.url);
                 return (
-                  <div
+                  <button
                     key={idx}
+                    type="button"
                     onClick={() => toggleImage(image.url)}
-                    style={{
-                      cursor: 'pointer',
-                      position: 'relative',
-                      border: isSelected ? '2px solid #0066cc' : '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      padding: '8px',
-                      transition: 'all 0.15s ease',
-                      background: isSelected ? '#f0f9ff' : 'white'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected) {
-                        e.currentTarget.style.borderColor = '#0066cc';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) {
-                        e.currentTarget.style.borderColor = '#e5e7eb';
-                      }
-                    }}
+                    className={`relative p-2 rounded-lg transition-all duration-200 ${
+                      isSelected
+                        ? 'border-2 border-blue-500 bg-blue-50 ring-2 ring-blue-100'
+                        : 'border border-gray-200 bg-white hover:border-blue-400'
+                    }`}
                   >
                     <img
                       src={image.url}
                       alt={image.altText || `${product.title} - Image ${idx + 1}`}
-                      style={{
-                        width: '100%',
-                        height: '160px',
-                        objectFit: 'cover',
-                        borderRadius: '6px'
-                      }}
+                      className="w-full h-40 object-cover rounded-md"
                     />
                     {isSelected && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '12px',
-                        right: '12px',
-                        background: '#0066cc',
-                        color: 'white',
-                        borderRadius: '50%',
-                        width: '28px',
-                        height: '28px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-                      }}>
-                        <Check style={{ width: '16px', height: '16px' }} />
+                      <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md">
+                        <Check className="w-4 h-4" />
                       </div>
                     )}
-                  </div>
+                  </button>
                 );
               })}
             </div>
           )}
 
           {tempSelectedImages.length > 0 && (
-            <div style={{
-              background: '#dbeafe',
-              border: '1px solid #3b82f6',
-              borderRadius: '8px',
-              padding: '12px 16px'
-            }}>
-              <p style={{
-                fontSize: '14px',
-                color: '#1d4ed8',
-                margin: 0,
-                fontWeight: 500
-              }}>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+              <p className="text-sm text-blue-700 font-medium">
                 {tempSelectedImages.length} of {product.images.length} images selected
               </p>
             </div>
           )}
         </div>
 
-        <div style={{
-          padding: '18px 32px',
-          borderTop: '1px solid #e5e7eb',
-          display: 'flex',
-          justifyContent: 'flex-end',
-          background: 'white',
-          flexShrink: 0
-        }}>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              onClick={handleCancel}
-              style={{
-                padding: '10px 20px',
-                fontSize: '14px',
-                fontWeight: 500,
-                color: '#6b7280',
-                background: 'white',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#f9fafb';
-                e.currentTarget.style.borderColor = '#d1d5db';
-                e.currentTarget.style.boxShadow = '0 2px 4px 0 rgba(0, 0, 0, 0.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'white';
-                e.currentTarget.style.borderColor = '#e5e7eb';
-                e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDone}
-              style={{
-                padding: '10px 20px',
-                fontSize: '14px',
-                fontWeight: 500,
-                color: 'white',
-                background: '#0066cc',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#0052a3';
-                e.currentTarget.style.boxShadow = '0 2px 4px 0 rgba(0, 0, 0, 0.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#0066cc';
-                e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
-              }}
-            >
-              {tempSelectedImages.length > 0
-                ? `Add ${tempSelectedImages.length} Image${tempSelectedImages.length !== 1 ? 's' : ''}`
-                : 'Add All Images'}
-            </button>
-          </div>
+        <div className="px-6 py-4 border-t border-gray-200 bg-white flex-shrink-0 flex justify-end gap-3">
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            className="border-gray-200 hover:bg-gray-50"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDone}
+            style={{
+              background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+              border: 'none'
+            }}
+          >
+            {tempSelectedImages.length > 0
+              ? `Add ${tempSelectedImages.length} Image${tempSelectedImages.length !== 1 ? 's' : ''}`
+              : 'Add All Images'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -672,46 +524,64 @@ export default function AIEPage() {
     return { text: `${percentage}% - Needs Improvement`, variant: 'outline' as const };
   };
 
+  const router = useRouter()
+
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '48px 32px' }}>
+    <div className="min-h-screen bg-gray-50">
+      <main className="max-w-6xl mx-auto px-6 py-8">
         {/* Header */}
-        <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '36px', fontWeight: 700, color: '#111827', marginBottom: '8px' }}>
-            AI Ad Generator
-          </h1>
-          <p style={{ fontSize: '16px', color: '#6b7280' }}>
-            Generate high-converting ad copy powered by RAG & best practices
-          </p>
+        <div className="mb-8">
+          <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)' }}
+              >
+                <Megaphone className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">AI Ad Generator</h1>
+                <p className="text-gray-500 text-sm">Generate high-converting ad copy for {shop}</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              className="border-gray-200 hover:bg-gray-50"
+              onClick={() => router.push(`/dashboard?shop=${shop}`)}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </div>
+
+          {/* Info banner */}
+          <div
+            className="rounded-xl p-4 flex items-center gap-3"
+            style={{ background: 'rgba(0, 102, 204, 0.05)', border: '1px solid rgba(0, 102, 204, 0.1)' }}
+          >
+            <Sparkles className="w-5 h-5 flex-shrink-0" style={{ color: '#0066cc' }} />
+            <p className="text-sm" style={{ color: '#0066cc' }}>
+              Create AI-powered ad copy optimized for your target platform and campaign goals.
+            </p>
+          </div>
         </div>
 
         {/* Main Content */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <Card style={{
-            background: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
-            border: 'none'
-          }}>
-            <CardHeader style={{ borderBottom: '1px solid #e5e7eb', padding: '24px' }}>
-              <CardTitle style={{ fontSize: '24px', fontWeight: 600, color: '#111827' }}>
+        <div className="flex flex-col gap-6">
+          <Card className="bg-white rounded-xl border border-gray-200">
+            <CardHeader className="border-b border-gray-200 p-6">
+              <CardTitle className="text-xl font-semibold text-gray-900">
                 Ad Generation Settings
               </CardTitle>
             </CardHeader>
-            <CardContent style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <Label htmlFor="platform" style={{ fontSize: '14px', fontWeight: 500, color: '#374151' }}>
+            <CardContent className="p-6 flex flex-col gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="platform" className="text-sm font-medium text-gray-700">
                     Platform
                   </Label>
                   <Select value={platform} onValueChange={setPlatform}>
-                    <SelectTrigger id="platform" style={{
-                      fontSize: '14px',
-                      padding: '12px 16px',
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      background: 'white'
-                    }}>
+                    <SelectTrigger id="platform" className="h-11 border-gray-200">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -724,18 +594,12 @@ export default function AIEPage() {
                   </Select>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <Label htmlFor="goal" style={{ fontSize: '14px', fontWeight: 500, color: '#374151' }}>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="goal" className="text-sm font-medium text-gray-700">
                     Campaign Goal
                   </Label>
                   <Select value={goal} onValueChange={setGoal}>
-                    <SelectTrigger id="goal" style={{
-                      fontSize: '14px',
-                      padding: '12px 16px',
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
-                      background: 'white'
-                    }}>
+                    <SelectTrigger id="goal" className="h-11 border-gray-200">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -750,72 +614,28 @@ export default function AIEPage() {
               </div>
 
               {/* Product/Image Selection Buttons */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <Label style={{ fontSize: '16px', fontWeight: 600, color: '#111827' }}>
+              <div className="flex flex-col gap-3">
+                <Label className="text-base font-semibold text-gray-900">
                   Products & Images
                 </Label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <div className="flex items-center gap-3 flex-wrap">
                   <Button
                     variant="outline"
                     onClick={() => setProductModalOpen(true)}
-                    style={{
-                      background: 'white',
-                      color: '#0066cc',
-                      border: '1px solid #0066cc',
-                      padding: '12px 24px',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                      transition: 'all 0.15s ease',
-                      cursor: 'pointer'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
+                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
                   >
-                    <Package className="w-4 h-4" />
+                    <Package className="w-4 h-4 mr-2" />
                     Add Product
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => setImageUrlModalOpen(true)}
-                    style={{
-                      background: 'white',
-                      color: '#0066cc',
-                      border: '1px solid #0066cc',
-                      padding: '12px 24px',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                      transition: 'all 0.15s ease',
-                      cursor: 'pointer'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
+                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
                   >
                     Add Custom Image URL
                   </Button>
                 </div>
-                <p style={{ fontSize: '14px', color: '#6b7280' }}>
+                <p className="text-sm text-gray-500">
                   Select a product and choose images, or add custom image URLs
                 </p>
               </div>
@@ -894,8 +714,8 @@ export default function AIEPage() {
                 </Card>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <Label htmlFor="description" style={{ fontSize: '14px', fontWeight: 500, color: '#374151' }}>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="description" className="text-sm font-medium text-gray-700">
                   Product/Service Description
                 </Label>
                 <Textarea
@@ -905,23 +725,15 @@ export default function AIEPage() {
                   rows={4}
                   placeholder="Describe your product or service. Include key benefits, features, and what makes it unique..."
                   maxLength={1000}
-                  style={{
-                    fontSize: '14px',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    border: '1px solid #e5e7eb',
-                    resize: 'none',
-                    lineHeight: '1.5',
-                    fontFamily: 'inherit'
-                  }}
+                  className="border-gray-200 resize-none"
                 />
-                <p style={{ fontSize: '14px', color: '#6b7280' }}>
+                <p className="text-sm text-gray-500">
                   Be specific - this helps the AI understand your offering ({description.length}/1000)
                 </p>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <Label htmlFor="audience" style={{ fontSize: '14px', fontWeight: 500, color: '#374151' }}>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="audience" className="text-sm font-medium text-gray-700">
                   Target Audience (Optional)
                 </Label>
                 <Input
@@ -929,48 +741,23 @@ export default function AIEPage() {
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
                   placeholder="e.g., Busy moms aged 25-40, Tech professionals, Fitness enthusiasts"
-                  style={{
-                    fontSize: '14px',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    border: '1px solid #e5e7eb'
-                  }}
+                  className="h-11 border-gray-200"
                 />
-                <p style={{ fontSize: '14px', color: '#6b7280' }}>
+                <p className="text-sm text-gray-500">
                   Helps personalize the ad copy
                 </p>
               </div>
 
               <Button
+                className="w-full h-11 text-base font-medium"
                 style={{
-                  width: '100%',
-                  background: !description.trim() || loading ? '#9ca3af' : '#0066cc',
-                  color: 'white',
-                  padding: '12px 24px',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  border: 'none',
-                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                  transition: 'all 0.15s ease',
-                  cursor: !description.trim() || loading ? 'not-allowed' : 'pointer'
+                  background: !description.trim() || loading
+                    ? '#9ca3af'
+                    : 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                  border: 'none'
                 }}
                 disabled={!description.trim() || loading}
                 onClick={handleGenerate}
-                onMouseEnter={(e) => {
-                  if (!loading && description.trim()) {
-                    e.currentTarget.style.background = '#0052a3';
-                    e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!loading && description.trim()) {
-                    e.currentTarget.style.background = '#0066cc';
-                    e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }
-                }}
               >
                 {loading ? (
                   <>
@@ -978,39 +765,45 @@ export default function AIEPage() {
                     {loadingStep || 'Generating...'}
                   </>
                 ) : (
-                  'Generate Ad Variants'
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Ad Variants
+                  </>
                 )}
               </Button>
             </CardContent>
           </Card>
 
           {error && (
-            <Alert style={{
-              background: '#fee2e2',
-              border: '1px solid #dc2626',
-              borderRadius: '12px',
-              padding: '16px'
-            }}>
-              <AlertDescription style={{ color: '#dc2626', fontSize: '14px' }}>
+            <Alert className="bg-red-50 border-red-200 rounded-xl">
+              <AlertDescription className="text-red-600 text-sm">
                 {error}
               </AlertDescription>
             </Alert>
           )}
         </div>
-      </div>
+      </main>
 
       {/* Progress Modal - Shows during generation */}
       {mounted && (
         <Dialog open={loading} onOpenChange={() => { }}>
-          <DialogContent style={{ maxWidth: '448px', borderRadius: '12px', padding: 0 }}>
+          <DialogContent className="max-w-md rounded-xl">
             <DialogHeader>
-              <DialogTitle className="text-oxford-900">Generating Ad Variants</DialogTitle>
+              <div className="flex items-center gap-3 mb-2">
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)' }}
+                >
+                  <Loader2 className="w-5 h-5 text-white animate-spin" />
+                </div>
+                <DialogTitle className="text-gray-900 text-lg">Generating Ad Variants</DialogTitle>
+              </div>
             </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm">{loadingStep}</p>
-              <Progress value={loadingProgress} className="w-full" />
-              <p className="text-xs text-gray-600">
-                This typically takes 10-15 seconds. We're analyzing best practices from our database and generating 3 unique ad variants optimized for your platform and goal.
+            <div className="space-y-4 pt-2">
+              <p className="text-sm text-gray-700 font-medium">{loadingStep}</p>
+              <Progress value={loadingProgress} className="w-full h-2" />
+              <p className="text-sm text-gray-500">
+                This typically takes 10-15 seconds. We're analyzing best practices and generating unique ad variants optimized for your platform.
               </p>
             </div>
           </DialogContent>
@@ -1020,24 +813,35 @@ export default function AIEPage() {
       {/* Results Modal - Shows generated ad variants */}
       {mounted && resultsModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-5">
-          <div className="bg-white rounded-xl w-[80%] max-w-7xl max-h-[85vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-xl w-[90%] max-w-6xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
             {/* Modal Header */}
             <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-oxford-900">Ad Variants Generated</h2>
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+                >
+                  <Check className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Ad Variants Generated</h2>
+                  <p className="text-sm text-gray-500">Select a variant to save to your library</p>
+                </div>
+              </div>
               <button
                 onClick={() => setResultsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 text-2xl p-1"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 overflow-y-auto flex-1">
+            <div className="p-6 overflow-y-auto flex-1 bg-gray-50">
               <div className="space-y-4">
                 {result && (
-                  <Alert className="bg-smart-50 border-smart-500">
-                    <AlertDescription className="text-smart-700">
+                  <Alert className="bg-blue-50 border-blue-200 rounded-lg">
+                    <AlertDescription className="text-blue-700">
                       Generated {result.variants.length} variants in{' '}
                       {(result.metadata.generationTimeMs / 1000).toFixed(2)}s
                       {' • '}
@@ -1051,10 +855,10 @@ export default function AIEPage() {
                     const scoreInfo = formatScore(variant.predictedScore);
 
                     return (
-                      <Card key={variant.id}>
-                        <CardContent className="p-6 space-y-3">
+                      <Card key={variant.id} className="bg-white border-gray-200">
+                        <CardContent className="p-5 space-y-3">
                           <div className="flex items-center justify-between">
-                            <h3 className="font-semibold text-oxford-900">
+                            <h3 className="font-semibold text-gray-900">
                               Variant {variant.variantNumber}
                             </h3>
                             <Badge variant={scoreInfo.variant}>
@@ -1062,7 +866,7 @@ export default function AIEPage() {
                             </Badge>
                           </div>
 
-                          <Badge variant="outline">{variant.variantType}</Badge>
+                          <Badge variant="outline" className="border-gray-300">{variant.variantType}</Badge>
 
                           <Separator />
 
@@ -1150,15 +954,15 @@ export default function AIEPage() {
                           <Separator />
 
                           <div>
-                            <p className="text-sm font-semibold mb-2">Quality Scores</p>
+                            <p className="text-sm font-semibold mb-2 text-gray-700">Quality Scores</p>
                             <div className="flex items-center gap-1 flex-wrap">
-                              <Badge variant="secondary" className="bg-dodger-50 text-dodger-700">
+                              <Badge variant="secondary" className="bg-blue-50 text-blue-700">
                                 Hook: {(variant.scoreBreakdown.hook_strength * 100).toFixed(0)}%
                               </Badge>
-                              <Badge variant="secondary" className="bg-dodger-50 text-dodger-700">
+                              <Badge variant="secondary" className="bg-blue-50 text-blue-700">
                                 CTA: {(variant.scoreBreakdown.cta_clarity * 100).toFixed(0)}%
                               </Badge>
-                              <Badge variant="secondary" className="bg-dodger-50 text-dodger-700">
+                              <Badge variant="secondary" className="bg-blue-50 text-blue-700">
                                 Platform: {(variant.scoreBreakdown.platform_compliance * 100).toFixed(0)}%
                               </Badge>
                             </div>
@@ -1168,10 +972,10 @@ export default function AIEPage() {
                             <>
                               <Separator />
                               <div>
-                                <p className="text-sm font-semibold mb-1">Alternative Headlines</p>
+                                <p className="text-sm font-semibold mb-1 text-gray-700">Alternative Headlines</p>
                                 <div className="space-y-1">
                                   {variant.headlineAlternatives.slice(0, 2).map((alt, idx) => (
-                                    <p key={idx} className="text-xs text-gray-600">
+                                    <p key={idx} className="text-xs text-gray-500">
                                       • {alt}
                                     </p>
                                   ))}
@@ -1183,7 +987,11 @@ export default function AIEPage() {
                           <Separator />
 
                           <Button
-                            className="w-full bg-smart-500 hover:bg-smart-600"
+                            className="w-full h-10 font-medium"
+                            style={{
+                              background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                              border: 'none'
+                            }}
                             onClick={() => handleSelectVariant(variant)}
                           >
                             Select This Variant
@@ -1208,307 +1016,137 @@ export default function AIEPage() {
             if (!open) setSearchQuery('');
           }}
         >
-          <DialogContent style={{
-            maxWidth: '960px',
-            width: '90vw',
-            maxHeight: '80vh',
-            borderRadius: '12px',
-            padding: 0,
-            overflow: 'hidden',
-            background: 'white',
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-            border: '1px solid #e5e7eb'
-          }}>
-            <DialogHeader style={{
-              padding: '20px 32px 16px 32px',
-              borderBottom: '1px solid #e5e7eb',
-              background: 'white',
-              flexShrink: 0,
-              position: 'relative'
-            }}>
+          <DialogContent className="max-w-4xl w-[90vw] max-h-[80vh] rounded-xl p-0 overflow-hidden flex flex-col">
+            <DialogHeader className="px-6 py-5 border-b border-gray-200 bg-white flex-shrink-0 relative">
               <button
                 onClick={() => {
                   setProductModalOpen(false);
                   setSearchQuery('');
                 }}
-                style={{
-                  position: 'absolute',
-                  right: '24px',
-                  top: '20px',
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  borderRadius: '6px',
-                  transition: 'all 0.15s ease',
-                  color: '#6b7280'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#f3f4f6';
-                  e.currentTarget.style.color = '#111827';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#6b7280';
-                }}
+                className="absolute right-6 top-5 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
               >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M6 6L14 14M6 14L14 6" />
-                </svg>
+                <X className="w-5 h-5" />
               </button>
-              <DialogTitle style={{
-                fontSize: '20px',
-                fontWeight: 600,
-                color: '#111827',
-                paddingRight: '40px'
-              }}>
-                Add Products
-              </DialogTitle>
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)' }}
+                >
+                  <Package className="w-5 h-5 text-white" />
+                </div>
+                <DialogTitle className="text-lg font-semibold text-gray-900">
+                  Add Products
+                </DialogTitle>
+              </div>
             </DialogHeader>
 
-            <div style={{
-              padding: '24px 32px 32px 32px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '20px',
-              overflowY: 'auto',
-              flex: 1,
-              background: '#f9fafb',
-              minHeight: 0
-            }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-                <Label htmlFor="product-search" style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: '#374151'
-                }}>
+            <div className="p-6 flex flex-col gap-5 overflow-y-auto flex-1 bg-gray-50">
+              <div className="flex flex-col gap-2 w-full">
+                <Label htmlFor="product-search" className="text-sm font-medium text-gray-700">
                   Search Products
                 </Label>
-                <Input
-                  id="product-search"
-                  value={searchQuery}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  placeholder="Start typing to search..."
-                  autoFocus
-                  style={{
-                    fontSize: '14px',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    border: '1px solid #e5e7eb',
-                    background: 'white',
-                    width: '100%',
-                    boxSizing: 'border-box'
-                  }}
-                />
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="product-search"
+                    value={searchQuery}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    placeholder="Start typing to search..."
+                    autoFocus
+                    className="pl-10 h-11 border-gray-200"
+                  />
+                </div>
               </div>
 
               {selectedProducts.length > 0 && (
-                <div style={{
-                  background: '#dbeafe',
-                  border: '1px solid #3b82f6',
-                  borderRadius: '8px',
-                  padding: '12px 16px'
-                }}>
-                  <p style={{
-                    fontSize: '14px',
-                    color: '#1d4ed8',
-                    margin: 0,
-                    fontWeight: 500
-                  }}>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                  <p className="text-sm text-blue-700 font-medium">
                     {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected
                   </p>
                 </div>
               )}
 
               {loadingProducts && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '32px 0' }}>
-                  <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#6b7280' }} />
-                  <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>Loading products...</p>
+                <div className="flex items-center justify-center gap-2 py-8">
+                  <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                  <p className="text-sm text-gray-500">Loading products...</p>
                 </div>
               )}
 
               {!loadingProducts && products.length === 0 && (
-                <p style={{ fontSize: '14px', color: '#6b7280', textAlign: 'center', padding: '32px 0', margin: 0 }}>
+                <p className="text-sm text-gray-500 text-center py-8">
                   {searchQuery ? 'No products found' : 'Start typing to search products'}
                 </p>
               )}
 
               {!loadingProducts && products.length > 0 && (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                  gap: '16px',
-                  width: '100%'
-                }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {products.map((product) => {
                     const isSelected = selectedProducts.find(p => p.id === product.id);
                     return (
-                      <div
+                      <button
                         key={product.id}
-                        style={{
-                          background: 'white',
-                          border: isSelected ? '2px solid #0066cc' : '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          padding: '12px',
-                          cursor: 'pointer',
-                          opacity: isSelected ? 0.95 : 1,
-                          transition: 'all 0.15s ease',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '12px',
-                          minWidth: 0
-                        }}
+                        type="button"
                         onClick={() => handleProductSelect(product)}
-                        onMouseEnter={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.boxShadow = 'none';
-                          e.currentTarget.style.transform = 'translateY(0)';
-                        }}
+                        className={`text-left bg-white rounded-lg p-3 flex flex-col gap-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${
+                          isSelected
+                            ? 'border-2 border-blue-500 ring-2 ring-blue-100'
+                            : 'border border-gray-200 hover:border-blue-400'
+                        }`}
                       >
                         {product.images[0]?.url && (
                           <img
                             src={product.images[0].url}
                             alt={product.title}
-                            style={{
-                              width: '100%',
-                              height: '160px',
-                              objectFit: 'cover',
-                              borderRadius: '6px'
-                            }}
+                            className="w-full h-40 object-cover rounded-md"
                           />
                         )}
-                        <div style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '8px',
-                          flex: 1,
-                          minWidth: 0
-                        }}>
-                          <p style={{
-                            fontSize: '14px',
-                            fontWeight: 600,
-                            color: '#111827',
-                            margin: 0,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}>
+                        <div className="flex flex-col gap-2 flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">
                             {product.title}
                           </p>
                           {isSelected && (
-                            <span style={{
-                              background: '#0066cc',
-                              color: 'white',
-                              padding: '4px 12px',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: 500,
-                              alignSelf: 'flex-start'
-                            }}>
+                            <span className="inline-flex items-center self-start bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                              <Check className="w-3 h-3 mr-1" />
                               Added
                             </span>
                           )}
                           {product.description && (
-                            <p style={{
-                              fontSize: '13px',
-                              color: '#6b7280',
-                              margin: 0,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              lineHeight: '1.5'
-                            }}>
+                            <p className="text-xs text-gray-500 line-clamp-2">
                               {product.description}
                             </p>
                           )}
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
               )}
             </div>
 
-            <div style={{
-              padding: '18px 32px',
-              borderTop: '1px solid #e5e7eb',
-              display: 'flex',
-              justifyContent: 'flex-end',
-              background: 'white',
-              flexShrink: 0
-            }}>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setProductModalOpen(false);
-                    setSearchQuery('');
-                  }}
-                  style={{
-                    background: 'white',
-                    color: '#4b5563',
-                    border: '1px solid #e5e7eb',
-                    padding: '9px 20px',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => {
-                    setProductModalOpen(false);
-                    setSearchQuery('');
-                  }}
-                  style={{
-                    background: '#0066cc',
-                    color: 'white',
-                    padding: '9px 20px',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    border: 'none',
-                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#0052a3';
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#0066cc';
-                    e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  Done
-                </Button>
-              </div>
+            <div className="px-6 py-4 border-t border-gray-200 bg-white flex-shrink-0 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setProductModalOpen(false);
+                  setSearchQuery('');
+                }}
+                className="border-gray-200 hover:bg-gray-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  setProductModalOpen(false);
+                  setSearchQuery('');
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                  border: 'none'
+                }}
+              >
+                Done
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -1533,25 +1171,14 @@ export default function AIEPage() {
             if (!open) setTempImageUrl('');
           }}
         >
-          <DialogContent style={{
-            maxWidth: '500px',
-            borderRadius: '12px',
-            padding: 0,
-            background: 'white',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-            border: '1px solid #e5e7eb'
-          }}>
-            <DialogHeader style={{
-              padding: '20px 32px 16px 32px',
-              borderBottom: '1px solid #e5e7eb',
-              background: 'white'
-            }}>
-              <DialogTitle style={{ fontSize: '20px', fontWeight: 600, color: '#111827' }}>Add Product Image URL</DialogTitle>
+          <DialogContent className="max-w-lg rounded-xl p-0 overflow-hidden">
+            <DialogHeader className="px-6 py-5 border-b border-gray-200 bg-white">
+              <DialogTitle className="text-lg font-semibold text-gray-900">Add Product Image URL</DialogTitle>
             </DialogHeader>
 
-            <div style={{ padding: '24px 32px 32px 32px', display: 'flex', flexDirection: 'column', gap: '20px', background: '#f9fafb' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <Label htmlFor="image-url" style={{ fontSize: '14px', fontWeight: 500, color: '#374151' }}>
+            <div className="p-6 flex flex-col gap-5 bg-gray-50">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="image-url" className="text-sm font-medium text-gray-700">
                   Image URL
                 </Label>
                 <Input
@@ -1560,96 +1187,42 @@ export default function AIEPage() {
                   onChange={(e) => setTempImageUrl(e.target.value)}
                   placeholder="https://example.com/product-image.jpg"
                   autoFocus
-                  style={{
-                    fontSize: '14px',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    border: '1px solid #e5e7eb',
-                    width: '100%',
-                    boxSizing: 'border-box'
-                  }}
+                  className="h-11 border-gray-200"
                 />
-                <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>Enter a direct URL to your product image</p>
+                <p className="text-sm text-gray-500">Enter a direct URL to your product image</p>
               </div>
 
               {tempImageUrl && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <p style={{ fontSize: '14px', fontWeight: 600, color: '#111827', margin: 0 }}>Preview</p>
-                  <img src={tempImageUrl} alt="Preview" style={{ width: '128px', height: '128px', objectFit: 'cover', borderRadius: '8px' }} />
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm font-semibold text-gray-900">Preview</p>
+                  <img src={tempImageUrl} alt="Preview" className="w-32 h-32 object-cover rounded-lg" />
                 </div>
               )}
             </div>
 
-            <div style={{
-              padding: '18px 32px',
-              borderTop: '1px solid #e5e7eb',
-              display: 'flex',
-              justifyContent: 'flex-end',
-              background: 'white',
-              flexShrink: 0
-            }}>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={() => {
-                    setImageUrlModalOpen(false);
-                    setTempImageUrl('');
-                  }}
-                  style={{
-                    padding: '10px 20px',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    color: '#6b7280',
-                    background: 'white',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#f9fafb';
-                    e.currentTarget.style.borderColor = '#d1d5db';
-                    e.currentTarget.style.boxShadow = '0 2px 4px 0 rgba(0, 0, 0, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'white';
-                    e.currentTarget.style.borderColor = '#e5e7eb';
-                    e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleImageUrlSubmit}
-                  disabled={!tempImageUrl.trim()}
-                  style={{
-                    padding: '10px 20px',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    color: 'white',
-                    background: !tempImageUrl.trim() ? '#9ca3af' : '#0066cc',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: !tempImageUrl.trim() ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.15s ease',
-                    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (tempImageUrl.trim()) {
-                      e.currentTarget.style.background = '#0052a3';
-                      e.currentTarget.style.boxShadow = '0 2px 4px 0 rgba(0, 0, 0, 0.1)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (tempImageUrl.trim()) {
-                      e.currentTarget.style.background = '#0066cc';
-                      e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
-                    }
-                  }}
-                >
-                  Add Image
-                </button>
-              </div>
+            <div className="px-6 py-4 border-t border-gray-200 bg-white flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setImageUrlModalOpen(false);
+                  setTempImageUrl('');
+                }}
+                className="border-gray-200 hover:bg-gray-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleImageUrlSubmit}
+                disabled={!tempImageUrl.trim()}
+                style={{
+                  background: !tempImageUrl.trim()
+                    ? '#9ca3af'
+                    : 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                  border: 'none'
+                }}
+              >
+                Add Image
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

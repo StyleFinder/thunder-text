@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { RefreshCw } from 'lucide-react';
+import { Loader2, Zap } from 'lucide-react';
 
 /**
  * Redirect /create-ad to /aie (Ad Intelligence Engine)
@@ -24,9 +24,17 @@ export default function CreateAdRedirect() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-        <p className="text-gray-600">Redirecting to Ad Creator...</p>
+      <div className="flex flex-col items-center gap-4">
+        <div
+          className="w-12 h-12 rounded-xl flex items-center justify-center"
+          style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+        >
+          <Zap className="w-6 h-6 text-white" />
+        </div>
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#0066cc' }} />
+          <p className="text-sm text-gray-500">Redirecting to Ad Creator...</p>
+        </div>
       </div>
     </div>
   );

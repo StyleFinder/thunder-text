@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { RefreshCw } from 'lucide-react';
+import { Loader2, Zap, RefreshCw, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,27 +81,82 @@ export default function RootPage() {
     determineRoute();
   }, [router, searchParams]);
 
+  // Error state
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Retry
-          </button>
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{
+          background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+        }}
+      >
+        <div className="w-full max-w-md">
+          {/* Logo */}
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+            >
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold text-white">Thunder Text</span>
+          </div>
+
+          {/* Error Card */}
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                style={{ background: 'rgba(220, 38, 38, 0.1)' }}
+              >
+                <AlertCircle className="w-8 h-8 text-red-500" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-3">
+                Something Went Wrong
+              </h1>
+              <p className="text-gray-500 mb-6">{error}</p>
+              <Button
+                className="w-full h-11 text-base font-medium"
+                style={{
+                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                  border: 'none'
+                }}
+                onClick={() => window.location.reload()}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Loading state
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{
+        background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+      }}
+    >
       <div className="text-center">
-        <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-        <p className="text-gray-600">Loading Thunder Text...</p>
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+          >
+            <Zap className="w-6 h-6 text-white" />
+          </div>
+        </div>
+
+        {/* Loading indicator */}
+        <div className="flex items-center justify-center gap-3">
+          <Loader2 className="h-5 w-5 animate-spin text-white" />
+          <p className="text-white/80 text-sm">Loading Thunder Text...</p>
+        </div>
       </div>
     </div>
   );

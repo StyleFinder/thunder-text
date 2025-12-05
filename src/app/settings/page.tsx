@@ -10,7 +10,17 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
-import { Loader2, AlertCircle } from 'lucide-react'
+import {
+  Loader2,
+  AlertCircle,
+  Settings,
+  ArrowLeft,
+  Zap,
+  RefreshCw,
+  Link2,
+  FileText,
+  Info
+} from 'lucide-react'
 import { useNavigation } from '../hooks/useNavigation'
 import ShopSizes from '@/components/ShopSizes'
 import FacebookSettingsCard from '@/components/facebook/FacebookSettingsCard'
@@ -122,64 +132,78 @@ function SettingsContent() {
 
   if (loading) {
     return (
-      <div className="w-full flex flex-col items-center" style={{ background: '#fafaf9', minHeight: '100vh', padding: '32px 16px' }}>
-        <div className="w-full" style={{ maxWidth: '800px' }}>
-          <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ fontSize: '32px', fontWeight: 700, color: '#003366', marginBottom: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Settings</h1>
-            <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Loading your preferences...</p>
-          </div>
-          <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
-            <div style={{ padding: '48px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#0066cc' }} />
+      <div className="min-h-screen bg-gray-50">
+        <main className="max-w-4xl mx-auto px-6 py-8">
+          {/* Header skeleton */}
+          <div className="mb-8">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-gray-200 animate-pulse" />
+              <div>
+                <div className="h-8 w-32 bg-gray-200 rounded animate-pulse mb-2" />
+                <div className="h-4 w-48 bg-gray-100 rounded animate-pulse" />
+              </div>
             </div>
           </div>
-        </div>
+          {/* Content skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
+                <div className="h-5 bg-gray-200 rounded w-1/2 mb-4" />
+                <div className="h-4 bg-gray-100 rounded w-full mb-2" />
+                <div className="h-4 bg-gray-100 rounded w-3/4" />
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="w-full flex flex-col items-center" style={{ background: '#fafaf9', minHeight: '100vh', padding: '32px 16px' }}>
-        <div className="w-full" style={{ maxWidth: '800px' }}>
-          <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ fontSize: '32px', fontWeight: 700, color: '#003366', marginBottom: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Settings</h1>
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{
+          background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+        }}
+      >
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+            >
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold text-white">Thunder Text</span>
           </div>
-          <div style={{ background: '#fff5f5', border: '1px solid #fecaca', borderRadius: '8px', padding: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-            <AlertCircle className="h-5 w-5" style={{ color: '#dc2626', marginTop: '2px' }} />
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <p style={{ fontSize: '14px', fontWeight: 600, color: '#991b1b', marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Error loading settings</p>
-                <p style={{ fontSize: '14px', color: '#b91c1c', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>{error}</p>
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                style={{ background: 'rgba(220, 38, 38, 0.1)' }}
+              >
+                <AlertCircle className="w-8 h-8 text-red-500" />
               </div>
-              <button
+              <h1 className="text-2xl font-bold text-gray-900 mb-3">
+                Failed to Load Settings
+              </h1>
+              <p className="text-gray-500 mb-6">{error}</p>
+              <Button
+                className="w-full h-11 text-base font-medium"
+                style={{
+                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                  border: 'none'
+                }}
                 onClick={() => {
                   setLoading(true)
                   setError(null)
                   fetchSettings()
                 }}
-                style={{
-                  background: '#dc2626',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '12px 24px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                  cursor: 'pointer',
-                  transition: 'background 0.15s ease',
-                  width: 'fit-content'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#b91c1c'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#dc2626'
-                }}
               >
+                <RefreshCw className="w-4 h-4 mr-2" />
                 Try Again
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -188,30 +212,62 @@ function SettingsContent() {
   }
 
   return (
-    <div className="w-full flex flex-col items-center" style={{ background: '#fafaf9', minHeight: '100vh', padding: '32px 16px' }}>
-      <div className="w-full" style={{ maxWidth: '800px' }}>
-        <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 700, color: '#003366', marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Settings</h1>
-          <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Manage your Thunder Text preferences</p>
+    <div className="min-h-screen bg-gray-50">
+      <main className="max-w-4xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)' }}
+              >
+                <Settings className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+                <p className="text-gray-500 text-sm">Manage your Thunder Text preferences</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              className="border-gray-200 hover:bg-gray-50"
+              onClick={() => router.push(`/dashboard?shop=${shop}`)}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </div>
+
+          {/* Info banner */}
+          <div
+            className="rounded-xl p-4 flex items-center gap-3"
+            style={{ background: 'rgba(0, 102, 204, 0.05)', border: '1px solid rgba(0, 102, 204, 0.1)' }}
+          >
+            <Info className="w-5 h-5 flex-shrink-0" style={{ color: '#0066cc' }} />
+            <p className="text-sm" style={{ color: '#0066cc' }}>
+              Configure your prompts, templates, integrations, and size guides to customize your Thunder Text experience.
+            </p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: '24px' }}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Account Information */}
-          <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#003366', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Account Information</h3>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Account Information</h3>
             </div>
-            <div style={{ padding: '24px' }}>
+            <div className="p-6">
               {shopInfo && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="flex flex-col gap-3">
                   <div>
-                    <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Shop</p>
-                    <p style={{ fontSize: '14px', fontWeight: 600, color: '#003366', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>{shopInfo.shop_domain}</p>
+                    <p className="text-sm text-gray-500 mb-1">Shop</p>
+                    <p className="text-sm font-semibold text-gray-900">{shopInfo.shop_domain}</p>
                   </div>
-                  <div style={{ height: '1px', background: '#e5e7eb' }} />
+                  <div className="h-px bg-gray-200" />
                   <div>
-                    <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Installed Since</p>
-                    <p style={{ fontSize: '14px', color: '#003366', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>{formatDate(shopInfo.created_at)}</p>
+                    <p className="text-sm text-gray-500 mb-1">Installed Since</p>
+                    <p className="text-sm text-gray-900">{formatDate(shopInfo.created_at)}</p>
                   </div>
                 </div>
               )}
@@ -219,129 +275,87 @@ function SettingsContent() {
           </div>
 
           {/* Prompts Management */}
-          <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#003366', marginBottom: '4px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Prompts Management</h3>
-              <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center gap-2 mb-1">
+                <FileText className="w-5 h-5" style={{ color: '#0066cc' }} />
+                <h3 className="text-lg font-semibold text-gray-900">Prompts Management</h3>
+              </div>
+              <p className="text-sm text-gray-500">
                 Customize AI writing templates and system prompts for your product descriptions
               </p>
             </div>
-            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="p-6 flex flex-col gap-4">
               <Link href={`/settings/prompts?shop=${shop}`}>
-                <button
+                <Button
+                  className="w-full h-11 text-base font-medium"
                   style={{
-                    width: '100%',
-                    background: '#0066cc',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '16px 24px',
-                    fontSize: '16px',
-                    fontWeight: 600,
-                    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                    cursor: 'pointer',
-                    transition: 'background 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#0052a3'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#0066cc'
+                    background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                    border: 'none'
                   }}
                 >
-                  ⚙️ Manage Prompts & Templates
-                </button>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Manage Prompts & Templates
+                </Button>
               </Link>
 
-              <div style={{ background: '#f0f7ff', padding: '16px', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <p style={{ fontSize: '14px', fontWeight: 600, color: '#003366', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Current Settings:</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <p style={{ fontSize: '14px', color: '#003366', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-                      • Global Default Template: <span style={{ fontWeight: 600 }}>Women's Clothing</span>
-                    </p>
-                    <p style={{ fontSize: '14px', color: '#003366', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-                      • System Prompt: <span style={{ fontWeight: 600 }}>Active</span>
-                    </p>
-                    <p style={{ fontSize: '14px', color: '#003366', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-                      • Category Templates: <span style={{ fontWeight: 600 }}>6 configured</span>
-                    </p>
-                  </div>
+              <div
+                className="rounded-lg p-4"
+                style={{ background: 'rgba(0, 102, 204, 0.05)', border: '1px solid rgba(0, 102, 204, 0.1)' }}
+              >
+                <p className="text-sm font-semibold text-gray-900 mb-2">Current Settings:</p>
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm text-gray-700">
+                    • Global Default Template: <span className="font-semibold">Women's Clothing</span>
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    • System Prompt: <span className="font-semibold">Active</span>
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    • Category Templates: <span className="font-semibold">6 configured</span>
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Connections */}
-          <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
-            <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#003366', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Connections</h3>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center gap-2 mb-1">
+                <Link2 className="w-5 h-5" style={{ color: '#0066cc' }} />
+                <h3 className="text-lg font-semibold text-gray-900">Connections</h3>
                 {connectionsCount > 0 && (
-                  <span style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '20px',
-                    height: '20px',
-                    borderRadius: '50%',
-                    background: '#10b981',
-                    color: '#ffffff',
-                    fontSize: '11px',
-                    fontWeight: 600
-                  }}>
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500 text-white text-xs font-semibold">
                     {connectionsCount}
                   </span>
                 )}
               </div>
-              <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+              <p className="text-sm text-gray-500">
                 Manage integrations with Shopify, Meta, Google, and more
               </p>
             </div>
-            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="p-6 flex flex-col gap-4">
               <Link href={`/settings/connections?shop=${shop}`}>
-                <button
+                <Button
+                  className="w-full h-11 text-base font-medium"
                   style={{
-                    width: '100%',
-                    background: '#0066cc',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '16px 24px',
-                    fontSize: '16px',
-                    fontWeight: 600,
-                    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                    cursor: 'pointer',
-                    transition: 'background 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#0052a3'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#0066cc'
+                    background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                    border: 'none'
                   }}
                 >
-                  🔗 Manage Connections
-                </button>
+                  <Link2 className="w-4 h-4 mr-2" />
+                  Manage Connections
+                </Button>
               </Link>
 
               {connectionsCount > 0 && (
-                <div style={{ background: '#ecfdf5', padding: '16px', borderRadius: '8px', border: '1px solid #a7f3d0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      background: '#10b981',
-                      color: '#ffffff',
-                      fontSize: '14px'
-                    }}>
+                <div className="rounded-lg p-4 bg-green-50 border border-green-200">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white text-sm">
                       ✓
                     </span>
-                    <p style={{ fontSize: '14px', fontWeight: 600, color: '#065f46', margin: 0, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+                    <p className="text-sm font-semibold text-green-700">
                       {connectionsCount} {connectionsCount === 1 ? 'platform' : 'platforms'} connected
                     </p>
                   </div>
@@ -351,8 +365,8 @@ function SettingsContent() {
           </div>
 
           {/* Shop Sizes - Full Width */}
-          <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', gridColumn: '1 / -1' }}>
-            <div style={{ padding: '24px' }}>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm col-span-1 lg:col-span-2">
+            <div className="p-6">
               {shop && (
                 <ShopSizes
                   shop={shop}
@@ -368,7 +382,7 @@ function SettingsContent() {
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
@@ -376,10 +390,18 @@ function SettingsContent() {
 export default function SettingsPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-smart-blue-500 mx-auto mb-4" />
-          <p className="text-oxford-navy">Loading Settings...</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+          >
+            <Zap className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#0066cc' }} />
+            <p className="text-sm text-gray-500">Loading Settings...</p>
+          </div>
         </div>
       </div>
     }>

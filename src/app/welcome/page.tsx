@@ -1,14 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, FileText, Target, Users, Gift, ShoppingBag, Facebook } from 'lucide-react';
-import { logger } from '@/lib/logger'
+import {
+  CheckCircle2,
+  FileText,
+  Target,
+  Users,
+  Sparkles,
+  ArrowRight,
+  Store,
+  Zap,
+  ChevronLeft,
+  ExternalLink,
+  Check
+} from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 type OnboardingStep = 'welcome' | 'shopify' | 'social' | 'complete';
 
@@ -21,6 +31,260 @@ interface ConnectionStatus {
   tiktok: boolean;
 }
 
+// Animated background gradient mesh
+function GradientMesh() {
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      {/* Base gradient - using inline styles for reliable dark colors */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'linear-gradient(135deg, #001429 0%, #002952 40%, #003d7a 100%)'
+        }}
+      />
+
+      {/* Animated orbs */}
+      <div
+        className="absolute w-[800px] h-[800px] rounded-full blur-3xl animate-welcome-float-slow"
+        style={{
+          background: 'radial-gradient(circle, rgba(0,102,204,0.4) 0%, transparent 70%)',
+          top: '-20%',
+          right: '-10%',
+          opacity: 0.6,
+        }}
+      />
+      <div
+        className="absolute w-[600px] h-[600px] rounded-full blur-3xl animate-welcome-float-slower"
+        style={{
+          background: 'radial-gradient(circle, rgba(0,153,255,0.3) 0%, transparent 70%)',
+          bottom: '-10%',
+          left: '-5%',
+          opacity: 0.5,
+        }}
+      />
+      <div
+        className="absolute w-[400px] h-[400px] rounded-full blur-2xl animate-welcome-float"
+        style={{
+          background: 'radial-gradient(circle, rgba(0,102,204,0.5) 0%, transparent 70%)',
+          top: '40%',
+          left: '30%',
+          opacity: 0.4,
+        }}
+      />
+
+      {/* Subtle noise texture overlay */}
+      <div
+        className="absolute inset-0 opacity-[0.08]"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+        }}
+      />
+    </div>
+  );
+}
+
+// Vertical step indicator
+function StepIndicator({
+  currentStep,
+  steps
+}: {
+  currentStep: OnboardingStep;
+  steps: { id: OnboardingStep; label: string }[];
+}) {
+  const currentIndex = steps.findIndex(s => s.id === currentStep);
+
+  return (
+    <div className="flex flex-col gap-1">
+      {steps.map((step, index) => {
+        const isCompleted = index < currentIndex;
+        const isCurrent = step.id === currentStep;
+
+        return (
+          <div key={step.id} className="flex items-center gap-3">
+            {/* Step circle */}
+            <div
+              className={`
+                relative w-10 h-10 rounded-full flex items-center justify-center
+                transition-all duration-500 ease-out
+                ${isCompleted
+                  ? 'text-gray-900'
+                  : isCurrent
+                    ? 'text-gray-900 ring-4 ring-white/30'
+                    : 'text-white/50'
+                }
+              `}
+              style={{
+                backgroundColor: isCompleted
+                  ? '#ffcc00'
+                  : isCurrent
+                    ? '#ffffff'
+                    : 'rgba(255,255,255,0.15)'
+              }}
+            >
+              {isCompleted ? (
+                <Check className="w-5 h-5" strokeWidth={3} />
+              ) : (
+                <span className="text-sm font-bold">{index + 1}</span>
+              )}
+
+              {/* Pulse animation for current step */}
+              {isCurrent && (
+                <div className="absolute inset-0 rounded-full bg-white/20 animate-ping" />
+              )}
+            </div>
+
+            {/* Step label */}
+            <span
+              className="text-sm font-medium transition-colors duration-300"
+              style={{
+                color: isCurrent
+                  ? '#ffffff'
+                  : isCompleted
+                    ? 'rgba(255,255,255,0.85)'
+                    : 'rgba(255,255,255,0.45)'
+              }}
+            >
+              {step.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Feature card with hover effects
+function FeatureCard({
+  icon: Icon,
+  title,
+  description,
+  delay = 0
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  delay?: number;
+}) {
+  return (
+    <div
+      className="group relative p-5 rounded-xl bg-white border border-gray-200 shadow-sm
+                 hover:shadow-md hover:border-gray-300 transition-all duration-300 cursor-default
+                 animate-welcome-fade-in-up"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className="relative">
+        <div
+          className="w-10 h-10 rounded-lg flex items-center justify-center mb-3
+                      group-hover:scale-105 transition-transform duration-300"
+          style={{ background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)' }}
+        >
+          <Icon className="w-5 h-5 text-white" />
+        </div>
+        <h3 className="text-base font-semibold text-gray-900 mb-1">{title}</h3>
+        <p className="text-sm text-gray-500 leading-relaxed">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+// Platform connection card
+function PlatformCard({
+  logo,
+  name,
+  description,
+  connected,
+  comingSoon,
+  onConnect,
+  onSelect,
+}: {
+  logo: string;
+  name: string;
+  description: string;
+  connected?: boolean;
+  comingSoon?: boolean;
+  onConnect?: () => void;
+  onSelect?: () => void;
+}) {
+  return (
+    <div
+      className={`
+        group relative p-5 rounded-2xl border transition-all duration-300
+        ${comingSoon
+          ? 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed'
+          : connected
+            ? 'bg-emerald-50 border-emerald-200'
+            : 'bg-white border-gray-200 hover:border-smart-300 hover:shadow-lg hover:shadow-smart-500/10 cursor-pointer'
+        }
+      `}
+      onClick={() => !comingSoon && !connected && (onSelect || onConnect)?.()}
+    >
+      {/* Hover lift effect */}
+      {!comingSoon && !connected && (
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-smart-500/5 to-transparent
+                        opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      )}
+
+      <div className="relative flex items-center gap-4">
+        <div className="w-14 h-14 rounded-xl bg-white border border-gray-100
+                        flex items-center justify-center overflow-hidden
+                        group-hover:scale-105 transition-transform duration-300">
+          <img src={logo} alt={name} className="w-10 h-10 object-contain" />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-gray-900">{name}</h3>
+          <p className="text-sm text-gray-500 truncate">{description}</p>
+        </div>
+
+        {connected ? (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span className="text-sm font-medium text-emerald-700">Connected</span>
+          </div>
+        ) : comingSoon ? (
+          <span className="text-xs font-medium text-gray-400 bg-gray-100 px-3 py-1.5 rounded-full">
+            Coming Soon
+          </span>
+        ) : (
+          <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-smart-500
+                                 group-hover:translate-x-1 transition-all duration-300" />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Celebration particles
+function CelebrationParticles() {
+  const particles = Array.from({ length: 50 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    delay: Math.random() * 2,
+    duration: 2 + Math.random() * 2,
+    size: 4 + Math.random() * 8,
+    color: ['#ffcc00', '#0099ff', '#0066cc', '#ff6b6b', '#4ade80'][Math.floor(Math.random() * 5)],
+  }));
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          className="absolute rounded-full animate-welcome-confetti"
+          style={{
+            left: `${p.x}%`,
+            width: p.size,
+            height: p.size,
+            backgroundColor: p.color,
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.duration}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function WelcomePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -28,6 +292,7 @@ export default function WelcomePage() {
   const [shopDomain, setShopDomain] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<'shopify' | 'lightspeed' | 'commentsold' | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [connections, setConnections] = useState<ConnectionStatus>({
     shopify: false,
     facebook: false,
@@ -36,39 +301,21 @@ export default function WelcomePage() {
     tiktok: false,
   });
 
-  // Handle step parameter from OAuth callbacks
-  useEffect(() => {
-    const stepParam = searchParams.get('step');
-    if (stepParam && ['welcome', 'shopify', 'social', 'complete'].includes(stepParam)) {
-      setCurrentStep(stepParam as OnboardingStep);
-    }
+  const steps: { id: OnboardingStep; label: string }[] = [
+    { id: 'welcome', label: 'Welcome' },
+    { id: 'shopify', label: 'Connect Store' },
+    { id: 'social', label: 'Ad Platforms' },
+    { id: 'complete', label: 'Ready!' },
+  ];
 
-    // Check if Facebook was just connected (from OAuth callback)
-    const facebookConnected = searchParams.get('facebook_connected');
-    if (facebookConnected === 'true') {
-      // Re-check connections to update UI
-      checkExistingConnections();
-    }
-  }, [searchParams]);
-
-  // Check existing connections on mount
-  useEffect(() => {
-    checkExistingConnections();
-  }, []);
-
-  const checkExistingConnections = async () => {
+  const checkExistingConnections = useCallback(async () => {
     try {
-      // Get shop from URL params
       const shop = searchParams.get('shop');
-      if (!shop) {
-        console.log('No shop parameter, skipping connection check');
-        return;
-      }
+      if (!shop) return;
 
       const response = await fetch(`/api/settings/connections?shop=${shop}`);
       if (response.ok) {
         const data = await response.json();
-
         const newConnections: ConnectionStatus = {
           shopify: false,
           facebook: false,
@@ -77,35 +324,44 @@ export default function WelcomePage() {
           tiktok: false,
         };
 
-        data.connections?.forEach((conn: any) => {
+        data.connections?.forEach((conn: { provider: string; connected: boolean; metadata?: { shop_domain?: string } }) => {
           if (conn.provider === 'shopify' && conn.connected) {
             newConnections.shopify = true;
             newConnections.shopifyDomain = conn.metadata?.shop_domain;
           }
-          if (conn.provider === 'facebook' && conn.connected) {
-            newConnections.facebook = true;
-          }
-          if (conn.provider === 'google' && conn.connected) {
-            newConnections.google = true;
-          }
-          if (conn.provider === 'pinterest' && conn.connected) {
-            newConnections.pinterest = true;
-          }
-          if (conn.provider === 'tiktok' && conn.connected) {
-            newConnections.tiktok = true;
-          }
+          if (conn.provider === 'facebook' && conn.connected) newConnections.facebook = true;
+          if (conn.provider === 'google' && conn.connected) newConnections.google = true;
+          if (conn.provider === 'pinterest' && conn.connected) newConnections.pinterest = true;
+          if (conn.provider === 'tiktok' && conn.connected) newConnections.tiktok = true;
         });
 
         setConnections(newConnections);
-
-        // If already connected to Shopify, skip to social or complete
-        if (newConnections.shopify) {
-          setCurrentStep('social');
-        }
+        if (newConnections.shopify) setCurrentStep('social');
       }
     } catch (error) {
       logger.error('Error checking connections:', error as Error, { component: 'welcome' });
     }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const stepParam = searchParams.get('step');
+    if (stepParam && ['welcome', 'shopify', 'social', 'complete'].includes(stepParam)) {
+      setCurrentStep(stepParam as OnboardingStep);
+    }
+    const facebookConnected = searchParams.get('facebook_connected');
+    if (facebookConnected === 'true') checkExistingConnections();
+  }, [searchParams, checkExistingConnections]);
+
+  useEffect(() => {
+    checkExistingConnections();
+  }, [checkExistingConnections]);
+
+  const transitionTo = (step: OnboardingStep) => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentStep(step);
+      setIsTransitioning(false);
+    }, 300);
   };
 
   const handleConnectShopify = () => {
@@ -113,501 +369,426 @@ export default function WelcomePage() {
       alert('Please enter your Shopify store domain');
       return;
     }
-
     setIsConnecting(true);
-
-    // Normalize shop domain
-    let normalizedShop = shopDomain.trim().toLowerCase();
-    normalizedShop = normalizedShop
-      .replace(/^https?:\/\//, '')
-      .replace(/^www\./, '');
-
+    let normalizedShop = shopDomain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '');
     if (!normalizedShop.includes('.myshopify.com')) {
       normalizedShop = `${normalizedShop}.myshopify.com`;
     }
-
-    // Store return URL for after OAuth
     sessionStorage.setItem('onboarding_return', 'social');
-
-    // Redirect to Shopify OAuth
     window.location.href = `/api/auth/shopify?shop=${normalizedShop}`;
   };
 
   const handleConnectFacebook = () => {
-    // Get shop from URL params (passed after Shopify OAuth)
     const shop = searchParams.get('shop');
-
     if (!shop) {
       logger.error('Missing shop parameter for Facebook OAuth', undefined, { component: 'welcome' });
       alert('Unable to connect Facebook. Please reconnect your Shopify store first.');
       return;
     }
-
     sessionStorage.setItem('onboarding_return', 'complete');
     window.location.href = `/api/facebook/oauth/authorize?shop=${shop}&return_to=welcome`;
   };
 
-  const handleSkipSocial = () => {
-    setCurrentStep('complete');
+  const handleConnectGoogle = () => {
+    const shop = searchParams.get('shop');
+    if (shop) {
+      window.location.href = `/api/google/oauth/authorize?shop=${shop}&return_to=/welcome`;
+    }
   };
 
   const handleGoToDashboard = async () => {
     const shop = searchParams.get('shop');
-
     if (!shop) {
       router.push('/dashboard');
       return;
     }
-
     try {
-      // Mark onboarding as complete
-      const response = await fetch('/api/onboarding/complete', {
+      await fetch('/api/onboarding/complete', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${shop}`,
-        },
+        headers: { 'Authorization': `Bearer ${shop}` },
       });
-
-      if (response.ok) {
-        console.log('[Welcome] Onboarding marked as complete');
-      } else {
-        console.error('[Welcome] Failed to mark onboarding complete');
-      }
     } catch (error) {
       console.error('[Welcome] Error marking onboarding complete:', error);
     }
-
-    // Navigate to dashboard regardless of API result
     router.push(`/dashboard?shop=${shop}`);
   };
 
-  // Progress calculation
-  const getProgress = () => {
-    switch (currentStep) {
-      case 'welcome': return 0;
-      case 'shopify': return 33;
-      case 'social': return 66;
-      case 'complete': return 100;
-      default: return 0;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 px-6 py-8">
-      <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-md border border-gray-200 p-8">
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <Progress value={getProgress()} className="h-2" />
-          <p className="text-sm text-muted-foreground mt-2">Step {currentStep === 'welcome' ? 1 : currentStep === 'shopify' ? 2 : currentStep === 'social' ? 3 : 4} of 4</p>
-        </div>
+      <div className="min-h-screen flex">
+        {/* Left Panel - Branding & Progress */}
+        <div className="hidden lg:flex lg:w-[280px] xl:w-[320px] relative flex-col p-8">
+          <GradientMesh />
 
-      {/* Step 1: Welcome */}
-      {currentStep === 'welcome' && (
-        <div>
-          <div className="text-center pb-4 mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">Welcome to Thunder Text & ACE Suite</h1>
-            <p className="text-lg mt-2 text-gray-600">
-              AI-powered product descriptions and ad copy for your e-commerce store
-            </p>
-          </div>
-          <div className="space-y-6">
-            {/* Feature Cards */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <Card className="border-gray-200">
-                <CardContent className="pt-6">
-                  <div className="text-center space-y-3">
-                    <FileText className="h-8 w-8 mx-auto text-primary" />
-                    <h3 className="font-semibold text-gray-900">Thunder Text</h3>
-                    <p className="text-sm text-gray-600">
-                      Generate compelling product descriptions from your images and product data
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-gray-200">
-                <CardContent className="pt-6">
-                  <div className="text-center space-y-3">
-                    <Target className="h-8 w-8 mx-auto text-primary" />
-                    <h3 className="font-semibold text-gray-900">ACE (Ad Copy Engine)</h3>
-                    <p className="text-sm text-gray-600">
-                      Create high-converting Facebook and social media ads with AI
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-gray-200">
-                <CardContent className="pt-6">
-                  <div className="text-center space-y-3">
-                    <Users className="h-8 w-8 mx-auto text-primary" />
-                    <h3 className="font-semibold text-gray-900">BHB Coaching</h3>
-                    <p className="text-sm text-gray-600">
-                      Your personal coach helps optimize your store and content strategy
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Trial Banner */}
-            <Card className="border-primary bg-primary/5">
-              <CardContent className="pt-6">
-                <div className="text-center space-y-3">
-                  <Gift className="h-8 w-8 mx-auto text-primary" />
-                  <h3 className="font-semibold text-lg text-gray-900">14-Day Free Trial Included</h3>
-                  <p className="text-sm text-gray-600">
-                    Full access to Thunder Text & ACE features, no credit card required
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Button size="lg" className="w-full" onClick={() => setCurrentStep('shopify')}>
-              Let's Get Started →
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 2: Connect E-commerce Platform */}
-      {currentStep === 'shopify' && (
-        <div>
-          <div className="text-center pb-4 mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Connect Your E-commerce Platform</h1>
-          </div>
-
-          {!selectedPlatform ? (
-            <div className="space-y-6">
-              <p className="text-center text-sm font-semibold text-gray-900">Select your e-commerce platform:</p>
-
-              {/* Platform Selection Cards */}
-              <div className="grid md:grid-cols-3 gap-4">
-                {/* Shopify */}
-                <Card
-                  className="cursor-pointer hover:border-primary transition-colors border-gray-200"
-                  onClick={() => setSelectedPlatform('shopify')}
-                >
-                  <CardContent className="pt-6 pb-6">
-                    <div className="text-center space-y-3">
-                      <div className="h-30 flex items-center justify-center">
-                        <img src="/shopify-logo.png" alt="Shopify" className="w-30 h-30 object-contain" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Lightspeed */}
-                <Card
-                  className="cursor-pointer hover:border-primary transition-colors opacity-60 border-gray-200"
-                  onClick={() => setSelectedPlatform('lightspeed')}
-                >
-                  <CardContent className="pt-6 pb-6">
-                    <div className="text-center space-y-3">
-                      <div className="h-30 flex items-center justify-center">
-                        <img src="/lightspeed-logo.png" alt="Lightspeed" className="w-30 h-30 object-contain" />
-                      </div>
-                      <p className="text-xs text-gray-500">Coming Soon</p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* CommentSold */}
-                <Card
-                  className="cursor-pointer hover:border-primary transition-colors opacity-60 border-gray-200"
-                  onClick={() => setSelectedPlatform('commentsold')}
-                >
-                  <CardContent className="pt-6 pb-6">
-                    <div className="text-center space-y-3">
-                      <div className="h-30 flex items-center justify-center">
-                        <img src="/commentsold-logo.png" alt="CommentSold" className="w-30 h-30 object-contain" />
-                      </div>
-                      <p className="text-xs text-gray-500">Coming Soon</p>
-                    </div>
-                  </CardContent>
-                </Card>
+          {/* Logo & Brand */}
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
+                <Zap className="w-6 h-6" style={{ color: '#ffcc00' }} />
               </div>
+              <span className="text-xl font-bold" style={{ color: '#ffffff' }}>Thunder Text</span>
             </div>
-          ) : selectedPlatform === 'shopify' ? (
-            /* Shopify Connection Flow */
-            <div className="space-y-6">
-              <Button
-                variant="ghost"
-                onClick={() => setSelectedPlatform(null)}
-                className="mb-4"
-              >
-                ← Back to platform selection
-              </Button>
+            <p className="text-sm ml-[52px]" style={{ color: 'rgba(255,255,255,0.7)' }}>AI-Powered E-commerce Suite</p>
+          </div>
 
-              <Card className="border-gray-200">
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-center text-gray-900">Enter your Shopify store name</h3>
+          {/* Step Indicator */}
+          <div className="relative z-10 mt-12">
+            <StepIndicator currentStep={currentStep} steps={steps} />
+          </div>
+        </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="shop-name" className="text-gray-900">Shop Name</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="shop-name"
-                          type="text"
-                          placeholder="my-store"
-                          value={shopDomain.replace('.myshopify.com', '')}
-                          onChange={(e) => setShopDomain(e.target.value.replace('.myshopify.com', ''))}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              handleConnectShopify();
-                            }
-                          }}
-                          disabled={isConnecting}
-                          className="flex-1"
-                        />
-                        <span className="text-sm text-gray-500 whitespace-nowrap">.myshopify.com</span>
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        Enter just the store name (e.g., "my-store" not "my-store.myshopify.com")
-                      </p>
-                    </div>
+        {/* Right Panel - Content */}
+        <div className="flex-1 bg-gray-50 flex flex-col">
+          {/* Mobile Header */}
+          <div className="lg:hidden px-6 py-4 flex items-center gap-3" style={{ backgroundColor: '#002952' }}>
+            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+              <Zap className="w-5 h-5 text-amber-400" />
+            </div>
+            <span className="text-lg font-bold text-white">Thunder Text</span>
+          </div>
 
-                    <Button
-                      className="w-full"
-                      onClick={handleConnectShopify}
-                      disabled={isConnecting || !shopDomain}
+          {/* Content Area */}
+          <div className={`flex-1 flex items-center justify-center p-6 lg:p-12 transition-opacity duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
+            <div className="w-full max-w-xl">
+
+              {/* Step 1: Welcome */}
+              {currentStep === 'welcome' && (
+                <div className="animate-welcome-fade-in-up">
+                  {/* Trial Badge */}
+                  <div
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6"
+                    style={{ backgroundColor: '#fef3c7', color: '#92400e' }}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    14-Day Free Trial — No Credit Card Required
+                  </div>
+
+                  <h1 className="text-3xl lg:text-[42px] font-bold text-gray-900 mb-4 leading-tight">
+                    <span className="whitespace-nowrap">Create Product & Ad Copy</span><br />
+                    <span
+                      className="text-transparent bg-clip-text"
+                      style={{ backgroundImage: 'linear-gradient(90deg, #0066cc 0%, #0099ff 100%)' }}
                     >
-                      {isConnecting ? 'Connecting...' : 'Connect Shopify Store'}
+                      That Actually Sells
+                    </span>
+                  </h1>
+
+                  <p className="text-lg text-gray-600 mb-10 leading-relaxed">
+                    Stop spending hours writing product descriptions. Let AI analyze your images
+                    and create SEO-optimized, conversion-focused copy in seconds.
+                  </p>
+
+                  {/* Feature Grid */}
+                  <div className="grid gap-4 mb-10">
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <FeatureCard
+                        icon={FileText}
+                        title="Thunder Text"
+                        description="AI product descriptions from your images"
+                        delay={100}
+                      />
+                      <FeatureCard
+                        icon={Target}
+                        title="ACE Engine"
+                        description="High-converting social media ads"
+                        delay={200}
+                      />
+                      <FeatureCard
+                        icon={Users}
+                        title="BHB Coach"
+                        description="Personal strategy & optimization"
+                        delay={300}
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    size="lg"
+                    className="w-full h-14 text-base font-semibold text-white transition-all duration-300"
+                    style={{
+                      background: 'linear-gradient(135deg, #0066cc 0%, #0052a3 100%)',
+                      boxShadow: '0 4px 14px 0 rgba(0,102,204,0.3)'
+                    }}
+                    onClick={() => transitionTo('shopify')}
+                  >
+                    Get Started
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 2: Connect Store */}
+              {currentStep === 'shopify' && (
+                <div className="animate-welcome-fade-in-up">
+                  {!selectedPlatform ? (
+                    <>
+                      <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+                        Connect Your Store
+                      </h1>
+                      <p className="text-gray-600 mb-8">
+                        Select your e-commerce platform to sync your products
+                      </p>
+
+                      <div className="space-y-3">
+                        <PlatformCard
+                          logo="/shopify-logo.png"
+                          name="Shopify"
+                          description="Most popular e-commerce platform"
+                          onSelect={() => setSelectedPlatform('shopify')}
+                        />
+                        <PlatformCard
+                          logo="/lightspeed-logo.png"
+                          name="Lightspeed"
+                          description="Point of sale & e-commerce"
+                          comingSoon
+                        />
+                        <PlatformCard
+                          logo="/commentsold-logo.png"
+                          name="CommentSold"
+                          description="Live selling & social commerce"
+                          comingSoon
+                        />
+                      </div>
+                    </>
+                  ) : selectedPlatform === 'shopify' ? (
+                    <>
+                      <button
+                        onClick={() => setSelectedPlatform(null)}
+                        className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 transition-colors"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        <span className="text-sm font-medium">Back to platforms</span>
+                      </button>
+
+                      <div className="flex items-center gap-4 mb-8">
+                        <div className="w-14 h-14 rounded-2xl bg-[#96bf48]/10 border border-[#96bf48]/20
+                                        flex items-center justify-center">
+                          <img src="/shopify-logo.png" alt="Shopify" className="w-10 h-10" />
+                        </div>
+                        <div>
+                          <h1 className="text-2xl font-bold text-gray-900">Connect Shopify</h1>
+                          <p className="text-gray-500">Enter your store URL to continue</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="shop-domain" className="text-gray-700 font-medium">
+                            Store Name
+                          </Label>
+                          <div className="flex">
+                            <Input
+                              id="shop-domain"
+                              type="text"
+                              placeholder="your-store"
+                              value={shopDomain.replace('.myshopify.com', '')}
+                              onChange={(e) => setShopDomain(e.target.value.replace('.myshopify.com', ''))}
+                              onKeyDown={(e) => e.key === 'Enter' && handleConnectShopify()}
+                              disabled={isConnecting}
+                              className="rounded-r-none border-r-0 h-12 text-base"
+                            />
+                            <div className="flex items-center px-4 bg-gray-100 border border-l-0 border-gray-200
+                                            rounded-r-lg text-gray-500 text-sm font-medium">
+                              .myshopify.com
+                            </div>
+                          </div>
+                        </div>
+
+                        <Button
+                          className="w-full h-12 text-base font-semibold"
+                          onClick={handleConnectShopify}
+                          disabled={isConnecting || !shopDomain}
+                        >
+                          {isConnecting ? (
+                            <>
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                              Connecting...
+                            </>
+                          ) : (
+                            <>
+                              Connect Store
+                              <ExternalLink className="w-4 h-4 ml-2" />
+                            </>
+                          )}
+                        </Button>
+
+                        {/* What we access */}
+                        <div className="p-5 rounded-xl bg-gray-100/50 border border-gray-200/50">
+                          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <Store className="w-4 h-4 text-smart-500" />
+                            What we'll access
+                          </h4>
+                          <ul className="space-y-2.5">
+                            {[
+                              'Your product catalog and images',
+                              'Product descriptions and metadata',
+                              'Store analytics for your BHB Coach',
+                            ].map((item, i) => (
+                              <li key={i} className="flex items-start gap-2.5 text-sm text-gray-600">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                        <img
+                          src={selectedPlatform === 'lightspeed' ? '/lightspeed-logo.png' : '/commentsold-logo.png'}
+                          alt={selectedPlatform}
+                          className="w-10 h-10"
+                        />
+                      </div>
+                      <h2 className="text-xl font-bold text-gray-900 mb-2">
+                        {selectedPlatform === 'lightspeed' ? 'Lightspeed' : 'CommentSold'} Coming Soon
+                      </h2>
+                      <p className="text-gray-500 mb-6">
+                        We're working hard to bring this integration to you.
+                      </p>
+                      <Button variant="outline" onClick={() => setSelectedPlatform(null)}>
+                        <ChevronLeft className="w-4 h-4 mr-2" />
+                        Choose Another Platform
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 3: Social Platforms */}
+              {currentStep === 'social' && (
+                <div className="animate-welcome-fade-in-up">
+                  <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+                    Connect Ad Platforms
+                  </h1>
+                  <p className="text-gray-600 mb-8">
+                    Optional: Connect platforms to publish ads directly with ACE
+                  </p>
+
+                  <div className="space-y-3 mb-8">
+                    <PlatformCard
+                      logo="/shopify-logo.png"
+                      name="Shopify"
+                      description={connections.shopifyDomain || 'E-commerce platform'}
+                      connected={connections.shopify}
+                    />
+                    <PlatformCard
+                      logo="/meta-logo.png"
+                      name="Meta Ads"
+                      description="Facebook & Instagram campaigns"
+                      connected={connections.facebook}
+                      onConnect={handleConnectFacebook}
+                    />
+                    <PlatformCard
+                      logo="/google-ads-logo.png"
+                      name="Google Ads"
+                      description="Search & Display campaigns"
+                      connected={connections.google}
+                      onConnect={handleConnectGoogle}
+                    />
+                    <PlatformCard
+                      logo="/tiktok-ads-logo.png"
+                      name="TikTok Ads"
+                      description="Short-form video campaigns"
+                      comingSoon
+                    />
+                    <PlatformCard
+                      logo="/pinterest-ads-logo.png"
+                      name="Pinterest Ads"
+                      description="Visual discovery campaigns"
+                      comingSoon
+                    />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-12"
+                      onClick={() => transitionTo('complete')}
+                    >
+                      Skip for Now
+                    </Button>
+                    <Button
+                      className="flex-1 h-12"
+                      onClick={() => router.push(`/?shop=${searchParams.get('shop')}`)}
+                    >
+                      Done Connecting
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              )}
 
-              <Card className="border-gray-200">
-                <CardContent className="pt-6">
-                  <h4 className="font-semibold mb-3 text-gray-900">What we'll access:</h4>
-                  <ul className="space-y-2">
-                    <li className="flex items-start gap-2 text-sm text-gray-700">
-                      <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span>Your product catalog and images</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm text-gray-700">
-                      <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span>Product descriptions and metadata</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm text-gray-700">
-                      <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span>Store analytics (for your BHB Coach)</span>
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
+              {/* Step 4: Complete */}
+              {currentStep === 'complete' && (
+                <div className="text-center animate-welcome-fade-in-up relative">
+                  <CelebrationParticles />
+
+                  {/* Success Icon */}
+                  <div className="relative w-24 h-24 mx-auto mb-6">
+                    <div
+                      className="absolute inset-0 rounded-full animate-pulse opacity-20"
+                      style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #e6b800 100%)' }}
+                    />
+                    <div
+                      className="relative w-full h-full rounded-full flex items-center justify-center"
+                      style={{
+                        background: 'linear-gradient(135deg, #ffcc00 0%, #e6b800 100%)',
+                        boxShadow: '0 8px 24px rgba(255,204,0,0.3)'
+                      }}
+                    >
+                      <Check className="w-12 h-12 text-white" strokeWidth={3} />
+                    </div>
+                  </div>
+
+                  <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+                    You're All Set!
+                  </h1>
+                  <p className="text-lg text-gray-600 mb-8">
+                    Your 14-day free trial is now active
+                  </p>
+
+                  {/* What's Included */}
+                  <div className="text-left p-6 rounded-2xl bg-white border border-gray-200 shadow-sm mb-8">
+                    <h3 className="font-semibold text-gray-900 mb-4">What's included in your trial:</h3>
+                    <ul className="space-y-3">
+                      {[
+                        'Unlimited AI product descriptions',
+                        'AI-powered ad copy generation',
+                        'Personal BHB Coach support',
+                        'Brand voice training & best practices',
+                        'Full access to all features',
+                      ].map((item, i) => (
+                        <li key={i} className="flex items-center gap-3 text-gray-700">
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: '#dbeafe' }}
+                          >
+                            <Check className="w-4 h-4" style={{ color: '#0066cc' }} />
+                          </div>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <Button
+                    size="lg"
+                    className="w-full h-14 text-base font-semibold text-white transition-all duration-300"
+                    style={{
+                      background: 'linear-gradient(135deg, #0066cc 0%, #0052a3 100%)',
+                      boxShadow: '0 4px 14px 0 rgba(0,102,204,0.3)'
+                    }}
+                    onClick={handleGoToDashboard}
+                  >
+                    Go to Dashboard
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </div>
+              )}
             </div>
-          ) : (
-            /* Coming Soon for Lightspeed/CommentSold */
-            <Card className="border-gray-200">
-              <CardContent className="pt-6 text-center">
-                <h3 className="font-semibold mb-4 text-gray-900">{selectedPlatform === 'lightspeed' ? 'Lightspeed' : 'CommentSold'} Integration</h3>
-                <p className="text-gray-600 mb-6">
-                  We're working on {selectedPlatform === 'lightspeed' ? 'Lightspeed' : 'CommentSold'} integration. It will be available soon!
-                </p>
-                <Button variant="outline" onClick={() => setSelectedPlatform(null)}>
-                  ← Choose a different platform
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+          </div>
         </div>
-      )}
-
-      {/* Step 3: Connect Social Platforms */}
-      {currentStep === 'social' && (
-        <Card className="border-gray-200">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl text-gray-900">Connect Social Ad Platforms</CardTitle>
-            <CardDescription className="text-gray-600">
-              Optional: Connect ad platforms to create and manage campaigns with ACE
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="max-w-md mx-auto space-y-4">
-              {/* Shopify */}
-              <Card className="border-gray-200">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="h-16 w-16 flex items-center justify-center flex-shrink-0">
-                      <img src="/shopify-logo.png" alt="Shopify" className="w-16 h-16 object-contain" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Shopify</h3>
-                      <p className="text-sm text-gray-600">
-                        {connections.shopifyDomain || 'E-commerce platform'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {connections.shopify ? (
-                    <div className="bg-green-100 text-green-700 px-3 py-2 rounded-md text-center text-sm font-semibold">
-                      ✓ Connected
-                    </div>
-                  ) : (
-                    <Button variant="outline" className="w-full">
-                      Connect Shopify
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Meta / Facebook Ads */}
-              <Card className="border-gray-200">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="h-16 w-16 flex items-center justify-center flex-shrink-0">
-                      <img src="/meta-logo.png" alt="Meta" className="w-16 h-16 object-contain" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Meta Ads</h3>
-                      <p className="text-sm text-gray-600">
-                        Facebook & Instagram campaigns
-                      </p>
-                    </div>
-                  </div>
-
-                  {connections.facebook ? (
-                    <div className="bg-green-100 text-green-700 px-3 py-2 rounded-md text-center text-sm font-semibold">
-                      ✓ Connected
-                    </div>
-                  ) : (
-                    <Button variant="outline" className="w-full" onClick={handleConnectFacebook}>
-                      Connect Meta
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Google Ads */}
-              <Card className="border-gray-200">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="h-16 w-16 flex items-center justify-center flex-shrink-0">
-                      <img src="/google-ads-logo.png" alt="Google Ads" className="w-16 h-16 object-contain" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Google Ads</h3>
-                      <p className="text-sm text-gray-600">
-                        Search & Display campaigns
-                      </p>
-                    </div>
-                  </div>
-
-                  {connections.google ? (
-                    <div className="bg-green-100 text-green-700 px-3 py-2 rounded-md text-center text-sm font-semibold">
-                      ✓ Connected
-                    </div>
-                  ) : (
-                    <Button variant="outline" className="w-full" onClick={() => {
-                      const shop = searchParams.get('shop');
-                      if (shop) {
-                        window.location.href = `/api/google/oauth/authorize?shop=${shop}&return_to=/welcome`;
-                      }
-                    }}>
-                      Connect Google Ads
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* TikTok Ads */}
-              <Card className="opacity-60 border-gray-200">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="h-16 w-16 flex items-center justify-center flex-shrink-0">
-                      <img src="/tiktok-ads-logo.png" alt="TikTok Ads" className="w-16 h-16 object-contain" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">TikTok Ads</h3>
-                      <p className="text-sm text-gray-600">
-                        Short-form video campaigns
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500 text-center">Coming Soon</p>
-                </CardContent>
-              </Card>
-
-              {/* Pinterest Ads */}
-              <Card className="opacity-60 border-gray-200">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="h-16 w-16 flex items-center justify-center flex-shrink-0">
-                      <img src="/pinterest-ads-logo.png" alt="Pinterest Ads" className="w-16 h-16 object-contain" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Pinterest Ads</h3>
-                      <p className="text-sm text-gray-600">
-                        Visual discovery campaigns
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500 text-center">Coming Soon</p>
-                </CardContent>
-              </Card>
-
-              <div className="flex gap-3">
-                <Button variant="outline" className="flex-1" onClick={handleSkipSocial}>
-                  Skip for Now
-                </Button>
-                <Button className="flex-1" onClick={() => router.push(`/?shop=${searchParams.get('shop')}`)}>
-                  Done Connecting Accounts
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 4: Complete */}
-      {currentStep === 'complete' && (
-        <Card className="border-gray-200">
-          <CardContent className="pt-12 pb-8 text-center">
-            <div className="text-6xl mb-6">🎉</div>
-
-            <h2 className="text-3xl font-bold mb-2 text-gray-900">You're All Set!</h2>
-            <p className="text-lg text-gray-600 mb-8">
-              Your 14-day free trial has been activated
-            </p>
-
-            <Card className="max-w-lg mx-auto mb-8 border-gray-200">
-              <CardContent className="pt-6">
-                <h3 className="font-semibold mb-4 text-left text-gray-900">What's included in your trial:</h3>
-                <ul className="space-y-3 text-left">
-                  <li className="flex items-start gap-2 text-gray-700">
-                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Unlimited AI product descriptions (Thunder Text)</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-gray-700">
-                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>AI-powered ad copy generation (ACE)</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-gray-700">
-                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Personal BHB Coach support</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-gray-700">
-                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Brand voice training & best practices</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-gray-700">
-                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>Full access to all features</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Button size="lg" onClick={handleGoToDashboard}>
-              Go to Dashboard →
-            </Button>
-          </CardContent>
-        </Card>
-      )}
       </div>
-    </div>
   );
 }

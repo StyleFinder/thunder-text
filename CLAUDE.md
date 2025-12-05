@@ -2,7 +2,33 @@
 
 ## Project Overview
 
-Thunder Text is an AI-powered Shopify application that generates SEO-optimized product descriptions from images using GPT-4 Vision API. This configuration optimizes SuperClaude for efficient development across all project phases.
+Thunder Text is an AI-powered **standalone SaaS platform** that generates SEO-optimized product descriptions and creates high-converting ads using GPT-4 Vision API. Unlike embedded applications, Thunder Text is **hosted externally on Render** and integrates with multiple e-commerce platforms via OAuth:
+
+- **Shopify** (primary integration)
+- **Lightspeed** (supported)
+- **Extensible** to WooCommerce, BigCommerce, and other platforms
+
+### Platform Architecture
+
+Thunder Text is NOT an embedded Shopify app. It operates as an independent web application:
+
+- **Deployment**: Hosted on Render (https://thunder-text.onrender.com)
+- **Authentication**: Multi-provider OAuth via NextAuth.js (Shopify, Lightspeed)
+- **Database**: Supabase PostgreSQL with Row Level Security
+- **UI**: Custom design system with Tailwind CSS and Shadcn UI (not Shopify Polaris)
+
+### ACE (Ad Creation Engine) Integration
+
+Thunder Text includes the fully-integrated **ACE (Ad Creation Engine)** for end-to-end content creation:
+
+- **Business Profile Builder**: Interactive interview system for brand identity
+- **Brand Voice System**: Consistent voice across all content
+- **Best Practices**: Vector-stored knowledge base for ad optimization
+- **AI Ad Engine (AIE)**: Multi-variant ad generation
+- **Facebook/Instagram Integration**: OAuth-connected ad submission
+- **Content Center**: Unified content library with voice profiles
+
+This configuration optimizes SuperClaude for efficient development across all project phases.
 
 ## 🔴 CRITICAL: Shop/Store ID Architecture (READ THIS FIRST)
 

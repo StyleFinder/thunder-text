@@ -4,8 +4,18 @@ export const dynamic = "force-dynamic";
 
 import { useState, useCallback, useEffect, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Loader2,
+  Zap,
+  ArrowLeft,
+  Sparkles,
+  Camera,
+  Image as ImageIcon,
+  Settings2,
+  FileText,
+  CheckCircle2
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -48,6 +58,31 @@ interface GeneratedContent {
   bulletPoints?: string[];
   keywords?: string[];
   [key: string]: unknown;
+}
+
+// Step indicator component
+function StepIndicator({ step, title, isActive, isComplete }: {
+  step: number;
+  title: string;
+  isActive?: boolean;
+  isComplete?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3 mb-4">
+      <div
+        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+          isComplete
+            ? 'bg-green-100 text-green-600'
+            : isActive
+              ? 'bg-blue-100 text-blue-600'
+              : 'bg-gray-100 text-gray-500'
+        }`}
+      >
+        {isComplete ? <CheckCircle2 className="w-4 h-4" /> : step}
+      </div>
+      <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+    </div>
+  );
 }
 
 function CreateProductContent() {
@@ -97,7 +132,6 @@ function CreateProductContent() {
     useState<ProductCategory>("general");
   const [productType, setProductType] = useState("");
   const [availableSizing, setAvailableSizing] = useState("");
-  // templatePreview state reserved for future template preview feature
   const [, setTemplatePreview] = useState<{
     id: string;
     name: string;
@@ -110,7 +144,6 @@ function CreateProductContent() {
   const [targetAudience, setTargetAudience] = useState("");
   const [keyFeatures, setKeyFeatures] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
-  // categoryDetected tracks whether auto-detection has run
   const [, setCategoryDetected] = useState(false);
   const [suggestedCategory, setSuggestedCategory] = useState<{
     category: string;
@@ -186,7 +219,7 @@ function CreateProductContent() {
     fetchGlobalDefaultTemplate();
   }, [shop, authenticated, initialFormValues]);
 
-  // Category detection from image - defined before handlePrimaryPhotosAdd which depends on it
+  // Category detection from image
   const detectCategoryFromImage = useCallback(
     async (file: File) => {
       try {
@@ -234,11 +267,8 @@ function CreateProductContent() {
   const handlePrimaryPhotosAdd = useCallback(
     (files: File[]) => {
       const updatedPhotos = handlePrimaryPhotosDrop(files);
-
-      // Trigger color detection
       detectColorsFromPhotos(updatedPhotos);
 
-      // Also trigger category detection from first image
       if (primaryPhotos.length === 0 && files.length > 0) {
         setCategoryDetected(true);
         detectCategoryFromImage(files[0]);
@@ -331,7 +361,6 @@ function CreateProductContent() {
     setProgress(0);
     setShowModal(true);
 
-    // Start progress animation
     let currentProgress = 0;
     progressTimer.current = setInterval(() => {
       currentProgress += Math.random() * 8 + 2;
@@ -382,7 +411,6 @@ function CreateProductContent() {
         throw new Error(data.error || "Generation failed");
       }
 
-      // Complete progress bar
       if (progressTimer.current) {
         clearInterval(progressTimer.current);
       }
@@ -390,7 +418,6 @@ function CreateProductContent() {
 
       setGeneratedContent(data.data.generatedContent);
 
-      // Auto-suggest category
       if (data.data.generatedContent) {
         try {
           await suggestCategoryFromContent(data.data.generatedContent);
@@ -506,120 +533,46 @@ function CreateProductContent() {
   };
 
   return (
-    <>
-      {/* Page Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          maxWidth: "800px",
-          margin: "0 auto 24px auto",
-          width: "100%",
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: "32px",
-              fontWeight: 700,
-              color: "#003366",
-              margin: "0 0 4px 0",
-              fontFamily:
-                'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-            }}
+    <div className="min-h-screen bg-gray-50">
+      <main className="max-w-4xl mx-auto px-6 py-8">
+        {/* Page Header */}
+        <div className="flex items-start justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+            >
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Create New Product</h1>
+              <p className="text-gray-500 text-sm">Generate AI-powered product descriptions from images</p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => window.location.href = `/dashboard?${searchParams?.toString() || ""}`}
+            className="border-gray-200 hover:bg-gray-50"
           >
-            Create New Product
-          </h1>
-          <p
-            style={{
-              fontSize: "14px",
-              color: "#6b7280",
-              margin: 0,
-              fontFamily:
-                'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-            }}
-          >
-            Generate product descriptions from images
-          </p>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Button>
         </div>
-        <button
-          onClick={() =>
-            (window.location.href = `/dashboard?${searchParams?.toString() || ""}`)
-          }
-          style={{
-            background: "transparent",
-            color: "#003366",
-            border: "1px solid #e5e7eb",
-            borderRadius: "8px",
-            padding: "12px 24px",
-            fontSize: "14px",
-            fontWeight: 600,
-            fontFamily:
-              'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-            cursor: "pointer",
-            transition: "all 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#f9fafb";
-            e.currentTarget.style.borderColor = "#0066cc";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.borderColor = "#e5e7eb";
-          }}
-        >
-          Back to Dashboard
-        </button>
-      </div>
 
-      {/* Product Data Banner */}
-      <ProductDataBanner
-        dataLoading={dataLoading}
-        dataLoadError={dataLoadError}
-        prePopulatedData={prePopulatedData}
-      />
+        {/* Product Data Banner */}
+        <ProductDataBanner
+          dataLoading={dataLoading}
+          dataLoadError={dataLoadError}
+          prePopulatedData={prePopulatedData}
+        />
 
-      <section>
         {/* Step 1: Product Type Selection */}
-        <div
-          style={{
-            background: "#ffffff",
-            border: "1px solid #e5e7eb",
-            borderRadius: "8px",
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
-            maxWidth: "800px",
-            margin: "0 auto 24px auto",
-            width: "100%",
-          }}
-        >
-          <div style={{ padding: "24px" }}>
-            <h2
-              style={{
-                fontSize: "20px",
-                fontWeight: 700,
-                color: "#003366",
-                margin: "0 0 8px 0",
-                fontFamily:
-                  'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-              }}
-            >
-              Step 1: What Product Are You Selling?
-            </h2>
-            <p
-              style={{
-                fontSize: "14px",
-                color: "#6b7280",
-                lineHeight: 1.6,
-                margin: "0 0 24px 0",
-                fontFamily:
-                  'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-              }}
-            >
-              Specify the primary product type first. This helps the AI focus on
-              the correct item when analyzing images.
-            </p>
-
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+          <StepIndicator step={1} title="What Product Are You Selling?" isActive={!productType} isComplete={!!productType} />
+          <p className="text-gray-500 text-sm mb-4 ml-11">
+            Specify the primary product type first. This helps the AI focus on the correct item when analyzing images.
+          </p>
+          <div className="ml-11">
             <ProductTypeSelector
               value={productType}
               onChange={setProductType}
@@ -629,489 +582,249 @@ function CreateProductContent() {
         </div>
 
         {/* Step 2: Primary Photos */}
-        <PrimaryPhotoUpload
-          photos={primaryPhotos}
-          productType={productType}
-          detectedVariants={detectedVariants}
-          colorDetectionLoading={colorDetectionLoading}
-          onPhotosAdd={handlePrimaryPhotosAdd}
-          onPhotoRemove={handlePrimaryPhotoRemove}
-          onVariantOverride={updateVariantOverride}
-        />
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+          <StepIndicator
+            step={2}
+            title="Upload Primary Photos"
+            isActive={!!productType && primaryPhotos.length === 0}
+            isComplete={primaryPhotos.length > 0}
+          />
+          <p className="text-gray-500 text-sm mb-4 ml-11">
+            Upload clear photos of your product. The AI will analyze these to generate descriptions.
+          </p>
+          <div className="ml-11">
+            <PrimaryPhotoUpload
+              photos={primaryPhotos}
+              productType={productType}
+              detectedVariants={detectedVariants}
+              colorDetectionLoading={colorDetectionLoading}
+              onPhotosAdd={handlePrimaryPhotosAdd}
+              onPhotoRemove={handlePrimaryPhotoRemove}
+              onVariantOverride={updateVariantOverride}
+            />
+          </div>
+        </div>
 
         {/* Step 3: Secondary Photos */}
-        <SecondaryPhotoUpload
-          photos={secondaryPhotos}
-          onPhotosAdd={handleSecondaryPhotosDrop}
-          onPhotoRemove={removeSecondaryPhoto}
-        />
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+          <StepIndicator
+            step={3}
+            title="Additional Photos (Optional)"
+            isActive={primaryPhotos.length > 0 && secondaryPhotos.length === 0}
+            isComplete={secondaryPhotos.length > 0}
+          />
+          <p className="text-gray-500 text-sm mb-4 ml-11">
+            Add more photos showing different angles, details, or styling options.
+          </p>
+          <div className="ml-11">
+            <SecondaryPhotoUpload
+              photos={secondaryPhotos}
+              onPhotosAdd={handleSecondaryPhotosDrop}
+              onPhotoRemove={removeSecondaryPhoto}
+            />
+          </div>
+        </div>
 
-        {/* Step 4 & 5: Product Details */}
-        <div
-          className="grid grid-cols-1 md:grid-cols-2"
-          style={{
-            maxWidth: "800px",
-            margin: "0 auto",
-            marginBottom: "32px",
-            width: "100%",
-            gap: "32px",
-          }}
-        >
-          {/* Step 4: Product Details Card */}
-          <div
-            style={{
-              background: "#ffffff",
-              border: "1px solid #e5e7eb",
-              borderRadius: "8px",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
-            }}
-          >
-            <div style={{ padding: "24px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "16px",
-                }}
-              >
-                <h2
-                  style={{
-                    fontSize: "20px",
-                    fontWeight: 700,
-                    color: "#003366",
-                    margin: 0,
-                    fontFamily:
-                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                  }}
-                >
-                  Step 4: Product Details
-                </h2>
+        {/* Step 4 & 5: Product Details - Two columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Step 4: Product Details */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <StepIndicator step={4} title="Product Details" />
 
-                {primaryPhotos.length === 0 && (
-                  <div
-                    style={{
-                      background: "#eff6ff",
-                      border: "1px solid #bfdbfe",
-                      borderRadius: "8px",
-                      padding: "16px",
+            {primaryPhotos.length === 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 ml-11">
+                <p className="text-sm text-blue-700">
+                  Upload primary photos first, then select the product category below
+                </p>
+              </div>
+            )}
+
+            {suggestedCategory && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 ml-11">
+                <p className="text-sm text-green-700 font-medium">
+                  Suggested Category: {suggestedCategory.category}
+                </p>
+                <p className="text-sm text-green-600">
+                  Confidence: {(suggestedCategory.confidence * 100).toFixed(0)}%
+                  {suggestedCategory.confidence >= 0.6 ? " (Auto-assigned)" : " (Please review)"}
+                </p>
+                {suggestedCategory.confidence < 0.6 && (
+                  <Button
+                    size="sm"
+                    className="mt-2"
+                    style={{ background: '#16a34a' }}
+                    onClick={() => {
+                      setSelectedTemplate(suggestedCategory.category as ProductCategory);
+                      setCategoryDetected(true);
                     }}
                   >
-                    <p
-                      style={{
-                        fontSize: "14px",
-                        color: "#003366",
-                        margin: 0,
-                        fontFamily:
-                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                      }}
-                    >
-                      Upload primary photos first, then manually select the
-                      product category below
-                    </p>
-                  </div>
+                    Use This Suggestion
+                  </Button>
                 )}
+              </div>
+            )}
 
-                {suggestedCategory && (
-                  <div
-                    style={{
-                      background: "#f0fdf4",
-                      border: "1px solid #bbf7d0",
-                      borderRadius: "8px",
-                      padding: "16px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "8px",
-                      }}
-                    >
-                      <p
-                        style={{
-                          fontSize: "14px",
-                          color: "#166534",
-                          margin: 0,
-                          fontFamily:
-                            'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                        }}
-                      >
-                        <span style={{ fontWeight: 700 }}>
-                          Suggested Category:
-                        </span>{" "}
-                        {suggestedCategory.category}
-                      </p>
-                      <p
-                        style={{
-                          fontSize: "14px",
-                          color: "#166534",
-                          margin: 0,
-                          fontFamily:
-                            'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                        }}
-                      >
-                        Confidence:{" "}
-                        {(suggestedCategory.confidence * 100).toFixed(0)}%
-                        {suggestedCategory.confidence >= 0.6
-                          ? " (Auto-assigned)"
-                          : " (Please review)"}
-                      </p>
-                      {suggestedCategory.confidence < 0.6 && (
-                        <button
-                          onClick={() => {
-                            setSelectedTemplate(
-                              suggestedCategory.category as ProductCategory,
-                            );
-                            setCategoryDetected(true);
-                          }}
-                          style={{
-                            background: "#16a34a",
-                            color: "#ffffff",
-                            border: "none",
-                            borderRadius: "6px",
-                            padding: "8px 16px",
-                            fontSize: "12px",
-                            fontWeight: 600,
-                            fontFamily:
-                              'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                            cursor: "pointer",
-                            alignSelf: "flex-start",
-                          }}
-                        >
-                          Use This Suggestion
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
+            <div className="space-y-4 ml-11">
+              {/* Available Sizing */}
+              <div className="space-y-2">
+                <Label htmlFor="sizing-select" className="text-gray-700 font-medium">
+                  Available Sizing
+                </Label>
+                <Select value={availableSizing} onValueChange={setAvailableSizing}>
+                  <SelectTrigger id="sizing-select">
+                    <SelectValue placeholder="Select the available size range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sizingOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                {/* Available Sizing */}
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-                  }}
-                >
-                  <label
-                    htmlFor="sizing-select"
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      color: "#003366",
-                      fontFamily:
-                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                    }}
-                  >
-                    Available Sizing
-                  </label>
-                  <Select
-                    value={availableSizing}
-                    onValueChange={setAvailableSizing}
-                  >
-                    <SelectTrigger id="sizing-select">
-                      <SelectValue placeholder="Select the available size range" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sizingOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Product Templates */}
-                <div style={{ marginTop: "8px" }}>
-                  <CategoryTemplateSelector
-                    value={selectedTemplate}
-                    onChange={handleTemplateChange}
-                    storeId={shop || "test-store"}
-                    onPreview={setTemplatePreview}
-                  />
-                </div>
+              {/* Product Templates */}
+              <div>
+                <CategoryTemplateSelector
+                  value={selectedTemplate}
+                  onChange={handleTemplateChange}
+                  storeId={shop || "test-store"}
+                  onPreview={setTemplatePreview}
+                />
               </div>
             </div>
           </div>
 
-          {/* Step 5: Additional Information Card */}
-          <div
-            style={{
-              background: "#ffffff",
-              border: "1px solid #e5e7eb",
-              borderRadius: "8px",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
-            }}
-          >
-            <div style={{ padding: "24px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "16px",
-                }}
-              >
-                <h2
-                  style={{
-                    fontSize: "20px",
-                    fontWeight: 700,
-                    color: "#003366",
-                    margin: 0,
-                    fontFamily:
-                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                  }}
-                >
-                  Step 5: Additional Information
-                </h2>
+          {/* Step 5: Additional Information */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <StepIndicator step={5} title="Additional Information" />
 
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-                  }}
-                >
-                  <label
-                    htmlFor="fabric-material"
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      color: "#003366",
-                      fontFamily:
-                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                    }}
-                  >
-                    Fabric/Material Content
-                  </label>
-                  <Textarea
-                    id="fabric-material"
-                    placeholder="e.g. 100% organic cotton, stainless steel, recycled plastic"
-                    value={fabricMaterial}
-                    onChange={(e) => setFabricMaterial(e.target.value)}
-                    rows={2}
-                  />
-                </div>
+            <div className="space-y-4 ml-11">
+              <div className="space-y-2">
+                <Label htmlFor="fabric-material" className="text-gray-700 font-medium">
+                  Fabric/Material Content
+                </Label>
+                <Textarea
+                  id="fabric-material"
+                  placeholder="e.g. 100% organic cotton, stainless steel, recycled plastic"
+                  value={fabricMaterial}
+                  onChange={(e) => setFabricMaterial(e.target.value)}
+                  rows={2}
+                  className="resize-none"
+                />
+              </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-                  }}
-                >
-                  <label
-                    htmlFor="occasion-use"
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      color: "#003366",
-                      fontFamily:
-                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                    }}
-                  >
-                    Occasion Use
-                  </label>
-                  <Textarea
-                    id="occasion-use"
-                    placeholder="e.g. outdoor activities, formal events, everyday use"
-                    value={occasionUse}
-                    onChange={(e) => setOccasionUse(e.target.value)}
-                    rows={2}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="occasion-use" className="text-gray-700 font-medium">
+                  Occasion Use
+                </Label>
+                <Textarea
+                  id="occasion-use"
+                  placeholder="e.g. outdoor activities, formal events, everyday use"
+                  value={occasionUse}
+                  onChange={(e) => setOccasionUse(e.target.value)}
+                  rows={2}
+                  className="resize-none"
+                />
+              </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-                  }}
-                >
-                  <label
-                    htmlFor="target-audience"
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      color: "#003366",
-                      fontFamily:
-                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                    }}
-                  >
-                    Target Audience
-                  </label>
-                  <Textarea
-                    id="target-audience"
-                    placeholder="e.g. young professionals, parents, fitness enthusiasts"
-                    value={targetAudience}
-                    onChange={(e) => setTargetAudience(e.target.value)}
-                    rows={2}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="target-audience" className="text-gray-700 font-medium">
+                  Target Audience
+                </Label>
+                <Textarea
+                  id="target-audience"
+                  placeholder="e.g. young professionals, parents, fitness enthusiasts"
+                  value={targetAudience}
+                  onChange={(e) => setTargetAudience(e.target.value)}
+                  rows={2}
+                  className="resize-none"
+                />
               </div>
             </div>
           </div>
         </div>
 
         {/* Step 6: Features & Additional Details */}
-        <Card
-          style={{
-            maxWidth: "800px",
-            margin: "0 auto 32px auto",
-            width: "100%",
-          }}
-        >
-          <CardContent style={{ padding: "32px" }}>
-            <div className="flex flex-col gap-4">
-              <h2
-                style={{
-                  fontSize: "20px",
-                  fontWeight: 600,
-                  color: "#111827",
-                  margin: "0 0 16px 0",
-                }}
-              >
-                Step 6: Features & Additional Details
-              </h2>
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+          <StepIndicator step={6} title="Features & Additional Details" />
 
-              <div className="space-y-2">
-                <Label htmlFor="key-features">
-                  List the main features and benefits
-                </Label>
-                <Textarea
-                  id="key-features"
-                  placeholder="e.g. waterproof, eco-friendly, machine washable, lifetime warranty"
-                  value={keyFeatures}
-                  onChange={(e) => setKeyFeatures(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="additional-notes">Additional Notes</Label>
-                <Textarea
-                  id="additional-notes"
-                  placeholder="Any other important information about this product"
-                  value={additionalNotes}
-                  onChange={(e) => setAdditionalNotes(e.target.value)}
-                  rows={3}
-                />
-              </div>
+          <div className="space-y-4 ml-11">
+            <div className="space-y-2">
+              <Label htmlFor="key-features" className="text-gray-700 font-medium">
+                List the main features and benefits
+              </Label>
+              <Textarea
+                id="key-features"
+                placeholder="e.g. waterproof, eco-friendly, machine washable, lifetime warranty"
+                value={keyFeatures}
+                onChange={(e) => setKeyFeatures(e.target.value)}
+                rows={3}
+                className="resize-none"
+              />
             </div>
-          </CardContent>
-        </Card>
+
+            <div className="space-y-2">
+              <Label htmlFor="additional-notes" className="text-gray-700 font-medium">
+                Additional Notes
+              </Label>
+              <Textarea
+                id="additional-notes"
+                placeholder="Any other important information about this product"
+                value={additionalNotes}
+                onChange={(e) => setAdditionalNotes(e.target.value)}
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+          </div>
+        </div>
 
         {/* Error Display */}
         {error && (
-          <div
-            style={{
-              maxWidth: "800px",
-              margin: "0 auto 24px auto",
-              width: "100%",
-            }}
-          >
-            <div
-              style={{
-                background: "#fff5f5",
-                border: "1px solid #fecaca",
-                borderRadius: "8px",
-                padding: "16px",
-              }}
-            >
-              <p
-                style={{
-                  fontSize: "14px",
-                  color: "#b91c1c",
-                  margin: 0,
-                  fontFamily:
-                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                }}
-              >
-                {error}
-              </p>
-            </div>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+            <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
 
         {/* Action Buttons */}
-        <div
-          style={{
-            maxWidth: "800px",
-            margin: "0 auto",
-            width: "100%",
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: "12px",
-          }}
-        >
-          <button
+        <div className="flex justify-end gap-3">
+          <Button
+            variant="outline"
             onClick={() => window.history.back()}
-            style={{
-              background: "transparent",
-              color: "#003366",
-              border: "1px solid #e5e7eb",
-              borderRadius: "8px",
-              padding: "12px 24px",
-              fontSize: "14px",
-              fontWeight: 600,
-              fontFamily:
-                'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#f9fafb";
-              e.currentTarget.style.borderColor = "#0066cc";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.borderColor = "#e5e7eb";
-            }}
+            className="border-gray-200"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleGenerateDescription}
-            disabled={
-              primaryPhotos.length === 0 || !selectedTemplate || generating
-            }
+            disabled={primaryPhotos.length === 0 || !selectedTemplate || generating}
+            className="px-6"
             style={{
-              background:
-                primaryPhotos.length === 0 || !selectedTemplate || generating
-                  ? "#f9fafb"
-                  : "#0066cc",
-              color:
-                primaryPhotos.length === 0 || !selectedTemplate || generating
-                  ? "#6b7280"
-                  : "#ffffff",
-              border: "none",
-              borderRadius: "8px",
-              padding: "12px 24px",
-              fontSize: "14px",
-              fontWeight: 600,
-              fontFamily:
-                'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-              cursor:
-                primaryPhotos.length === 0 || !selectedTemplate || generating
-                  ? "not-allowed"
-                  : "pointer",
-              transition: "all 0.15s ease",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
+              background: primaryPhotos.length === 0 || !selectedTemplate || generating
+                ? '#e5e7eb'
+                : 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+              color: primaryPhotos.length === 0 || !selectedTemplate || generating
+                ? '#9ca3af'
+                : '#ffffff',
+              border: 'none'
             }}
           >
             {generating ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Generating...
               </>
             ) : (
-              "Generate Description"
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate Description
+              </>
             )}
-          </button>
+          </Button>
         </div>
-      </section>
+      </main>
 
       {/* Modals */}
       <GenerationModal
@@ -1136,52 +849,31 @@ function CreateProductContent() {
         data={productCreated}
         onClose={() => setProductCreated(null)}
       />
-    </>
+    </div>
   );
 }
 
 export default function CreateProductPage() {
   return (
-    <div
-      style={{
-        background: "#fafaf9",
-        minHeight: "100vh",
-        padding: "32px 16px",
-      }}
-    >
-      <Suspense
-        fallback={
-          <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
             <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "12px",
-                padding: "48px",
-              }}
+              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
             >
-              <Loader2
-                className="h-6 w-6 animate-spin"
-                style={{ color: "#0066cc" }}
-              />
-              <p
-                style={{
-                  fontSize: "14px",
-                  color: "#6b7280",
-                  margin: 0,
-                  fontFamily:
-                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                }}
-              >
-                Loading Create Product Page...
-              </p>
+              <Zap className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#0066cc' }} />
+              <p className="text-sm text-gray-500">Loading Create Product...</p>
             </div>
           </div>
-        }
-      >
-        <CreateProductContent />
-      </Suspense>
-    </div>
+        </div>
+      }
+    >
+      <CreateProductContent />
+    </Suspense>
   );
 }

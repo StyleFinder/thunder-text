@@ -2,11 +2,22 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useShopifyAuth } from '../components/UnifiedShopifyAuth'
-
-// Force dynamic rendering for this page
-export const dynamic = 'force-dynamic'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { logger } from '@/lib/logger'
+import { Button } from '@/components/ui/button'
+import {
+  Loader2,
+  Zap,
+  Package,
+  ArrowLeft,
+  Sparkles,
+  ImageOff,
+  AlertCircle,
+  RefreshCw,
+  ChevronRight
+} from 'lucide-react'
+
+export const dynamic = 'force-dynamic'
 
 interface ProductImage {
   id: string
@@ -28,17 +39,103 @@ interface Product {
   }
 }
 
-interface ProductsResponse {
-  success: boolean
-  data: {
-    products: {
-      edges: Product[]
-      pageInfo: {
-        hasNextPage: boolean
-        endCursor: string | null
-      }
-    }
+// Product Card Component
+function ProductCard({
+  product,
+  onGenerate,
+  isGenerating
+}: {
+  product: Product
+  onGenerate: (id: string) => void
+  isGenerating: boolean
+}) {
+  const productData = product.node
+  const primaryImage = productData.images.edges[0]?.node
+
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text
+    return text.substring(0, maxLength) + '...'
   }
+
+  const stripHtml = (html: string) => {
+    if (!html) return ''
+    return html.replace(/<[^>]*>/g, '')
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group">
+      {/* Product Image */}
+      <div className="h-48 bg-gray-50 flex items-center justify-center overflow-hidden">
+        {primaryImage ? (
+          <img
+            src={primaryImage.url}
+            alt={primaryImage.altText || productData.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <div className="text-center p-6">
+            <ImageOff className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+            <p className="text-sm text-gray-400">No image</p>
+          </div>
+        )}
+      </div>
+
+      {/* Product Info */}
+      <div className="p-5">
+        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
+          {truncateText(productData.title, 60)}
+        </h3>
+
+        {productData.description && (
+          <p className="text-sm text-gray-500 mb-4 line-clamp-2">
+            {truncateText(stripHtml(productData.description), 100)}
+          </p>
+        )}
+
+        <Button
+          className="w-full h-10 font-medium transition-all"
+          style={{
+            background: isGenerating
+              ? '#9ca3af'
+              : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            border: 'none'
+          }}
+          onClick={() => onGenerate(productData.id)}
+          disabled={isGenerating}
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Opening...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Generate Description
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+// Empty State Component
+function EmptyState() {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+      <div
+        className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+        style={{ background: 'rgba(0, 102, 204, 0.1)' }}
+      >
+        <Package className="w-8 h-8" style={{ color: '#0066cc' }} />
+      </div>
+      <h2 className="text-xl font-semibold text-gray-900 mb-2">No products found</h2>
+      <p className="text-gray-500 max-w-md mx-auto">
+        It looks like your store doesn't have any products yet, or there was an issue loading them.
+      </p>
+    </div>
+  )
 }
 
 function ProductsContent() {
@@ -71,7 +168,6 @@ function ProductsContent() {
         params.append('cursor', nextCursor)
       }
 
-      // Use regular fetch with session token for authentication
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       }
@@ -85,7 +181,6 @@ function ProductsContent() {
         throw new Error(data.error || 'Failed to fetch products')
       }
 
-      // The API returns products directly, not nested in data.products.edges
       if (nextCursor) {
         setProducts(prev => [...prev, ...data.products])
       } else {
@@ -113,347 +208,257 @@ function ProductsContent() {
 
   const handleGenerateDescription = (productId: string) => {
     setGeneratingIds(prev => new Set([...prev, productId]))
-    
-    // Navigate to generate page with product ID
+
     const params = new URLSearchParams(searchParams?.toString() || '')
     params.set('productId', productId)
     router.push(`/generate?${params}`)
   }
 
-  const truncateText = (text: string, maxLength: number) => {
-    if (text.length <= maxLength) return text
-    return text.substring(0, maxLength) + '...'
-  }
-
-  const stripHtml = (html: string) => {
-    if (!html) return ''
-    return html.replace(/<[^>]*>/g, '')
-  }
-
-  // Temporarily disable auth check for development
-  if (false) { // if (!shop || !authenticated) {
+  // Auth required state (disabled for dev)
+  if (false) {
     return (
-      <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ color: '#2563eb', fontSize: '2rem' }}>Thunder Text Products</h1>
-        </div>
-        
-        <div style={{ 
-          backgroundColor: '#fef3c7',
-          border: '1px solid #fbbf24',
-          borderRadius: '8px',
-          padding: '2rem',
-          textAlign: 'center'
-        }}>
-          <h2 style={{ color: '#92400e', marginBottom: '1rem' }}>Authentication Required</h2>
-          <p style={{ color: '#b45309', marginBottom: '1rem' }}>
-            Please access this page through your Shopify admin panel.
-          </p>
-          <button 
-            style={{
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '6px',
-              fontSize: '1rem',
-              cursor: 'pointer'
-            }}
-            onClick={() => router.push('/dashboard')}
-          >
-            Back to Dashboard
-          </button>
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{
+          background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+        }}
+      >
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+            >
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold text-white">Thunder Text</span>
+          </div>
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                style={{ background: 'rgba(245, 158, 11, 0.1)' }}
+              >
+                <AlertCircle className="w-8 h-8 text-amber-500" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-3">
+                Authentication Required
+              </h1>
+              <p className="text-gray-500 mb-6">
+                Please access this page through your Shopify admin panel.
+              </p>
+              <Button
+                className="w-full h-11 text-base font-medium"
+                style={{
+                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                  border: 'none'
+                }}
+                onClick={() => router.push('/dashboard')}
+              >
+                Back to Dashboard
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     )
   }
 
+  // Loading state
   if (loading) {
     return (
-      <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ color: '#2563eb', fontSize: '2rem' }}>Your Products</h1>
-          <p style={{ color: '#6b7280' }}>Loading products from {shop}...</p>
-        </div>
-        
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-          <div style={{ 
-            display: 'inline-block', 
-            width: '40px', 
-            height: '40px', 
-            border: '4px solid #e5e7eb', 
-            borderTop: '4px solid #3b82f6', 
-            borderRadius: '50%', 
-            animation: 'spin 1s linear infinite' 
-          }}></div>
-        </div>
+      <div className="min-h-screen bg-gray-50">
+        <main className="max-w-6xl mx-auto px-6 py-8">
+          {/* Header skeleton */}
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-gray-200 animate-pulse" />
+              <div>
+                <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-2" />
+                <div className="h-4 w-64 bg-gray-100 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+
+          {/* Loading grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="h-48 bg-gray-100 animate-pulse" />
+                <div className="p-5">
+                  <div className="h-5 bg-gray-200 rounded animate-pulse mb-3" />
+                  <div className="h-4 bg-gray-100 rounded animate-pulse mb-4 w-3/4" />
+                  <div className="h-10 bg-gray-200 rounded animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     )
   }
 
+  // Error state
   if (error) {
     return (
-      <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ color: '#2563eb', fontSize: '2rem' }}>Your Products</h1>
-        </div>
-        
-        <div style={{ 
-          backgroundColor: '#fef2f2',
-          border: '1px solid #fecaca',
-          borderRadius: '8px',
-          padding: '2rem',
-          textAlign: 'center'
-        }}>
-          <h2 style={{ color: '#dc2626', marginBottom: '1rem' }}>Error</h2>
-          <p style={{ color: '#b91c1c', marginBottom: '1rem' }}>{error}</p>
-          <button 
-            style={{
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '6px',
-              fontSize: '1rem',
-              cursor: 'pointer'
-            }}
-            onClick={() => {
-              setLoading(true)
-              setError(null)
-              fetchProducts()
-            }}
-          >
-            Try Again
-          </button>
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{
+          background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+        }}
+      >
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+            >
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold text-white">Thunder Text</span>
+          </div>
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                style={{ background: 'rgba(220, 38, 38, 0.1)' }}
+              >
+                <AlertCircle className="w-8 h-8 text-red-500" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-3">
+                Failed to Load Products
+              </h1>
+              <p className="text-gray-500 mb-6">{error}</p>
+              <Button
+                className="w-full h-11 text-base font-medium"
+                style={{
+                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                  border: 'none'
+                }}
+                onClick={() => {
+                  setLoading(true)
+                  setError(null)
+                  fetchProducts()
+                }}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <div>
-            <h1 style={{ color: '#2563eb', fontSize: '2rem', margin: '0' }}>Your Products</h1>
-            <p style={{ color: '#6b7280', margin: '0.5rem 0' }}>
-              {products.length} products from {shop}
+    <div className="min-h-screen bg-gray-50">
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)' }}
+              >
+                <Package className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Your Products</h1>
+                <p className="text-gray-500 text-sm">
+                  {products.length} products from {shop}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              className="border-gray-200 hover:bg-gray-50"
+              onClick={() => router.push(`/dashboard?${searchParams?.toString() || ''}`)}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </div>
+
+          {/* Info banner */}
+          <div
+            className="rounded-xl p-4 flex items-center gap-3"
+            style={{ background: 'rgba(0, 102, 204, 0.05)', border: '1px solid rgba(0, 102, 204, 0.1)' }}
+          >
+            <Sparkles className="w-5 h-5 flex-shrink-0" style={{ color: '#0066cc' }} />
+            <p className="text-sm" style={{ color: '#0066cc' }}>
+              Select products to generate AI-powered descriptions that will boost your SEO and conversions.
             </p>
           </div>
-          <button 
-            style={{
-              backgroundColor: '#6b7280',
-              color: 'white',
-              border: 'none',
-              padding: '10px 20px',
-              borderRadius: '6px',
-              fontSize: '0.9rem',
-              cursor: 'pointer'
-            }}
-            onClick={() => router.push(`/dashboard?${searchParams?.toString() || ''}`)}
-          >
-            Back to Dashboard
-          </button>
         </div>
-        
-        <div style={{ 
-          backgroundColor: '#eff6ff',
-          border: '1px solid #dbeafe',
-          borderRadius: '8px',
-          padding: '1rem',
-        }}>
-          <p style={{ color: '#1d4ed8', margin: '0', fontSize: '0.9rem' }}>
-            Select products to generate AI-powered descriptions that will boost your SEO and conversions.
-          </p>
-        </div>
-      </div>
 
-      {/* Products Grid */}
-      {products.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '3rem' }}>
-          <h2 style={{ color: '#6b7280', marginBottom: '1rem' }}>No products found</h2>
-          <p style={{ color: '#9ca3af' }}>
-            It looks like your store doesn't have any products yet, or there was an issue loading them.
-          </p>
-        </div>
-      ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: '1.5rem',
-          marginBottom: '2rem'
-        }}>
-          {products.map((product) => {
-            // Products use GraphQL node structure
-            const productData = product.node
-            const primaryImage = productData.images.edges[0]?.node
-            const isGenerating = generatingIds.has(productData.id)
+        {/* Products Grid */}
+        {products.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {products.map((product) => (
+                <ProductCard
+                  key={product.node.id}
+                  product={product}
+                  onGenerate={handleGenerateDescription}
+                  isGenerating={generatingIds.has(product.node.id)}
+                />
+              ))}
+            </div>
 
-            return (
-              <div
-                key={productData.id}
-                style={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)'
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                }}
-              >
-                {/* Product Image */}
-                <div style={{ 
-                  height: '200px', 
-                  backgroundColor: '#f9fafb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden'
-                }}>
-                  {primaryImage ? (
-                    <img
-                      src={primaryImage.url}
-                      alt={primaryImage.altText || productData.title}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover'
-                      }}
-                    />
+            {/* Load More */}
+            {hasNextPage && (
+              <div className="text-center">
+                <Button
+                  variant="outline"
+                  className="px-8 h-11 border-gray-200 hover:bg-gray-50"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Loading more...
+                    </>
                   ) : (
-                    <div style={{ 
-                      color: '#9ca3af', 
-                      fontSize: '0.9rem',
-                      textAlign: 'center',
-                      padding: '1rem'
-                    }}>
-                      No image available
-                    </div>
+                    <>
+                      Load More Products
+                      <ChevronRight className="w-4 h-4 ml-2" />
+                    </>
                   )}
-                </div>
-
-                {/* Product Info */}
-                <div style={{ padding: '1.5rem' }}>
-                  <h3 style={{ 
-                    color: '#1f2937', 
-                    fontSize: '1.1rem', 
-                    fontWeight: '600', 
-                    margin: '0 0 0.5rem 0',
-                    lineHeight: '1.3'
-                  }}>
-                    {truncateText(productData.title, 60)}
-                  </h3>
-
-                  {productData.description && (
-                    <p style={{
-                      color: '#6b7280',
-                      fontSize: '0.9rem',
-                      margin: '0 0 1rem 0',
-                      lineHeight: '1.4'
-                    }}>
-                      {truncateText(stripHtml(productData.description), 100)}
-                    </p>
-                  )}
-
-                  <div style={{ marginTop: 'auto' }}>
-                    <button
-                      style={{
-                        width: '100%',
-                        backgroundColor: isGenerating ? '#9ca3af' : '#10b981',
-                        color: 'white',
-                        border: 'none',
-                        padding: '12px 16px',
-                        borderRadius: '6px',
-                        fontSize: '0.9rem',
-                        fontWeight: '500',
-                        cursor: isGenerating ? 'not-allowed' : 'pointer',
-                        transition: 'background-color 0.2s ease'
-                      }}
-                      onClick={() => handleGenerateDescription(productData.id)}
-                      disabled={isGenerating}
-                      onMouseEnter={(e) => {
-                        if (!isGenerating) {
-                          e.currentTarget.style.backgroundColor = '#059669'
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isGenerating) {
-                          e.currentTarget.style.backgroundColor = '#10b981'
-                        }
-                      }}
-                    >
-                      {isGenerating ? 'Opening Generator...' : 'Generate Description'}
-                    </button>
-                  </div>
-                </div>
+                </Button>
               </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Load More Button */}
-      {hasNextPage && (
-        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-          <button
-            style={{
-              backgroundColor: loadingMore ? '#9ca3af' : '#3b82f6',
-              color: 'white',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '6px',
-              fontSize: '1rem',
-              cursor: loadingMore ? 'not-allowed' : 'pointer'
-            }}
-            onClick={handleLoadMore}
-            disabled={loadingMore}
-          >
-            {loadingMore ? (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{ 
-                  width: '16px', 
-                  height: '16px', 
-                  border: '2px solid #ffffff', 
-                  borderTop: '2px solid transparent', 
-                  borderRadius: '50%', 
-                  animation: 'spin 1s linear infinite' 
-                }}></div>
-                Loading more...
-              </span>
-            ) : (
-              'Load More Products'
             )}
-          </button>
-        </div>
-      )}
-      
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
+          </>
+        )}
+      </main>
     </div>
   )
 }
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid #3b82f6', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-        <p>Loading Products...</p>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+            >
+              <Zap className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#0066cc' }} />
+              <p className="text-sm text-gray-500">Loading Products...</p>
+            </div>
+          </div>
+        </div>
+      }
+    >
       <ProductsContent />
     </Suspense>
   )

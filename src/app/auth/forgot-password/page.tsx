@@ -2,11 +2,19 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Card, Button, Input, Text } from '@/components/bhb';
-import { colors } from '@/lib/design-system/colors';
-import { layout } from '@/lib/design-system/layout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle2, ArrowLeft, Mail } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  ArrowLeft,
+  Mail,
+  Loader2,
+  Zap,
+  Send
+} from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -42,153 +50,144 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: `linear-gradient(135deg, ${colors.oxfordNavy} 0%, ${colors.smartBlue} 50%, ${colors.berryLipstick} 100%)`,
-      padding: layout.spacing.lg
-    }}>
-      <div style={{ maxWidth: '500px', width: '100%' }}>
-        <Card>
+    <div
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{
+        background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+      }}
+    >
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+          >
+            <Zap className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-xl font-bold text-white">Thunder Text</span>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-8">
           {success ? (
             // Success State
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                backgroundColor: `${colors.success}15`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto',
-                marginBottom: layout.spacing.lg
-              }}>
-                <CheckCircle2 size={32} color={colors.success} />
+            <div className="text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                style={{ background: 'rgba(34, 197, 94, 0.1)' }}
+              >
+                <CheckCircle2 className="w-8 h-8 text-green-500" />
               </div>
 
-              <Text variant="h1" style={{ marginBottom: layout.spacing.md }}>
-                Check Your Email
-              </Text>
+              <h1 className="text-2xl font-bold text-gray-900 mb-3">Check Your Email</h1>
+              <p className="text-gray-500 mb-6">
+                If an account exists for <strong className="text-gray-700">{email}</strong>, we've sent password reset instructions to that address.
+              </p>
 
-              <Text color={colors.grayText} style={{ marginBottom: layout.spacing.xl }}>
-                If an account exists for <strong>{email}</strong>, we've sent password reset instructions to that address.
-              </Text>
-
-              <div style={{
-                padding: layout.spacing.md,
-                backgroundColor: colors.background,
-                borderRadius: layout.cornerRadius,
-                marginBottom: layout.spacing.lg
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: layout.spacing.sm, justifyContent: 'center' }}>
-                  <Mail size={18} color={colors.grayText} />
-                  <Text variant="bodySmall" color={colors.grayText}>
-                    The link will expire in 1 hour
-                  </Text>
+              <div className="p-4 bg-gray-50 rounded-xl mb-6">
+                <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
+                  <Mail className="w-4 h-4" />
+                  <span>The link will expire in 1 hour</span>
                 </div>
               </div>
 
-              <Text variant="bodySmall" color={colors.grayText} style={{ marginBottom: layout.spacing.md }}>
+              <p className="text-sm text-gray-400 mb-6">
                 Didn't receive the email? Check your spam folder or{' '}
                 <button
                   onClick={() => setSuccess(false)}
-                  style={{
-                    color: colors.smartBlue,
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    padding: 0,
-                    font: 'inherit'
-                  }}
+                  className="font-medium hover:underline"
+                  style={{ color: '#0066cc' }}
                 >
                   try again
                 </button>
-              </Text>
+              </p>
 
               <Link
                 href="/auth/login"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: layout.spacing.xs,
-                  color: colors.smartBlue,
-                  textDecoration: 'none',
-                  fontSize: '14px'
-                }}
+                className="inline-flex items-center gap-2 text-sm font-medium hover:underline"
+                style={{ color: '#0066cc' }}
               >
-                <ArrowLeft size={16} />
+                <ArrowLeft className="w-4 h-4" />
                 Back to Login
               </Link>
             </div>
           ) : (
             // Form State
             <>
-              <div style={{ textAlign: 'center', marginBottom: layout.spacing.xl }}>
-                <Text variant="h1" style={{ marginBottom: layout.spacing.xs }}>
-                  Forgot Your Password?
-                </Text>
-                <Text color={colors.grayText}>
+              <div className="text-center mb-8">
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                  style={{ background: 'rgba(0, 102, 204, 0.1)' }}
+                >
+                  <Mail className="w-8 h-8" style={{ color: '#0066cc' }} />
+                </div>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">Forgot Your Password?</h1>
+                <p className="text-gray-500">
                   Enter your email address and we'll send you a link to reset your password.
-                </Text>
+                </p>
               </div>
 
               {error && (
-                <div style={{ marginBottom: layout.spacing.md }}>
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                </div>
+                <Alert variant="destructive" className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
 
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: layout.spacing.lg }}>
-                <Input
-                  label="Email Address"
-                  type="email"
-                  value={email}
-                  onChange={setEmail}
-                  placeholder="you@example.com"
-                  required
-                />
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-gray-700">Email address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                      className="pl-10 h-11"
+                    />
+                  </div>
+                </div>
 
                 <Button
                   type="submit"
-                  variant="primary"
-                  size="large"
-                  fullWidth
                   disabled={loading || !email}
+                  className="w-full h-11 text-base font-medium"
+                  style={{
+                    background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                    border: 'none'
+                  }}
                 >
-                  {loading ? 'Sending...' : 'Send Reset Link'}
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      Send Reset Link
+                      <Send className="w-4 h-4 ml-2" />
+                    </>
+                  )}
                 </Button>
 
-                <div style={{
-                  textAlign: 'center',
-                  paddingTop: layout.spacing.md,
-                  borderTop: `1px solid ${colors.border}`
-                }}>
+                <div className="pt-4 border-t border-gray-200 text-center">
                   <Link
                     href="/auth/login"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: layout.spacing.xs,
-                      color: colors.smartBlue,
-                      textDecoration: 'none',
-                      fontSize: '14px'
-                    }}
+                    className="inline-flex items-center gap-2 text-sm font-medium hover:underline"
+                    style={{ color: '#0066cc' }}
                   >
-                    <ArrowLeft size={16} />
+                    <ArrowLeft className="w-4 h-4" />
                     Back to Login
                   </Link>
                 </div>
               </form>
             </>
           )}
-        </Card>
+        </div>
       </div>
     </div>
   );

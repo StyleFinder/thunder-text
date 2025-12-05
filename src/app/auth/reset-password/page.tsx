@@ -3,11 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Card, Button, Input, Text } from '@/components/bhb';
-import { colors } from '@/lib/design-system/colors';
-import { layout } from '@/lib/design-system/layout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle2, ArrowLeft, Eye, EyeOff, Shield, Loader2 } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  Shield,
+  Loader2,
+  Zap,
+  Lock
+} from 'lucide-react';
 
 type PasswordStrength = 'weak' | 'fair' | 'good' | 'strong';
 
@@ -18,10 +28,10 @@ interface PasswordValidation {
 }
 
 const strengthColors: Record<PasswordStrength, string> = {
-  weak: colors.error,
+  weak: '#dc2626',
   fair: '#f59e0b',
-  good: colors.smartBlue,
-  strong: colors.success
+  good: '#0066cc',
+  strong: '#22c55e'
 };
 
 const strengthLabels: Record<PasswordStrength, string> = {
@@ -29,6 +39,13 @@ const strengthLabels: Record<PasswordStrength, string> = {
   fair: 'Fair',
   good: 'Good',
   strong: 'Strong'
+};
+
+const strengthWidths: Record<PasswordStrength, string> = {
+  weak: '25%',
+  fair: '50%',
+  good: '75%',
+  strong: '100%'
 };
 
 export default function ResetPasswordPage() {
@@ -48,7 +65,6 @@ export default function ResetPasswordPage() {
   const [tokenValid, setTokenValid] = useState(false);
   const [validation, setValidation] = useState<PasswordValidation | null>(null);
 
-  // Verify token on mount
   useEffect(() => {
     const verifyToken = async () => {
       if (!token) {
@@ -79,7 +95,6 @@ export default function ResetPasswordPage() {
     verifyToken();
   }, [token]);
 
-  // Validate password as user types
   useEffect(() => {
     if (!password) {
       setValidation(null);
@@ -154,77 +169,76 @@ export default function ResetPasswordPage() {
     }
   };
 
-  // Loading state while verifying token
+  // Loading state while verifying
   if (verifying) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: `linear-gradient(135deg, ${colors.oxfordNavy} 0%, ${colors.smartBlue} 50%, ${colors.berryLipstick} 100%)`,
-        padding: layout.spacing.lg
-      }}>
-        <div style={{ maxWidth: '500px', width: '100%' }}>
-          <Card>
-            <div style={{ textAlign: 'center', padding: layout.spacing.xl }}>
-              <Loader2 size={48} color={colors.smartBlue} style={{ animation: 'spin 1s linear infinite' }} />
-              <Text variant="h2" style={{ marginTop: layout.spacing.lg }}>
-                Verifying Reset Link...
-              </Text>
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{
+          background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+        }}
+      >
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+            >
+              <Zap className="w-5 h-5 text-white" />
             </div>
-          </Card>
+            <span className="text-xl font-bold text-white">Thunder Text</span>
+          </div>
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="text-center py-8">
+              <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: '#0066cc' }} />
+              <h2 className="text-xl font-semibold text-gray-900">Verifying Reset Link...</h2>
+            </div>
+          </div>
         </div>
-        <style>{`
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
     );
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: `linear-gradient(135deg, ${colors.oxfordNavy} 0%, ${colors.smartBlue} 50%, ${colors.berryLipstick} 100%)`,
-      padding: layout.spacing.lg
-    }}>
-      <div style={{ maxWidth: '500px', width: '100%' }}>
-        <Card>
+    <div
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{
+        background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+      }}
+    >
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+          >
+            <Zap className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-xl font-bold text-white">Thunder Text</span>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-8">
           {success ? (
             // Success State
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                backgroundColor: `${colors.success}15`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto',
-                marginBottom: layout.spacing.lg
-              }}>
-                <CheckCircle2 size={32} color={colors.success} />
+            <div className="text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                style={{ background: 'rgba(34, 197, 94, 0.1)' }}
+              >
+                <CheckCircle2 className="w-8 h-8 text-green-500" />
               </div>
-
-              <Text variant="h1" style={{ marginBottom: layout.spacing.md }}>
-                Password Reset Successfully
-              </Text>
-
-              <Text color={colors.grayText} style={{ marginBottom: layout.spacing.xl }}>
+              <h1 className="text-2xl font-bold text-gray-900 mb-3">Password Reset Successfully</h1>
+              <p className="text-gray-500 mb-6">
                 Your password has been changed. You can now log in with your new password.
-              </Text>
-
+              </p>
               <Button
-                variant="primary"
-                size="large"
-                fullWidth
+                className="w-full h-11 text-base font-medium"
+                style={{
+                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                  border: 'none'
+                }}
                 onClick={() => router.push('/auth/login')}
               >
                 Go to Login
@@ -232,233 +246,176 @@ export default function ResetPasswordPage() {
             </div>
           ) : !tokenValid ? (
             // Invalid Token State
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                backgroundColor: `${colors.error}15`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto',
-                marginBottom: layout.spacing.lg
-              }}>
-                <AlertCircle size={32} color={colors.error} />
+            <div className="text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                style={{ background: 'rgba(220, 38, 38, 0.1)' }}
+              >
+                <AlertCircle className="w-8 h-8 text-red-500" />
               </div>
-
-              <Text variant="h1" style={{ marginBottom: layout.spacing.md }}>
-                Link Expired or Invalid
-              </Text>
-
-              <Text color={colors.grayText} style={{ marginBottom: layout.spacing.xl }}>
+              <h1 className="text-2xl font-bold text-gray-900 mb-3">Link Expired or Invalid</h1>
+              <p className="text-gray-500 mb-6">
                 {error || 'This password reset link has expired or is invalid. Please request a new one.'}
-              </Text>
-
+              </p>
               <Button
-                variant="primary"
-                size="large"
-                fullWidth
+                className="w-full h-11 text-base font-medium mb-4"
+                style={{
+                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                  border: 'none'
+                }}
                 onClick={() => router.push('/auth/forgot-password')}
-                style={{ marginBottom: layout.spacing.md }}
               >
                 Request New Reset Link
               </Button>
-
               <Link
                 href="/auth/login"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: layout.spacing.xs,
-                  color: colors.smartBlue,
-                  textDecoration: 'none',
-                  fontSize: '14px'
-                }}
+                className="inline-flex items-center gap-2 text-sm font-medium hover:underline"
+                style={{ color: '#0066cc' }}
               >
-                <ArrowLeft size={16} />
+                <ArrowLeft className="w-4 h-4" />
                 Back to Login
               </Link>
             </div>
           ) : (
             // Form State
             <>
-              <div style={{ textAlign: 'center', marginBottom: layout.spacing.xl }}>
-                <div style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '50%',
-                  backgroundColor: `${colors.smartBlue}15`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto',
-                  marginBottom: layout.spacing.lg
-                }}>
-                  <Shield size={32} color={colors.smartBlue} />
+              <div className="text-center mb-8">
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                  style={{ background: 'rgba(0, 102, 204, 0.1)' }}
+                >
+                  <Shield className="w-8 h-8" style={{ color: '#0066cc' }} />
                 </div>
-
-                <Text variant="h1" style={{ marginBottom: layout.spacing.xs }}>
-                  Reset Your Password
-                </Text>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">Reset Your Password</h1>
                 {maskedEmail && (
-                  <Text color={colors.grayText}>
-                    Enter a new password for <strong>{maskedEmail}</strong>
-                  </Text>
+                  <p className="text-gray-500">
+                    Enter a new password for <strong className="text-gray-700">{maskedEmail}</strong>
+                  </p>
                 )}
               </div>
 
               {error && (
-                <div style={{ marginBottom: layout.spacing.md }}>
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                </div>
+                <Alert variant="destructive" className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
 
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: layout.spacing.lg }}>
-                <div style={{ position: 'relative' }}>
-                  <Input
-                    label="New Password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={setPassword}
-                    placeholder="Enter new password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '12px',
-                      top: '38px',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: colors.grayText
-                    }}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-gray-700">New Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      required
+                      className="pl-10 pr-10 h-11"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Password Strength Indicator */}
                 {validation && (
-                  <div style={{ marginTop: `-${layout.spacing.sm}` }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: layout.spacing.sm,
-                      marginBottom: layout.spacing.xs
-                    }}>
-                      <div style={{
-                        flex: 1,
-                        height: '4px',
-                        backgroundColor: colors.border,
-                        borderRadius: '2px',
-                        overflow: 'hidden'
-                      }}>
-                        <div style={{
-                          width: validation.strength === 'weak' ? '25%' :
-                                 validation.strength === 'fair' ? '50%' :
-                                 validation.strength === 'good' ? '75%' : '100%',
-                          height: '100%',
-                          backgroundColor: strengthColors[validation.strength],
-                          transition: 'width 0.3s ease'
-                        }} />
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full transition-all duration-300"
+                          style={{
+                            width: strengthWidths[validation.strength],
+                            backgroundColor: strengthColors[validation.strength]
+                          }}
+                        />
                       </div>
-                      <Text variant="bodySmall" style={{ color: strengthColors[validation.strength] }}>
+                      <span
+                        className="text-xs font-medium"
+                        style={{ color: strengthColors[validation.strength] }}
+                      >
                         {strengthLabels[validation.strength]}
-                      </Text>
+                      </span>
                     </div>
 
                     {validation.errors.length > 0 && (
-                      <div style={{
-                        padding: layout.spacing.sm,
-                        backgroundColor: colors.background,
-                        borderRadius: layout.cornerRadius
-                      }}>
-                        <Text variant="bodySmall" color={colors.grayText} style={{ marginBottom: layout.spacing.xs }}>
-                          Requirements:
-                        </Text>
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">Requirements:</p>
                         {validation.errors.map((err, i) => (
-                          <Text key={i} variant="bodySmall" color={colors.error} style={{ display: 'block' }}>
-                            • {err}
-                          </Text>
+                          <p key={i} className="text-xs text-red-500">• {err}</p>
                         ))}
                       </div>
                     )}
                   </div>
                 )}
 
-                <div style={{ position: 'relative' }}>
-                  <Input
-                    label="Confirm Password"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={setConfirmPassword}
-                    placeholder="Confirm new password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '12px',
-                      top: '38px',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: colors.grayText
-                    }}
-                  >
-                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-gray-700">Confirm Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      required
+                      className="pl-10 pr-10 h-11"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {confirmPassword && password !== confirmPassword && (
+                    <p className="text-xs text-red-500">Passwords do not match</p>
+                  )}
                 </div>
-
-                {confirmPassword && password !== confirmPassword && (
-                  <Text variant="bodySmall" color={colors.error} style={{ marginTop: `-${layout.spacing.sm}` }}>
-                    Passwords do not match
-                  </Text>
-                )}
 
                 <Button
                   type="submit"
-                  variant="primary"
-                  size="large"
-                  fullWidth
                   disabled={loading || !validation?.isValid || password !== confirmPassword}
+                  className="w-full h-11 text-base font-medium"
+                  style={{
+                    background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                    border: 'none'
+                  }}
                 >
-                  {loading ? 'Resetting Password...' : 'Reset Password'}
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Resetting Password...
+                    </>
+                  ) : (
+                    'Reset Password'
+                  )}
                 </Button>
 
-                <div style={{
-                  textAlign: 'center',
-                  paddingTop: layout.spacing.md,
-                  borderTop: `1px solid ${colors.border}`
-                }}>
+                <div className="pt-4 border-t border-gray-200 text-center">
                   <Link
                     href="/auth/login"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: layout.spacing.xs,
-                      color: colors.smartBlue,
-                      textDecoration: 'none',
-                      fontSize: '14px'
-                    }}
+                    className="inline-flex items-center gap-2 text-sm font-medium hover:underline"
+                    style={{ color: '#0066cc' }}
                   >
-                    <ArrowLeft size={16} />
+                    <ArrowLeft className="w-4 h-4" />
                     Back to Login
                   </Link>
                 </div>
               </form>
             </>
           )}
-        </Card>
+        </div>
       </div>
     </div>
   );

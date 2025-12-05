@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Card, Button, Text } from '@/components/bhb';
-import { colors } from '@/lib/design-system/colors';
-import { layout } from '@/lib/design-system/layout';
+import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   AlertCircle,
@@ -16,57 +14,63 @@ import {
   Mail,
   Key,
   Unplug,
-  ShieldAlert
+  ShieldAlert,
+  Zap
 } from 'lucide-react';
 
 type ActionType = 'account_deletion' | 'email_change' | 'password_change' | 'disconnect_integration';
 
 interface ActionInfo {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   description: string;
   warningMessage: string;
   confirmButtonText: string;
   successMessage: string;
   color: string;
+  isDangerous: boolean;
 }
 
 const actionDetails: Record<ActionType, ActionInfo> = {
   account_deletion: {
-    icon: <Trash2 size={32} />,
+    icon: <Trash2 className="w-8 h-8" />,
     title: 'Confirm Account Deletion',
     description: 'You are about to permanently delete your account.',
     warningMessage: 'This action cannot be undone. All your data, including generated content, settings, and integrations will be permanently removed.',
     confirmButtonText: 'Yes, Delete My Account',
     successMessage: 'Your account has been successfully deleted.',
-    color: colors.error
+    color: '#dc2626',
+    isDangerous: true
   },
   email_change: {
-    icon: <Mail size={32} />,
+    icon: <Mail className="w-8 h-8" />,
     title: 'Confirm Email Change',
     description: 'You are about to change your email address.',
     warningMessage: 'After confirming, you will need to use your new email address to log in.',
     confirmButtonText: 'Confirm Email Change',
     successMessage: 'Your email address has been successfully changed.',
-    color: colors.smartBlue
+    color: '#0066cc',
+    isDangerous: false
   },
   password_change: {
-    icon: <Key size={32} />,
+    icon: <Key className="w-8 h-8" />,
     title: 'Confirm Password Change',
     description: 'You are about to change your password.',
     warningMessage: 'This will update your password immediately. You may need to log in again on other devices.',
     confirmButtonText: 'Confirm Password Change',
     successMessage: 'Your password has been successfully changed.',
-    color: colors.smartBlue
+    color: '#0066cc',
+    isDangerous: false
   },
   disconnect_integration: {
-    icon: <Unplug size={32} />,
+    icon: <Unplug className="w-8 h-8" />,
     title: 'Confirm Integration Disconnect',
     description: 'You are about to disconnect an integration.',
     warningMessage: 'This will revoke access and remove all associated data. You can reconnect later if needed.',
     confirmButtonText: 'Disconnect Integration',
     successMessage: 'The integration has been successfully disconnected.',
-    color: '#f59e0b'
+    color: '#f59e0b',
+    isDangerous: false
   }
 };
 
@@ -74,7 +78,6 @@ export default function ConfirmActionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
-  const actionParam = searchParams.get('action') as ActionType | null;
 
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true);
@@ -85,7 +88,6 @@ export default function ConfirmActionPage() {
   const [actionId, setActionId] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<Record<string, unknown> | null>(null);
 
-  // Verify token on mount
   useEffect(() => {
     const verifyToken = async () => {
       if (!token) {
@@ -139,9 +141,7 @@ export default function ConfirmActionPage() {
 
       setSuccess(true);
 
-      // Redirect based on action type
       if (actionType === 'account_deletion') {
-        // Account deleted - redirect to home after delay
         setTimeout(() => {
           router.push('/');
         }, 3000);
@@ -156,82 +156,77 @@ export default function ConfirmActionPage() {
 
   const actionInfo = actionType ? actionDetails[actionType] : null;
 
-  // Loading state while verifying token
+  // Loading state while verifying
   if (verifying) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: `linear-gradient(135deg, ${colors.oxfordNavy} 0%, ${colors.smartBlue} 50%, ${colors.berryLipstick} 100%)`,
-        padding: layout.spacing.lg
-      }}>
-        <div style={{ maxWidth: '500px', width: '100%' }}>
-          <Card>
-            <div style={{ textAlign: 'center', padding: layout.spacing.xl }}>
-              <Loader2 size={48} color={colors.smartBlue} style={{ animation: 'spin 1s linear infinite' }} />
-              <Text variant="h2" style={{ marginTop: layout.spacing.lg }}>
-                Verifying Confirmation Link...
-              </Text>
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{
+          background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+        }}
+      >
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+            >
+              <Zap className="w-5 h-5 text-white" />
             </div>
-          </Card>
+            <span className="text-xl font-bold text-white">Thunder Text</span>
+          </div>
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="text-center py-8">
+              <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: '#0066cc' }} />
+              <h2 className="text-xl font-semibold text-gray-900">Verifying Confirmation Link...</h2>
+            </div>
+          </div>
         </div>
-        <style>{`
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
     );
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: `linear-gradient(135deg, ${colors.oxfordNavy} 0%, ${colors.smartBlue} 50%, ${colors.berryLipstick} 100%)`,
-      padding: layout.spacing.lg
-    }}>
-      <div style={{ maxWidth: '500px', width: '100%' }}>
-        <Card>
+    <div
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{
+        background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+      }}
+    >
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+          >
+            <Zap className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-xl font-bold text-white">Thunder Text</span>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-8">
           {success && actionInfo ? (
             // Success State
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                backgroundColor: `${colors.success}15`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto',
-                marginBottom: layout.spacing.lg
-              }}>
-                <CheckCircle2 size={32} color={colors.success} />
+            <div className="text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                style={{ background: 'rgba(34, 197, 94, 0.1)' }}
+              >
+                <CheckCircle2 className="w-8 h-8 text-green-500" />
               </div>
-
-              <Text variant="h1" style={{ marginBottom: layout.spacing.md }}>
-                Action Confirmed
-              </Text>
-
-              <Text color={colors.grayText} style={{ marginBottom: layout.spacing.xl }}>
-                {actionInfo.successMessage}
-              </Text>
-
+              <h1 className="text-2xl font-bold text-gray-900 mb-3">Action Confirmed</h1>
+              <p className="text-gray-500 mb-6">{actionInfo.successMessage}</p>
               {actionType === 'account_deletion' ? (
-                <Text variant="bodySmall" color={colors.grayText}>
-                  Redirecting you to the home page...
-                </Text>
+                <p className="text-sm text-gray-400">Redirecting you to the home page...</p>
               ) : (
                 <Button
-                  variant="primary"
-                  size="large"
-                  fullWidth
+                  className="w-full h-11 text-base font-medium"
+                  style={{
+                    background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                    border: 'none'
+                  }}
                   onClick={() => router.push('/dashboard')}
                 >
                   Go to Dashboard
@@ -240,211 +235,164 @@ export default function ConfirmActionPage() {
             </div>
           ) : !tokenValid ? (
             // Invalid Token State
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                backgroundColor: `${colors.error}15`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto',
-                marginBottom: layout.spacing.lg
-              }}>
-                <AlertCircle size={32} color={colors.error} />
+            <div className="text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                style={{ background: 'rgba(220, 38, 38, 0.1)' }}
+              >
+                <AlertCircle className="w-8 h-8 text-red-500" />
               </div>
-
-              <Text variant="h1" style={{ marginBottom: layout.spacing.md }}>
-                Link Expired or Invalid
-              </Text>
-
-              <Text color={colors.grayText} style={{ marginBottom: layout.spacing.xl }}>
+              <h1 className="text-2xl font-bold text-gray-900 mb-3">Link Expired or Invalid</h1>
+              <p className="text-gray-500 mb-6">
                 {error || 'This confirmation link has expired or is invalid. Please try the action again from your dashboard.'}
-              </Text>
-
+              </p>
               <Button
-                variant="primary"
-                size="large"
-                fullWidth
+                className="w-full h-11 text-base font-medium mb-4"
+                style={{
+                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                  border: 'none'
+                }}
                 onClick={() => router.push('/dashboard')}
-                style={{ marginBottom: layout.spacing.md }}
               >
                 Go to Dashboard
               </Button>
-
               <Link
                 href="/auth/login"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: layout.spacing.xs,
-                  color: colors.smartBlue,
-                  textDecoration: 'none',
-                  fontSize: '14px'
-                }}
+                className="inline-flex items-center gap-2 text-sm font-medium hover:underline"
+                style={{ color: '#0066cc' }}
               >
-                <ArrowLeft size={16} />
+                <ArrowLeft className="w-4 h-4" />
                 Back to Login
               </Link>
             </div>
           ) : actionInfo ? (
             // Confirmation Form State
             <>
-              <div style={{ textAlign: 'center', marginBottom: layout.spacing.xl }}>
-                <div style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '50%',
-                  backgroundColor: `${actionInfo.color}15`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto',
-                  marginBottom: layout.spacing.lg,
-                  color: actionInfo.color
-                }}>
+              <div className="text-center mb-6">
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                  style={{
+                    background: `${actionInfo.color}15`,
+                    color: actionInfo.color
+                  }}
+                >
                   {actionInfo.icon}
                 </div>
-
-                <Text variant="h1" style={{ marginBottom: layout.spacing.xs }}>
-                  {actionInfo.title}
-                </Text>
-                <Text color={colors.grayText}>
-                  {actionInfo.description}
-                </Text>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">{actionInfo.title}</h1>
+                <p className="text-gray-500">{actionInfo.description}</p>
               </div>
 
               {error && (
-                <div style={{ marginBottom: layout.spacing.md }}>
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                </div>
+                <Alert variant="destructive" className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
 
               {/* Warning Box */}
-              <div style={{
-                padding: layout.spacing.md,
-                backgroundColor: actionType === 'account_deletion' ? `${colors.error}08` : colors.background,
-                borderRadius: layout.cornerRadius,
-                border: actionType === 'account_deletion' ? `1px solid ${colors.error}30` : `1px solid ${colors.border}`,
-                marginBottom: layout.spacing.lg
-              }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: layout.spacing.sm }}>
+              <div
+                className="p-4 rounded-xl mb-6"
+                style={{
+                  background: actionInfo.isDangerous ? 'rgba(220, 38, 38, 0.05)' : '#f9fafb',
+                  border: actionInfo.isDangerous ? '1px solid rgba(220, 38, 38, 0.2)' : '1px solid #e5e7eb'
+                }}
+              >
+                <div className="flex items-start gap-3">
                   <ShieldAlert
-                    size={20}
-                    color={actionType === 'account_deletion' ? colors.error : colors.grayText}
-                    style={{ flexShrink: 0, marginTop: '2px' }}
+                    className="w-5 h-5 flex-shrink-0 mt-0.5"
+                    style={{ color: actionInfo.isDangerous ? '#dc2626' : '#6b7280' }}
                   />
-                  <Text
-                    variant="bodySmall"
-                    color={actionType === 'account_deletion' ? colors.error : colors.grayText}
+                  <p
+                    className="text-sm"
+                    style={{ color: actionInfo.isDangerous ? '#dc2626' : '#6b7280' }}
                   >
                     {actionInfo.warningMessage}
-                  </Text>
+                  </p>
                 </div>
               </div>
 
-              {/* Show metadata if available */}
+              {/* Metadata */}
               {metadata && Object.keys(metadata).length > 0 && (
-                <div style={{
-                  padding: layout.spacing.md,
-                  backgroundColor: colors.background,
-                  borderRadius: layout.cornerRadius,
-                  marginBottom: layout.spacing.lg
-                }}>
-                  <Text variant="bodySmall" color={colors.grayText} style={{ fontWeight: 600, marginBottom: layout.spacing.xs }}>
-                    Details:
-                  </Text>
-                  {actionType === 'email_change' && Boolean(metadata.newEmail) && (
-                    <Text variant="bodySmall" color={colors.oxfordNavy}>
-                      New email: <strong>{String(metadata.newEmail)}</strong>
-                    </Text>
+                <div className="p-4 bg-gray-50 rounded-xl mb-6">
+                  <p className="text-xs font-semibold text-gray-500 mb-2">Details:</p>
+                  {actionType === 'email_change' && typeof metadata.newEmail === 'string' && (
+                    <p className="text-sm text-gray-700">
+                      New email: <strong>{metadata.newEmail}</strong>
+                    </p>
                   )}
-                  {actionType === 'disconnect_integration' && Boolean(metadata.provider) && (
-                    <Text variant="bodySmall" color={colors.oxfordNavy}>
-                      Integration: <strong>{String(metadata.provider)}</strong>
-                    </Text>
+                  {actionType === 'disconnect_integration' && typeof metadata.provider === 'string' && (
+                    <p className="text-sm text-gray-700">
+                      Integration: <strong>{metadata.provider}</strong>
+                    </p>
                   )}
                 </div>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: layout.spacing.md }}>
+              {/* Actions */}
+              <div className="space-y-3">
                 <Button
-                  variant={actionType === 'account_deletion' ? 'secondary' : 'primary'}
-                  size="large"
-                  fullWidth
+                  className="w-full h-11 text-base font-medium"
+                  style={{
+                    background: actionInfo.isDangerous
+                      ? '#dc2626'
+                      : 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                    border: 'none'
+                  }}
                   disabled={loading}
                   onClick={handleConfirm}
-                  style={actionType === 'account_deletion' ? {
-                    backgroundColor: colors.error,
-                    borderColor: colors.error,
-                    color: colors.white
-                  } : undefined}
                 >
-                  {loading ? 'Processing...' : actionInfo.confirmButtonText}
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    actionInfo.confirmButtonText
+                  )}
                 </Button>
 
                 <Button
-                  variant="secondary"
-                  size="large"
-                  fullWidth
-                  onClick={() => router.push('/dashboard')}
+                  variant="outline"
+                  className="w-full h-11 border-gray-200 hover:bg-gray-50"
                   disabled={loading}
+                  onClick={() => router.push('/dashboard')}
                 >
                   Cancel
                 </Button>
               </div>
 
-              <div style={{
-                textAlign: 'center',
-                paddingTop: layout.spacing.lg,
-                marginTop: layout.spacing.md,
-                borderTop: `1px solid ${colors.border}`
-              }}>
-                <Text variant="bodySmall" color={colors.grayText}>
+              <div className="pt-6 mt-6 border-t border-gray-200 text-center">
+                <p className="text-xs text-gray-400">
                   This confirmation link will expire in 30 minutes.
-                </Text>
+                </p>
               </div>
             </>
           ) : (
             // Unknown action type
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                backgroundColor: `${colors.error}15`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto',
-                marginBottom: layout.spacing.lg
-              }}>
-                <AlertCircle size={32} color={colors.error} />
+            <div className="text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                style={{ background: 'rgba(220, 38, 38, 0.1)' }}
+              >
+                <AlertCircle className="w-8 h-8 text-red-500" />
               </div>
-
-              <Text variant="h1" style={{ marginBottom: layout.spacing.md }}>
-                Unknown Action
-              </Text>
-
-              <Text color={colors.grayText} style={{ marginBottom: layout.spacing.xl }}>
+              <h1 className="text-2xl font-bold text-gray-900 mb-3">Unknown Action</h1>
+              <p className="text-gray-500 mb-6">
                 We couldn't recognize the requested action. Please try again from your dashboard.
-              </Text>
-
+              </p>
               <Button
-                variant="primary"
-                size="large"
-                fullWidth
+                className="w-full h-11 text-base font-medium"
+                style={{
+                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                  border: 'none'
+                }}
                 onClick={() => router.push('/dashboard')}
               >
                 Go to Dashboard
               </Button>
             </div>
           )}
-        </Card>
+        </div>
       </div>
     </div>
   );
