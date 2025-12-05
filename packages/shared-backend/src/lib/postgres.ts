@@ -26,14 +26,14 @@ console.log("=".repeat(80));
 console.log("Database Host:", dbHost);
 console.log("Database Name:", dbName);
 console.log("Supabase Project ID:", projectId);
-console.log("Expected Project:", "***REMOVED*** (Thunder Text)");
+console.log("Expected Project:", "upkmmwvbspgeanotzknk (Thunder Text)");
 console.log("=".repeat(80));
 
-if (projectId !== "***REMOVED***") {
+if (projectId !== "upkmmwvbspgeanotzknk") {
   console.error("❌ WRONG DATABASE! Connected to:", projectId);
-  console.error("   Expected: ***REMOVED*** (Thunder Text)");
+  console.error("   Expected: upkmmwvbspgeanotzknk (Thunder Text)");
   throw new Error(
-    `DATABASE_URL points to wrong project: ${projectId}. Expected: ***REMOVED***`,
+    `DATABASE_URL points to wrong project: ${projectId}. Expected: upkmmwvbspgeanotzknk`,
   );
 }
 

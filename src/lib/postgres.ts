@@ -1,18 +1,22 @@
 import { Pool, QueryResult, QueryResultRow } from "pg";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
 
 // Direct PostgreSQL connection - bypasses Supabase PostgREST entirely
 // Only use this when PostgREST has issues (like schema cache problems)
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  logger.error("❌ CRITICAL: DATABASE_URL environment variable is not set!", undefined, {
-    availableEnvVars: Object.keys(process.env).filter((key) =>
-      key.includes("DATABASE"),
-    ),
-    nodeEnv: process.env.NODE_ENV,
-    component: 'postgres'
-  });
+  logger.error(
+    "❌ CRITICAL: DATABASE_URL environment variable is not set!",
+    undefined,
+    {
+      availableEnvVars: Object.keys(process.env).filter((key) =>
+        key.includes("DATABASE"),
+      ),
+      nodeEnv: process.env.NODE_ENV,
+      component: "postgres",
+    },
+  );
   throw new Error("DATABASE_URL is required for direct PostgreSQL connection");
 }
 
@@ -28,14 +32,20 @@ console.log("=".repeat(80));
 console.log("Database Host:", dbHost);
 console.log("Database Name:", dbName);
 console.log("Supabase Project ID:", projectId);
-console.log("Expected Project:", "***REMOVED*** (Thunder Text)");
+console.log("Expected Project:", "upkmmwvbspgeanotzknk (Thunder Text)");
 console.log("=".repeat(80));
 
-if (projectId !== "***REMOVED***") {
-  logger.error(`WRONG DATABASE! Connected to: ${projectId}`, new Error(`Wrong database project: ${projectId}`), { component: 'postgres' });
-  logger.error(`Expected: ***REMOVED*** (Thunder Text)`, undefined, { component: 'postgres' });
+if (projectId !== "upkmmwvbspgeanotzknk") {
+  logger.error(
+    `WRONG DATABASE! Connected to: ${projectId}`,
+    new Error(`Wrong database project: ${projectId}`),
+    { component: "postgres" },
+  );
+  logger.error(`Expected: upkmmwvbspgeanotzknk (Thunder Text)`, undefined, {
+    component: "postgres",
+  });
   throw new Error(
-    `DATABASE_URL points to wrong project: ${projectId}. Expected: ***REMOVED***`,
+    `DATABASE_URL points to wrong project: ${projectId}. Expected: upkmmwvbspgeanotzknk`,
   );
 }
 
@@ -43,16 +53,18 @@ const pool = new Pool({
   connectionString,
   // SECURITY: Verify SSL certificates in production to prevent MITM attacks
   // In development, we allow self-signed certs for local testing
-  ssl: process.env.NODE_ENV === 'production'
-    ? { rejectUnauthorized: true }
-    : { rejectUnauthorized: false },
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: true }
+      : { rejectUnauthorized: false },
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
 });
 
 // Test connection on startup
-pool.query("SELECT current_database(), current_schema()").then((result) => {
+pool.query("SELECT current_database(), current_schema()").then(() => {
+  // Connection verified
 });
 
 /**
@@ -110,7 +122,7 @@ export async function getTenantClient(
       if (involvesTenantTable) {
         // Log query for audit trail
         logger.debug("Tenant-scoped query", {
-          component: 'postgres',
+          component: "postgres",
           tenantId,
           operation: queryLower.includes("insert")
             ? "INSERT"
