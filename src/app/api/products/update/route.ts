@@ -5,7 +5,48 @@ import {
 } from "@/lib/middleware/cors";
 import { ShopifyAPI } from "@/lib/shopify";
 import { getShopToken } from "@/lib/shopify/token-manager";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
+import { createClient } from "@supabase/supabase-js";
+
+// Helper to check if a string looks like an email
+function isEmail(str: string): boolean {
+  return str.includes("@") && !str.includes(".myshopify.com");
+}
+
+// Get the linked Shopify domain for a standalone user (by email)
+async function getLinkedShopifyDomain(email: string): Promise<string | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    logger.error(
+      "Missing Supabase configuration for standalone user lookup",
+      undefined,
+      { component: "update" },
+    );
+    return null;
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const { data, error } = await supabase
+    .from("shops")
+    .select("linked_shopify_domain")
+    .eq("email", email)
+    .eq("is_active", true)
+    .single();
+
+  if (error) {
+    logger.error("Error looking up linked Shopify domain", error as Error, {
+      component: "update",
+      email,
+    });
+    return null;
+  }
+
+  return data?.linked_shopify_domain || null;
+}
 
 export async function OPTIONS(request: NextRequest) {
   return handleCorsPreflightRequest(request);
@@ -16,7 +57,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { shop, productId, updates } = body;
+    let { shop } = body;
+    const { productId, updates } = body;
 
     if (!shop || !productId || !updates) {
       return NextResponse.json(
@@ -25,17 +67,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if shop is actually an email (standalone user)
+    // If so, look up their linked Shopify domain
+    const isStandaloneUser = isEmail(shop);
+    if (isStandaloneUser) {
+      logger.info(
+        "Standalone user detected, looking up linked Shopify domain",
+        { component: "update", email: shop },
+      );
+      const linkedDomain = await getLinkedShopifyDomain(shop);
+
+      if (!linkedDomain) {
+        return NextResponse.json(
+          {
+            error: "No linked Shopify store",
+            details: "Please connect your Shopify store first",
+            hint: "Go to Settings > Connections to link your Shopify store",
+          },
+          { status: 400, headers: corsHeaders },
+        );
+      }
+
+      logger.info("Found linked Shopify domain", {
+        component: "update",
+        linkedDomain,
+      });
+      shop = linkedDomain;
+    }
 
     // Get session token from the request
     const sessionToken = request.headers
       .get("authorization")
       ?.replace("Bearer ", "");
 
-    // For the staging test store, we'll use a direct approach if no session token
+    // For the staging test store or standalone users, we'll use a direct approach if no session token
     const isTestStore = shop.includes("zunosai-staging-test-store");
 
-    if (!sessionToken && !isTestStore) {
-      logger.error("❌ No session token provided in request", undefined, { component: 'update' });
+    // Standalone users use stored tokens, not session tokens
+    if (!sessionToken && !isTestStore && !isStandaloneUser) {
+      logger.error("❌ No session token provided in request", undefined, {
+        component: "update",
+      });
       return NextResponse.json(
         {
           error: "Authentication required",
@@ -91,7 +163,9 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (tokenError) {
-      logger.error("❌ Failed to obtain access token:", tokenError as Error, { component: 'update' });
+      logger.error("❌ Failed to obtain access token:", tokenError as Error, {
+        component: "update",
+      });
       return NextResponse.json(
         {
           error: "Authentication failed",
@@ -167,7 +241,9 @@ export async function POST(request: NextRequest) {
         productInput,
       )) as { productUpdate?: { product?: unknown; userErrors?: unknown[] } };
     } catch (apiError) {
-      logger.error("❌ Shopify API call failed:", apiError as Error, { component: 'update' });
+      logger.error("❌ Shopify API call failed:", apiError as Error, {
+        component: "update",
+      });
       throw new Error(
         `Shopify API error: ${apiError instanceof Error ? apiError.message : "Unknown error"}`,
       );
@@ -177,11 +253,10 @@ export async function POST(request: NextRequest) {
       updateResult.productUpdate?.userErrors &&
       updateResult.productUpdate.userErrors.length > 0
     ) {
-      logger.error(
-        "❌ Shopify API errors:",
-        undefined,
-        { errors: updateResult.productUpdate.userErrors, component: 'update' }
-      );
+      logger.error("❌ Shopify API errors:", undefined, {
+        errors: updateResult.productUpdate.userErrors,
+        component: "update",
+      });
       return NextResponse.json(
         {
           error: "Failed to update product",
@@ -198,21 +273,18 @@ export async function POST(request: NextRequest) {
 
     // Update metafields if any
     if (metafieldsToUpdate.length > 0) {
-
       for (const metafield of metafieldsToUpdate) {
         try {
           await shopifyClient.createProductMetafield(productId, metafield);
         } catch (metaError) {
-          logger.error(
-            "⚠️ Error updating metafield",
-            metaError as Error,
-            { metafieldKey: metafield.key, component: 'update' }
-          );
+          logger.error("⚠️ Error updating metafield", metaError as Error, {
+            metafieldKey: metafield.key,
+            component: "update",
+          });
           // Continue with other metafields even if one fails
         }
       }
     }
-
 
     return NextResponse.json(
       {
@@ -232,7 +304,9 @@ export async function POST(request: NextRequest) {
       { headers: corsHeaders },
     );
   } catch (error) {
-    logger.error("Error in update endpoint:", error as Error, { component: 'update' });
+    logger.error("Error in update endpoint:", error as Error, {
+      component: "update",
+    });
     return NextResponse.json(
       {
         error: "Internal server error",
