@@ -9,20 +9,25 @@
  * Uses otplib for TOTP generation/verification
  */
 
-import { authenticator } from 'otplib';
-import * as QRCode from 'qrcode';
-import { randomBytes, createHash } from 'crypto';
-import { supabaseAdmin } from '@/lib/supabase/admin';
-import { logger } from '@/lib/logger';
+import { authenticator } from "otplib";
+import * as QRCode from "qrcode";
+import { randomBytes, createHash } from "crypto";
+import { logger } from "@/lib/logger";
+
+// Lazy import supabaseAdmin to avoid module load failures at initialization
+async function getSupabaseAdmin() {
+  const { supabaseAdmin } = await import("@/lib/supabase/admin");
+  return supabaseAdmin;
+}
 
 // Configure authenticator options
 authenticator.options = {
   digits: 6,
   step: 30, // 30-second window
-  window: 1  // Allow 1 step before/after for clock drift
+  window: 1, // Allow 1 step before/after for clock drift
 };
 
-const APP_NAME = 'ThunderText';
+const APP_NAME = "ThunderText";
 const BACKUP_CODE_COUNT = 10;
 
 export interface TwoFactorSetupResult {
@@ -52,7 +57,7 @@ export function generateBackupCodes(): string[] {
   const codes: string[] = [];
   for (let i = 0; i < BACKUP_CODE_COUNT; i++) {
     // Generate 8-character alphanumeric codes
-    const code = randomBytes(4).toString('hex').toUpperCase();
+    const code = randomBytes(4).toString("hex").toUpperCase();
     codes.push(code);
   }
   return codes;
@@ -62,15 +67,16 @@ export function generateBackupCodes(): string[] {
  * Hash backup codes for secure storage
  */
 function hashBackupCodes(codes: string[]): string[] {
-  return codes.map(code =>
-    createHash('sha256').update(code).digest('hex')
-  );
+  return codes.map((code) => createHash("sha256").update(code).digest("hex"));
 }
 
 /**
  * Generate QR code data URL for authenticator app setup
  */
-export async function generateQRCode(email: string, secret: string): Promise<string> {
+export async function generateQRCode(
+  email: string,
+  secret: string,
+): Promise<string> {
   const otpauth = authenticator.keyuri(email, APP_NAME, secret);
   return QRCode.toDataURL(otpauth);
 }
@@ -81,7 +87,7 @@ export async function generateQRCode(email: string, secret: string): Promise<str
  */
 export async function initializeTwoFactorSetup(
   adminId: string,
-  email: string
+  email: string,
 ): Promise<TwoFactorSetupResult> {
   try {
     const secret = generateTwoFactorSecret();
@@ -89,38 +95,39 @@ export async function initializeTwoFactorSetup(
     const qrCodeDataUrl = await generateQRCode(email, secret);
 
     // Store the pending 2FA setup (not yet verified)
+    const supabaseAdmin = await getSupabaseAdmin();
     const { error } = await supabaseAdmin
-      .from('super_admins')
+      .from("super_admins")
       .update({
         two_factor_secret_pending: secret,
-        two_factor_backup_codes_pending: hashBackupCodes(backupCodes)
+        two_factor_backup_codes_pending: hashBackupCodes(backupCodes),
       })
-      .eq('id', adminId);
+      .eq("id", adminId);
 
     if (error) {
-      logger.error('[2FA] Failed to store pending setup', error as Error, {
-        component: 'two-factor-auth',
-        adminId
+      logger.error("[2FA] Failed to store pending setup", error as Error, {
+        component: "two-factor-auth",
+        adminId,
       });
-      return { success: false, error: 'Failed to initialize 2FA setup' };
+      return { success: false, error: "Failed to initialize 2FA setup" };
     }
 
-    logger.info('[2FA] Setup initialized', {
-      component: 'two-factor-auth',
-      adminId
+    logger.info("[2FA] Setup initialized", {
+      component: "two-factor-auth",
+      adminId,
     });
 
     return {
       success: true,
       secret,
       qrCodeDataUrl,
-      backupCodes // Return plaintext codes to show user ONCE
+      backupCodes, // Return plaintext codes to show user ONCE
     };
   } catch (error) {
-    logger.error('[2FA] Setup initialization error', error as Error, {
-      component: 'two-factor-auth'
+    logger.error("[2FA] Setup initialization error", error as Error, {
+      component: "two-factor-auth",
     });
-    return { success: false, error: 'Server error' };
+    return { success: false, error: "Server error" };
   }
 }
 
@@ -130,62 +137,63 @@ export async function initializeTwoFactorSetup(
  */
 export async function completeTwoFactorSetup(
   adminId: string,
-  code: string
+  code: string,
 ): Promise<TwoFactorVerifyResult> {
   try {
     // Get the pending secret
+    const supabaseAdmin = await getSupabaseAdmin();
     const { data: admin, error: fetchError } = await supabaseAdmin
-      .from('super_admins')
-      .select('two_factor_secret_pending, two_factor_backup_codes_pending')
-      .eq('id', adminId)
+      .from("super_admins")
+      .select("two_factor_secret_pending, two_factor_backup_codes_pending")
+      .eq("id", adminId)
       .single();
 
     if (fetchError || !admin?.two_factor_secret_pending) {
-      return { success: false, error: 'No pending 2FA setup found' };
+      return { success: false, error: "No pending 2FA setup found" };
     }
 
     // Verify the code against the pending secret
     const isValid = authenticator.verify({
       token: code,
-      secret: admin.two_factor_secret_pending
+      secret: admin.two_factor_secret_pending,
     });
 
     if (!isValid) {
-      return { success: false, error: 'Invalid verification code' };
+      return { success: false, error: "Invalid verification code" };
     }
 
     // Move pending to active
     const { error: updateError } = await supabaseAdmin
-      .from('super_admins')
+      .from("super_admins")
       .update({
         two_factor_enabled: true,
         two_factor_secret: admin.two_factor_secret_pending,
         two_factor_backup_codes: admin.two_factor_backup_codes_pending,
         two_factor_secret_pending: null,
         two_factor_backup_codes_pending: null,
-        two_factor_enabled_at: new Date().toISOString()
+        two_factor_enabled_at: new Date().toISOString(),
       })
-      .eq('id', adminId);
+      .eq("id", adminId);
 
     if (updateError) {
-      logger.error('[2FA] Failed to complete setup', updateError as Error, {
-        component: 'two-factor-auth',
-        adminId
+      logger.error("[2FA] Failed to complete setup", updateError as Error, {
+        component: "two-factor-auth",
+        adminId,
       });
-      return { success: false, error: 'Failed to enable 2FA' };
+      return { success: false, error: "Failed to enable 2FA" };
     }
 
-    logger.info('[2FA] Setup completed successfully', {
-      component: 'two-factor-auth',
-      adminId
+    logger.info("[2FA] Setup completed successfully", {
+      component: "two-factor-auth",
+      adminId,
     });
 
     return { success: true };
   } catch (error) {
-    logger.error('[2FA] Setup completion error', error as Error, {
-      component: 'two-factor-auth'
+    logger.error("[2FA] Setup completion error", error as Error, {
+      component: "two-factor-auth",
     });
-    return { success: false, error: 'Server error' };
+    return { success: false, error: "Server error" };
   }
 }
 
@@ -194,36 +202,39 @@ export async function completeTwoFactorSetup(
  */
 export async function verifyTwoFactorCode(
   adminId: string,
-  code: string
+  code: string,
 ): Promise<TwoFactorVerifyResult> {
   try {
+    const supabaseAdmin = await getSupabaseAdmin();
     const { data: admin, error: fetchError } = await supabaseAdmin
-      .from('super_admins')
-      .select('two_factor_secret, two_factor_backup_codes')
-      .eq('id', adminId)
-      .eq('two_factor_enabled', true)
+      .from("super_admins")
+      .select("two_factor_secret, two_factor_backup_codes")
+      .eq("id", adminId)
+      .eq("two_factor_enabled", true)
       .single();
 
     if (fetchError || !admin?.two_factor_secret) {
-      return { success: false, error: '2FA not enabled for this account' };
+      return { success: false, error: "2FA not enabled for this account" };
     }
 
     // First, try regular TOTP verification
     const isValidTotp = authenticator.verify({
       token: code,
-      secret: admin.two_factor_secret
+      secret: admin.two_factor_secret,
     });
 
     if (isValidTotp) {
-      logger.info('[2FA] Code verified via TOTP', {
-        component: 'two-factor-auth',
-        adminId
+      logger.info("[2FA] Code verified via TOTP", {
+        component: "two-factor-auth",
+        adminId,
       });
       return { success: true };
     }
 
     // If TOTP fails, check if it's a backup code
-    const codeHash = createHash('sha256').update(code.toUpperCase()).digest('hex');
+    const codeHash = createHash("sha256")
+      .update(code.toUpperCase())
+      .digest("hex");
     const backupCodes = admin.two_factor_backup_codes || [];
 
     const backupCodeIndex = backupCodes.indexOf(codeHash);
@@ -232,25 +243,25 @@ export async function verifyTwoFactorCode(
       backupCodes.splice(backupCodeIndex, 1);
 
       await supabaseAdmin
-        .from('super_admins')
+        .from("super_admins")
         .update({ two_factor_backup_codes: backupCodes })
-        .eq('id', adminId);
+        .eq("id", adminId);
 
-      logger.warn('[2FA] Backup code used', {
-        component: 'two-factor-auth',
+      logger.warn("[2FA] Backup code used", {
+        component: "two-factor-auth",
         adminId,
-        remainingBackupCodes: backupCodes.length
+        remainingBackupCodes: backupCodes.length,
       });
 
       return { success: true };
     }
 
-    return { success: false, error: 'Invalid verification code' };
+    return { success: false, error: "Invalid verification code" };
   } catch (error) {
-    logger.error('[2FA] Verification error', error as Error, {
-      component: 'two-factor-auth'
+    logger.error("[2FA] Verification error", error as Error, {
+      component: "two-factor-auth",
     });
-    return { success: false, error: 'Server error' };
+    return { success: false, error: "Server error" };
   }
 }
 
@@ -259,10 +270,11 @@ export async function verifyTwoFactorCode(
  */
 export async function isTwoFactorEnabled(adminId: string): Promise<boolean> {
   try {
+    const supabaseAdmin = await getSupabaseAdmin();
     const { data, error } = await supabaseAdmin
-      .from('super_admins')
-      .select('two_factor_enabled')
-      .eq('id', adminId)
+      .from("super_admins")
+      .select("two_factor_enabled")
+      .eq("id", adminId)
       .single();
 
     if (error || !data) {
@@ -278,37 +290,40 @@ export async function isTwoFactorEnabled(adminId: string): Promise<boolean> {
 /**
  * Disable 2FA for an admin (requires password confirmation)
  */
-export async function disableTwoFactor(adminId: string): Promise<TwoFactorVerifyResult> {
+export async function disableTwoFactor(
+  adminId: string,
+): Promise<TwoFactorVerifyResult> {
   try {
+    const supabaseAdmin = await getSupabaseAdmin();
     const { error } = await supabaseAdmin
-      .from('super_admins')
+      .from("super_admins")
       .update({
         two_factor_enabled: false,
         two_factor_secret: null,
         two_factor_backup_codes: null,
-        two_factor_enabled_at: null
+        two_factor_enabled_at: null,
       })
-      .eq('id', adminId);
+      .eq("id", adminId);
 
     if (error) {
-      logger.error('[2FA] Failed to disable', error as Error, {
-        component: 'two-factor-auth',
-        adminId
+      logger.error("[2FA] Failed to disable", error as Error, {
+        component: "two-factor-auth",
+        adminId,
       });
-      return { success: false, error: 'Failed to disable 2FA' };
+      return { success: false, error: "Failed to disable 2FA" };
     }
 
-    logger.info('[2FA] Disabled for admin', {
-      component: 'two-factor-auth',
-      adminId
+    logger.info("[2FA] Disabled for admin", {
+      component: "two-factor-auth",
+      adminId,
     });
 
     return { success: true };
   } catch (error) {
-    logger.error('[2FA] Disable error', error as Error, {
-      component: 'two-factor-auth'
+    logger.error("[2FA] Disable error", error as Error, {
+      component: "two-factor-auth",
     });
-    return { success: false, error: 'Server error' };
+    return { success: false, error: "Server error" };
   }
 }
 
@@ -324,26 +339,27 @@ export async function regenerateBackupCodes(adminId: string): Promise<{
     const backupCodes = generateBackupCodes();
     const hashedCodes = hashBackupCodes(backupCodes);
 
+    const supabaseAdmin = await getSupabaseAdmin();
     const { error } = await supabaseAdmin
-      .from('super_admins')
+      .from("super_admins")
       .update({ two_factor_backup_codes: hashedCodes })
-      .eq('id', adminId)
-      .eq('two_factor_enabled', true);
+      .eq("id", adminId)
+      .eq("two_factor_enabled", true);
 
     if (error) {
-      return { success: false, error: 'Failed to regenerate backup codes' };
+      return { success: false, error: "Failed to regenerate backup codes" };
     }
 
-    logger.info('[2FA] Backup codes regenerated', {
-      component: 'two-factor-auth',
-      adminId
+    logger.info("[2FA] Backup codes regenerated", {
+      component: "two-factor-auth",
+      adminId,
     });
 
     return { success: true, backupCodes };
   } catch (error) {
-    logger.error('[2FA] Backup code regeneration error', error as Error, {
-      component: 'two-factor-auth'
+    logger.error("[2FA] Backup code regeneration error", error as Error, {
+      component: "two-factor-auth",
     });
-    return { success: false, error: 'Server error' };
+    return { success: false, error: "Server error" };
   }
 }
