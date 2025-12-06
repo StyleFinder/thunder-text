@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createStandaloneShopifyLinkState,
-  storeOAuthState,
-} from "@/lib/security/oauth-validation";
+import { createHash } from "crypto";
+import { createStandaloneShopifyLinkState } from "@/lib/security/oauth-validation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
+
+// Maximum age of state parameter (10 minutes)
+const MAX_STATE_AGE_MS = 10 * 60 * 1000;
+const OAUTH_STATE_COOKIE_PREFIX = "oauth_state_";
+
+function getStateHash(state: string): string {
+  return createHash("sha256").update(state).digest("hex").substring(0, 16);
+}
 
 /**
  * Shopify Link for Standalone Users
@@ -62,9 +68,6 @@ export async function GET(req: NextRequest) {
       target_shop: shopDomain,
     });
 
-    // Store state hash in cookie for replay attack prevention
-    await storeOAuthState(secureState, "shopify_link");
-
     const scopes = process.env.SCOPES || "read_products,write_products";
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/shopify/callback`;
 
@@ -81,7 +84,27 @@ export async function GET(req: NextRequest) {
       targetShop: shopDomain,
     });
 
-    return NextResponse.redirect(authUrl);
+    // Create redirect response and set cookie directly on it
+    // This ensures the cookie is included in the redirect response
+    const response = NextResponse.redirect(authUrl);
+    const cookieName = `${OAUTH_STATE_COOKIE_PREFIX}shopify_link`;
+    const stateHash = getStateHash(secureState);
+
+    response.cookies.set(cookieName, stateHash, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: MAX_STATE_AGE_MS / 1000,
+      path: "/",
+    });
+
+    logger.info("[Shopify Link] Set OAuth state cookie", {
+      component: "shopify-link",
+      cookieName,
+      stateHashPrefix: stateHash.substring(0, 8),
+    });
+
+    return response;
   } catch (error) {
     logger.error("[Shopify Link] Error initiating OAuth", error as Error, {
       component: "shopify-link",

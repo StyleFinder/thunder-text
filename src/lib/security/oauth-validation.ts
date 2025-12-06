@@ -594,14 +594,39 @@ export async function verifyStoredOAuthState(
 
   const storedHash = cookieStore.get(cookieName)?.value;
 
+  // Log all cookies for debugging
+  const allCookies = cookieStore.getAll();
+  const oauthCookies = allCookies.filter((c) =>
+    c.name.startsWith(OAUTH_STATE_COOKIE_PREFIX),
+  );
+
+  console.log("[OAuth State Verify] Cookie check:", {
+    lookingFor: cookieName,
+    foundStoredHash: storedHash ? storedHash.substring(0, 8) + "..." : "NONE",
+    oauthCookiesFound: oauthCookies.map((c) => c.name),
+    totalCookies: allCookies.length,
+  });
+
   if (!storedHash) {
     // No stored state - either expired, already used, or attack attempt
+    console.log(
+      "[OAuth State Verify] No stored hash found for cookie:",
+      cookieName,
+    );
     return false;
   }
 
   // Compare hashes
   const receivedHash = getStateHash(state);
-  return storedHash === receivedHash;
+  const matches = storedHash === receivedHash;
+
+  console.log("[OAuth State Verify] Hash comparison:", {
+    storedHashPrefix: storedHash.substring(0, 8),
+    receivedHashPrefix: receivedHash.substring(0, 8),
+    matches,
+  });
+
+  return matches;
 }
 
 /**

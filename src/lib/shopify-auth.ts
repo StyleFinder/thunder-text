@@ -38,6 +38,31 @@ function extractShopName(shop: string): string {
 }
 
 /**
+ * SECURITY: Validate that a shop domain is a legitimate Shopify domain
+ * Prevents SSRF attacks by ensuring we only make requests to *.myshopify.com
+ *
+ * Valid formats:
+ * - mystore.myshopify.com
+ * - my-store.myshopify.com
+ * - my-store-123.myshopify.com
+ *
+ * Invalid formats (blocked):
+ * - evil.com
+ * - mystore.myshopify.com.evil.com
+ * - https://mystore.myshopify.com (no protocol allowed)
+ * - mystore.myshopify.com/path (no path allowed)
+ *
+ * @param shop - Shop domain to validate
+ * @returns true if valid Shopify domain, false otherwise
+ */
+function isValidShopifyDomain(shop: string): boolean {
+  // Must end with .myshopify.com exactly (no subdomain attacks)
+  // Shop name can only contain alphanumeric, hyphens (standard Shopify format)
+  const shopifyDomainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
+  return shopifyDomainRegex.test(shop);
+}
+
+/**
  * Shopify authentication for Next.js using Token Exchange
  * Following official Shopify documentation for embedded apps
  *
@@ -75,6 +100,19 @@ async function exchangeToken(
   sessionToken: string,
   shop: string,
 ): Promise<TokenExchangeResponse> {
+  // SECURITY: Validate shop domain before making any requests
+  // This prevents SSRF attacks by ensuring we only request *.myshopify.com
+  if (!isValidShopifyDomain(shop)) {
+    logger.error("Invalid shop domain - SSRF protection triggered", undefined, {
+      shop,
+      component: "shopify-auth",
+      operation: "token-exchange",
+    });
+    throw new Error(
+      "Invalid shop domain format. Must be a valid *.myshopify.com domain.",
+    );
+  }
+
   // Use NEXT_PUBLIC_SHOPIFY_API_KEY for client ID (visible to client)
   // This will be the dev app's key in Preview environment
   const clientId =
@@ -488,6 +526,14 @@ export async function getAccessToken(
  * Create a GraphQL client for Shopify Admin API
  */
 export function createAdminClient(shop: string, accessToken: string) {
+  // SECURITY: Validate shop domain before creating client
+  // This prevents SSRF attacks by ensuring we only connect to *.myshopify.com
+  if (!isValidShopifyDomain(shop)) {
+    throw new Error(
+      "Invalid shop domain format. Must be a valid *.myshopify.com domain.",
+    );
+  }
+
   const client = new GraphQLClient(
     `https://${shop}/admin/api/2025-01/graphql.json`,
     {

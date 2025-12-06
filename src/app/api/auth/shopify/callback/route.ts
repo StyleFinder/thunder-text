@@ -62,6 +62,14 @@ export async function GET(req: NextRequest) {
     const isLinkState = isStandaloneShopifyLinkState(state);
     const stateType = isLinkState ? "shopify_link" : "shopify";
 
+    logger.info("[Shopify Callback] Verifying OAuth state", {
+      component: "callback",
+      shop,
+      stateType,
+      isLinkState,
+      statePrefix: state.substring(0, 20),
+    });
+
     const stateMatchesStored = await verifyStoredOAuthState(state, stateType);
     if (!stateMatchesStored) {
       logger.error(
@@ -71,6 +79,7 @@ export async function GET(req: NextRequest) {
           component: "callback",
           shop,
           stateType,
+          hint: "Cookie may not have been set or was cleared. Check link route logs.",
         },
       );
       return NextResponse.redirect(
