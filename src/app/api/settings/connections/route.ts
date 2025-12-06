@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
       shop_type: string;
       access_token: string | null;
       shop_domain: string;
+      linked_shopify_domain: string | null;
     } | null = null;
     let shopError: { message?: string; code?: string } | null = null;
 
@@ -85,7 +86,9 @@ export async function GET(request: NextRequest) {
     if (authenticatedShop) {
       const result = await supabaseAdmin
         .from("shops")
-        .select("id, is_active, shop_type, access_token, shop_domain")
+        .select(
+          "id, is_active, shop_type, access_token, shop_domain, linked_shopify_domain",
+        )
         .eq("shop_domain", authenticatedShop)
         .single();
 
@@ -109,7 +112,9 @@ export async function GET(request: NextRequest) {
 
         const fallbackResult = await supabaseAdmin
           .from("shops")
-          .select("id, is_active, shop_type, access_token, shop_domain")
+          .select(
+            "id, is_active, shop_type, access_token, shop_domain, linked_shopify_domain",
+          )
           .eq("shop_domain", shopFromUrl)
           .eq("shop_type", "standalone")
           .single();
@@ -141,7 +146,9 @@ export async function GET(request: NextRequest) {
 
       const standaloneResult = await supabaseAdmin
         .from("shops")
-        .select("id, is_active, shop_type, access_token, shop_domain")
+        .select(
+          "id, is_active, shop_type, access_token, shop_domain, linked_shopify_domain",
+        )
         .eq("shop_domain", shopFromUrl)
         .eq("shop_type", "standalone")
         .single();
@@ -216,17 +223,30 @@ export async function GET(request: NextRequest) {
       if (provider === "shopify") {
         // Shopify connection status:
         // - For 'shopify' type shops: connected if is_active is true
-        // - For 'standalone' type shops: connected if they have a valid Shopify access token
+        // - For 'standalone' type shops: connected if they have a linked_shopify_domain and valid access_token
+        const isStandalone = shopData.shop_type === "standalone";
         const isShopifyConnected =
           shopData.is_active === true &&
           (shopData.shop_type === "shopify" ||
-            (shopData.shop_type === "standalone" && !!shopData.access_token));
+            (isStandalone &&
+              !!shopData.linked_shopify_domain &&
+              !!shopData.access_token));
+
+        // For standalone users, show the linked Shopify domain if available
+        const displayDomain =
+          isStandalone && shopData.linked_shopify_domain
+            ? shopData.linked_shopify_domain
+            : shopData.shop_domain;
+
         return {
           provider: "shopify",
           connected: isShopifyConnected,
           lastConnected: null,
           metadata: {
-            shop_domain: shopData.shop_domain,
+            shop_domain: displayDomain,
+            // Include shop_id for standalone users to initiate linking flow
+            ...(isStandalone &&
+              !isShopifyConnected && { shop_id: shopData.id }),
           },
         };
       }

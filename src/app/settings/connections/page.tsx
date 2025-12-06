@@ -13,6 +13,16 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { logger } from "@/lib/logger";
 import {
   Loader2,
@@ -106,6 +116,14 @@ export default function ConnectionsPage() {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Shopify link modal state
+  const [showShopifyLinkModal, setShowShopifyLinkModal] = useState(false);
+  const [shopifyDomainInput, setShopifyDomainInput] = useState("");
+  const [shopifyLinkLoading, setShopifyLinkLoading] = useState(false);
+  const [shopifyLinkShopId, setShopifyLinkShopId] = useState<string | null>(
+    null,
+  );
+
   const fetchConnections = useCallback(async () => {
     try {
       setLoading(true);
@@ -149,9 +167,10 @@ export default function ConnectionsPage() {
 
     // Check for OAuth success messages
     const googleConnected = searchParams?.get("google_connected");
+    const shopifyLinked = searchParams?.get("shopify_linked");
     const message = searchParams?.get("message");
 
-    if (googleConnected && message) {
+    if ((googleConnected || shopifyLinked) && message) {
       setSuccessMessage(message);
       // Clean URL
       window.history.replaceState(
@@ -165,7 +184,15 @@ export default function ConnectionsPage() {
     }
   }, [sessionStatus, shop, searchParams, fetchConnections]);
 
-  function handleConnect(provider: string) {
+  function handleConnect(provider: string, shopId?: string) {
+    // For Shopify with a shop_id, this is a standalone user linking flow
+    if (provider === "shopify" && shopId) {
+      setShopifyLinkShopId(shopId);
+      setShopifyDomainInput("");
+      setShowShopifyLinkModal(true);
+      return;
+    }
+
     // Redirect to OAuth flow for the provider
     const oauthUrls: Record<string, string> = {
       shopify: "/api/auth/shopify",
@@ -174,10 +201,11 @@ export default function ConnectionsPage() {
       tiktok: "/api/tiktok/oauth/authorize",
     };
 
-    // eslint-disable-next-line security/detect-object-injection -- Safe: Object.hasOwn validates property exists
+    /* eslint-disable security/detect-object-injection -- Safe: Object.hasOwn validates property exists */
     const baseUrl = Object.hasOwn(oauthUrls, provider)
       ? oauthUrls[provider]
       : null;
+    /* eslint-enable security/detect-object-injection */
     if (baseUrl) {
       // Build OAuth URL with shop parameter
       let url = baseUrl;
@@ -196,11 +224,33 @@ export default function ConnectionsPage() {
     }
   }
 
+  // Handle Shopify link submission for standalone users
+  function handleShopifyLinkSubmit() {
+    if (!shopifyDomainInput.trim() || !shopifyLinkShopId) {
+      return;
+    }
+
+    setShopifyLinkLoading(true);
+
+    // Normalize the domain - user can enter just the store name or full domain
+    let normalizedDomain = shopifyDomainInput.trim().toLowerCase();
+    if (!normalizedDomain.includes(".myshopify.com")) {
+      // Remove any .myshopify or trailing dots
+      normalizedDomain = normalizedDomain.replace(/\.myshopify\.?$/, "");
+      normalizedDomain = `${normalizedDomain}.myshopify.com`;
+    }
+
+    // Redirect to the Shopify link OAuth endpoint
+    const linkUrl = `/api/auth/shopify/link?standalone_user_id=${encodeURIComponent(shopifyLinkShopId)}&target_shop=${encodeURIComponent(normalizedDomain)}`;
+    window.location.href = linkUrl;
+  }
+
   async function handleDisconnect(provider: string) {
-    // eslint-disable-next-line security/detect-object-injection -- Safe: Object.hasOwn validates property exists
+    /* eslint-disable security/detect-object-injection -- Safe: Object.hasOwn validates property exists */
     const providerName = Object.hasOwn(PROVIDER_INFO, provider)
       ? PROVIDER_INFO[provider]?.name
       : provider;
+    /* eslint-enable security/detect-object-injection */
     if (!confirm(`Are you sure you want to disconnect ${providerName}?`)) {
       return;
     }
@@ -397,7 +447,12 @@ export default function ConnectionsPage() {
                     )
                   ) : (
                     <Button
-                      onClick={() => handleConnect(connection.provider)}
+                      onClick={() =>
+                        handleConnect(
+                          connection.provider,
+                          connection.metadata?.shop_id,
+                        )
+                      }
                       className="w-full bg-primary text-white"
                     >
                       Connect {info.name}
@@ -409,6 +464,69 @@ export default function ConnectionsPage() {
           })}
         </div>
       </div>
+
+      {/* Shopify Link Modal for Standalone Users */}
+      <Dialog
+        open={showShopifyLinkModal}
+        onOpenChange={setShowShopifyLinkModal}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect to Shopify Store</DialogTitle>
+            <DialogDescription>
+              Enter the Shopify store domain you have staff access to.
+              You&apos;ll be redirected to Shopify to authorize access.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="shopify-domain">Shopify Store Domain</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="shopify-domain"
+                  placeholder="your-store"
+                  value={shopifyDomainInput}
+                  onChange={(e) => setShopifyDomainInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleShopifyLinkSubmit();
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <span className="text-sm text-gray-500">.myshopify.com</span>
+              </div>
+              <p className="text-xs text-gray-500">
+                Enter just the store name (e.g., &quot;my-store&quot;) or the
+                full domain
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowShopifyLinkModal(false)}
+              disabled={shopifyLinkLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleShopifyLinkSubmit}
+              disabled={!shopifyDomainInput.trim() || shopifyLinkLoading}
+            >
+              {shopifyLinkLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                "Connect"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

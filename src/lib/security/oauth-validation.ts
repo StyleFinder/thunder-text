@@ -14,91 +14,105 @@
  * - Server-side state storage for replay attack prevention
  */
 
-import { z } from 'zod'
-import { randomBytes, createHash } from 'crypto'
-import { cookies } from 'next/headers'
+import { z } from "zod";
+import { randomBytes, createHash } from "crypto";
+import { cookies } from "next/headers";
 
 // Maximum age of state parameter (10 minutes)
-const MAX_STATE_AGE_MS = 10 * 60 * 1000
+const MAX_STATE_AGE_MS = 10 * 60 * 1000;
 
 /**
  * Facebook OAuth State Schema
  * Used for Facebook OAuth flow state parameter validation
  */
 export const FacebookOAuthStateSchema = z.object({
-  shop_id: z.string().uuid('Invalid shop_id format'),
-  shop_domain: z.string().regex(
-    /^[a-z0-9-]+\.myshopify\.com$/,
-    'Invalid shop domain format'
-  ),
+  shop_id: z.string().uuid("Invalid shop_id format"),
+  shop_domain: z
+    .string()
+    .regex(/^[a-z0-9-]+\.myshopify\.com$/, "Invalid shop domain format"),
   host: z.string().nullable().optional(),
   embedded: z.string().nullable().optional(),
   return_to: z.string().nullable().optional(),
-  timestamp: z.number().int().positive('Timestamp must be positive'),
-  nonce: z.string().min(32, 'Nonce must be at least 32 characters')
-})
+  timestamp: z.number().int().positive("Timestamp must be positive"),
+  nonce: z.string().min(32, "Nonce must be at least 32 characters"),
+});
 
-export type FacebookOAuthState = z.infer<typeof FacebookOAuthStateSchema>
+export type FacebookOAuthState = z.infer<typeof FacebookOAuthStateSchema>;
 
 /**
  * Shopify OAuth State Schema
  * Used for Shopify OAuth flow state parameter validation
  */
 export const ShopifyOAuthStateSchema = z.object({
-  shop: z.string().regex(
-    /^[a-z0-9-]+\.myshopify\.com$/,
-    'Invalid shop domain format'
-  ),
-  timestamp: z.number().int().positive('Timestamp must be positive'),
-  nonce: z.string().min(32, 'Nonce must be at least 32 characters')
-})
+  shop: z
+    .string()
+    .regex(/^[a-z0-9-]+\.myshopify\.com$/, "Invalid shop domain format"),
+  timestamp: z.number().int().positive("Timestamp must be positive"),
+  nonce: z.string().min(32, "Nonce must be at least 32 characters"),
+});
 
-export type ShopifyOAuthState = z.infer<typeof ShopifyOAuthStateSchema>
+export type ShopifyOAuthState = z.infer<typeof ShopifyOAuthStateSchema>;
 
 /**
  * Google OAuth State Schema
  * Used for Google Ads OAuth flow state parameter validation
  */
 export const GoogleOAuthStateSchema = z.object({
-  shop_id: z.string().uuid('Invalid shop_id format'),
-  shop_domain: z.string().regex(
-    /^[a-z0-9-]+\.myshopify\.com$/,
-    'Invalid shop domain format'
-  ),
+  shop_id: z.string().uuid("Invalid shop_id format"),
+  shop_domain: z
+    .string()
+    .regex(/^[a-z0-9-]+\.myshopify\.com$/, "Invalid shop domain format"),
   host: z.string().nullable().optional(),
   embedded: z.string().nullable().optional(),
   return_to: z.string().nullable().optional(),
-  timestamp: z.number().int().positive('Timestamp must be positive'),
-  nonce: z.string().min(32, 'Nonce must be at least 32 characters')
-})
+  timestamp: z.number().int().positive("Timestamp must be positive"),
+  nonce: z.string().min(32, "Nonce must be at least 32 characters"),
+});
 
-export type GoogleOAuthState = z.infer<typeof GoogleOAuthStateSchema>
+export type GoogleOAuthState = z.infer<typeof GoogleOAuthStateSchema>;
 
 /**
  * TikTok OAuth State Schema
  * Used for TikTok for Business OAuth flow state parameter validation
  */
 export const TikTokOAuthStateSchema = z.object({
-  shop_id: z.string().uuid('Invalid shop_id format'),
-  shop_domain: z.string().regex(
-    /^[a-z0-9-]+\.myshopify\.com$/,
-    'Invalid shop domain format'
-  ),
+  shop_id: z.string().uuid("Invalid shop_id format"),
+  shop_domain: z
+    .string()
+    .regex(/^[a-z0-9-]+\.myshopify\.com$/, "Invalid shop domain format"),
   host: z.string().nullable().optional(),
   embedded: z.string().nullable().optional(),
   return_to: z.string().nullable().optional(),
-  timestamp: z.number().int().positive('Timestamp must be positive'),
-  nonce: z.string().min(32, 'Nonce must be at least 32 characters')
-})
+  timestamp: z.number().int().positive("Timestamp must be positive"),
+  nonce: z.string().min(32, "Nonce must be at least 32 characters"),
+});
 
-export type TikTokOAuthState = z.infer<typeof TikTokOAuthStateSchema>
+export type TikTokOAuthState = z.infer<typeof TikTokOAuthStateSchema>;
+
+/**
+ * Standalone User Shopify Link State Schema
+ * Used when a standalone user is linking to a Shopify store they have staff access to
+ */
+export const StandaloneShopifyLinkStateSchema = z.object({
+  standalone_user_id: z.string().uuid("Invalid standalone user ID"),
+  standalone_email: z.string().email("Invalid email format"),
+  target_shop: z
+    .string()
+    .regex(/^[a-z0-9-]+\.myshopify\.com$/, "Invalid shop domain format"),
+  timestamp: z.number().int().positive("Timestamp must be positive"),
+  nonce: z.string().min(32, "Nonce must be at least 32 characters"),
+});
+
+export type StandaloneShopifyLinkState = z.infer<
+  typeof StandaloneShopifyLinkStateSchema
+>;
 
 /**
  * Generate a cryptographically secure nonce for CSRF protection
  * Uses crypto.randomBytes for secure random generation
  */
 export function generateNonce(): string {
-  return randomBytes(32).toString('base64url')
+  return randomBytes(32).toString("base64url");
 }
 
 /**
@@ -112,11 +126,11 @@ export function generateNonce(): string {
  * @returns Base64url encoded state string
  */
 export function createFacebookOAuthState(params: {
-  shop_id: string
-  shop_domain: string
-  host?: string | null
-  embedded?: string | null
-  return_to?: 'welcome' | 'facebook-ads'
+  shop_id: string;
+  shop_domain: string;
+  host?: string | null;
+  embedded?: string | null;
+  return_to?: "welcome" | "facebook-ads";
 }): string {
   const state: FacebookOAuthState = {
     shop_id: params.shop_id,
@@ -125,13 +139,13 @@ export function createFacebookOAuthState(params: {
     embedded: params.embedded || null,
     return_to: params.return_to,
     timestamp: Date.now(),
-    nonce: generateNonce()
-  }
+    nonce: generateNonce(),
+  };
 
   // Validate the state before encoding
-  FacebookOAuthStateSchema.parse(state)
+  FacebookOAuthStateSchema.parse(state);
 
-  return Buffer.from(JSON.stringify(state)).toString('base64url')
+  return Buffer.from(JSON.stringify(state)).toString("base64url");
 }
 
 /**
@@ -142,37 +156,43 @@ export function createFacebookOAuthState(params: {
  * @throws ZodError if validation fails
  * @throws Error if state is expired or invalid
  */
-export function validateFacebookOAuthState(stateParam: string): FacebookOAuthState {
+export function validateFacebookOAuthState(
+  stateParam: string,
+): FacebookOAuthState {
   // Decode base64url
-  let decoded: string
+  let decoded: string;
   try {
-    decoded = Buffer.from(stateParam, 'base64url').toString('utf-8')
-  } catch (error) {
-    throw new Error('Invalid state encoding')
+    decoded = Buffer.from(stateParam, "base64url").toString("utf-8");
+  } catch {
+    throw new Error("Invalid state encoding");
   }
 
   // Parse JSON
-  let parsed: unknown
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(decoded)
-  } catch (error) {
-    throw new Error('Invalid state JSON')
+    parsed = JSON.parse(decoded);
+  } catch {
+    throw new Error("Invalid state JSON");
   }
 
   // Validate with Zod schema
-  const validated = FacebookOAuthStateSchema.parse(parsed)
+  const validated = FacebookOAuthStateSchema.parse(parsed);
 
   // Check timestamp to prevent replay attacks
-  const stateAge = Date.now() - validated.timestamp
+  const stateAge = Date.now() - validated.timestamp;
   if (stateAge > MAX_STATE_AGE_MS) {
-    throw new Error(`State parameter expired (age: ${Math.round(stateAge / 1000)}s, max: ${MAX_STATE_AGE_MS / 1000}s)`)
+    throw new Error(
+      `State parameter expired (age: ${Math.round(stateAge / 1000)}s, max: ${MAX_STATE_AGE_MS / 1000}s)`,
+    );
   }
 
   if (stateAge < 0) {
-    throw new Error('State parameter from the future - possible clock skew or tampering')
+    throw new Error(
+      "State parameter from the future - possible clock skew or tampering",
+    );
   }
 
-  return validated
+  return validated;
 }
 
 /**
@@ -185,13 +205,13 @@ export function createShopifyOAuthState(shop: string): string {
   const state: ShopifyOAuthState = {
     shop,
     timestamp: Date.now(),
-    nonce: generateNonce()
-  }
+    nonce: generateNonce(),
+  };
 
   // Validate the state before encoding
-  ShopifyOAuthStateSchema.parse(state)
+  ShopifyOAuthStateSchema.parse(state);
 
-  return Buffer.from(JSON.stringify(state)).toString('base64url')
+  return Buffer.from(JSON.stringify(state)).toString("base64url");
 }
 
 /**
@@ -205,43 +225,49 @@ export function createShopifyOAuthState(shop: string): string {
  */
 export function validateShopifyOAuthState(
   stateParam: string,
-  expectedShop: string
+  expectedShop: string,
 ): ShopifyOAuthState {
   // Decode base64url
-  let decoded: string
+  let decoded: string;
   try {
-    decoded = Buffer.from(stateParam, 'base64url').toString('utf-8')
-  } catch (error) {
-    throw new Error('Invalid state encoding')
+    decoded = Buffer.from(stateParam, "base64url").toString("utf-8");
+  } catch {
+    throw new Error("Invalid state encoding");
   }
 
   // Parse JSON
-  let parsed: unknown
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(decoded)
-  } catch (error) {
-    throw new Error('Invalid state JSON')
+    parsed = JSON.parse(decoded);
+  } catch {
+    throw new Error("Invalid state JSON");
   }
 
   // Validate with Zod schema
-  const validated = ShopifyOAuthStateSchema.parse(parsed)
+  const validated = ShopifyOAuthStateSchema.parse(parsed);
 
   // Verify shop matches expected value (prevent shop swapping)
   if (validated.shop !== expectedShop) {
-    throw new Error(`Shop mismatch: expected ${expectedShop}, got ${validated.shop}`)
+    throw new Error(
+      `Shop mismatch: expected ${expectedShop}, got ${validated.shop}`,
+    );
   }
 
   // Check timestamp to prevent replay attacks
-  const stateAge = Date.now() - validated.timestamp
+  const stateAge = Date.now() - validated.timestamp;
   if (stateAge > MAX_STATE_AGE_MS) {
-    throw new Error(`State parameter expired (age: ${Math.round(stateAge / 1000)}s, max: ${MAX_STATE_AGE_MS / 1000}s)`)
+    throw new Error(
+      `State parameter expired (age: ${Math.round(stateAge / 1000)}s, max: ${MAX_STATE_AGE_MS / 1000}s)`,
+    );
   }
 
   if (stateAge < 0) {
-    throw new Error('State parameter from the future - possible clock skew or tampering')
+    throw new Error(
+      "State parameter from the future - possible clock skew or tampering",
+    );
   }
 
-  return validated
+  return validated;
 }
 
 /**
@@ -255,11 +281,11 @@ export function validateShopifyOAuthState(
  * @returns Base64url encoded state string
  */
 export function createGoogleOAuthState(params: {
-  shop_id: string
-  shop_domain: string
-  host?: string | null
-  embedded?: string | null
-  return_to?: string | null
+  shop_id: string;
+  shop_domain: string;
+  host?: string | null;
+  embedded?: string | null;
+  return_to?: string | null;
 }): string {
   const state: GoogleOAuthState = {
     shop_id: params.shop_id,
@@ -268,13 +294,13 @@ export function createGoogleOAuthState(params: {
     embedded: params.embedded || null,
     return_to: params.return_to || null,
     timestamp: Date.now(),
-    nonce: generateNonce()
-  }
+    nonce: generateNonce(),
+  };
 
   // Validate the state before encoding
-  GoogleOAuthStateSchema.parse(state)
+  GoogleOAuthStateSchema.parse(state);
 
-  return Buffer.from(JSON.stringify(state)).toString('base64url')
+  return Buffer.from(JSON.stringify(state)).toString("base64url");
 }
 
 /**
@@ -287,35 +313,39 @@ export function createGoogleOAuthState(params: {
  */
 export function validateGoogleOAuthState(stateParam: string): GoogleOAuthState {
   // Decode base64url
-  let decoded: string
+  let decoded: string;
   try {
-    decoded = Buffer.from(stateParam, 'base64url').toString('utf-8')
-  } catch (error) {
-    throw new Error('Invalid state encoding')
+    decoded = Buffer.from(stateParam, "base64url").toString("utf-8");
+  } catch {
+    throw new Error("Invalid state encoding");
   }
 
   // Parse JSON
-  let parsed: unknown
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(decoded)
-  } catch (error) {
-    throw new Error('Invalid state JSON')
+    parsed = JSON.parse(decoded);
+  } catch {
+    throw new Error("Invalid state JSON");
   }
 
   // Validate with Zod schema
-  const validated = GoogleOAuthStateSchema.parse(parsed)
+  const validated = GoogleOAuthStateSchema.parse(parsed);
 
   // Check timestamp to prevent replay attacks
-  const stateAge = Date.now() - validated.timestamp
+  const stateAge = Date.now() - validated.timestamp;
   if (stateAge > MAX_STATE_AGE_MS) {
-    throw new Error(`State parameter expired (age: ${Math.round(stateAge / 1000)}s, max: ${MAX_STATE_AGE_MS / 1000}s)`)
+    throw new Error(
+      `State parameter expired (age: ${Math.round(stateAge / 1000)}s, max: ${MAX_STATE_AGE_MS / 1000}s)`,
+    );
   }
 
   if (stateAge < 0) {
-    throw new Error('State parameter from the future - possible clock skew or tampering')
+    throw new Error(
+      "State parameter from the future - possible clock skew or tampering",
+    );
   }
 
-  return validated
+  return validated;
 }
 
 /**
@@ -329,11 +359,11 @@ export function validateGoogleOAuthState(stateParam: string): GoogleOAuthState {
  * @returns Base64url encoded state string
  */
 export function createTikTokOAuthState(params: {
-  shop_id: string
-  shop_domain: string
-  host?: string | null
-  embedded?: string | null
-  return_to?: string | null
+  shop_id: string;
+  shop_domain: string;
+  host?: string | null;
+  embedded?: string | null;
+  return_to?: string | null;
 }): string {
   const state: TikTokOAuthState = {
     shop_id: params.shop_id,
@@ -342,13 +372,13 @@ export function createTikTokOAuthState(params: {
     embedded: params.embedded || null,
     return_to: params.return_to || null,
     timestamp: Date.now(),
-    nonce: generateNonce()
-  }
+    nonce: generateNonce(),
+  };
 
   // Validate the state before encoding
-  TikTokOAuthStateSchema.parse(state)
+  TikTokOAuthStateSchema.parse(state);
 
-  return Buffer.from(JSON.stringify(state)).toString('base64url')
+  return Buffer.from(JSON.stringify(state)).toString("base64url");
 }
 
 /**
@@ -361,35 +391,140 @@ export function createTikTokOAuthState(params: {
  */
 export function validateTikTokOAuthState(stateParam: string): TikTokOAuthState {
   // Decode base64url
-  let decoded: string
+  let decoded: string;
   try {
-    decoded = Buffer.from(stateParam, 'base64url').toString('utf-8')
-  } catch (error) {
-    throw new Error('Invalid state encoding')
+    decoded = Buffer.from(stateParam, "base64url").toString("utf-8");
+  } catch {
+    throw new Error("Invalid state encoding");
   }
 
   // Parse JSON
-  let parsed: unknown
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(decoded)
-  } catch (error) {
-    throw new Error('Invalid state JSON')
+    parsed = JSON.parse(decoded);
+  } catch {
+    throw new Error("Invalid state JSON");
   }
 
   // Validate with Zod schema
-  const validated = TikTokOAuthStateSchema.parse(parsed)
+  const validated = TikTokOAuthStateSchema.parse(parsed);
 
   // Check timestamp to prevent replay attacks
-  const stateAge = Date.now() - validated.timestamp
+  const stateAge = Date.now() - validated.timestamp;
   if (stateAge > MAX_STATE_AGE_MS) {
-    throw new Error(`State parameter expired (age: ${Math.round(stateAge / 1000)}s, max: ${MAX_STATE_AGE_MS / 1000}s)`)
+    throw new Error(
+      `State parameter expired (age: ${Math.round(stateAge / 1000)}s, max: ${MAX_STATE_AGE_MS / 1000}s)`,
+    );
   }
 
   if (stateAge < 0) {
-    throw new Error('State parameter from the future - possible clock skew or tampering')
+    throw new Error(
+      "State parameter from the future - possible clock skew or tampering",
+    );
   }
 
-  return validated
+  return validated;
+}
+
+/**
+ * Create Standalone User Shopify Link state parameter
+ *
+ * @param standalone_user_id - UUID of the standalone user
+ * @param standalone_email - Email of the standalone user (their shop_domain)
+ * @param target_shop - Target Shopify store domain (e.g., store.myshopify.com)
+ * @returns Base64url encoded state string
+ */
+export function createStandaloneShopifyLinkState(params: {
+  standalone_user_id: string;
+  standalone_email: string;
+  target_shop: string;
+}): string {
+  const state: StandaloneShopifyLinkState = {
+    standalone_user_id: params.standalone_user_id,
+    standalone_email: params.standalone_email,
+    target_shop: params.target_shop,
+    timestamp: Date.now(),
+    nonce: generateNonce(),
+  };
+
+  // Validate the state before encoding
+  StandaloneShopifyLinkStateSchema.parse(state);
+
+  return Buffer.from(JSON.stringify(state)).toString("base64url");
+}
+
+/**
+ * Validate and parse Standalone User Shopify Link state parameter
+ *
+ * @param stateParam - Base64url encoded state string
+ * @param expectedShop - Expected shop domain to prevent shop swapping attacks
+ * @returns Parsed and validated state data
+ * @throws ZodError if validation fails
+ * @throws Error if state is expired, invalid, or shop doesn't match
+ */
+export function validateStandaloneShopifyLinkState(
+  stateParam: string,
+  expectedShop: string,
+): StandaloneShopifyLinkState {
+  // Decode base64url
+  let decoded: string;
+  try {
+    decoded = Buffer.from(stateParam, "base64url").toString("utf-8");
+  } catch {
+    throw new Error("Invalid state encoding");
+  }
+
+  // Parse JSON
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(decoded);
+  } catch {
+    throw new Error("Invalid state JSON");
+  }
+
+  // Validate with Zod schema
+  const validated = StandaloneShopifyLinkStateSchema.parse(parsed);
+
+  // Verify shop matches expected value (prevent shop swapping)
+  if (validated.target_shop !== expectedShop) {
+    throw new Error(
+      `Shop mismatch: expected ${expectedShop}, got ${validated.target_shop}`,
+    );
+  }
+
+  // Check timestamp to prevent replay attacks
+  const stateAge = Date.now() - validated.timestamp;
+  if (stateAge > MAX_STATE_AGE_MS) {
+    throw new Error(
+      `State parameter expired (age: ${Math.round(stateAge / 1000)}s, max: ${MAX_STATE_AGE_MS / 1000}s)`,
+    );
+  }
+
+  if (stateAge < 0) {
+    throw new Error(
+      "State parameter from the future - possible clock skew or tampering",
+    );
+  }
+
+  return validated;
+}
+
+/**
+ * Check if a state parameter is a standalone user link state
+ * Used to determine which callback flow to use
+ */
+export function isStandaloneShopifyLinkState(stateParam: string): boolean {
+  try {
+    const decoded = Buffer.from(stateParam, "base64url").toString("utf-8");
+    const parsed = JSON.parse(decoded);
+    return (
+      "standalone_user_id" in parsed &&
+      "standalone_email" in parsed &&
+      "target_shop" in parsed
+    );
+  } catch {
+    return false;
+  }
 }
 
 // =============================================================================
@@ -400,14 +535,14 @@ export function validateTikTokOAuthState(stateParam: string): TikTokOAuthState {
  * Cookie name for storing OAuth state
  * Uses a hash prefix to prevent enumeration attacks
  */
-const OAUTH_STATE_COOKIE_PREFIX = 'oauth_state_'
+const OAUTH_STATE_COOKIE_PREFIX = "oauth_state_";
 
 /**
  * Generate a hash of the state for cookie naming
  * This prevents the full state from being visible in cookie names
  */
 function getStateHash(state: string): string {
-  return createHash('sha256').update(state).digest('hex').substring(0, 16)
+  return createHash("sha256").update(state).digest("hex").substring(0, 16);
 }
 
 /**
@@ -419,21 +554,24 @@ function getStateHash(state: string): string {
  * @param state - The full base64url encoded state string
  * @param provider - OAuth provider name (shopify, facebook, google, tiktok)
  */
-export async function storeOAuthState(state: string, provider: string): Promise<void> {
-  const cookieStore = await cookies()
-  const cookieName = `${OAUTH_STATE_COOKIE_PREFIX}${provider}`
+export async function storeOAuthState(
+  state: string,
+  provider: string,
+): Promise<void> {
+  const cookieStore = await cookies();
+  const cookieName = `${OAUTH_STATE_COOKIE_PREFIX}${provider}`;
 
   // Store a hash of the state (we don't need to store the full state,
   // just enough to verify it matches what we sent)
-  const stateHash = getStateHash(state)
+  const stateHash = getStateHash(state);
 
   cookieStore.set(cookieName, stateHash, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
     maxAge: MAX_STATE_AGE_MS / 1000, // Convert to seconds
-    path: '/'
-  })
+    path: "/",
+  });
 }
 
 /**
@@ -447,20 +585,23 @@ export async function storeOAuthState(state: string, provider: string): Promise<
  * @param provider - OAuth provider name (shopify, facebook, google, tiktok)
  * @returns true if state matches stored value, false otherwise
  */
-export async function verifyStoredOAuthState(state: string, provider: string): Promise<boolean> {
-  const cookieStore = await cookies()
-  const cookieName = `${OAUTH_STATE_COOKIE_PREFIX}${provider}`
+export async function verifyStoredOAuthState(
+  state: string,
+  provider: string,
+): Promise<boolean> {
+  const cookieStore = await cookies();
+  const cookieName = `${OAUTH_STATE_COOKIE_PREFIX}${provider}`;
 
-  const storedHash = cookieStore.get(cookieName)?.value
+  const storedHash = cookieStore.get(cookieName)?.value;
 
   if (!storedHash) {
     // No stored state - either expired, already used, or attack attempt
-    return false
+    return false;
   }
 
   // Compare hashes
-  const receivedHash = getStateHash(state)
-  return storedHash === receivedHash
+  const receivedHash = getStateHash(state);
+  return storedHash === receivedHash;
 }
 
 /**
@@ -472,8 +613,8 @@ export async function verifyStoredOAuthState(state: string, provider: string): P
  * @param provider - OAuth provider name (shopify, facebook, google, tiktok)
  */
 export async function clearStoredOAuthState(provider: string): Promise<void> {
-  const cookieStore = await cookies()
-  const cookieName = `${OAUTH_STATE_COOKIE_PREFIX}${provider}`
+  const cookieStore = await cookies();
+  const cookieName = `${OAUTH_STATE_COOKIE_PREFIX}${provider}`;
 
-  cookieStore.delete(cookieName)
+  cookieStore.delete(cookieName);
 }
