@@ -301,6 +301,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: "Product updated successfully",
         productId,
+        shopDomain: shop, // Return the resolved Shopify domain (not email for standalone users)
         updates: {
           title: updates.title || null,
           description: updates.description || null,

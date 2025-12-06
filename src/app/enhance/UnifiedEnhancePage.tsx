@@ -4,7 +4,11 @@ export const dynamic = "force-dynamic";
 
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { ProductImageUpload, type UploadedFile } from "@/app/components/shared/ProductImageUpload";
+import Image from "next/image";
+import {
+  ProductImageUpload,
+  type UploadedFile,
+} from "@/app/components/shared/ProductImageUpload";
 import { ProductDetailsForm } from "@/app/components/shared/ProductDetailsForm";
 import { AdditionalInfoForm } from "@/app/components/shared/AdditionalInfoForm";
 import EnhancedContentComparison from "@/app/components/shared/EnhancedContentComparison";
@@ -24,11 +28,10 @@ import {
   ArrowLeft,
   CheckCircle2,
   PenTool,
-  Zap,
   Package,
   Sparkles,
   ExternalLink,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -37,10 +40,10 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
 
 interface EnhancementOptions {
   generateTitle: boolean;
@@ -61,12 +64,17 @@ export default function UnifiedEnhancePage() {
     "zunosai-staging-test-store.myshopify.com";
 
   // Product data states
-  const [productData, setProductData] = useState<EnhancementProductData | null>(null);
+  const [productData, setProductData] = useState<EnhancementProductData | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [updateResult, setUpdateResult] = useState<Record<string, unknown> | null>(null);
+  const [updateResult, setUpdateResult] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
 
   // Image states
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -75,7 +83,8 @@ export default function UnifiedEnhancePage() {
   // Form states
   const [parentCategory, setParentCategory] = useState("");
   const [availableSizing, setAvailableSizing] = useState("");
-  const [selectedTemplate, setSelectedTemplate] = useState<ProductCategory>("general");
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<ProductCategory>("general");
   const [templatePreview, setTemplatePreview] = useState<
     { name: string; description: string; sections?: string[] } | undefined
   >(undefined);
@@ -87,17 +96,21 @@ export default function UnifiedEnhancePage() {
   const [additionalNotes, setAdditionalNotes] = useState("");
 
   // Enhancement options
-  const [enhancementOptions, setEnhancementOptions] = useState<EnhancementOptions>({
-    generateTitle: false,
-    enhanceDescription: true,
-    generateSEO: true,
-    createPromo: false,
-    updateImages: false,
-  });
+  const [enhancementOptions, setEnhancementOptions] =
+    useState<EnhancementOptions>({
+      generateTitle: false,
+      enhanceDescription: true,
+      generateSEO: true,
+      createPromo: false,
+      updateImages: false,
+    });
 
   // Generation states
   const [generating, setGenerating] = useState(false);
-  const [generatedContent, setGeneratedContent] = useState<Record<string, unknown> | null>(null);
+  const [generatedContent, setGeneratedContent] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [applying, setApplying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -115,10 +128,17 @@ export default function UnifiedEnhancePage() {
     try {
       console.log("Loading product data for:", { productId, shop });
       const isTestStore = shop.includes("zunosai-staging-test-store");
-      const isEmbedded = typeof window !== "undefined" && window.top !== window.self;
+      const isEmbedded =
+        typeof window !== "undefined" && window.top !== window.self;
 
-      const fetchMethod = isTestStore && !isEmbedded ? undefined : authenticatedFetch;
-      const data = await fetchProductDataForEnhancement(productId, shop, null, fetchMethod);
+      const fetchMethod =
+        isTestStore && !isEmbedded ? undefined : authenticatedFetch;
+      const data = await fetchProductDataForEnhancement(
+        productId,
+        shop,
+        null,
+        fetchMethod,
+      );
 
       if (data) {
         setProductData(data);
@@ -153,11 +173,20 @@ export default function UnifiedEnhancePage() {
             const uniqueSizes = [...new Set(sizes)];
             if (uniqueSizes.includes("XS") && uniqueSizes.includes("XL")) {
               setAvailableSizing("xs-xl");
-            } else if (uniqueSizes.includes("XS") && uniqueSizes.includes("XXL")) {
+            } else if (
+              uniqueSizes.includes("XS") &&
+              uniqueSizes.includes("XXL")
+            ) {
               setAvailableSizing("xs-xxl");
-            } else if (uniqueSizes.includes("S") && uniqueSizes.includes("XXXL")) {
+            } else if (
+              uniqueSizes.includes("S") &&
+              uniqueSizes.includes("XXXL")
+            ) {
               setAvailableSizing("s-xxxl");
-            } else if (uniqueSizes.length === 1 && uniqueSizes[0] === "One Size") {
+            } else if (
+              uniqueSizes.length === 1 &&
+              uniqueSizes[0] === "One Size"
+            ) {
               setAvailableSizing("onesize");
             }
           }
@@ -186,7 +215,8 @@ export default function UnifiedEnhancePage() {
           const features = data.originalDescription
             .split("\n")
             .filter(
-              (line) => line.trim().startsWith("•") || line.trim().startsWith("-"),
+              (line) =>
+                line.trim().startsWith("•") || line.trim().startsWith("-"),
             )
             .map((line) => line.replace(/^[•\-]\s*/, ""))
             .join("\n");
@@ -210,7 +240,9 @@ export default function UnifiedEnhancePage() {
         }
       }
     } catch (err) {
-      logger.error("Error loading product:", err as Error, { component: 'UnifiedEnhancePage' });
+      logger.error("Error loading product:", err as Error, {
+        component: "UnifiedEnhancePage",
+      });
       setError(err instanceof Error ? err.message : "Failed to load product");
     } finally {
       setLoading(false);
@@ -251,7 +283,11 @@ export default function UnifiedEnhancePage() {
     try {
       const formData = new FormData();
 
-      if (useExistingImages && productData?.images && productData.images.length > 0) {
+      if (
+        useExistingImages &&
+        productData?.images &&
+        productData.images.length > 0
+      ) {
         productData.images.forEach((img) => {
           if (
             img.url &&
@@ -264,7 +300,9 @@ export default function UnifiedEnhancePage() {
           }
         });
       } else {
-        console.log("📸 No existing images to add or useExistingImages is false");
+        console.log(
+          "📸 No existing images to add or useExistingImages is false",
+        );
       }
       uploadedFiles.forEach((file) => formData.append("images", file.file));
 
@@ -312,7 +350,8 @@ export default function UnifiedEnhancePage() {
       formData.append("enhancementOptions", JSON.stringify(enhancementOptions));
 
       const isTestStore = shop?.includes("zunosai-staging-test-store");
-      const isEmbedded = typeof window !== "undefined" && window.top !== window.self;
+      const isEmbedded =
+        typeof window !== "undefined" && window.top !== window.self;
 
       let response;
       if (isTestStore && !isEmbedded) {
@@ -329,7 +368,9 @@ export default function UnifiedEnhancePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        logger.error("Enhancement API error:", errorData as Error, { component: 'UnifiedEnhancePage' });
+        logger.error("Enhancement API error:", errorData as Error, {
+          component: "UnifiedEnhancePage",
+        });
         throw new Error(
           errorData.error || `Failed to generate content: ${response.status}`,
         );
@@ -367,7 +408,8 @@ export default function UnifiedEnhancePage() {
       }
 
       const isTestStore = shop?.includes("zunosai-staging-test-store");
-      const isEmbedded = typeof window !== "undefined" && window.top !== window.self;
+      const isEmbedded =
+        typeof window !== "undefined" && window.top !== window.self;
 
       let response;
       if (isTestStore && !isEmbedded) {
@@ -404,7 +446,10 @@ export default function UnifiedEnhancePage() {
         if (editedContent.title !== undefined && editedContent.title !== null) {
           updatedData.title = editedContent.title;
         }
-        if (editedContent.description !== undefined && editedContent.description !== null) {
+        if (
+          editedContent.description !== undefined &&
+          editedContent.description !== null
+        ) {
           updatedData.originalDescription = editedContent.description;
         }
 
@@ -426,7 +471,9 @@ export default function UnifiedEnhancePage() {
       setGeneratedContent(null);
       setShowSuccessModal(true);
     } catch (err) {
-      logger.error("Error applying changes:", err as Error, { component: 'UnifiedEnhancePage' });
+      logger.error("Error applying changes:", err as Error, {
+        component: "UnifiedEnhancePage",
+      });
       setError(err instanceof Error ? err.message : "Failed to apply changes");
     } finally {
       setApplying(false);
@@ -477,7 +524,10 @@ export default function UnifiedEnhancePage() {
               <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-4" />
               <div className="space-y-3">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-5 bg-gray-100 rounded animate-pulse" />
+                  <div
+                    key={i}
+                    className="h-5 bg-gray-100 rounded animate-pulse"
+                  />
                 ))}
               </div>
             </div>
@@ -497,12 +547,17 @@ export default function UnifiedEnhancePage() {
               <div className="flex items-center gap-4">
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)' }}
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                  }}
                 >
                   <PenTool className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Enhance Product</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    Enhance Product
+                  </h1>
                   {productData && (
                     <p className="text-gray-500 text-sm">{productData.title}</p>
                   )}
@@ -511,7 +566,9 @@ export default function UnifiedEnhancePage() {
               <Button
                 variant="outline"
                 className="border-gray-200 hover:bg-gray-50"
-                onClick={() => (window.location.href = `/dashboard?shop=${shop}`)}
+                onClick={() =>
+                  (window.location.href = `/dashboard?shop=${shop}`)
+                }
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Dashboard
@@ -540,10 +597,13 @@ export default function UnifiedEnhancePage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
               <div className="flex items-start gap-4">
                 {productData.images?.[0]?.url && (
-                  <img
+                  <Image
                     src={productData.images[0].url}
                     alt={productData.title}
+                    width={80}
+                    height={80}
                     className="w-20 h-20 object-cover rounded-lg"
+                    unoptimized
                   />
                 )}
                 <div className="flex-1">
@@ -585,13 +645,20 @@ export default function UnifiedEnhancePage() {
                 <div className="flex items-center gap-3">
                   <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{ background: 'rgba(0, 102, 204, 0.1)' }}
+                    style={{ background: "rgba(0, 102, 204, 0.1)" }}
                   >
-                    <Sparkles className="w-5 h-5" style={{ color: '#0066cc' }} />
+                    <Sparkles
+                      className="w-5 h-5"
+                      style={{ color: "#0066cc" }}
+                    />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Enhancement Options</h2>
-                    <p className="text-sm text-gray-500">Choose what to generate</p>
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      Enhancement Options
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      Choose what to generate
+                    </p>
                   </div>
                 </div>
                 <Button
@@ -615,9 +682,9 @@ export default function UnifiedEnhancePage() {
                   }}
                 >
                   {enhancementOptions.generateTitle &&
-                    enhancementOptions.enhanceDescription &&
-                    enhancementOptions.generateSEO &&
-                    enhancementOptions.createPromo
+                  enhancementOptions.enhanceDescription &&
+                  enhancementOptions.generateSEO &&
+                  enhancementOptions.createPromo
                     ? "Deselect All"
                     : "Select All"}
                 </Button>
@@ -625,17 +692,33 @@ export default function UnifiedEnhancePage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
-                  { id: 'generateTitle', label: 'Generate new title', checked: enhancementOptions.generateTitle },
-                  { id: 'enhanceDescription', label: 'Enhance description', checked: enhancementOptions.enhanceDescription },
-                  { id: 'generateSEO', label: 'Generate SEO metadata', checked: enhancementOptions.generateSEO },
-                  { id: 'createPromo', label: 'Create promotional copy', checked: enhancementOptions.createPromo },
+                  {
+                    id: "generateTitle",
+                    label: "Generate new title",
+                    checked: enhancementOptions.generateTitle,
+                  },
+                  {
+                    id: "enhanceDescription",
+                    label: "Enhance description",
+                    checked: enhancementOptions.enhanceDescription,
+                  },
+                  {
+                    id: "generateSEO",
+                    label: "Generate SEO metadata",
+                    checked: enhancementOptions.generateSEO,
+                  },
+                  {
+                    id: "createPromo",
+                    label: "Create promotional copy",
+                    checked: enhancementOptions.createPromo,
+                  },
                 ].map((option) => (
                   <div
                     key={option.id}
                     className={`flex items-center space-x-3 p-4 rounded-lg border transition-colors ${
                       option.checked
-                        ? 'border-blue-200 bg-blue-50/50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? "border-blue-200 bg-blue-50/50"
+                        : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
                     <Checkbox
@@ -661,13 +744,17 @@ export default function UnifiedEnhancePage() {
               <div className="flex items-center gap-3 mb-6">
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ background: 'rgba(0, 102, 204, 0.1)' }}
+                  style={{ background: "rgba(0, 102, 204, 0.1)" }}
                 >
-                  <Package className="w-5 h-5" style={{ color: '#0066cc' }} />
+                  <Package className="w-5 h-5" style={{ color: "#0066cc" }} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Product Details</h2>
-                  <p className="text-sm text-gray-500">Category and template settings</p>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Product Details
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Category and template settings
+                  </p>
                 </div>
               </div>
               <ProductDetailsForm
@@ -709,7 +796,9 @@ export default function UnifiedEnhancePage() {
                 variant="outline"
                 size="lg"
                 className="border-gray-200"
-                onClick={() => (window.location.href = `/dashboard?shop=${shop}`)}
+                onClick={() =>
+                  (window.location.href = `/dashboard?shop=${shop}`)
+                }
               >
                 Cancel
               </Button>
@@ -717,8 +806,9 @@ export default function UnifiedEnhancePage() {
                 size="lg"
                 className="px-8"
                 style={{
-                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                  border: 'none'
+                  background:
+                    "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                  border: "none",
                 }}
                 onClick={handleGenerate}
                 disabled={!isFormValid() || generating}
@@ -747,7 +837,7 @@ export default function UnifiedEnhancePage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5" style={{ color: '#0066cc' }} />
+              <Sparkles className="w-5 h-5" style={{ color: "#0066cc" }} />
               Generating Enhanced Content
             </DialogTitle>
             <DialogDescription>
@@ -781,40 +871,55 @@ export default function UnifiedEnhancePage() {
           <div className="space-y-4 py-4">
             {successMessage && (
               <Alert className="bg-green-50 border-green-200">
-                <AlertDescription className="text-green-700">{successMessage}</AlertDescription>
+                <AlertDescription className="text-green-700">
+                  {successMessage}
+                </AlertDescription>
               </Alert>
             )}
             {updateResult && Boolean(updateResult.shopifyResult) && (
               <div className="space-y-2">
-                <p className="text-sm text-gray-600">The following changes have been applied:</p>
+                <p className="text-sm text-gray-600">
+                  The following changes have been applied:
+                </p>
                 <div className="space-y-1 text-sm">
-                  {updateResult.updates && typeof updateResult.updates === "object" ? (
+                  {updateResult.updates &&
+                  typeof updateResult.updates === "object" ? (
                     <>
-                      {"title" in updateResult.updates && (updateResult.updates as Record<string, unknown>).title ? (
+                      {"title" in updateResult.updates &&
+                      (updateResult.updates as Record<string, unknown>)
+                        .title ? (
                         <p className="flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4 text-green-500" />
                           Title updated
                         </p>
                       ) : null}
-                      {"description" in updateResult.updates && (updateResult.updates as Record<string, unknown>).description ? (
+                      {"description" in updateResult.updates &&
+                      (updateResult.updates as Record<string, unknown>)
+                        .description ? (
                         <p className="flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4 text-green-500" />
                           Description updated
                         </p>
                       ) : null}
-                      {"seoTitle" in updateResult.updates && (updateResult.updates as Record<string, unknown>).seoTitle ? (
+                      {"seoTitle" in updateResult.updates &&
+                      (updateResult.updates as Record<string, unknown>)
+                        .seoTitle ? (
                         <p className="flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4 text-green-500" />
                           SEO title updated
                         </p>
                       ) : null}
-                      {"seoDescription" in updateResult.updates && (updateResult.updates as Record<string, unknown>).seoDescription ? (
+                      {"seoDescription" in updateResult.updates &&
+                      (updateResult.updates as Record<string, unknown>)
+                        .seoDescription ? (
                         <p className="flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4 text-green-500" />
                           SEO meta description updated
                         </p>
                       ) : null}
-                      {"bulletPoints" in updateResult.updates && (updateResult.updates as Record<string, unknown>).bulletPoints ? (
+                      {"bulletPoints" in updateResult.updates &&
+                      (updateResult.updates as Record<string, unknown>)
+                        .bulletPoints ? (
                         <p className="flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4 text-green-500" />
                           Bullet points added
@@ -826,8 +931,9 @@ export default function UnifiedEnhancePage() {
               </div>
             )}
             <p className="text-sm text-gray-500">
-              Click &quot;View Product&quot; to see the updated product in your Shopify admin, or
-              &quot;Continue Editing&quot; to make more changes.
+              Click &quot;View Product&quot; to see the updated product in your
+              Shopify admin, or &quot;Continue Editing&quot; to make more
+              changes.
             </p>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -843,11 +949,17 @@ export default function UnifiedEnhancePage() {
             </Button>
             <Button
               style={{
-                background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                border: 'none'
+                background: "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                border: "none",
               }}
               onClick={() => {
-                const shopDomain = shop?.replace(".myshopify.com", "");
+                // Use the resolved shopDomain from API response (handles standalone users with email → domain resolution)
+                const resolvedDomain = (updateResult as Record<string, unknown>)
+                  ?.shopDomain as string | undefined;
+                const shopDomain = (resolvedDomain || shop)?.replace(
+                  ".myshopify.com",
+                  "",
+                );
                 const adminUrl = `https://admin.shopify.com/store/${shopDomain}/products/${productId?.split("/").pop()}`;
                 window.open(adminUrl, "_blank");
               }}
