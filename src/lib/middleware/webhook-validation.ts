@@ -34,7 +34,8 @@ export async function validateWebhook(
     }
 
     // Get webhook secret from environment
-    const webhookSecret = process.env.SHOPIFY_WEBHOOK_SECRET
+    // Note: Shopify uses SHOPIFY_API_SECRET for webhook HMAC verification
+    const webhookSecret = process.env.SHOPIFY_API_SECRET || process.env.SHOPIFY_WEBHOOK_SECRET
     if (!webhookSecret) {
       logger.error('Webhook secret not configured', new Error('Missing webhook secret'), {
         component: 'webhook-validation',

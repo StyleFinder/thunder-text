@@ -417,7 +417,7 @@ export default function AIEPage() {
           // Product metadata is sent in productMetadata array instead
           platform,
           goal,
-          description, // User-editable unified description
+          productInfo: description, // User-editable unified description (API expects productInfo)
           imageUrls: selectedImageUrls, // All selected images for carousel support
           targetAudience: targetAudience || undefined,
           // Pass all product metadata for RAG context (descriptions, titles, etc.)
@@ -504,10 +504,11 @@ export default function AIEPage() {
 
       const data = await response.json();
 
-      if (data.success) {
+      if (data.success && data.data?.ad?.id) {
         setResultsModalOpen(false);
-        // Clear any existing errors and show success via console (Banner would require additional state)
         setError(null);
+        // Navigate to the ad editor page
+        router.push(`/ads-library/${data.data.ad.id}/edit?shop=${shop}`);
       } else {
         throw new Error(data.error?.message || 'Failed to save ad');
       }
@@ -518,9 +519,10 @@ export default function AIEPage() {
   };
 
   const formatScore = (score: number) => {
-    const percentage = (score * 100).toFixed(0);
-    if (score >= 0.8) return { text: `${percentage}% - Excellent`, variant: 'default' as const };
-    if (score >= 0.6) return { text: `${percentage}% - Good`, variant: 'secondary' as const };
+    // Score is 0-10 from AI, convert to percentage (0-100)
+    const percentage = (score * 10).toFixed(0);
+    if (score >= 8) return { text: `${percentage}% - Excellent`, variant: 'default' as const };
+    if (score >= 6) return { text: `${percentage}% - Good`, variant: 'secondary' as const };
     return { text: `${percentage}% - Needs Improvement`, variant: 'outline' as const };
   };
 
@@ -554,16 +556,6 @@ export default function AIEPage() {
             </Button>
           </div>
 
-          {/* Info banner */}
-          <div
-            className="rounded-xl p-4 flex items-center gap-3"
-            style={{ background: 'rgba(0, 102, 204, 0.05)', border: '1px solid rgba(0, 102, 204, 0.1)' }}
-          >
-            <Sparkles className="w-5 h-5 flex-shrink-0" style={{ color: '#0066cc' }} />
-            <p className="text-sm" style={{ color: '#0066cc' }}>
-              Create AI-powered ad copy optimized for your target platform and campaign goals.
-            </p>
-          </div>
         </div>
 
         {/* Main Content */}
@@ -842,10 +834,13 @@ export default function AIEPage() {
                 {result && (
                   <Alert className="bg-blue-50 border-blue-200 rounded-lg">
                     <AlertDescription className="text-blue-700">
-                      Generated {result.variants.length} variants in{' '}
-                      {(result.metadata.generationTimeMs / 1000).toFixed(2)}s
-                      {' • '}
-                      AI Cost: ${result.metadata.aiCost.toFixed(4)}
+                      Generated {result.variants.length} variants
+                      {result.metadata?.generationTimeMs && (
+                        <> in {(result.metadata.generationTimeMs / 1000).toFixed(2)}s</>
+                      )}
+                      {result.metadata?.aiCost && (
+                        <> • AI Cost: ${result.metadata.aiCost.toFixed(4)}</>
+                      )}
                     </AlertDescription>
                   </Alert>
                 )}
@@ -946,29 +941,39 @@ export default function AIEPage() {
                             </div>
                           )}
 
-                          <div>
-                            <p className="text-sm font-semibold mb-1">Call-to-Action</p>
-                            <Badge>{variant.cta}</Badge>
-                          </div>
+                          {variant.cta && (
+                            <div>
+                              <p className="text-sm font-semibold mb-1">Call-to-Action</p>
+                              <Badge>{variant.cta}</Badge>
+                            </div>
+                          )}
 
                           <Separator />
 
-                          <div>
-                            <p className="text-sm font-semibold mb-2 text-gray-700">Quality Scores</p>
-                            <div className="flex items-center gap-1 flex-wrap">
-                              <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-                                Hook: {(variant.scoreBreakdown.hook_strength * 100).toFixed(0)}%
-                              </Badge>
-                              <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-                                CTA: {(variant.scoreBreakdown.cta_clarity * 100).toFixed(0)}%
-                              </Badge>
-                              <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-                                Platform: {(variant.scoreBreakdown.platform_compliance * 100).toFixed(0)}%
-                              </Badge>
+                          {variant.scoreBreakdown && (
+                            <div>
+                              <p className="text-sm font-semibold mb-2 text-gray-700">Quality Scores</p>
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {variant.scoreBreakdown.hook_strength !== undefined && (
+                                  <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+                                    Hook: {(variant.scoreBreakdown.hook_strength * 100).toFixed(0)}%
+                                  </Badge>
+                                )}
+                                {variant.scoreBreakdown.cta_clarity !== undefined && (
+                                  <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+                                    CTA: {(variant.scoreBreakdown.cta_clarity * 100).toFixed(0)}%
+                                  </Badge>
+                                )}
+                                {variant.scoreBreakdown.platform_compliance !== undefined && (
+                                  <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+                                    Platform: {(variant.scoreBreakdown.platform_compliance * 100).toFixed(0)}%
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
-                          </div>
+                          )}
 
-                          {variant.headlineAlternatives.length > 0 && (
+                          {variant.headlineAlternatives && variant.headlineAlternatives.length > 0 && (
                             <>
                               <Separator />
                               <div>

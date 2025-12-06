@@ -2,6 +2,7 @@
 
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useNavigation } from '../hooks/useNavigation';
 import {
   Loader2,
@@ -176,7 +177,12 @@ function QuickLink({
 function DashboardContent() {
   const searchParams = useSearchParams();
   const { navigateTo } = useNavigation();
-  const shop = searchParams?.get('shop');
+  const { data: session, status } = useSession();
+
+  // Get shop from URL params first, then fallback to session
+  const shopFromUrl = searchParams?.get('shop');
+  const shopFromSession = session?.user?.shopDomain;
+  const shop = shopFromUrl || shopFromSession;
 
   const storeName = shop
     ? decodeURIComponent(shop).replace('.myshopify.com', '')
@@ -194,7 +200,27 @@ function DashboardContent() {
   const trialDays = 14;
   const trialProgress = ((trialDays - daysRemaining) / trialDays) * 100;
 
-  // No shop state
+  // Show loading while session is being fetched
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-4">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+          >
+            <Zap className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#0066cc' }} />
+            <p className="text-sm text-gray-500">Loading Dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // No shop state - only show after session is loaded
   if (!shop) {
     return (
       <div

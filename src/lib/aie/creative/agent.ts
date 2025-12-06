@@ -374,20 +374,23 @@ Output Format (JSON Array):
   {
     "variant_type": "emotional",
     "headline": "...",
-    "primary_text": "...",
+    "primary_text": "... (MUST include compelling body copy with a clear CTA at the end)",
+    "call_to_action": "Shop Now", // Strong action verb CTA
     "description": "..." // OPTIONAL: 20-30 chars for price/shipping/guarantee
   },
   {
     "variant_type": "benefit",
     "headline": "...",
-    "primary_text": "...",
-    "description": "..." // OPTIONAL: 20-30 chars for price/shipping/guarantee
+    "primary_text": "... (MUST include compelling body copy with a clear CTA at the end)",
+    "call_to_action": "Get Yours",
+    "description": "..."
   },
   {
     "variant_type": "ugc",
     "headline": "...",
-    "primary_text": "...",
-    "description": "..." // OPTIONAL: 20-30 chars for price/shipping/guarantee
+    "primary_text": "... (MUST include compelling body copy with a clear CTA at the end)",
+    "call_to_action": "Buy Now",
+    "description": "..."
   }
 ]
     `.trim();
@@ -402,10 +405,11 @@ Output Format (JSON Array):
             throw new Error('Invalid response format: Expected array of 3 variants');
         }
 
-        return parsed.map((v: { variant_type: string; headline: string; primary_text: string; description?: string }) => ({
+        return parsed.map((v: { variant_type: string; headline: string; primary_text: string; call_to_action?: string; description?: string }) => ({
             variant_type: v.variant_type as AieVariantType,
             headline: v.headline,
             primary_text: v.primary_text,
+            call_to_action: v.call_to_action || 'Shop Now',
             description: v.description || undefined, // Optional field
             selected_length: selectedLength, // Tag each variant with the selected length
             is_selected: false

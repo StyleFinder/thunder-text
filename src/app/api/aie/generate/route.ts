@@ -42,7 +42,28 @@ export async function POST(req: NextRequest) {
       adLengthMode: adLengthMode as AdLengthMode || 'AUTO' // Default to AUTO if not provided
     });
 
-    return NextResponse.json(result);
+    // Transform snake_case to camelCase for frontend compatibility
+    const transformedVariants = result.variants.map((v: any, index: number) => ({
+      id: `variant-${Date.now()}-${index}`,
+      variantType: v.variant_type,
+      headline: v.headline,
+      primaryText: v.primary_text,
+      description: v.description,
+      callToAction: v.call_to_action || 'Shop Now',
+      selectedLength: v.selected_length,
+      isSelected: v.is_selected,
+      predictedScore: v.predicted_score,
+      scoreBreakdown: v.score_breakdown,
+      headlineAlternatives: v.headline_alternatives || [],
+    }));
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        variants: transformedVariants,
+        researchSummary: result.researchSummary
+      }
+    });
 
   } catch (error: any) {
     logger.error('AIE Generation Error:', error as Error, { component: 'generate' });

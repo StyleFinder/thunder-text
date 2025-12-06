@@ -190,16 +190,6 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
             </Button>
           </div>
 
-          {/* Info banner */}
-          <div
-            className="rounded-xl p-4 flex items-center gap-3"
-            style={{ background: 'rgba(0, 102, 204, 0.05)', border: '1px solid rgba(0, 102, 204, 0.1)' }}
-          >
-            <PenTool className="w-5 h-5 flex-shrink-0" style={{ color: '#0066cc' }} />
-            <p className="text-sm" style={{ color: '#0066cc' }}>
-              Choose a product from your store to generate or improve its description using AI.
-            </p>
-          </div>
         </div>
 
         {/* Product Selection Card */}

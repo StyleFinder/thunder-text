@@ -1,6 +1,6 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "fa85f3902882734b800968440c27447d"
+client_id = "613bffa12a51873c2739ae67163a72e2"
 name = "Thunder Text Dev911"
 application_url = "https://app.zunosai.com"
 embedded = false
@@ -19,6 +19,14 @@ uri = "/api/webhooks/app-uninstalled"
 [[webhooks.subscriptions]]
 topics = ["shop/update"]
 uri = "/api/webhooks/shop-update"
+
+# Mandatory Privacy/GDPR Compliance Webhooks
+# Required for Shopify App Store approval
+# @see https://shopify.dev/docs/apps/build/privacy-law-compliance
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+uri = "https://thundertext-dev.ngrok.app/api/webhooks/compliance"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes

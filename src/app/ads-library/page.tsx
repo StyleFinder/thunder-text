@@ -18,7 +18,8 @@ import {
   AlertCircle,
   RefreshCw,
   Megaphone,
-  ImageOff
+  ImageOff,
+  Pencil
 } from 'lucide-react';
 import { AdMockupModal } from '@/components/AdMockupModal';
 import { logger } from '@/lib/logger'
@@ -28,13 +29,18 @@ interface SavedAd {
   headline: string;
   primary_text: string;
   description?: string;
+  cta: string;
   platform: string;
-  goal: string;
+  campaign_goal: string;
   variant_type?: string;
-  product_id?: string;
-  product_title?: string;
-  product_image?: string;
-  product_data?: any;
+  image_urls?: string[];
+  product_metadata?: {
+    products?: Array<{
+      id: string;
+      title: string;
+      handle: string;
+    }>;
+  };
   predicted_score?: number;
   selected_length?: string;
   status: string;
@@ -53,22 +59,24 @@ export default function AdsLibraryPage() {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   useEffect(() => {
-    fetchAds();
-  }, []);
+    if (shop) {
+      fetchAds();
+    }
+  }, [shop]);
 
   const fetchAds = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch('/api/ads-library');
+      const response = await fetch(`/api/aie/library?shopId=${encodeURIComponent(shop)}`);
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch ads');
+      if (!data.success) {
+        throw new Error(data.error?.message || 'Failed to fetch ads');
       }
 
-      setAds(data.ads);
+      setAds(data.data?.ads || []);
     } catch (err: any) {
       logger.error('Error fetching ads:', err as Error, { component: 'ads-library' });
       setError(err.message || 'Failed to load ads library');
@@ -300,10 +308,10 @@ export default function AdsLibraryPage() {
                   <div className="flex-1 space-y-3">
                     <div className="flex flex-wrap gap-2">
                       {getPlatformBadge(ad.platform)}
-                      {getGoalBadge(ad.goal)}
+                      {getGoalBadge(ad.campaign_goal)}
                       {ad.predicted_score && ad.predicted_score > 0 && (
                         <Badge className="bg-green-100 text-green-700 hover:bg-green-200">
-                          Score: {ad.predicted_score}/10
+                          Score: {(ad.predicted_score * 10).toFixed(0)}%
                         </Badge>
                       )}
                       {ad.selected_length && (
@@ -318,14 +326,14 @@ export default function AdsLibraryPage() {
                     </h3>
 
                     <p className="text-gray-600 text-sm">
-                      {ad.primary_text.length > 150
+                      {ad.primary_text?.length > 150
                         ? ad.primary_text.substring(0, 150) + '...'
                         : ad.primary_text}
                     </p>
 
-                    {ad.product_title && (
+                    {ad.product_metadata?.products?.[0]?.title && (
                       <p className="text-sm text-gray-500">
-                        Product: {ad.product_title}
+                        Product: {ad.product_metadata.products[0].title}
                       </p>
                     )}
 
@@ -334,11 +342,11 @@ export default function AdsLibraryPage() {
                     </p>
                   </div>
 
-                  {ad.product_image ? (
+                  {ad.image_urls?.[0] ? (
                     <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                       <img
-                        src={ad.product_image}
-                        alt={ad.product_title || 'Product'}
+                        src={ad.image_urls[0]}
+                        alt={ad.product_metadata?.products?.[0]?.title || 'Product'}
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -349,14 +357,24 @@ export default function AdsLibraryPage() {
                   )}
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="mt-4 pt-4 border-t border-gray-100 flex gap-3">
                   <Button
                     onClick={() => handlePreview(ad)}
                     variant="outline"
                     className="border-gray-200 hover:bg-gray-50"
                   >
                     <Eye className="w-4 h-4 mr-2" />
-                    Preview Ad
+                    Preview
+                  </Button>
+                  <Button
+                    onClick={() => router.push(`/ads-library/${ad.id}/edit?shop=${shop}`)}
+                    style={{
+                      background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                      border: 'none'
+                    }}
+                  >
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit Ad
                   </Button>
                 </div>
               </div>
@@ -381,8 +399,8 @@ export default function AdsLibraryPage() {
               selected_length: selectedAd.selected_length
             }}
             platform={selectedAd.platform}
-            goal={selectedAd.goal}
-            productData={selectedAd.product_data}
+            goal={selectedAd.campaign_goal}
+            productData={selectedAd.product_metadata}
             previewOnly={true}
           />
         )}

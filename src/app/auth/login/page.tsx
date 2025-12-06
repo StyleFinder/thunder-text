@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -123,8 +123,21 @@ export default function LoginPage() {
       return;
     }
 
-    console.log("[Login Page] Login successful, redirecting...");
-    const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+    console.log("[Login Page] Login successful, fetching session...");
+
+    // Get the session to retrieve the shop domain
+    const session = await getSession();
+    const shopDomain = session?.user?.shopDomain;
+
+    // Build redirect URL with shop parameter if available
+    let callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+
+    if (shopDomain && !callbackUrl.includes("shop=")) {
+      const separator = callbackUrl.includes("?") ? "&" : "?";
+      callbackUrl = `${callbackUrl}${separator}shop=${encodeURIComponent(shopDomain)}`;
+    }
+
+    console.log("[Login Page] Redirecting to:", callbackUrl);
     router.push(callbackUrl);
   };
 

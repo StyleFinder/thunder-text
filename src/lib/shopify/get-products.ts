@@ -108,17 +108,22 @@ export async function getProducts(shop: string, accessToken: string, searchQuery
     const response = await client.request<ShopifyProductsResponse>(query, variables)
 
   // Transform to simpler format
+  const imageEdges = (edge: ShopifyProductEdge) => edge.node.images?.edges || []
   let products = response.products.edges.map((edge: ShopifyProductEdge) => ({
     id: edge.node.id,
     title: edge.node.title,
     handle: edge.node.handle,
     description: edge.node.description || '',
-    status: edge.node.status?.toLowerCase() || 'active',
+    status: edge.node.status || 'ACTIVE',
     price: edge.node.variants?.edges[0]?.node?.price || '0.00',
-    images: edge.node.images?.edges?.map((imgEdge) => ({
+    images: imageEdges(edge).map((imgEdge) => ({
       url: imgEdge.node.url,
       altText: imgEdge.node.altText
-    })) || [],
+    })),
+    featuredImage: imageEdges(edge)[0] ? {
+      url: imageEdges(edge)[0].node.url,
+      altText: imageEdges(edge)[0].node.altText
+    } : null,
   }))
 
   // Apply client-side filtering as an additional layer
