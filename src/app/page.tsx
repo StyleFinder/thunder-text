@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, Zap, RefreshCw, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2, Zap, RefreshCw, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 /**
  * Root route handler
@@ -17,32 +17,32 @@ export const dynamic = 'force-dynamic';
 export default function RootPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isLoading, setIsLoading] = useState(true);
+  const [, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const determineRoute = async () => {
       try {
         // Get shop parameter from URL
-        const shop = searchParams?.get('shop');
+        const shop = searchParams?.get("shop");
 
         if (!shop) {
-          // No shop parameter - assume coach trying to access
-          console.log('[Root] No shop parameter, redirecting to coach login');
-          router.replace('/coach/login');
+          // No shop parameter - redirect to login page
+          console.log("[Root] No shop parameter, redirecting to login");
+          router.replace("/auth/login");
           return;
         }
 
         // Check onboarding status for store users
-        const response = await fetch('/api/onboarding/status', {
+        const response = await fetch("/api/onboarding/status", {
           headers: {
-            'Authorization': `Bearer ${shop}`,
+            Authorization: `Bearer ${shop}`,
           },
         });
 
         if (!response.ok) {
           // Shop not found or error - redirect to welcome for new setup
-          console.log('[Root] Shop not found, redirecting to welcome');
+          console.log("[Root] Shop not found, redirecting to welcome");
           router.replace(`/welcome?shop=${shop}`);
           return;
         }
@@ -52,19 +52,23 @@ export default function RootPage() {
         if (data.success && data.data) {
           const { onboarding_completed, user_type } = data.data;
 
-          if (user_type === 'coach') {
+          if (user_type === "coach") {
             // Coach user - redirect to coach portal
-            console.log('[Root] Coach user detected, redirecting to coach login');
-            router.replace('/coach/login');
+            console.log(
+              "[Root] Coach user detected, redirecting to coach login",
+            );
+            router.replace("/coach/login");
             return;
           }
 
           // Store user - check onboarding status
           if (onboarding_completed) {
-            console.log('[Root] Onboarding complete, redirecting to dashboard');
+            console.log("[Root] Onboarding complete, redirecting to dashboard");
             router.replace(`/dashboard?shop=${shop}`);
           } else {
-            console.log('[Root] Onboarding not complete, redirecting to welcome');
+            console.log(
+              "[Root] Onboarding not complete, redirecting to welcome",
+            );
             router.replace(`/welcome?shop=${shop}`);
           }
         } else {
@@ -72,8 +76,8 @@ export default function RootPage() {
           router.replace(`/welcome?shop=${shop}`);
         }
       } catch (error) {
-        console.error('[Root] Error determining route:', error);
-        setError('Failed to load. Please try again.');
+        console.error("[Root] Error determining route:", error);
+        setError("Failed to load. Please try again.");
         setIsLoading(false);
       }
     };
@@ -87,7 +91,8 @@ export default function RootPage() {
       <div
         className="min-h-screen flex items-center justify-center p-6"
         style={{
-          background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+          background:
+            "linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)",
         }}
       >
         <div className="w-full max-w-md">
@@ -95,7 +100,9 @@ export default function RootPage() {
           <div className="flex items-center justify-center gap-3 mb-8">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+              style={{
+                background: "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+              }}
             >
               <Zap className="w-5 h-5 text-white" />
             </div>
@@ -107,7 +114,7 @@ export default function RootPage() {
             <div className="text-center">
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
-                style={{ background: 'rgba(220, 38, 38, 0.1)' }}
+                style={{ background: "rgba(220, 38, 38, 0.1)" }}
               >
                 <AlertCircle className="w-8 h-8 text-red-500" />
               </div>
@@ -118,8 +125,9 @@ export default function RootPage() {
               <Button
                 className="w-full h-11 text-base font-medium"
                 style={{
-                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                  border: 'none'
+                  background:
+                    "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                  border: "none",
                 }}
                 onClick={() => window.location.reload()}
               >
@@ -138,7 +146,8 @@ export default function RootPage() {
     <div
       className="min-h-screen flex items-center justify-center p-6"
       style={{
-        background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+        background:
+          "linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)",
       }}
     >
       <div className="text-center">
@@ -146,7 +155,9 @@ export default function RootPage() {
         <div className="flex items-center justify-center gap-3 mb-8">
           <div
             className="w-12 h-12 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+            style={{
+              background: "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+            }}
           >
             <Zap className="w-6 h-6 text-white" />
           </div>
