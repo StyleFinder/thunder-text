@@ -205,8 +205,8 @@ export async function GET(req: NextRequest) {
           .from("shops")
           .update({
             linked_shopify_domain: fullShopDomain,
-            access_token: access_token,
-            scope: scope || "",
+            shopify_access_token: access_token,
+            shopify_scope: scope || "",
             updated_at: new Date().toISOString(),
           })
           .eq("id", standaloneUser.id);

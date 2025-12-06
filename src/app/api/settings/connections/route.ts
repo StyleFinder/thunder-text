@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       id: string;
       is_active: boolean;
       shop_type: string;
-      access_token: string | null;
+      shopify_access_token: string | null;
       shop_domain: string;
       linked_shopify_domain: string | null;
     } | null = null;
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       const result = await supabaseAdmin
         .from("shops")
         .select(
-          "id, is_active, shop_type, access_token, shop_domain, linked_shopify_domain",
+          "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
         )
         .eq("shop_domain", authenticatedShop)
         .single();
@@ -95,27 +95,28 @@ export async function GET(request: NextRequest) {
       shopData = result.data;
       shopError = result.error;
 
-      // If cookie-based auth failed and URL param looks like standalone user, try fallback
+      // If cookie-based auth failed and URL param looks like standalone user email, try fallback
+      // Standalone users have their email in the 'email' column, not 'shop_domain'
       if (
         (shopError || !shopData) &&
         shopFromUrl &&
         shopFromUrl.includes("@")
       ) {
         logger.info(
-          "[Connections API] Primary lookup failed, trying URL param fallback for standalone user",
+          "[Connections API] Primary lookup failed, trying email lookup for standalone user",
           {
             component: "connections",
             primaryDomain: authenticatedShop,
-            urlParamDomain: shopFromUrl,
+            emailParam: shopFromUrl,
           },
         );
 
         const fallbackResult = await supabaseAdmin
           .from("shops")
           .select(
-            "id, is_active, shop_type, access_token, shop_domain, linked_shopify_domain",
+            "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
           )
-          .eq("shop_domain", shopFromUrl)
+          .eq("email", shopFromUrl)
           .eq("shop_type", "standalone")
           .single();
 
@@ -124,10 +125,11 @@ export async function GET(request: NextRequest) {
           shopError = null;
           authenticatedShop = shopFromUrl;
           logger.info(
-            "[Connections API] Fallback successful - found standalone user",
+            "[Connections API] Fallback successful - found standalone user by email",
             {
               component: "connections",
-              shopDomain: shopFromUrl,
+              email: shopFromUrl,
+              shopDomain: fallbackResult.data.shop_domain,
             },
           );
         }
@@ -137,19 +139,20 @@ export async function GET(request: NextRequest) {
       // SECURITY: This is safe because we verify the email exists in our database as a standalone user
       // The user must have a valid session on the frontend (useSession) to know their email
       logger.info(
-        "[Connections API] No cookie auth - attempting URL param auth for standalone user",
+        "[Connections API] No cookie auth - attempting email lookup for standalone user",
         {
           component: "connections",
-          urlParamDomain: shopFromUrl,
+          emailParam: shopFromUrl,
         },
       );
 
+      // Standalone users: lookup by 'email' column (not 'shop_domain')
       const standaloneResult = await supabaseAdmin
         .from("shops")
         .select(
-          "id, is_active, shop_type, access_token, shop_domain, linked_shopify_domain",
+          "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
         )
-        .eq("shop_domain", shopFromUrl)
+        .eq("email", shopFromUrl)
         .eq("shop_type", "standalone")
         .single();
 
@@ -158,18 +161,19 @@ export async function GET(request: NextRequest) {
         shopError = null;
         authenticatedShop = shopFromUrl;
         logger.info(
-          "[Connections API] URL param auth successful - found standalone user",
+          "[Connections API] Email auth successful - found standalone user",
           {
             component: "connections",
-            shopDomain: shopFromUrl,
+            email: shopFromUrl,
+            shopDomain: standaloneResult.data.shop_domain,
           },
         );
       } else {
         logger.warn(
-          "[Connections API] URL param auth failed - standalone user not found",
+          "[Connections API] Email auth failed - standalone user not found",
           {
             component: "connections",
-            urlParamDomain: shopFromUrl,
+            emailParam: shopFromUrl,
             error: standaloneResult.error?.message,
           },
         );
@@ -223,14 +227,14 @@ export async function GET(request: NextRequest) {
       if (provider === "shopify") {
         // Shopify connection status:
         // - For 'shopify' type shops: connected if is_active is true
-        // - For 'standalone' type shops: connected if they have a linked_shopify_domain and valid access_token
+        // - For 'standalone' type shops: connected if they have a linked_shopify_domain and valid shopify_access_token
         const isStandalone = shopData.shop_type === "standalone";
         const isShopifyConnected =
           shopData.is_active === true &&
           (shopData.shop_type === "shopify" ||
             (isStandalone &&
               !!shopData.linked_shopify_domain &&
-              !!shopData.access_token));
+              !!shopData.shopify_access_token));
 
         // For standalone users, show the linked Shopify domain if available
         const displayDomain =
