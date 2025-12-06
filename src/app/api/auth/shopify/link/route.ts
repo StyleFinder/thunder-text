@@ -55,9 +55,10 @@ export async function GET(req: NextRequest) {
       : `${targetShop.toLowerCase()}.myshopify.com`;
 
     // Create secure state with standalone user info
+    // Use the 'email' column which contains the actual email address
     const secureState = createStandaloneShopifyLinkState({
       standalone_user_id: standaloneUser.id,
-      standalone_email: standaloneUser.shop_domain, // shop_domain is email for standalone users
+      standalone_email: standaloneUser.email,
       target_shop: shopDomain,
     });
 

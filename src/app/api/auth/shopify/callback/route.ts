@@ -180,7 +180,7 @@ export async function GET(req: NextRequest) {
         // Verify the standalone user still exists
         const { data: standaloneUser, error: userError } = await supabaseAdmin
           .from("shops")
-          .select("id, shop_domain, shop_type")
+          .select("id, shop_domain, shop_type, email")
           .eq("id", linkState.standalone_user_id)
           .eq("shop_type", "standalone")
           .single();
@@ -231,13 +231,14 @@ export async function GET(req: NextRequest) {
           {
             component: "callback",
             standaloneUserId: standaloneUser.id,
-            standaloneEmail: standaloneUser.shop_domain,
+            standaloneEmail: standaloneUser.email,
             linkedShop: fullShopDomain,
           },
         );
 
         // Redirect back to connections page with success message
-        const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings/connections?shop=${encodeURIComponent(standaloneUser.shop_domain)}&shopify_linked=true&message=${encodeURIComponent(`Successfully linked to ${fullShopDomain}`)}`;
+        // Use 'email' for the shop param since that's how we lookup standalone users
+        const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings/connections?shop=${encodeURIComponent(standaloneUser.email)}&shopify_linked=true&message=${encodeURIComponent(`Successfully linked to ${fullShopDomain}`)}`;
 
         return NextResponse.redirect(redirectUrl);
       } catch (linkError) {
