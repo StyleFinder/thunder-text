@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getToken } from "next-auth/jwt";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth-options";
 import { logger } from "@/lib/logger";
 
 const supabaseAdmin = createClient(
@@ -27,15 +28,12 @@ export async function GET(request: NextRequest) {
     }
 
     // SECURITY: Verify the request is authenticated
-    // Support both Shopify OAuth (shopify_shop cookie) and NextAuth (JWT session)
+    // Support both Shopify OAuth (shopify_shop cookie) and NextAuth session
     const shopifyCookie = request.cookies.get("shopify_shop")?.value;
 
-    // Check NextAuth JWT token for standalone users
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
-    const nextAuthShop = token?.shopDomain as string | undefined;
+    // Check NextAuth session for standalone users (uses getServerSession like other routes)
+    const session = await getServerSession(authOptions);
+    const nextAuthShop = session?.user?.shopDomain;
 
     // Use whichever authentication method is present
     const authenticatedShop = shopifyCookie || nextAuthShop;
@@ -44,8 +42,9 @@ export async function GET(request: NextRequest) {
     logger.debug("[Connections API] Auth check", {
       component: "connections",
       hasShopifyCookie: !!shopifyCookie,
-      hasNextAuthToken: !!token,
+      hasNextAuthSession: !!session,
       nextAuthShop: nextAuthShop || "none",
+      sessionUser: session?.user?.email || "none",
       requestedShop: shop,
     });
 
@@ -54,8 +53,8 @@ export async function GET(request: NextRequest) {
       logger.warn("[Connections API] No authentication found", {
         component: "connections",
         hasShopifyCookie: !!shopifyCookie,
-        hasNextAuthToken: !!token,
-        tokenKeys: token ? Object.keys(token) : [],
+        hasNextAuthSession: !!session,
+        sessionUserRole: session?.user?.role || "none",
       });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -68,7 +67,7 @@ export async function GET(request: NextRequest) {
         {
           component: "connections",
           requestedShop: shop,
-          authenticatedShop: authenticatedShop, // Log for debugging
+          authenticatedShop: authenticatedShop,
         },
       );
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
