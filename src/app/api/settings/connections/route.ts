@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getServerSession } from "next-auth";
+import { getToken } from "next-auth/jwt";
 import { authOptions } from "@/lib/auth/auth-options";
 import { logger } from "@/lib/logger";
 
@@ -21,9 +22,27 @@ export async function GET(request: NextRequest) {
     // Support both Shopify OAuth (shopify_shop cookie) and NextAuth session
     const shopifyCookie = request.cookies.get("shopify_shop")?.value;
 
-    // Check NextAuth session for standalone users (uses getServerSession like other routes)
+    // Try multiple methods to get NextAuth session/token
+    // Method 1: getServerSession (recommended but may not work in all App Router contexts)
     const session = await getServerSession(authOptions);
-    const nextAuthShop = session?.user?.shopDomain;
+    let nextAuthShop = session?.user?.shopDomain;
+
+    // Method 2: If getServerSession returns null, try getToken as fallback
+    // This reads the JWT directly from the cookie and may work better in some contexts
+    if (!session) {
+      const token = await getToken({
+        req: request,
+        secret: process.env.NEXTAUTH_SECRET,
+      });
+      if (token?.shopDomain) {
+        nextAuthShop = token.shopDomain as string;
+        logger.debug("[Connections API] Using getToken fallback", {
+          component: "connections",
+          shopDomain: nextAuthShop,
+          tokenEmail: token.email || "none",
+        });
+      }
+    }
 
     // IMPORTANT: Prefer NextAuth session over Shopify cookie
     // This is because standalone users may have stale Shopify cookies from previous sessions
@@ -35,9 +54,11 @@ export async function GET(request: NextRequest) {
     logger.debug("[Connections API] Auth check", {
       component: "connections",
       hasShopifyCookie: !!shopifyCookie,
+      shopifyCookieValue: shopifyCookie || "none",
       hasNextAuthSession: !!session,
       nextAuthShop: nextAuthShop || "none",
       sessionUser: session?.user?.email || "none",
+      finalAuthShop: authenticatedShop || "none",
     });
 
     if (!authenticatedShop) {
@@ -71,7 +92,10 @@ export async function GET(request: NextRequest) {
         errorCode: shopError?.code,
       });
       return NextResponse.json(
-        { error: `Shop not found for domain: ${shopDomainToLookup}`, connections: [] },
+        {
+          error: `Shop not found for domain: ${shopDomainToLookup}`,
+          connections: [],
+        },
         { status: 404 },
       );
     }
