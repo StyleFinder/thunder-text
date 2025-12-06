@@ -40,12 +40,22 @@ export async function GET(request: NextRequest) {
     // Use whichever authentication method is present
     const authenticatedShop = shopifyCookie || nextAuthShop;
 
+    // Log authentication status for debugging
+    logger.debug("[Connections API] Auth check", {
+      component: "connections",
+      hasShopifyCookie: !!shopifyCookie,
+      hasNextAuthToken: !!token,
+      nextAuthShop: nextAuthShop || "none",
+      requestedShop: shop,
+    });
+
     if (!authenticatedShop) {
       // No authentication found - user is not authenticated
-      logger.debug("[Connections API] No authentication found", {
+      logger.warn("[Connections API] No authentication found", {
         component: "connections",
         hasShopifyCookie: !!shopifyCookie,
         hasNextAuthToken: !!token,
+        tokenKeys: token ? Object.keys(token) : [],
       });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -58,7 +68,7 @@ export async function GET(request: NextRequest) {
         {
           component: "connections",
           requestedShop: shop,
-          // Don't log the authenticated shop to avoid info leak in logs
+          authenticatedShop: authenticatedShop, // Log for debugging
         },
       );
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
