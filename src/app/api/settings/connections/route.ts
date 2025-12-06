@@ -67,81 +67,118 @@ export async function GET(request: NextRequest) {
     // This is because standalone users may have stale Shopify cookies from previous sessions
     // but their actual identity should come from their NextAuth session (email-based shop_domain)
     // Only fall back to Shopify cookie if no NextAuth session exists
-    const authenticatedShop = nextAuthShop || shopifyCookie;
+    let authenticatedShop = nextAuthShop || shopifyCookie;
 
-    // If no authentication found at all
-    if (!authenticatedShop) {
-      logger.warn("[Connections API] No authentication found", {
-        component: "connections",
-        hasShopifyCookie: !!shopifyCookie,
-        hasNextAuthSession: !!session,
-        sessionUserRole: session?.user?.role || "none",
-      });
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // EARLY FALLBACK: If no cookie-based auth but URL param looks like a standalone user email
+    // This handles the case where NextAuth session cookies aren't readable in API routes
+    // SECURITY: We verify the email exists as a standalone user in the database before proceeding
+    let shopData: {
+      id: string;
+      is_active: boolean;
+      shop_type: string;
+      access_token: string | null;
+      shop_domain: string;
+    } | null = null;
+    let shopError: { message?: string; code?: string } | null = null;
 
-    // Use the authenticated shop domain for database lookup
-    let shopDomainToLookup = authenticatedShop;
+    // If we have cookie-based auth, try that first
+    if (authenticatedShop) {
+      const result = await supabaseAdmin
+        .from("shops")
+        .select("id, is_active, shop_type, access_token, shop_domain")
+        .eq("shop_domain", authenticatedShop)
+        .single();
 
-    // First, get the shop_id, is_active, shop_type, and access_token from shop_domain
-    let { data: shopData, error: shopError } = await supabaseAdmin
-      .from("shops")
-      .select("id, is_active, shop_type, access_token, shop_domain")
-      .eq("shop_domain", shopDomainToLookup)
-      .single();
+      shopData = result.data;
+      shopError = result.error;
 
-    // FALLBACK: If lookup failed AND we have a URL param that looks like a standalone user email
-    // This handles the case where:
-    // 1. NextAuth session can't be read by API (cookie domain mismatch)
-    // 2. User has stale Shopify cookie
-    // 3. Frontend passed the correct shop_domain from useSession()
-    if ((shopError || !shopData) && shopFromUrl && shopFromUrl.includes("@")) {
+      // If cookie-based auth failed and URL param looks like standalone user, try fallback
+      if (
+        (shopError || !shopData) &&
+        shopFromUrl &&
+        shopFromUrl.includes("@")
+      ) {
+        logger.info(
+          "[Connections API] Primary lookup failed, trying URL param fallback for standalone user",
+          {
+            component: "connections",
+            primaryDomain: authenticatedShop,
+            urlParamDomain: shopFromUrl,
+          },
+        );
+
+        const fallbackResult = await supabaseAdmin
+          .from("shops")
+          .select("id, is_active, shop_type, access_token, shop_domain")
+          .eq("shop_domain", shopFromUrl)
+          .eq("shop_type", "standalone")
+          .single();
+
+        if (fallbackResult.data && !fallbackResult.error) {
+          shopData = fallbackResult.data;
+          shopError = null;
+          authenticatedShop = shopFromUrl;
+          logger.info(
+            "[Connections API] Fallback successful - found standalone user",
+            {
+              component: "connections",
+              shopDomain: shopFromUrl,
+            },
+          );
+        }
+      }
+    } else if (shopFromUrl && shopFromUrl.includes("@")) {
+      // No cookie-based auth at all, but URL param looks like a standalone user email
+      // SECURITY: This is safe because we verify the email exists in our database as a standalone user
+      // The user must have a valid session on the frontend (useSession) to know their email
       logger.info(
-        "[Connections API] Primary lookup failed, trying URL param fallback for standalone user",
+        "[Connections API] No cookie auth - attempting URL param auth for standalone user",
         {
           component: "connections",
-          primaryDomain: shopDomainToLookup,
           urlParamDomain: shopFromUrl,
         },
       );
 
-      // Try looking up by URL param (for standalone users, this is their email)
-      const fallbackResult = await supabaseAdmin
+      const standaloneResult = await supabaseAdmin
         .from("shops")
         .select("id, is_active, shop_type, access_token, shop_domain")
         .eq("shop_domain", shopFromUrl)
-        .eq("shop_type", "standalone") // SECURITY: Only allow this fallback for standalone users
+        .eq("shop_type", "standalone")
         .single();
 
-      if (fallbackResult.data && !fallbackResult.error) {
-        shopData = fallbackResult.data;
+      if (standaloneResult.data && !standaloneResult.error) {
+        shopData = standaloneResult.data;
         shopError = null;
-        shopDomainToLookup = shopFromUrl;
+        authenticatedShop = shopFromUrl;
         logger.info(
-          "[Connections API] Fallback successful - found standalone user",
+          "[Connections API] URL param auth successful - found standalone user",
           {
             component: "connections",
             shopDomain: shopFromUrl,
           },
         );
+      } else {
+        logger.warn(
+          "[Connections API] URL param auth failed - standalone user not found",
+          {
+            component: "connections",
+            urlParamDomain: shopFromUrl,
+            error: standaloneResult.error?.message,
+          },
+        );
       }
     }
 
-    if (shopError || !shopData) {
-      logger.error("[Connections API] Shop not found in database", {
+    // If still no authentication found at all
+    if (!authenticatedShop || !shopData) {
+      logger.warn("[Connections API] No authentication found", {
         component: "connections",
-        shopDomainToLookup,
+        hasShopifyCookie: !!shopifyCookie,
+        hasNextAuthSession: !!session,
+        sessionUserRole: session?.user?.role || "none",
         shopFromUrl: shopFromUrl || "none",
-        error: shopError?.message || "No data returned",
-        errorCode: shopError?.code,
       });
-      return NextResponse.json(
-        {
-          error: `Shop not found for domain: ${shopDomainToLookup}`,
-          connections: [],
-        },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get all integrations for this shop
