@@ -183,6 +183,13 @@ export async function POST(request: NextRequest) {
     console.log("🔐 Initializing Shopify API client for shop:", shop);
     const shopifyClient = new ShopifyAPI(shop, accessToken);
 
+    // Format product ID for GraphQL (must be gid://shopify/Product/123 format)
+    let formattedProductId = productId;
+    if (!productId.startsWith("gid://")) {
+      formattedProductId = `gid://shopify/Product/${productId}`;
+    }
+    console.log("📦 Using product ID:", formattedProductId);
+
     // Prepare the update input for Shopify GraphQL
     const productInput: {
       title?: string;
@@ -237,7 +244,7 @@ export async function POST(request: NextRequest) {
     try {
       console.log("📤 Sending update to Shopify GraphQL API...");
       updateResult = (await shopifyClient.updateProduct(
-        productId,
+        formattedProductId,
         productInput,
       )) as { productUpdate?: { product?: unknown; userErrors?: unknown[] } };
     } catch (apiError) {
@@ -275,7 +282,10 @@ export async function POST(request: NextRequest) {
     if (metafieldsToUpdate.length > 0) {
       for (const metafield of metafieldsToUpdate) {
         try {
-          await shopifyClient.createProductMetafield(productId, metafield);
+          await shopifyClient.createProductMetafield(
+            formattedProductId,
+            metafield,
+          );
         } catch (metaError) {
           logger.error("⚠️ Error updating metafield", metaError as Error, {
             metafieldKey: metafield.key,
