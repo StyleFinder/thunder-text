@@ -62,8 +62,14 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (shopError || !shopData) {
+      logger.error("[Connections API] Shop not found in database", {
+        component: "connections",
+        shopDomainToLookup,
+        error: shopError?.message || "No data returned",
+        errorCode: shopError?.code,
+      });
       return NextResponse.json(
-        { error: "Shop not found", connections: [] },
+        { error: `Shop not found for domain: ${shopDomainToLookup}`, connections: [] },
         { status: 404 },
       );
     }
