@@ -37,6 +37,7 @@ interface Connection {
 interface ConnectionsResponse {
   success: boolean;
   connections: Connection[];
+  error?: string;
 }
 
 // Provider display information with Lucide icons
@@ -118,7 +119,9 @@ export default function ConnectionsPage() {
       const data: ConnectionsResponse = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error("Failed to fetch connections");
+        // Include the actual error from the API for better debugging
+        const errorMessage = data.error || `HTTP ${response.status}`;
+        throw new Error(`Failed to fetch connections: ${errorMessage}`);
       }
 
       setConnections(data.connections);
