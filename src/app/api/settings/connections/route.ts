@@ -25,9 +25,11 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     const nextAuthShop = session?.user?.shopDomain;
 
-    // Use whichever authentication method is present
-    // This is the AUTHORITATIVE shop domain from auth, not from URL params
-    const authenticatedShop = shopifyCookie || nextAuthShop;
+    // IMPORTANT: Prefer NextAuth session over Shopify cookie
+    // This is because standalone users may have stale Shopify cookies from previous sessions
+    // but their actual identity should come from their NextAuth session (email-based shop_domain)
+    // Only fall back to Shopify cookie if no NextAuth session exists
+    const authenticatedShop = nextAuthShop || shopifyCookie;
 
     // Log authentication status for debugging
     logger.debug("[Connections API] Auth check", {
