@@ -17,16 +17,6 @@ const supabaseAdmin = createClient(
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const shop = searchParams.get("shop");
-
-    if (!shop) {
-      return NextResponse.json(
-        { error: "Missing shop parameter" },
-        { status: 400 },
-      );
-    }
-
     // SECURITY: Verify the request is authenticated
     // Support both Shopify OAuth (shopify_shop cookie) and NextAuth session
     const shopifyCookie = request.cookies.get("shopify_shop")?.value;
@@ -36,6 +26,7 @@ export async function GET(request: NextRequest) {
     const nextAuthShop = session?.user?.shopDomain;
 
     // Use whichever authentication method is present
+    // This is the AUTHORITATIVE shop domain from auth, not from URL params
     const authenticatedShop = shopifyCookie || nextAuthShop;
 
     // Log authentication status for debugging
@@ -45,7 +36,6 @@ export async function GET(request: NextRequest) {
       hasNextAuthSession: !!session,
       nextAuthShop: nextAuthShop || "none",
       sessionUser: session?.user?.email || "none",
-      requestedShop: shop,
     });
 
     if (!authenticatedShop) {
@@ -59,25 +49,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // SECURITY: Verify the authenticated user owns this shop
-    // This prevents information disclosure via shop enumeration
-    if (authenticatedShop !== shop) {
-      logger.warn(
-        "[Connections API] Shop mismatch - possible enumeration attempt",
-        {
-          component: "connections",
-          requestedShop: shop,
-          authenticatedShop: authenticatedShop,
-        },
-      );
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    // Use the authenticated shop domain for database lookup
+    // This ensures we always use the correct shop_domain from the user's auth,
+    // not from URL params which could be incorrect (e.g., standalone user with Shopify URL)
+    const shopDomainToLookup = authenticatedShop;
 
     // First, get the shop_id, is_active, shop_type, and access_token from shop_domain
     const { data: shopData, error: shopError } = await supabaseAdmin
       .from("shops")
-      .select("id, is_active, shop_type, access_token")
-      .eq("shop_domain", shop)
+      .select("id, is_active, shop_type, access_token, shop_domain")
+      .eq("shop_domain", shopDomainToLookup)
       .single();
 
     if (shopError || !shopData) {
@@ -132,7 +113,7 @@ export async function GET(request: NextRequest) {
           connected: isShopifyConnected,
           lastConnected: null,
           metadata: {
-            shop_domain: shop,
+            shop_domain: shopData.shop_domain,
           },
         };
       }
