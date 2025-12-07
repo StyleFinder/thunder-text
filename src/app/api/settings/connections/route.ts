@@ -134,6 +134,69 @@ export async function GET(request: NextRequest) {
           );
         }
       }
+
+      // If cookie-based auth failed and URL param looks like a Shopify domain, try fallback
+      // This handles standalone users with linked Shopify stores when session cookies are stale
+      if (
+        (shopError || !shopData) &&
+        shopFromUrl &&
+        shopFromUrl.includes(".myshopify.com")
+      ) {
+        logger.info(
+          "[Connections API] Primary lookup failed, trying linked_shopify_domain lookup",
+          {
+            component: "connections",
+            primaryDomain: authenticatedShop,
+            shopifyDomainParam: shopFromUrl,
+          },
+        );
+
+        // First try regular Shopify store lookup
+        const shopifyFallbackResult = await supabaseAdmin
+          .from("shops")
+          .select(
+            "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
+          )
+          .eq("shop_domain", shopFromUrl)
+          .single();
+
+        if (shopifyFallbackResult.data && !shopifyFallbackResult.error) {
+          shopData = shopifyFallbackResult.data;
+          shopError = null;
+          authenticatedShop = shopFromUrl;
+          logger.info(
+            "[Connections API] Fallback successful - found Shopify store by shop_domain",
+            {
+              component: "connections",
+              shopDomain: shopFromUrl,
+            },
+          );
+        } else {
+          // Try finding a standalone user with this linked_shopify_domain
+          const linkedFallbackResult = await supabaseAdmin
+            .from("shops")
+            .select(
+              "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
+            )
+            .eq("linked_shopify_domain", shopFromUrl)
+            .eq("shop_type", "standalone")
+            .single();
+
+          if (linkedFallbackResult.data && !linkedFallbackResult.error) {
+            shopData = linkedFallbackResult.data;
+            shopError = null;
+            authenticatedShop = shopFromUrl;
+            logger.info(
+              "[Connections API] Fallback successful - found standalone user by linked_shopify_domain",
+              {
+                component: "connections",
+                linkedShopifyDomain: shopFromUrl,
+                standaloneEmail: linkedFallbackResult.data.shop_domain,
+              },
+            );
+          }
+        }
+      }
     } else if (shopFromUrl && shopFromUrl.includes("@")) {
       // No cookie-based auth at all, but URL param looks like a standalone user email
       // SECURITY: This is safe because we verify the email exists in our database as a standalone user
