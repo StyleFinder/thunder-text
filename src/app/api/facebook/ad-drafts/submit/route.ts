@@ -390,27 +390,44 @@ async function createAd(
   );
 
   // Now create the ad - only needs creative, name, and status
+  // Use URL params instead of JSON body (more reliable with Facebook API)
   const adUrl = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/ads`);
   adUrl.searchParams.set("access_token", accessToken);
+  adUrl.searchParams.set("name", adName);
+  adUrl.searchParams.set("adset_id", adSetId);
+  adUrl.searchParams.set(
+    "creative",
+    JSON.stringify({ creative_id: creativeId }),
+  );
+  adUrl.searchParams.set("status", "PAUSED"); // Start paused so user can review
 
-  const adData = {
-    name: adName,
-    adset_id: adSetId,
-    creative: { creative_id: creativeId },
-    status: "PAUSED", // Start paused so user can review
-  };
+  logger.info("Creating ad with params", {
+    component: "facebook-ad-drafts-submit",
+    operation: "createAd",
+    adAccountId,
+    adSetId,
+    creativeId,
+    adName,
+  });
 
   const adResponse = await fetch(adUrl.toString(), {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(adData),
   });
 
   const adResult = await adResponse.json();
 
   if (!adResponse.ok || adResult.error) {
+    // Extract detailed error info
+    const errorDetails = {
+      message: adResult.error?.message,
+      code: adResult.error?.code,
+      type: adResult.error?.type,
+      subcode: adResult.error?.error_subcode,
+      userTitle: adResult.error?.error_user_title,
+      userMsg: adResult.error?.error_user_msg,
+      blameFieldSpecs: adResult.error?.error_data?.blame_field_specs,
+    };
+
     logger.error(
       "Facebook API error - Ad Creation",
       new Error(adResult.error?.message || "Ad creation failed"),
@@ -418,19 +435,16 @@ async function createAd(
         component: "facebook-ad-drafts-submit",
         operation: "createAd",
         status: adResponse.status,
-        errorCode: adResult.error?.code,
-        errorType: adResult.error?.type,
-        errorSubcode: adResult.error?.error_subcode,
+        ...errorDetails,
         fullError: JSON.stringify(adResult.error),
         adAccountId,
         adSetId,
         creativeId,
         adName,
-        requestBody: JSON.stringify(adData),
       },
     );
     throw new FacebookAPIError(
-      `[STEP 4: Ad Creation] ${adResult.error?.message || "Failed to create ad"}`,
+      `[STEP 4: Ad Creation] ${adResult.error?.message || "Failed to create ad"} (subcode: ${errorDetails.subcode || "none"}, blame: ${JSON.stringify(errorDetails.blameFieldSpecs) || "none"})`,
       adResponse.status,
       adResult.error?.code,
       adResult.error?.type,
