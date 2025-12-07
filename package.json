@@ -8,7 +8,7 @@
     "dev:clean": "./scripts/cleanup-and-start.sh",
     "dev:kill": "lsof -ti:3050 | xargs kill -9 2>/dev/null && pkill -f 'next dev' || echo 'No dev servers running'",
     "build": "node scripts/check-auth-bypass.mjs && next build",
-    "build:render": "npm install --legacy-peer-deps && rm -rf .next && node scripts/check-auth-bypass.mjs && node scripts/remove-debug-routes.mjs && next build",
+    "build:render": "npm install --legacy-peer-deps && rm -rf .next && node scripts/check-auth-bypass.mjs && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
