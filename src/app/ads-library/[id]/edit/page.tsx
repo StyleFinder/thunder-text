@@ -164,6 +164,15 @@ export default function AdEditorPage() {
       return;
     }
 
+    // Get the campaign name from the campaigns array
+    const selectedCampaignData = campaigns.find(
+      (c) => c.id === selectedCampaign,
+    );
+    if (!selectedCampaignData) {
+      setError("Selected campaign not found. Please try selecting again.");
+      return;
+    }
+
     // Save changes first
     await handleSave();
 
@@ -184,6 +193,7 @@ export default function AdEditorPage() {
           selected_image_url: ad.image_urls?.[0] || null,
           facebook_ad_account_id: selectedAdAccount,
           facebook_campaign_id: selectedCampaign,
+          facebook_campaign_name: selectedCampaignData.name,
           additional_metadata: {
             description,
             cta,
