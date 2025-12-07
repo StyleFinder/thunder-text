@@ -195,7 +195,10 @@ async function createAdCreative(
         message: body,
         name: title,
         call_to_action: {
-          type: "SHOP_NOW", // Required for most campaign objectives (SALES, TRAFFIC, etc.)
+          type: "SHOP_NOW",
+          value: {
+            link: productUrl,
+          },
         },
       },
     },
