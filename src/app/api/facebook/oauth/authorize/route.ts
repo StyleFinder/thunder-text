@@ -20,9 +20,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createFacebookOAuthState } from "@/lib/security/oauth-validation";
 import { logger } from "@/lib/logger";
+import { lookupShopWithFallback } from "@/lib/shop-lookup";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -48,50 +49,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get shop from database using admin client
-    // First try by shop_domain, then fallback to linked_shopify_domain for standalone users
-    let shopData: { id: string; shop_domain: string } | null = null;
-    let shopError: { message?: string } | null = null;
-
-    // First try: lookup by shop_domain
-    const primaryResult = await supabaseAdmin
-      .from("shops")
-      .select("id, shop_domain")
-      .eq("shop_domain", shop)
-      .single();
-
-    if (primaryResult.data && !primaryResult.error) {
-      shopData = primaryResult.data;
-    } else if (shop.includes(".myshopify.com")) {
-      // Fallback: For standalone users, try linked_shopify_domain
-      logger.info(
-        `[Facebook OAuth] Primary lookup failed, trying linked_shopify_domain for: ${shop}`,
-        { component: "authorize" },
-      );
-
-      const linkedResult = await supabaseAdmin
-        .from("shops")
-        .select("id, shop_domain")
-        .eq("linked_shopify_domain", shop)
-        .eq("shop_type", "standalone")
-        .single();
-
-      if (linkedResult.data && !linkedResult.error) {
-        shopData = linkedResult.data;
-        logger.info(
-          `[Facebook OAuth] Found standalone user by linked_shopify_domain`,
-          {
-            component: "authorize",
-            linkedShopifyDomain: shop,
-            shopDomain: linkedResult.data.shop_domain,
-          },
-        );
-      } else {
-        shopError = linkedResult.error;
-      }
-    } else {
-      shopError = primaryResult.error;
-    }
+    // Get shop from database using admin client (with fallback for standalone users)
+    const { data: shopData, error: shopError } = await lookupShopWithFallback<{
+      id: string;
+      shop_domain: string;
+    }>(supabaseAdmin, shop, "id, shop_domain", "facebook-oauth");
 
     if (shopError || !shopData) {
       logger.error(`Shop not found: ${shop}`, shopError as Error, {
