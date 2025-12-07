@@ -33,7 +33,7 @@
     "process-bp": "tsx scripts/process-best-practice-example.ts",
     "cleanup-stores": "dotenv -e .env.local -- tsx scripts/cleanup-stores.ts",
     "seed-mock-stores": "dotenv -e .env.local -- tsx scripts/seed-mock-stores.ts",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "dependencies": {
     "@next-auth/supabase-adapter": "^0.2.1",
