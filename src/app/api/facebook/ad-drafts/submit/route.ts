@@ -77,6 +77,28 @@ async function uploadAdImage(
   adAccountId: string,
   imageUrl: string,
 ): Promise<{ hash: string }> {
+  logger.info("Starting image upload to Facebook", {
+    component: "facebook-ad-drafts-submit",
+    operation: "uploadAdImage",
+    adAccountId,
+    imageUrl: imageUrl.substring(0, 100), // Log first 100 chars of URL
+  });
+
+  // Validate ad account ID format
+  if (!adAccountId || !adAccountId.startsWith("act_")) {
+    logger.error("Invalid ad account ID format", undefined, {
+      component: "facebook-ad-drafts-submit",
+      operation: "uploadAdImage",
+      adAccountId,
+      expected: "act_XXXXXXXXX format",
+    });
+    throw new FacebookAPIError(
+      `Invalid ad account ID format: ${adAccountId}. Expected act_XXXXXXXXX format.`,
+      400,
+      "INVALID_AD_ACCOUNT_ID",
+    );
+  }
+
   // Fetch image from Shopify CDN
   const imageResponse = await fetch(imageUrl);
   if (!imageResponse.ok) {
@@ -114,7 +136,9 @@ async function uploadAdImage(
         status: response.status,
         errorCode: data.error?.code,
         errorType: data.error?.type,
-        imageUrl,
+        errorSubcode: data.error?.error_subcode,
+        fullError: JSON.stringify(data.error),
+        imageUrl: imageUrl.substring(0, 100),
         adAccountId,
       },
     );
@@ -125,6 +149,12 @@ async function uploadAdImage(
       data.error?.type,
     );
   }
+
+  logger.info("Image uploaded successfully", {
+    component: "facebook-ad-drafts-submit",
+    operation: "uploadAdImage",
+    imageHash: data.images?.bytes?.hash,
+  });
 
   // Response format: { images: { bytes: { hash: "abc123" } } }
   return { hash: data.images?.bytes?.hash };
@@ -142,6 +172,16 @@ async function createAdCreative(
   productUrl: string,
   pageId: string,
 ): Promise<{ id: string }> {
+  logger.info("Creating ad creative on Facebook", {
+    component: "facebook-ad-drafts-submit",
+    operation: "createAdCreative",
+    adAccountId,
+    pageId,
+    title: title.substring(0, 50),
+    productUrl: productUrl.substring(0, 100),
+    imageHash,
+  });
+
   const url = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/adcreatives`);
   url.searchParams.set("access_token", accessToken);
 
@@ -178,10 +218,14 @@ async function createAdCreative(
         status: response.status,
         errorCode: data.error?.code,
         errorType: data.error?.type,
+        errorSubcode: data.error?.error_subcode,
+        fullError: JSON.stringify(data.error),
         adAccountId,
         pageId,
         title,
         imageHash,
+        productUrl: productUrl.substring(0, 100),
+        requestBody: JSON.stringify(creativeData),
       },
     );
     throw new FacebookAPIError(
@@ -191,6 +235,12 @@ async function createAdCreative(
       data.error?.type,
     );
   }
+
+  logger.info("Ad creative created successfully", {
+    component: "facebook-ad-drafts-submit",
+    operation: "createAdCreative",
+    creativeId: data.id,
+  });
 
   return data;
 }
@@ -223,6 +273,13 @@ async function getOrCreateAdSet(
   campaignId: string,
   adName: string,
 ): Promise<string> {
+  logger.info("Fetching existing ad sets from campaign", {
+    component: "facebook-ad-drafts-submit",
+    operation: "getOrCreateAdSet",
+    campaignId,
+    adAccountId,
+  });
+
   // First, fetch existing ad sets from the campaign
   const campaignAdSetsUrl = new URL(
     `${FACEBOOK_GRAPH_URL}/${campaignId}/adsets`,
@@ -245,8 +302,24 @@ async function getOrCreateAdSet(
           as.status === "ACTIVE" || as.effective_status === "ACTIVE",
       ) || fetchResult.data[0];
 
+    logger.info("Using existing ad set from campaign", {
+      component: "facebook-ad-drafts-submit",
+      operation: "getOrCreateAdSet",
+      adSetId: activeAdSet.id,
+      adSetName: activeAdSet.name,
+      adSetStatus: activeAdSet.status,
+      totalAdSetsFound: fetchResult.data.length,
+    });
+
     return activeAdSet.id;
   }
+
+  logger.info("No existing ad sets found, will create new one", {
+    component: "facebook-ad-drafts-submit",
+    operation: "getOrCreateAdSet",
+    campaignId,
+    fetchError: fetchResult.error ? JSON.stringify(fetchResult.error) : null,
+  });
 
   // If no ad sets exist, create one with required fields
   // First get the campaign objective to determine appropriate settings
