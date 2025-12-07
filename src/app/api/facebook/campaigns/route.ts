@@ -1,7 +1,9 @@
 /**
  * GET /api/facebook/campaigns
  *
- * Retrieves active campaigns for a specific ad account
+ * Retrieves campaigns for a specific ad account
+ * By default returns all campaigns (ACTIVE, PAUSED, etc.)
+ * Optional status filter can be provided to filter by specific status
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -55,8 +57,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Get campaigns from Facebook API
+    // When no status filter is provided, fetch all campaigns (ACTIVE, PAUSED, etc.)
     const campaigns = await getCampaigns(shopData.id, adAccountId, {
-      status: status || "ACTIVE",
+      ...(status && { status }), // Only filter by status if explicitly provided
       limit: limit ? parseInt(limit) : 100,
     });
 
