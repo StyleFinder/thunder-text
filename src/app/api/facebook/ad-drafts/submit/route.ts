@@ -370,10 +370,13 @@ async function createAd(
         status: adResponse.status,
         errorCode: adResult.error?.code,
         errorType: adResult.error?.type,
+        errorSubcode: adResult.error?.error_subcode,
+        fullError: JSON.stringify(adResult.error),
         adAccountId,
         adSetId,
         creativeId,
         adName,
+        requestBody: JSON.stringify(adData),
       },
     );
     throw new FacebookAPIError(
@@ -383,6 +386,13 @@ async function createAd(
       adResult.error?.type,
     );
   }
+
+  logger.info("Ad created successfully", {
+    component: "facebook-ad-drafts-submit",
+    operation: "createAd",
+    adId: adResult.id,
+    adSetId,
+  });
 
   return {
     id: adResult.id,
