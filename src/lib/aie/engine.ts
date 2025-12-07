@@ -81,64 +81,91 @@ export class AdIntelligenceEngine {
      * Orchestrate the entire ad generation process
      */
     async generateAds(request: GenerationRequest): Promise<GenerationResult> {
+        let selectedLength: import('@/types/aie').AdLengthOption = 'MEDIUM';
 
         // 0. Ad Length Selection Phase
-        console.log('📏 Phase 0: Determining optimal ad length...');
-        const lengthSelector = await this.getLengthSelector();
+        logger.info('📏 Phase 0: Determining optimal ad length...', { component: 'aie-engine' });
+        try {
+            const lengthSelector = await this.getLengthSelector();
 
-        const adLengthInput: Partial<AdLengthInput> = {
-            campaign_type: request.campaignType || this.mapGoalToCampaignType(request.goal),
-            audience_temperature: request.audienceTemperature,
-            price: request.productPrice,
-            product_complexity: request.productComplexity,
-            has_strong_story: request.hasStrongStory,
-            is_premium_brand: request.isPremiumBrand
-        };
+            const adLengthInput: Partial<AdLengthInput> = {
+                campaign_type: request.campaignType || this.mapGoalToCampaignType(request.goal),
+                audience_temperature: request.audienceTemperature,
+                price: request.productPrice,
+                product_complexity: request.productComplexity,
+                has_strong_story: request.hasStrongStory,
+                is_premium_brand: request.isPremiumBrand
+            };
 
-        const selectedLength = await lengthSelector.selectAdLength(
-            request.adLengthMode || 'AUTO',
-            adLengthInput
-        );
+            selectedLength = await lengthSelector.selectAdLength(
+                request.adLengthMode || 'AUTO',
+                adLengthInput
+            );
 
-        const limits = lengthSelector.getCharacterLimits(selectedLength);
-        console.log(`   Selected: ${selectedLength} (${limits.ideal} chars ideal, ${limits.max} max)`);
+            const limits = lengthSelector.getCharacterLimits(selectedLength);
+            logger.info(`   Phase 0 complete: Selected ${selectedLength} (${limits.ideal} chars ideal, ${limits.max} max)`, { component: 'aie-engine' });
+        } catch (phase0Error) {
+            logger.error('Phase 0 error (ad length selection):', phase0Error as Error, { component: 'aie-engine' });
+            // Default to MEDIUM and continue - don't fail the entire generation
+            logger.info('   Defaulting to MEDIUM ad length', { component: 'aie-engine' });
+        }
 
         // 1. Research Phase
-        const context = await this.researcher.compileContext(
-            request.productInfo,
-            request.platform,
-            request.goal,
-            request.shopId
-        );
-        console.log(`   Found ${context.bestPractices.length} best practices and ${context.adExamples.length} examples.`);
-        if (context.brandVoice) {
+        logger.info('🔬 Phase 1: Researching best practices and examples...', { component: 'aie-engine' });
+        let context;
+        try {
+            context = await this.researcher.compileContext(
+                request.productInfo,
+                request.platform,
+                request.goal,
+                request.shopId
+            );
+            logger.info(`   Phase 1 complete: Found ${context.bestPractices.length} best practices and ${context.adExamples.length} examples.`, { component: 'aie-engine' });
+            if (context.brandVoice) {
+                logger.info('   Brand voice context loaded', { component: 'aie-engine' });
+            }
+        } catch (phase1Error) {
+            logger.error('Phase 1 error (research):', phase1Error as Error, { component: 'aie-engine' });
+            throw new Error(`Research phase failed: ${phase1Error instanceof Error ? phase1Error.message : 'Unknown error'}`);
         }
 
         // 2. Creative Phase
-        console.log('🎨 Phase 2: Generating creative variants...');
-        const drafts = await this.creative.generateVariants(
-            request.productInfo,
-            context,
-            request.platform,
-            request.goal,
-            selectedLength // Pass selected length to creative agent
-        );
-        console.log(`   Generated ${drafts.length} drafts.`);
+        logger.info('🎨 Phase 2: Generating creative variants...', { component: 'aie-engine' });
+        let drafts;
+        try {
+            drafts = await this.creative.generateVariants(
+                request.productInfo,
+                context,
+                request.platform,
+                request.goal,
+                selectedLength // Pass selected length to creative agent
+            );
+            logger.info(`   Phase 2 complete: Generated ${drafts.length} drafts.`, { component: 'aie-engine' });
+        } catch (phase2Error) {
+            logger.error('Phase 2 error (creative):', phase2Error as Error, { component: 'aie-engine' });
+            throw new Error(`Creative phase failed: ${phase2Error instanceof Error ? phase2Error.message : 'Unknown error'}`);
+        }
 
         // 3. Analysis Phase
-        console.log('🧐 Phase 3: Analyzing and scoring variants...');
-        const scoredVariants = await this.analyst.scoreVariants(
-            drafts,
-            context,
-            request.platform,
-            request.goal
-        );
+        logger.info('🧐 Phase 3: Analyzing and scoring variants...', { component: 'aie-engine' });
+        let scoredVariants;
+        try {
+            scoredVariants = await this.analyst.scoreVariants(
+                drafts,
+                context,
+                request.platform,
+                request.goal
+            );
 
-        // Sort by score descending
-        scoredVariants.sort((a, b) => (b.predicted_score || 0) - (a.predicted_score || 0));
-        console.log('   Scoring complete.');
+            // Sort by score descending
+            scoredVariants.sort((a, b) => (b.predicted_score || 0) - (a.predicted_score || 0));
+            logger.info('   Phase 3 complete: Scoring complete.', { component: 'aie-engine' });
+        } catch (phase3Error) {
+            logger.error('Phase 3 error (analysis):', phase3Error as Error, { component: 'aie-engine' });
+            throw new Error(`Analysis phase failed: ${phase3Error instanceof Error ? phase3Error.message : 'Unknown error'}`);
+        }
 
-        // NOTE: Auto-save removed per user request. 
+        // NOTE: Auto-save removed per user request.
         // We now only save specific variants when the user clicks "Save" in the UI.
 
         return {

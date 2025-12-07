@@ -22,7 +22,16 @@ export class ResearcherAgent {
         goal?: AieGoal,
         limit: number = 5
     ): Promise<BestPractice[]> {
-        const embedding = await generateEmbedding(query);
+        logger.info('🔍 Searching best practices...', { component: 'researcher', platform, goal });
+
+        let embedding: number[];
+        try {
+            embedding = await generateEmbedding(query);
+            logger.info(`   Embedding generated (${embedding.length} dimensions)`, { component: 'researcher' });
+        } catch (embeddingError) {
+            logger.error('Failed to generate embedding for best practices search:', embeddingError as Error, { component: 'researcher' });
+            throw new Error(`Embedding generation failed: ${embeddingError instanceof Error ? embeddingError.message : 'Unknown error'}`);
+        }
 
         const { data, error } = await this.supabase.rpc('search_best_practices', {
             query_embedding: embedding,
@@ -33,10 +42,11 @@ export class ResearcherAgent {
         });
 
         if (error) {
-            logger.error('Error searching best practices:', error as Error, { component: 'agent' });
+            logger.error('Error searching best practices:', error as Error, { component: 'researcher' });
             throw new Error(`Failed to search best practices: ${error.message}`);
         }
 
+        logger.info(`   Found ${data?.length || 0} best practices`, { component: 'researcher' });
         return data as BestPractice[];
     }
 
@@ -48,7 +58,16 @@ export class ResearcherAgent {
         platform?: AiePlatform,
         limit: number = 5
     ): Promise<AdExample[]> {
-        const embedding = await generateEmbedding(query);
+        logger.info('🔍 Searching ad examples...', { component: 'researcher', platform });
+
+        let embedding: number[];
+        try {
+            embedding = await generateEmbedding(query);
+            logger.info(`   Embedding generated for ad examples (${embedding.length} dimensions)`, { component: 'researcher' });
+        } catch (embeddingError) {
+            logger.error('Failed to generate embedding for ad examples search:', embeddingError as Error, { component: 'researcher' });
+            throw new Error(`Embedding generation failed: ${embeddingError instanceof Error ? embeddingError.message : 'Unknown error'}`);
+        }
 
         const { data, error } = await this.supabase.rpc('search_ad_examples', {
             query_embedding: embedding,
@@ -58,10 +77,11 @@ export class ResearcherAgent {
         });
 
         if (error) {
-            logger.error('Error searching ad examples:', error as Error, { component: 'agent' });
+            logger.error('Error searching ad examples:', error as Error, { component: 'researcher' });
             throw new Error(`Failed to search ad examples: ${error.message}`);
         }
 
+        logger.info(`   Found ${data?.length || 0} ad examples`, { component: 'researcher' });
         return data as AdExample[];
     }
 

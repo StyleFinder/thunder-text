@@ -34,11 +34,25 @@ export const aieSupabase = createClient(
  * Generate text embedding using OpenAI
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await aieOpenAI.embeddings.create({
-    model: 'text-embedding-ada-002',
-    input: text,
-  });
-  return response.data[0].embedding;
+  if (!process.env.OPENAI_API_KEY) {
+    logger.error('OPENAI_API_KEY is not configured', undefined, { component: 'aie-clients' });
+    throw new Error('OPENAI_API_KEY environment variable is not set');
+  }
+
+  try {
+    const response = await aieOpenAI.embeddings.create({
+      model: 'text-embedding-ada-002',
+      input: text,
+    });
+    return response.data[0].embedding;
+  } catch (error) {
+    logger.error('OpenAI embedding generation failed:', error as Error, {
+      component: 'aie-clients',
+      textLength: text.length,
+      model: 'text-embedding-ada-002'
+    });
+    throw new Error(`OpenAI embedding failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 /**
