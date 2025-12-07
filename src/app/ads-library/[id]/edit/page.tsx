@@ -216,7 +216,7 @@ export default function AdEditorPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           shop,
-          draft_id: draftData.data.draft.id,
+          draft_id: draftData.data.id,
         }),
       });
 
