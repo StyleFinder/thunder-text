@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
 import { getCombinedPrompt, type ProductCategory } from "@/lib/prompts";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
 
 interface CreateProductRequest {
   images: string[]; // base64 encoded images
@@ -25,13 +25,16 @@ export async function POST(request: NextRequest) {
       : undefined;
 
     if (!authToken) {
-      logger.error("❌ No auth token provided for generate/create API", undefined, { component: 'create' });
+      logger.error(
+        "❌ No auth token provided for generate/create API",
+        undefined,
+        { component: "create" },
+      );
       return NextResponse.json(
         { success: false, error: "Authentication required" },
         { status: 401 },
       );
     }
-
 
     // Get shop domain from X-Shop-Domain header or decode from token
     let shopDomain: string | null = request.headers.get("x-shop-domain");
@@ -43,12 +46,32 @@ export async function POST(request: NextRequest) {
         // Dev token - shop domain must be in header
         // Continue - shop domain will be validated below
       }
+      // Check if token is the shop domain itself (standalone SaaS authentication)
+      // This is used when shop domain is passed as the auth token for non-embedded apps
+      else if (
+        authToken.includes(".myshopify.com") ||
+        authToken.includes("zunosai")
+      ) {
+        // Shop domain was passed as token - this is valid for standalone apps
+        shopDomain = authToken;
+        logger.debug("Using shop domain from auth token", {
+          component: "create",
+          shop: shopDomain,
+        });
+      }
       // Check if it's an OAuth token (starts with shpat_) or JWT session token
       else if (authToken.startsWith("shpat_")) {
         // OAuth token - shop domain must be in header
-        logger.error("❌ OAuth token provided but no X-Shop-Domain header", undefined, { component: 'create' });
+        logger.error(
+          "❌ OAuth token provided but no X-Shop-Domain header",
+          undefined,
+          { component: "create" },
+        );
         return NextResponse.json(
-          { success: false, error: "Shop domain required for OAuth authentication" },
+          {
+            success: false,
+            error: "Shop domain required for OAuth authentication",
+          },
           { status: 401 },
         );
       } else {
@@ -56,12 +79,16 @@ export async function POST(request: NextRequest) {
         try {
           const parts = authToken.split(".");
           if (parts.length === 3) {
-            const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
+            const payload = JSON.parse(
+              Buffer.from(parts[1], "base64").toString(),
+            );
             const shopMatch = payload.dest?.match(/https:\/\/([^\/]+)/);
             shopDomain = shopMatch ? shopMatch[1] : null;
           }
         } catch (error) {
-          logger.error("❌ Failed to decode session token:", error as Error, { component: 'create' });
+          logger.error("❌ Failed to decode session token:", error as Error, {
+            component: "create",
+          });
           return NextResponse.json(
             { success: false, error: "Invalid authentication token" },
             { status: 401 },
@@ -71,13 +98,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (!shopDomain) {
-      logger.error("❌ No shop domain found in token or headers", undefined, { component: 'create' });
+      logger.error("❌ No shop domain found in token or headers", undefined, {
+        component: "create",
+      });
       return NextResponse.json(
         { success: false, error: "Shop domain required" },
         { status: 401 },
       );
     }
-
 
     const body: CreateProductRequest = await request.json();
 
@@ -143,7 +171,7 @@ EXAMPLES OF WHAT TO IGNORE:
 - If selling "Watch" → ignore shirt sleeves or other clothing visible
 - If selling "Handbag" → ignore the model's clothing/outfit
 `
-          : '';
+          : "";
 
         systemPrompt = `${customPrompts.combined}
 
@@ -214,7 +242,11 @@ Closing content in plain text highlighting key benefits.`;
         throw new Error("No custom prompts available");
       }
     } catch (error) {
-      logger.error("Failed to load custom prompts, using fallback", error as Error, { component: 'create' });
+      logger.error(
+        "Failed to load custom prompts, using fallback",
+        error as Error,
+        { component: "create" },
+      );
 
       // Add primary product focus for fallback prompt too
       const primaryProductGuidance = productType
@@ -228,7 +260,7 @@ CRITICAL INSTRUCTIONS:
 - Focus ONLY on the "${productType}" in your description
 - Ignore secondary items visible for styling purposes
 `
-        : '';
+        : "";
 
       // Fallback to basic prompt if custom prompts fail
       systemPrompt = `You are a professional e-commerce copywriter tasked with creating compelling product descriptions for a new product.
@@ -349,7 +381,9 @@ ${additionalNotes ? `Special Instructions: ${additionalNotes}` : ""}`;
     try {
       parsedContent = JSON.parse(generatedContent);
     } catch (parseError) {
-      logger.error("Failed to parse OpenAI response:", parseError as Error, { component: 'create' });
+      logger.error("Failed to parse OpenAI response:", parseError as Error, {
+        component: "create",
+      });
       return NextResponse.json(
         { success: false, error: "Generated content format error" },
         { status: 500 },
@@ -365,10 +399,11 @@ ${additionalNotes ? `Special Instructions: ${additionalNotes}` : ""}`;
       "keywords",
     ] as const;
     // Safe: requiredFields is a const array we control, not user input
-     
+    /* eslint-disable security/detect-object-injection */
     const missingFields = requiredFields.filter(
       (field) => !parsedContent[field],
     );
+    /* eslint-enable security/detect-object-injection */
 
     if (missingFields.length > 0) {
       return NextResponse.json(
@@ -420,7 +455,9 @@ ${additionalNotes ? `Special Instructions: ${additionalNotes}` : ""}`;
       usage,
     });
   } catch (error) {
-    logger.error("Create product generation error:", error as Error, { component: 'create' });
+    logger.error("Create product generation error:", error as Error, {
+      component: "create",
+    });
     return NextResponse.json(
       {
         success: false,

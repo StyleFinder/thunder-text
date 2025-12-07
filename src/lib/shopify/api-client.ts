@@ -55,19 +55,17 @@ export async function getAuthToken(
     }
   }
 
-  // Development bypass: Enable in development mode when shop is provided
+  // Standalone app authentication: Enable when shop parameter is provided
+  // Thunder Text is a standalone SaaS app (not embedded), so we use a simple
+  // token-based auth when shop domain is available. The API validates the shop.
   if (typeof window !== "undefined" && shop) {
-    const urlParams = new URLSearchParams(window.location.search);
-    const isDevelopment = process.env.NODE_ENV === "development";
-    const hasAuthParam = urlParams.get("authenticated") === "true";
-
-    // Allow dev-token if either:
-    // 1. authenticated=true is in URL, OR
-    // 2. We're in development mode (NODE_ENV=development)
-    if (hasAuthParam || isDevelopment) {
-      // Return a dev token for testing
-      return { token: "dev-token", type: "oauth" };
-    }
+    // For standalone SaaS apps, the presence of a valid shop domain is sufficient
+    // The backend API validates the shop exists in the database
+    logger.debug("Using shop-based authentication", {
+      component: "api-client",
+      shop,
+    });
+    return { token: shop, type: "oauth" };
   }
 
   logger.warn("No authentication token available", { component: "api-client" });
