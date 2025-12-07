@@ -194,6 +194,9 @@ async function createAdCreative(
         link: productUrl, // Link to Shopify product page
         message: body,
         name: title,
+        call_to_action: {
+          type: "SHOP_NOW", // Required for most campaign objectives (SALES, TRAFFIC, etc.)
+        },
       },
     },
   };
