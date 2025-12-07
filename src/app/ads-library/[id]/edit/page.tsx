@@ -1,30 +1,52 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams, useParams } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams, useParams } from "next/navigation";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Loader2,
   ArrowLeft,
   Save,
-  Eye,
   Zap,
   AlertCircle,
   RefreshCw,
   Check,
   Copy,
   Download,
-  ExternalLink,
   Smartphone,
   Monitor,
-  Sparkles
-} from 'lucide-react';
-import { logger } from '@/lib/logger';
+  Sparkles,
+  Send,
+  Facebook,
+} from "lucide-react";
+import { logger } from "@/lib/logger";
+
+interface Campaign {
+  id: string;
+  name: string;
+  status: string;
+  objective: string;
+}
+
+interface AdAccount {
+  id: string;
+  name: string;
+  account_id: string;
+  currency: string;
+}
 
 interface AdData {
   id: string;
@@ -49,29 +71,166 @@ export default function AdEditorPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const adId = params?.id as string;
-  const shop = searchParams?.get('shop') || '';
+  const shop = searchParams?.get("shop") || "";
 
   const [ad, setAd] = useState<AdData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [previewMode, setPreviewMode] = useState<'mobile' | 'desktop'>('mobile');
+  const [previewMode, setPreviewMode] = useState<"mobile" | "desktop">(
+    "mobile",
+  );
   const [copied, setCopied] = useState<string | null>(null);
 
+  // Campaign selection
+  const [adAccounts, setAdAccounts] = useState<AdAccount[]>([]);
+  const [selectedAdAccount, setSelectedAdAccount] = useState<string>("");
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<string>("");
+  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
+  const [facebookConnected, setFacebookConnected] = useState(false);
+
   // Editable fields
-  const [headline, setHeadline] = useState('');
-  const [primaryText, setPrimaryText] = useState('');
-  const [description, setDescription] = useState('');
-  const [cta, setCta] = useState('');
+  const [headline, setHeadline] = useState("");
+  const [primaryText, setPrimaryText] = useState("");
+  const [description, setDescription] = useState("");
+  const [cta, setCta] = useState("");
+
+  const fetchAdAccounts = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `/api/facebook/ad-accounts?shop=${encodeURIComponent(shop)}`,
+      );
+      const data = await response.json();
+
+      if (data.success && data.data?.length > 0) {
+        setAdAccounts(data.data);
+        setFacebookConnected(true);
+        // Auto-select first account if only one
+        if (data.data.length === 1) {
+          setSelectedAdAccount(data.data[0].id);
+        }
+      } else if (data.code === "NOT_CONNECTED") {
+        setFacebookConnected(false);
+      }
+    } catch (err) {
+      logger.error("Error fetching ad accounts:", err as Error, {
+        component: "ad-editor",
+      });
+      setFacebookConnected(false);
+    }
+  }, [shop]);
+
+  const fetchCampaigns = useCallback(
+    async (adAccountId: string) => {
+      setIsLoadingCampaigns(true);
+      try {
+        const response = await fetch(
+          `/api/facebook/campaigns?shop=${encodeURIComponent(shop)}&ad_account_id=${encodeURIComponent(adAccountId)}`,
+        );
+        const data = await response.json();
+
+        if (data.success) {
+          setCampaigns(data.data || []);
+        }
+      } catch (err) {
+        logger.error("Error fetching campaigns:", err as Error, {
+          component: "ad-editor",
+        });
+      } finally {
+        setIsLoadingCampaigns(false);
+      }
+    },
+    [shop],
+  );
 
   useEffect(() => {
-    if (adId) {
-      fetchAd();
+    if (shop) {
+      fetchAdAccounts();
     }
-  }, [adId]);
+  }, [shop, fetchAdAccounts]);
 
-  const fetchAd = async () => {
+  useEffect(() => {
+    if (selectedAdAccount && shop) {
+      fetchCampaigns(selectedAdAccount);
+    }
+  }, [selectedAdAccount, shop, fetchCampaigns]);
+
+  const handlePostToCampaign = async () => {
+    if (!ad || !selectedCampaign || !selectedAdAccount) {
+      setError("Please select an ad account and campaign first");
+      return;
+    }
+
+    // Save changes first
+    await handleSave();
+
+    setIsPosting(true);
+    setError(null);
+
+    try {
+      // Create an ad draft and submit it
+      const draftResponse = await fetch("/api/facebook/ad-drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shop,
+          shopify_product_id: ad.product_metadata?.products?.[0]?.id || null,
+          ad_title: headline,
+          ad_copy: primaryText,
+          image_urls: ad.image_urls || [],
+          selected_image_url: ad.image_urls?.[0] || null,
+          facebook_ad_account_id: selectedAdAccount,
+          facebook_campaign_id: selectedCampaign,
+          additional_metadata: {
+            description,
+            cta,
+            product_handle: ad.product_metadata?.products?.[0]?.handle,
+            platform: ad.platform,
+            campaign_goal: ad.campaign_goal,
+          },
+        }),
+      });
+
+      const draftData = await draftResponse.json();
+
+      if (!draftData.success) {
+        throw new Error(draftData.error || "Failed to create ad draft");
+      }
+
+      // Submit the draft to Facebook
+      const submitResponse = await fetch("/api/facebook/ad-drafts/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shop,
+          draft_id: draftData.data.draft.id,
+        }),
+      });
+
+      const submitData = await submitResponse.json();
+
+      if (!submitData.success) {
+        throw new Error(submitData.error || "Failed to submit ad to Facebook");
+      }
+
+      setSuccessMessage(
+        "Ad successfully posted to Facebook campaign! It has been created in PAUSED status for your review.",
+      );
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err: any) {
+      logger.error("Error posting to campaign:", err as Error, {
+        component: "ad-editor",
+      });
+      setError(err.message || "Failed to post ad to campaign");
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  const fetchAd = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -80,22 +239,32 @@ export default function AdEditorPage() {
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error?.message || 'Failed to fetch ad');
+        throw new Error(data.error?.message || "Failed to fetch ad");
       }
 
       const adData = data.data?.ad;
       setAd(adData);
-      setHeadline(adData.headline || '');
-      setPrimaryText(adData.primary_text || '');
-      setDescription(adData.description || '');
-      setCta(adData.cta || 'Shop Now');
-    } catch (err: any) {
-      logger.error('Error fetching ad:', err as Error, { component: 'ad-editor' });
-      setError(err.message || 'Failed to load ad');
+      setHeadline(adData.headline || "");
+      setPrimaryText(adData.primary_text || "");
+      setDescription(adData.description || "");
+      setCta(adData.cta || "Shop Now");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load ad";
+      logger.error("Error fetching ad:", err as Error, {
+        component: "ad-editor",
+      });
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [adId]);
+
+  useEffect(() => {
+    if (adId) {
+      fetchAd();
+    }
+  }, [adId, fetchAd]);
 
   const handleSave = async () => {
     if (!ad) return;
@@ -106,8 +275,8 @@ export default function AdEditorPage() {
 
     try {
       const response = await fetch(`/api/aie/library/${adId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           headline,
           primaryText,
@@ -119,15 +288,17 @@ export default function AdEditorPage() {
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error?.message || 'Failed to save changes');
+        throw new Error(data.error?.message || "Failed to save changes");
       }
 
       setAd(data.data?.ad);
-      setSuccessMessage('Changes saved successfully!');
+      setSuccessMessage("Changes saved successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
-      logger.error('Error saving ad:', err as Error, { component: 'ad-editor' });
-      setError(err.message || 'Failed to save changes');
+      logger.error("Error saving ad:", err as Error, {
+        component: "ad-editor",
+      });
+      setError(err.message || "Failed to save changes");
     } finally {
       setIsSaving(false);
     }
@@ -151,9 +322,11 @@ export default function AdEditorPage() {
       campaignGoal: ad.campaign_goal,
     };
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `ad-${ad.id.slice(0, 8)}.json`;
     a.click();
@@ -162,23 +335,25 @@ export default function AdEditorPage() {
 
   const getPlatformColor = (platform: string) => {
     const colors: Record<string, string> = {
-      meta: '#1877F2',
-      instagram: '#E4405F',
-      google: '#4285F4',
-      tiktok: '#000000',
-      pinterest: '#E60023',
+      meta: "#1877F2",
+      instagram: "#E4405F",
+      google: "#4285F4",
+      tiktok: "#000000",
+      pinterest: "#E60023",
     };
-    return colors[platform] || '#6B7280';
+    // eslint-disable-next-line security/detect-object-injection
+    return colors[platform] || "#6B7280";
   };
 
   const getPlatformName = (platform: string) => {
     const names: Record<string, string> = {
-      meta: 'Meta (Facebook)',
-      instagram: 'Instagram',
-      google: 'Google Ads',
-      tiktok: 'TikTok',
-      pinterest: 'Pinterest',
+      meta: "Meta (Facebook)",
+      instagram: "Instagram",
+      google: "Google Ads",
+      tiktok: "TikTok",
+      pinterest: "Pinterest",
     };
+    // eslint-disable-next-line security/detect-object-injection
     return names[platform] || platform;
   };
 
@@ -211,14 +386,17 @@ export default function AdEditorPage() {
       <div
         className="min-h-screen flex items-center justify-center p-6"
         style={{
-          background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+          background:
+            "linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)",
         }}
       >
         <div className="w-full max-w-md">
           <div className="flex items-center justify-center gap-3 mb-8">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+              style={{
+                background: "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+              }}
             >
               <Zap className="w-5 h-5 text-white" />
             </div>
@@ -228,7 +406,7 @@ export default function AdEditorPage() {
             <div className="text-center">
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
-                style={{ background: 'rgba(220, 38, 38, 0.1)' }}
+                style={{ background: "rgba(220, 38, 38, 0.1)" }}
               >
                 <AlertCircle className="w-8 h-8 text-red-500" />
               </div>
@@ -240,8 +418,9 @@ export default function AdEditorPage() {
                 <Button
                   className="w-full h-11 text-base font-medium"
                   style={{
-                    background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                    border: 'none'
+                    background:
+                      "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                    border: "none",
                   }}
                   onClick={fetchAd}
                 >
@@ -275,14 +454,18 @@ export default function AdEditorPage() {
             <div className="flex items-center gap-4">
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{ background: `linear-gradient(135deg, ${getPlatformColor(ad.platform)} 0%, ${getPlatformColor(ad.platform)}cc 100%)` }}
+                style={{
+                  background: `linear-gradient(135deg, ${getPlatformColor(ad.platform)} 0%, ${getPlatformColor(ad.platform)}cc 100%)`,
+                }}
               >
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Edit Ad</h1>
                 <p className="text-gray-500 text-sm">
-                  {getPlatformName(ad.platform)} • {ad.campaign_goal.charAt(0).toUpperCase() + ad.campaign_goal.slice(1)}
+                  {getPlatformName(ad.platform)} •{" "}
+                  {ad.campaign_goal.charAt(0).toUpperCase() +
+                    ad.campaign_goal.slice(1)}
                 </p>
               </div>
             </div>
@@ -307,8 +490,9 @@ export default function AdEditorPage() {
                 onClick={handleSave}
                 disabled={isSaving}
                 style={{
-                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                  border: 'none'
+                  background:
+                    "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                  border: "none",
                 }}
               >
                 {isSaving ? (
@@ -326,7 +510,7 @@ export default function AdEditorPage() {
             <Badge
               style={{
                 backgroundColor: `${getPlatformColor(ad.platform)}20`,
-                color: getPlatformColor(ad.platform)
+                color: getPlatformColor(ad.platform),
               }}
             >
               {getPlatformName(ad.platform)}
@@ -347,13 +531,17 @@ export default function AdEditorPage() {
         {successMessage && (
           <Alert className="mb-6 bg-green-50 border-green-200">
             <Check className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-700">{successMessage}</AlertDescription>
+            <AlertDescription className="text-green-700">
+              {successMessage}
+            </AlertDescription>
           </Alert>
         )}
         {error && (
           <Alert className="mb-6 bg-red-50 border-red-200">
             <AlertCircle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-700">{error}</AlertDescription>
+            <AlertDescription className="text-red-700">
+              {error}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -369,14 +557,16 @@ export default function AdEditorPage() {
                 {/* Headline */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-700">Headline</label>
+                    <label className="text-sm font-medium text-gray-700">
+                      Headline
+                    </label>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-7 px-2"
-                      onClick={() => copyToClipboard(headline, 'headline')}
+                      onClick={() => copyToClipboard(headline, "headline")}
                     >
-                      {copied === 'headline' ? (
+                      {copied === "headline" ? (
                         <Check className="w-3.5 h-3.5 text-green-600" />
                       ) : (
                         <Copy className="w-3.5 h-3.5 text-gray-400" />
@@ -389,20 +579,26 @@ export default function AdEditorPage() {
                     placeholder="Enter headline..."
                     className="h-11"
                   />
-                  <p className="text-xs text-gray-400 mt-1">{headline.length} characters</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {headline.length} characters
+                  </p>
                 </div>
 
                 {/* Primary Text */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-700">Primary Text</label>
+                    <label className="text-sm font-medium text-gray-700">
+                      Primary Text
+                    </label>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-7 px-2"
-                      onClick={() => copyToClipboard(primaryText, 'primaryText')}
+                      onClick={() =>
+                        copyToClipboard(primaryText, "primaryText")
+                      }
                     >
-                      {copied === 'primaryText' ? (
+                      {copied === "primaryText" ? (
                         <Check className="w-3.5 h-3.5 text-green-600" />
                       ) : (
                         <Copy className="w-3.5 h-3.5 text-gray-400" />
@@ -415,20 +611,26 @@ export default function AdEditorPage() {
                     placeholder="Enter primary text..."
                     className="min-h-[120px] resize-none"
                   />
-                  <p className="text-xs text-gray-400 mt-1">{primaryText.length} characters</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {primaryText.length} characters
+                  </p>
                 </div>
 
                 {/* Description */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-700">Description (Optional)</label>
+                    <label className="text-sm font-medium text-gray-700">
+                      Description (Optional)
+                    </label>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-7 px-2"
-                      onClick={() => copyToClipboard(description, 'description')}
+                      onClick={() =>
+                        copyToClipboard(description, "description")
+                      }
                     >
-                      {copied === 'description' ? (
+                      {copied === "description" ? (
                         <Check className="w-3.5 h-3.5 text-green-600" />
                       ) : (
                         <Copy className="w-3.5 h-3.5 text-gray-400" />
@@ -445,7 +647,9 @@ export default function AdEditorPage() {
 
                 {/* CTA */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-2">Call to Action</label>
+                  <label className="text-sm font-medium text-gray-700 block mb-2">
+                    Call to Action
+                  </label>
                   <Input
                     value={cta}
                     onChange={(e) => setCta(e.target.value)}
@@ -457,32 +661,150 @@ export default function AdEditorPage() {
             </Card>
 
             {/* Product Info */}
-            {ad.product_metadata?.products && ad.product_metadata.products.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Product</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-3">
-                    {ad.image_urls?.[0] && (
-                      <img
-                        src={ad.image_urls[0]}
-                        alt="Product"
-                        className="w-16 h-16 rounded-lg object-cover"
-                      />
-                    )}
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {ad.product_metadata.products[0].title}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {ad.product_metadata.products[0].handle}
-                      </p>
+            {ad.product_metadata?.products &&
+              ad.product_metadata.products.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Product</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-3">
+                      {ad.image_urls?.[0] && (
+                        <Image
+                          src={ad.image_urls[0]}
+                          alt="Product"
+                          width={64}
+                          height={64}
+                          className="w-16 h-16 rounded-lg object-cover"
+                          unoptimized
+                        />
+                      )}
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {ad.product_metadata.products[0].title}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {ad.product_metadata.products[0].handle}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </CardContent>
+                </Card>
+              )}
+
+            {/* Campaign Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Facebook className="w-5 h-5 text-blue-600" />
+                  Post to Facebook Campaign
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!facebookConnected ? (
+                  <Alert className="bg-yellow-50 border-yellow-200">
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                    <AlertDescription className="text-yellow-700">
+                      Connect your Facebook account in Settings to post ads to
+                      campaigns.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <>
+                    {/* Ad Account Selection */}
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 block mb-2">
+                        Ad Account
+                      </label>
+                      <Select
+                        value={selectedAdAccount}
+                        onValueChange={setSelectedAdAccount}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select an ad account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {adAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.name} ({account.currency})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Campaign Selection */}
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 block mb-2">
+                        Campaign
+                      </label>
+                      <Select
+                        value={selectedCampaign}
+                        onValueChange={setSelectedCampaign}
+                        disabled={!selectedAdAccount || isLoadingCampaigns}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue
+                            placeholder={
+                              isLoadingCampaigns
+                                ? "Loading campaigns..."
+                                : !selectedAdAccount
+                                  ? "Select an ad account first"
+                                  : campaigns.length === 0
+                                    ? "No active campaigns found"
+                                    : "Select a campaign"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {campaigns.map((campaign) => (
+                            <SelectItem key={campaign.id} value={campaign.id}>
+                              {campaign.name} ({campaign.status})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedAdAccount &&
+                        campaigns.length === 0 &&
+                        !isLoadingCampaigns && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            No active campaigns found. Create a campaign in
+                            Facebook Ads Manager first.
+                          </p>
+                        )}
+                    </div>
+
+                    {/* Post to Campaign Button */}
+                    <Button
+                      onClick={handlePostToCampaign}
+                      disabled={!selectedCampaign || isPosting}
+                      className="w-full h-11"
+                      style={{
+                        background: selectedCampaign
+                          ? "linear-gradient(135deg, #1877F2 0%, #42A5F5 100%)"
+                          : undefined,
+                        border: "none",
+                      }}
+                    >
+                      {isPosting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Posting to Facebook...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Post to Campaign
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-xs text-gray-500 text-center">
+                      Ad will be created in PAUSED status for your review
+                    </p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Preview Panel */}
@@ -491,21 +813,21 @@ export default function AdEditorPage() {
               <h3 className="text-lg font-semibold text-gray-900">Preview</h3>
               <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
                 <button
-                  onClick={() => setPreviewMode('mobile')}
+                  onClick={() => setPreviewMode("mobile")}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    previewMode === 'mobile'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
+                    previewMode === "mobile"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
                   <Smartphone className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => setPreviewMode('desktop')}
+                  onClick={() => setPreviewMode("desktop")}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    previewMode === 'desktop'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
+                    previewMode === "desktop"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
                   <Monitor className="w-4 h-4" />
@@ -516,13 +838,15 @@ export default function AdEditorPage() {
             {/* Platform Preview */}
             <div
               className={`bg-white rounded-xl border border-gray-200 overflow-hidden ${
-                previewMode === 'mobile' ? 'max-w-[375px] mx-auto' : ''
+                previewMode === "mobile" ? "max-w-[375px] mx-auto" : ""
               }`}
             >
               {/* Platform Header */}
               <div
                 className="px-4 py-3 border-b border-gray-100 flex items-center gap-2"
-                style={{ backgroundColor: `${getPlatformColor(ad.platform)}10` }}
+                style={{
+                  backgroundColor: `${getPlatformColor(ad.platform)}10`,
+                }}
               >
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
@@ -531,7 +855,9 @@ export default function AdEditorPage() {
                   {ad.platform.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-medium text-sm text-gray-900">Your Brand</p>
+                  <p className="font-medium text-sm text-gray-900">
+                    Your Brand
+                  </p>
                   <p className="text-xs text-gray-500">Sponsored</p>
                 </div>
               </div>
@@ -540,25 +866,29 @@ export default function AdEditorPage() {
               <div className="p-4">
                 {/* Primary Text */}
                 <p className="text-sm text-gray-800 mb-3 whitespace-pre-wrap">
-                  {primaryText || 'Your primary text will appear here...'}
+                  {primaryText || "Your primary text will appear here..."}
                 </p>
 
                 {/* Image */}
                 {ad.image_urls?.[0] && (
                   <div className="relative aspect-square mb-3 rounded-lg overflow-hidden bg-gray-100">
-                    <img
+                    <Image
                       src={ad.image_urls[0]}
                       alt="Ad preview"
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      unoptimized
                     />
                   </div>
                 )}
 
                 {/* Headline & CTA */}
                 <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">yourstore.com</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                    yourstore.com
+                  </p>
                   <p className="font-semibold text-gray-900 mb-2">
-                    {headline || 'Your headline will appear here...'}
+                    {headline || "Your headline will appear here..."}
                   </p>
                   {description && (
                     <p className="text-sm text-gray-600 mb-3">{description}</p>
@@ -567,7 +897,7 @@ export default function AdEditorPage() {
                     className="w-full py-2 px-4 rounded-lg font-medium text-white text-sm"
                     style={{ backgroundColor: getPlatformColor(ad.platform) }}
                   >
-                    {cta || 'Shop Now'}
+                    {cta || "Shop Now"}
                   </button>
                 </div>
               </div>
@@ -586,37 +916,41 @@ export default function AdEditorPage() {
                 <div className="flex items-start gap-3">
                   <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium text-blue-900 mb-1">Platform Tips</p>
+                    <p className="font-medium text-blue-900 mb-1">
+                      Platform Tips
+                    </p>
                     <ul className="text-sm text-blue-700 space-y-1">
-                      {ad.platform === 'meta' && (
+                      {ad.platform === "meta" && (
                         <>
                           <li>• Headlines: 25-40 characters work best</li>
-                          <li>• Primary text: First 125 characters are visible</li>
+                          <li>
+                            • Primary text: First 125 characters are visible
+                          </li>
                           <li>• Use emojis sparingly for engagement</li>
                         </>
                       )}
-                      {ad.platform === 'instagram' && (
+                      {ad.platform === "instagram" && (
                         <>
                           <li>• Keep captions concise and engaging</li>
                           <li>• Use 3-5 relevant hashtags</li>
                           <li>• Strong visual hook in first line</li>
                         </>
                       )}
-                      {ad.platform === 'google' && (
+                      {ad.platform === "google" && (
                         <>
                           <li>• Headlines: Max 30 characters each</li>
                           <li>• Descriptions: Max 90 characters</li>
                           <li>• Include keywords naturally</li>
                         </>
                       )}
-                      {ad.platform === 'tiktok' && (
+                      {ad.platform === "tiktok" && (
                         <>
                           <li>• Hook viewers in first 2 seconds</li>
                           <li>• Keep text overlays brief</li>
                           <li>• Use trending sounds/effects</li>
                         </>
                       )}
-                      {ad.platform === 'pinterest' && (
+                      {ad.platform === "pinterest" && (
                         <>
                           <li>• Use keyword-rich descriptions</li>
                           <li>• Vertical images perform best</li>

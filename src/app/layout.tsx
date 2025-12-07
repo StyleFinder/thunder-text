@@ -1,19 +1,25 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { PolarisProvider } from './components/PolarisProvider';
-import { AppLayout } from './components/AppLayout';
-import { ConditionalShopifyAuth } from './components/ConditionalShopifyAuth';
-import { ServiceWorkerCleanup } from './components/ServiceWorkerCleanup';
-import { AuthSessionProvider } from '@/lib/auth/session-provider';
+import { PolarisProvider } from "./components/PolarisProvider";
+import { AppLayout } from "./components/AppLayout";
+import { ConditionalShopifyAuth } from "./components/ConditionalShopifyAuth";
+import { ServiceWorkerCleanup } from "./components/ServiceWorkerCleanup";
+import { AuthSessionProvider } from "@/lib/auth/session-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Thunder Text - AI Product Descriptions",
-  description: "Generate compelling, SEO-optimized product descriptions from images using AI",
+  description:
+    "Generate compelling, SEO-optimized product descriptions from images using AI",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
   other: {
-    'shopify-api-key': process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || '',
+    "shopify-api-key": process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || "",
   },
 };
 
@@ -22,7 +28,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || '';
+  const apiKey = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || "";
 
   return (
     <html lang="en">
@@ -34,9 +40,7 @@ export default function RootLayout({
           <PolarisProvider>
             <ConditionalShopifyAuth>
               <ServiceWorkerCleanup />
-              <AppLayout>
-                {children}
-              </AppLayout>
+              <AppLayout>{children}</AppLayout>
             </ConditionalShopifyAuth>
           </PolarisProvider>
         </AuthSessionProvider>

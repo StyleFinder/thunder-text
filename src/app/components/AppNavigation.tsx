@@ -17,6 +17,7 @@ import {
   X,
   Flame,
   LogOut,
+  Library,
 } from "lucide-react";
 import { useNavigation } from "../hooks/useNavigation";
 import { Button } from "@/components/ui/button";
@@ -153,6 +154,19 @@ function NavigationContent({ children }: AppNavigationProps) {
         label: "AI Ad Engine",
         url: buildUrl("/aie"),
         matchPaths: ["/aie"],
+        exactMatch: false,
+      }),
+      allowedRoles: ["user", "admin"],
+    },
+    {
+      url: buildUrl("/ads-library"),
+      label: "Ads Library",
+      icon: Library,
+      onClick: () => navigateTo("/ads-library"),
+      matches: isActive({
+        label: "Ads Library",
+        url: buildUrl("/ads-library"),
+        matchPaths: ["/ads-library"],
         exactMatch: false,
       }),
       allowedRoles: ["user", "admin"],
@@ -329,6 +343,44 @@ function NavigationContent({ children }: AppNavigationProps) {
                   </button>
                 );
               })}
+
+              {/* Sign Out Button - Always Visible */}
+              <div
+                style={{
+                  marginTop: "16px",
+                  borderTop: "1px solid #e5e7eb",
+                  paddingTop: "16px",
+                }}
+              >
+                <button
+                  onClick={() => (window.location.href = "/api/auth/logout")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    backgroundColor: "transparent",
+                    color: "#dc2626",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    textAlign: "left",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#fef2f2";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  <LogOut className="h-5 w-5 flex-shrink-0 text-[#dc2626]" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
             </div>
           </nav>
 
@@ -587,6 +639,38 @@ function NavigationContent({ children }: AppNavigationProps) {
                     </button>
                   );
                 })}
+
+                {/* Sign Out Button - Always Visible */}
+                <div
+                  style={{
+                    marginTop: "16px",
+                    borderTop: "1px solid #e5e7eb",
+                    paddingTop: "16px",
+                  }}
+                >
+                  <button
+                    onClick={() => (window.location.href = "/api/auth/logout")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      backgroundColor: "transparent",
+                      color: "#dc2626",
+                      border: "none",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      textAlign: "left",
+                    }}
+                  >
+                    <LogOut className="h-5 w-5 flex-shrink-0 text-[#dc2626]" />
+                    Sign Out
+                  </button>
+                </div>
               </nav>
             </div>
           </aside>
