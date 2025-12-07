@@ -3,37 +3,45 @@
  * Main UI for generating AI-powered ad copy
  */
 
-'use client';
+/* eslint-disable @next/next/no-img-element */
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { Search, Package, Loader2, X, Check, Megaphone, ArrowLeft, Sparkles, Zap } from 'lucide-react';
-import { authenticatedFetch } from '@/lib/shopify/api-client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import {
+  Search,
+  Package,
+  Loader2,
+  X,
+  Check,
+  Megaphone,
+  ArrowLeft,
+  Sparkles,
+} from "lucide-react";
+import { authenticatedFetch } from "@/lib/shopify/api-client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { logger } from '@/lib/logger'
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { logger } from "@/lib/logger";
 
 interface ShopifyProduct {
   id: string;
@@ -50,12 +58,19 @@ interface ImageSelectionModalProps {
   isOpen: boolean;
 }
 
-function ImageSelectionModal({ product, onComplete, onCancel, isOpen }: ImageSelectionModalProps) {
+function ImageSelectionModal({
+  product,
+  onComplete,
+  onCancel,
+  isOpen,
+}: ImageSelectionModalProps) {
   const [tempSelectedImages, setTempSelectedImages] = useState<string[]>([]);
 
   const toggleImage = (imageUrl: string) => {
     if (tempSelectedImages.includes(imageUrl)) {
-      setTempSelectedImages(tempSelectedImages.filter(url => url !== imageUrl));
+      setTempSelectedImages(
+        tempSelectedImages.filter((url) => url !== imageUrl),
+      );
     } else {
       setTempSelectedImages([...tempSelectedImages, imageUrl]);
     }
@@ -64,7 +79,7 @@ function ImageSelectionModal({ product, onComplete, onCancel, isOpen }: ImageSel
   const handleDone = () => {
     if (tempSelectedImages.length === 0) {
       // If no images selected, select all by default
-      const allImages = product.images.map(img => img.url);
+      const allImages = product.images.map((img) => img.url);
       onComplete(allImages);
     } else {
       onComplete(tempSelectedImages);
@@ -96,7 +111,8 @@ function ImageSelectionModal({ product, onComplete, onCancel, isOpen }: ImageSel
           {product.images.length === 0 ? (
             <Alert className="bg-amber-50 border-amber-200 rounded-lg">
               <AlertDescription className="text-amber-700">
-                This product has no images. You can still add it, but consider adding images to your product first.
+                This product has no images. You can still add it, but consider
+                adding images to your product first.
               </AlertDescription>
             </Alert>
           ) : (
@@ -110,13 +126,15 @@ function ImageSelectionModal({ product, onComplete, onCancel, isOpen }: ImageSel
                     onClick={() => toggleImage(image.url)}
                     className={`relative p-2 rounded-lg transition-all duration-200 ${
                       isSelected
-                        ? 'border-2 border-blue-500 bg-blue-50 ring-2 ring-blue-100'
-                        : 'border border-gray-200 bg-white hover:border-blue-400'
+                        ? "border-2 border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+                        : "border border-gray-200 bg-white hover:border-blue-400"
                     }`}
                   >
                     <img
                       src={image.url}
-                      alt={image.altText || `${product.title} - Image ${idx + 1}`}
+                      alt={
+                        image.altText || `${product.title} - Image ${idx + 1}`
+                      }
                       className="w-full h-40 object-cover rounded-md"
                     />
                     {isSelected && (
@@ -133,7 +151,8 @@ function ImageSelectionModal({ product, onComplete, onCancel, isOpen }: ImageSel
           {tempSelectedImages.length > 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
               <p className="text-sm text-blue-700 font-medium">
-                {tempSelectedImages.length} of {product.images.length} images selected
+                {tempSelectedImages.length} of {product.images.length} images
+                selected
               </p>
             </div>
           )}
@@ -150,13 +169,13 @@ function ImageSelectionModal({ product, onComplete, onCancel, isOpen }: ImageSel
           <Button
             onClick={handleDone}
             style={{
-              background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-              border: 'none'
+              background: "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+              border: "none",
             }}
           >
             {tempSelectedImages.length > 0
-              ? `Add ${tempSelectedImages.length} Image${tempSelectedImages.length !== 1 ? 's' : ''}`
-              : 'Add All Images'}
+              ? `Add ${tempSelectedImages.length} Image${tempSelectedImages.length !== 1 ? "s" : ""}`
+              : "Add All Images"}
           </Button>
         </div>
       </DialogContent>
@@ -204,19 +223,21 @@ interface GenerationResult {
 
 export default function AIEPage() {
   const searchParams = useSearchParams();
-  const shop = searchParams?.get('shop') || 'demo-shop';
+  const shop = searchParams?.get("shop") || "demo-shop";
 
   const [mounted, setMounted] = useState(false);
-  const [platform, setPlatform] = useState<string>('meta');
-  const [goal, setGoal] = useState<string>('conversion');
-  const [description, setDescription] = useState<string>('');
-  const [targetAudience, setTargetAudience] = useState<string>('');
+  const [platform, setPlatform] = useState<string>("meta");
+  const [goal, setGoal] = useState<string>("conversion");
+  const [description, setDescription] = useState<string>("");
+  const [targetAudience, setTargetAudience] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
-  const [loadingStep, setLoadingStep] = useState<string>('');
+  const [loadingStep, setLoadingStep] = useState<string>("");
   const [loadingProgress, setLoadingProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerationResult | null>(null);
-  const [editableVariants, setEditableVariants] = useState<EditableVariant[]>([]);
+  const [editableVariants, setEditableVariants] = useState<EditableVariant[]>(
+    [],
+  );
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
 
   // Prevent hydration mismatch
@@ -227,31 +248,34 @@ export default function AIEPage() {
   // Product selection state
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [selectedProducts, setSelectedProducts] = useState<ShopifyProduct[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<ShopifyProduct[]>(
+    [],
+  );
   const [selectedImageUrls, setSelectedImageUrls] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [imageSelectionModalOpen, setImageSelectionModalOpen] = useState(false);
   const [imageUrlModalOpen, setImageUrlModalOpen] = useState(false);
-  const [tempImageUrl, setTempImageUrl] = useState('');
-  const [currentProductForImageSelection, setCurrentProductForImageSelection] = useState<ShopifyProduct | null>(null);
+  const [tempImageUrl, setTempImageUrl] = useState("");
+  const [currentProductForImageSelection, setCurrentProductForImageSelection] =
+    useState<ShopifyProduct | null>(null);
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const platformOptions = [
-    { label: 'Meta (Facebook)', value: 'meta' },
-    { label: 'Instagram', value: 'instagram' },
-    { label: 'Google Ads', value: 'google' },
-    { label: 'TikTok', value: 'tiktok' },
-    { label: 'Pinterest', value: 'pinterest' },
+    { label: "Meta (Facebook)", value: "meta" },
+    { label: "Instagram", value: "instagram" },
+    { label: "Google Ads", value: "google" },
+    { label: "TikTok", value: "tiktok" },
+    { label: "Pinterest", value: "pinterest" },
   ];
 
   const goalOptions = [
-    { label: 'Conversions', value: 'conversion' },
-    { label: 'Brand Awareness', value: 'awareness' },
-    { label: 'Engagement', value: 'engagement' },
-    { label: 'Traffic', value: 'traffic' },
-    { label: 'App Installs', value: 'app_installs' },
+    { label: "Conversions", value: "conversion" },
+    { label: "Brand Awareness", value: "awareness" },
+    { label: "Engagement", value: "engagement" },
+    { label: "Traffic", value: "traffic" },
+    { label: "App Installs", value: "app_installs" },
   ];
 
   // Fetch products with debounced search
@@ -261,35 +285,41 @@ export default function AIEPage() {
 
       const params = new URLSearchParams({
         shop,
-        limit: '50',
+        limit: "50",
       });
 
       if (debouncedSearchQuery) {
-        params.append('query', debouncedSearchQuery);
+        params.append("query", debouncedSearchQuery);
       }
 
-      const response = await authenticatedFetch(`/api/shopify/products?${params}`);
+      const response = await authenticatedFetch(
+        `/api/shopify/products?${params}`,
+      );
       const data = await response.json();
 
       if (data.success) {
         const productList = data.data?.products || data.products || [];
-        const transformedProducts: ShopifyProduct[] = productList.map((p: {
-          id: string;
-          title: string;
-          description?: string;
-          images?: Array<{ url: string; altText?: string }>;
-          handle: string;
-        }) => ({
-          id: p.id,
-          title: p.title,
-          description: p.description || '',
-          images: p.images || [],
-          handle: p.handle,
-        }));
+        const transformedProducts: ShopifyProduct[] = productList.map(
+          (p: {
+            id: string;
+            title: string;
+            description?: string;
+            images?: Array<{ url: string; altText?: string }>;
+            handle: string;
+          }) => ({
+            id: p.id,
+            title: p.title,
+            description: p.description || "",
+            images: p.images || [],
+            handle: p.handle,
+          }),
+        );
         setProducts(transformedProducts);
       }
     } catch (err) {
-      logger.error('Error fetching products:', err as Error, { component: 'aie' });
+      logger.error("Error fetching products:", err as Error, {
+        component: "aie",
+      });
     } finally {
       setLoadingProducts(false);
     }
@@ -316,8 +346,8 @@ export default function AIEPage() {
       clearTimeout(debounceTimeout.current);
     }
 
-    if (value === '') {
-      setDebouncedSearchQuery('');
+    if (value === "") {
+      setDebouncedSearchQuery("");
     } else {
       debounceTimeout.current = setTimeout(() => {
         setDebouncedSearchQuery(value);
@@ -327,7 +357,7 @@ export default function AIEPage() {
 
   const handleProductSelect = (product: ShopifyProduct) => {
     // Check if product already selected
-    if (selectedProducts.find(p => p.id === product.id)) {
+    if (selectedProducts.find((p) => p.id === product.id)) {
       return; // Don't select same product twice
     }
 
@@ -344,7 +374,10 @@ export default function AIEPage() {
   const handleImageSelectionComplete = (selectedImages: string[]) => {
     if (currentProductForImageSelection) {
       // Add product to selected products
-      setSelectedProducts([...selectedProducts, currentProductForImageSelection]);
+      setSelectedProducts([
+        ...selectedProducts,
+        currentProductForImageSelection,
+      ]);
 
       // Add selected images to the list
       setSelectedImageUrls([...selectedImageUrls, ...selectedImages]);
@@ -362,12 +395,14 @@ export default function AIEPage() {
   };
 
   const handleRemoveProduct = (productId: string) => {
-    setSelectedProducts(selectedProducts.filter(p => p.id !== productId));
+    setSelectedProducts(selectedProducts.filter((p) => p.id !== productId));
     // Remove images from that product
-    const productToRemove = selectedProducts.find(p => p.id === productId);
+    const productToRemove = selectedProducts.find((p) => p.id === productId);
     if (productToRemove) {
-      const imagesToRemove = productToRemove.images.map(img => img.url);
-      setSelectedImageUrls(selectedImageUrls.filter(url => !imagesToRemove.includes(url)));
+      const imagesToRemove = productToRemove.images.map((img) => img.url);
+      setSelectedImageUrls(
+        selectedImageUrls.filter((url) => !imagesToRemove.includes(url)),
+      );
     }
   };
 
@@ -376,41 +411,41 @@ export default function AIEPage() {
       setSelectedImageUrls([...selectedImageUrls, tempImageUrl]);
     }
     setImageUrlModalOpen(false);
-    setTempImageUrl('');
+    setTempImageUrl("");
   };
 
   const handleClearAll = () => {
     setSelectedProducts([]);
     setSelectedImageUrls([]);
-    setDescription('');
+    setDescription("");
   };
 
   const handleGenerate = async () => {
     if (!description.trim()) {
-      setError('Please provide a product/service description');
+      setError("Please provide a product/service description");
       return;
     }
 
     setLoading(true);
-    setLoadingStep('Preparing request...');
+    setLoadingStep("Preparing request...");
     setLoadingProgress(10);
     setError(null);
     setResult(null);
 
     try {
       // Prepare product metadata for RAG context
-      const productMetadata = selectedProducts.map(product => ({
+      const productMetadata = selectedProducts.map((product) => ({
         id: product.id,
         title: product.title,
         description: product.description,
         handle: product.handle,
       }));
 
-      setLoadingStep('Retrieving best practices...');
+      setLoadingStep("Retrieving best practices...");
       setLoadingProgress(30);
-      const response = await fetch('/api/aie/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/aie/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           shopId: shop,
           // Don't send productId - it's Shopify GID format, not UUID
@@ -421,21 +456,22 @@ export default function AIEPage() {
           imageUrls: selectedImageUrls, // All selected images for carousel support
           targetAudience: targetAudience || undefined,
           // Pass all product metadata for RAG context (descriptions, titles, etc.)
-          productMetadata: productMetadata.length > 0 ? productMetadata : undefined,
+          productMetadata:
+            productMetadata.length > 0 ? productMetadata : undefined,
           // Indicate if this is a collection ad (multi-product)
           isCollectionAd: selectedProducts.length > 1,
         }),
       });
 
-      setLoadingStep('Generating ad variants...');
+      setLoadingStep("Generating ad variants...");
       setLoadingProgress(60);
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error?.message || 'Failed to generate ads');
+        throw new Error(data.error?.message || "Failed to generate ads");
       }
 
-      setLoadingStep('Finalizing results...');
+      setLoadingStep("Finalizing results...");
       setLoadingProgress(90);
       setResult(data.data);
 
@@ -452,37 +488,43 @@ export default function AIEPage() {
       // Open results modal
       setResultsModalOpen(true);
     } catch (err) {
-      logger.error('Generation error:', err as Error, { component: 'aie' });
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      logger.error("Generation error:", err as Error, { component: "aie" });
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
-      setLoadingStep('');
+      setLoadingStep("");
       setLoadingProgress(0);
     }
   };
 
-  const handleVariantEdit = (variantId: string, field: 'headline' | 'primaryText' | 'description', value: string) => {
-    setEditableVariants(prev => prev.map(v => {
-      if (v.id === variantId) {
-        return {
-          ...v,
-          [`edited${field.charAt(0).toUpperCase() + field.slice(1)}`]: value,
-        };
-      }
-      return v;
-    }));
+  const handleVariantEdit = (
+    variantId: string,
+    field: "headline" | "primaryText" | "description",
+    value: string,
+  ) => {
+    setEditableVariants((prev) =>
+      prev.map((v) => {
+        if (v.id === variantId) {
+          return {
+            ...v,
+            [`edited${field.charAt(0).toUpperCase() + field.slice(1)}`]: value,
+          };
+        }
+        return v;
+      }),
+    );
   };
 
   const handleSelectVariant = async (variant: EditableVariant) => {
     try {
       // Save selected variant to ad library
-      const response = await fetch('/api/aie/library', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/aie/library", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           shopId: shop,
           adRequestId: null, // Future: link to aie_ad_requests if tracking generation sessions
-          variantId: null,   // Future: link to aie_ad_variants if storing all generated variants
+          variantId: null, // Future: link to aie_ad_variants if storing all generated variants
           headline: variant.editedHeadline || variant.headline,
           primaryText: variant.editedPrimaryText || variant.primaryText,
           description: variant.editedDescription || variant.description,
@@ -490,15 +532,17 @@ export default function AIEPage() {
           platform,
           campaignGoal: goal,
           variantType: variant.variantType,
-          imageUrls: selectedProducts.flatMap(p => p.images.map(img => img.url)),
+          imageUrls: selectedProducts.flatMap((p) =>
+            p.images.map((img) => img.url),
+          ),
           productMetadata: {
-            products: selectedProducts.map(p => ({
+            products: selectedProducts.map((p) => ({
               id: p.id,
               title: p.title,
               handle: p.handle,
             })),
           },
-          status: 'draft',
+          status: "draft",
         }),
       });
 
@@ -510,23 +554,35 @@ export default function AIEPage() {
         // Navigate to the ad editor page
         router.push(`/ads-library/${data.data.ad.id}/edit?shop=${shop}`);
       } else {
-        throw new Error(data.error?.message || 'Failed to save ad');
+        throw new Error(data.error?.message || "Failed to save ad");
       }
     } catch (err) {
-      logger.error('Error saving ad to library:', err as Error, { component: 'aie' });
-      setError(err instanceof Error ? err.message : 'Failed to save ad to library');
+      logger.error("Error saving ad to library:", err as Error, {
+        component: "aie",
+      });
+      setError(
+        err instanceof Error ? err.message : "Failed to save ad to library",
+      );
     }
   };
 
   const formatScore = (score: number) => {
     // Score is 0-10 from AI, convert to percentage (0-100)
     const percentage = (score * 10).toFixed(0);
-    if (score >= 8) return { text: `${percentage}% - Excellent`, variant: 'default' as const };
-    if (score >= 6) return { text: `${percentage}% - Good`, variant: 'secondary' as const };
-    return { text: `${percentage}% - Needs Improvement`, variant: 'outline' as const };
+    if (score >= 8)
+      return {
+        text: `${percentage}% - Excellent`,
+        variant: "default" as const,
+      };
+    if (score >= 6)
+      return { text: `${percentage}% - Good`, variant: "secondary" as const };
+    return {
+      text: `${percentage}% - Needs Improvement`,
+      variant: "outline" as const,
+    };
   };
 
-  const router = useRouter()
+  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -537,13 +593,20 @@ export default function AIEPage() {
             <div className="flex items-center gap-4">
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)' }}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                }}
               >
                 <Megaphone className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">AI Ad Generator</h1>
-                <p className="text-gray-500 text-sm">Generate high-converting ad copy for {shop}</p>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  AI Ad Generator
+                </h1>
+                <p className="text-gray-500 text-sm">
+                  Generate high-converting ad copy for {shop}
+                </p>
               </div>
             </div>
             <Button
@@ -555,7 +618,6 @@ export default function AIEPage() {
               Back to Dashboard
             </Button>
           </div>
-
         </div>
 
         {/* Main Content */}
@@ -569,15 +631,21 @@ export default function AIEPage() {
             <CardContent className="p-6 flex flex-col gap-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="platform" className="text-sm font-medium text-gray-700">
+                  <Label
+                    htmlFor="platform"
+                    className="text-sm font-medium text-gray-700"
+                  >
                     Platform
                   </Label>
                   <Select value={platform} onValueChange={setPlatform}>
-                    <SelectTrigger id="platform" className="h-11 border-gray-200">
+                    <SelectTrigger
+                      id="platform"
+                      className="h-11 border-gray-200"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {platformOptions.map(opt => (
+                      {platformOptions.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
                           {opt.label}
                         </SelectItem>
@@ -587,7 +655,10 @@ export default function AIEPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="goal" className="text-sm font-medium text-gray-700">
+                  <Label
+                    htmlFor="goal"
+                    className="text-sm font-medium text-gray-700"
+                  >
                     Campaign Goal
                   </Label>
                   <Select value={goal} onValueChange={setGoal}>
@@ -595,7 +666,7 @@ export default function AIEPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {goalOptions.map(opt => (
+                      {goalOptions.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
                           {opt.label}
                         </SelectItem>
@@ -640,7 +711,11 @@ export default function AIEPage() {
                       <h3 className="font-semibold text-oxford-900">
                         Selected Products ({selectedProducts.length})
                       </h3>
-                      <Button size="sm" variant="ghost" onClick={handleClearAll}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleClearAll}
+                      >
                         Clear All
                       </Button>
                     </div>
@@ -657,9 +732,12 @@ export default function AIEPage() {
                               />
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm truncate">{product.title}</p>
+                              <p className="font-semibold text-sm truncate">
+                                {product.title}
+                              </p>
                               <p className="text-xs text-gray-600">
-                                {product.images.length} image{product.images.length !== 1 ? 's' : ''}
+                                {product.images.length} image
+                                {product.images.length !== 1 ? "s" : ""}
                               </p>
                             </div>
                             <Button
@@ -688,13 +766,19 @@ export default function AIEPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       {selectedImageUrls.map((url, idx) => (
                         <div key={idx} className="relative">
-                          <img src={url} alt={`Image ${idx + 1}`} className="w-24 h-24 object-cover rounded" />
+                          <img
+                            src={url}
+                            alt={`Image ${idx + 1}`}
+                            className="w-24 h-24 object-cover rounded"
+                          />
                           <Button
                             size="sm"
                             variant="destructive"
                             className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
                             onClick={() => {
-                              setSelectedImageUrls(selectedImageUrls.filter((_, i) => i !== idx));
+                              setSelectedImageUrls(
+                                selectedImageUrls.filter((_, i) => i !== idx),
+                              );
                             }}
                           >
                             <X className="w-3 h-3" />
@@ -707,7 +791,10 @@ export default function AIEPage() {
               )}
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="description"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Product/Service Description
                 </Label>
                 <Textarea
@@ -720,12 +807,16 @@ export default function AIEPage() {
                   className="border-gray-200 resize-none"
                 />
                 <p className="text-sm text-gray-500">
-                  Be specific - this helps the AI understand your offering ({description.length}/1000)
+                  Be specific - this helps the AI understand your offering (
+                  {description.length}/1000)
                 </p>
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="audience" className="text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="audience"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Target Audience (Optional)
                 </Label>
                 <Input
@@ -743,10 +834,11 @@ export default function AIEPage() {
               <Button
                 className="w-full h-11 text-base font-medium"
                 style={{
-                  background: !description.trim() || loading
-                    ? '#9ca3af'
-                    : 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                  border: 'none'
+                  background:
+                    !description.trim() || loading
+                      ? "#9ca3af"
+                      : "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                  border: "none",
                 }}
                 disabled={!description.trim() || loading}
                 onClick={handleGenerate}
@@ -754,7 +846,7 @@ export default function AIEPage() {
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {loadingStep || 'Generating...'}
+                    {loadingStep || "Generating..."}
                   </>
                 ) : (
                   <>
@@ -778,24 +870,31 @@ export default function AIEPage() {
 
       {/* Progress Modal - Shows during generation */}
       {mounted && (
-        <Dialog open={loading} onOpenChange={() => { }}>
+        <Dialog open={loading} onOpenChange={() => {}}>
           <DialogContent className="max-w-md rounded-xl">
             <DialogHeader>
               <div className="flex items-center gap-3 mb-2">
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)' }}
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                  }}
                 >
                   <Loader2 className="w-5 h-5 text-white animate-spin" />
                 </div>
-                <DialogTitle className="text-gray-900 text-lg">Generating Ad Variants</DialogTitle>
+                <DialogTitle className="text-gray-900 text-lg">
+                  Generating Ad Variants
+                </DialogTitle>
               </div>
             </DialogHeader>
             <div className="space-y-4 pt-2">
               <p className="text-sm text-gray-700 font-medium">{loadingStep}</p>
               <Progress value={loadingProgress} className="w-full h-2" />
               <p className="text-sm text-gray-500">
-                This typically takes 10-15 seconds. We're analyzing best practices and generating unique ad variants optimized for your platform.
+                This typically takes 10-15 seconds. We&apos;re analyzing best
+                practices and generating unique ad variants optimized for your
+                platform.
               </p>
             </div>
           </DialogContent>
@@ -811,13 +910,20 @@ export default function AIEPage() {
               <div className="flex items-center gap-3">
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  }}
                 >
                   <Check className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Ad Variants Generated</h2>
-                  <p className="text-sm text-gray-500">Select a variant to save to your library</p>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Ad Variants Generated
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Select a variant to save to your library
+                  </p>
                 </div>
               </div>
               <button
@@ -836,7 +942,12 @@ export default function AIEPage() {
                     <AlertDescription className="text-blue-700">
                       Generated {result.variants.length} variants
                       {result.metadata?.generationTimeMs && (
-                        <> in {(result.metadata.generationTimeMs / 1000).toFixed(2)}s</>
+                        <>
+                          {" "}
+                          in{" "}
+                          {(result.metadata.generationTimeMs / 1000).toFixed(2)}
+                          s
+                        </>
                       )}
                       {result.metadata?.aiCost && (
                         <> • AI Cost: ${result.metadata.aiCost.toFixed(4)}</>
@@ -850,7 +961,10 @@ export default function AIEPage() {
                     const scoreInfo = formatScore(variant.predictedScore);
 
                     return (
-                      <Card key={variant.id} className="bg-white border-gray-200">
+                      <Card
+                        key={variant.id}
+                        className="bg-white border-gray-200"
+                      >
                         <CardContent className="p-5 space-y-3">
                           <div className="flex items-center justify-between">
                             <h3 className="font-semibold text-gray-900">
@@ -861,7 +975,9 @@ export default function AIEPage() {
                             </Badge>
                           </div>
 
-                          <Badge variant="outline" className="border-gray-300">{variant.variantType}</Badge>
+                          <Badge variant="outline" className="border-gray-300">
+                            {variant.variantType}
+                          </Badge>
 
                           <Separator />
 
@@ -870,33 +986,57 @@ export default function AIEPage() {
                             <>
                               <div>
                                 <p className="text-sm font-semibold mb-2">
-                                  Media ({selectedProducts.flatMap(p => p.images).length} {selectedProducts.flatMap(p => p.images).length === 1 ? 'image' : 'images'})
+                                  Media (
+                                  {
+                                    selectedProducts.flatMap((p) => p.images)
+                                      .length
+                                  }{" "}
+                                  {selectedProducts.flatMap((p) => p.images)
+                                    .length === 1
+                                    ? "image"
+                                    : "images"}
+                                  )
                                 </p>
-                                <div className={`grid gap-2 ${selectedProducts.flatMap(p => p.images).length === 1
-                                    ? 'grid-cols-1'
-                                    : 'grid-cols-[repeat(auto-fill,minmax(80px,1fr))]'
-                                  }`}>
-                                  {selectedProducts.flatMap(p => p.images).slice(0, 4).map((img, idx) => (
-                                    <div
-                                      key={idx}
-                                      className="relative pb-[100%] bg-gray-100 rounded-lg overflow-hidden"
-                                    >
-                                      <img
-                                        src={img.url}
-                                        alt={img.altText || `Product image ${idx + 1}`}
-                                        className="absolute inset-0 w-full h-full object-cover"
-                                      />
-                                    </div>
-                                  ))}
-                                  {selectedProducts.flatMap(p => p.images).length > 4 && (
+                                <div
+                                  className={`grid gap-2 ${
+                                    selectedProducts.flatMap((p) => p.images)
+                                      .length === 1
+                                      ? "grid-cols-1"
+                                      : "grid-cols-[repeat(auto-fill,minmax(80px,1fr))]"
+                                  }`}
+                                >
+                                  {selectedProducts
+                                    .flatMap((p) => p.images)
+                                    .slice(0, 4)
+                                    .map((img, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="relative pb-[100%] bg-gray-100 rounded-lg overflow-hidden"
+                                      >
+                                        <img
+                                          src={img.url}
+                                          alt={
+                                            img.altText ||
+                                            `Product image ${idx + 1}`
+                                          }
+                                          className="absolute inset-0 w-full h-full object-cover"
+                                        />
+                                      </div>
+                                    ))}
+                                  {selectedProducts.flatMap((p) => p.images)
+                                    .length > 4 && (
                                     <div className="relative pb-[100%] bg-gray-100 rounded-lg flex items-center justify-center">
                                       <p className="text-sm text-gray-600 font-semibold">
-                                        +{selectedProducts.flatMap(p => p.images).length - 4}
+                                        +
+                                        {selectedProducts.flatMap(
+                                          (p) => p.images,
+                                        ).length - 4}
                                       </p>
                                     </div>
                                   )}
                                 </div>
-                                {selectedProducts.flatMap(p => p.images).length > 1 && (
+                                {selectedProducts.flatMap((p) => p.images)
+                                  .length > 1 && (
                                   <p className="text-xs text-gray-600 text-center mt-1">
                                     Carousel
                                   </p>
@@ -907,34 +1047,72 @@ export default function AIEPage() {
                           )}
 
                           <div className="space-y-2">
-                            <Label htmlFor={`headline-${variant.id}`}>Headline</Label>
+                            <Label htmlFor={`headline-${variant.id}`}>
+                              Headline
+                            </Label>
                             <Textarea
                               id={`headline-${variant.id}`}
-                              value={variant.editedHeadline || ''}
-                              onChange={(e) => handleVariantEdit(variant.id, 'headline', e.target.value)}
+                              value={variant.editedHeadline || ""}
+                              onChange={(e) =>
+                                handleVariantEdit(
+                                  variant.id,
+                                  "headline",
+                                  e.target.value,
+                                )
+                              }
                               rows={2}
+                              maxLength={40}
                               className="resize-none"
                             />
+                            <p
+                              className={`text-xs ${(variant.editedHeadline?.length || 0) > 40 ? "text-red-500" : "text-gray-500"}`}
+                            >
+                              {variant.editedHeadline?.length || 0}/40
+                              characters
+                            </p>
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor={`primary-${variant.id}`}>Primary Text</Label>
+                            <Label htmlFor={`primary-${variant.id}`}>
+                              Ad Copy
+                            </Label>
                             <Textarea
                               id={`primary-${variant.id}`}
-                              value={variant.editedPrimaryText || ''}
-                              onChange={(e) => handleVariantEdit(variant.id, 'primaryText', e.target.value)}
+                              value={variant.editedPrimaryText || ""}
+                              onChange={(e) =>
+                                handleVariantEdit(
+                                  variant.id,
+                                  "primaryText",
+                                  e.target.value,
+                                )
+                              }
                               rows={3}
+                              maxLength={125}
                               className="resize-none"
                             />
+                            <p
+                              className={`text-xs ${(variant.editedPrimaryText?.length || 0) > 125 ? "text-red-500" : "text-gray-500"}`}
+                            >
+                              {variant.editedPrimaryText?.length || 0}/125
+                              characters
+                            </p>
                           </div>
 
                           {variant.description && (
                             <div className="space-y-2">
-                              <Label htmlFor={`desc-${variant.id}`}>Description</Label>
+                              <Label htmlFor={`desc-${variant.id}`}>
+                                Description
+                              </Label>
                               <Textarea
                                 id={`desc-${variant.id}`}
-                                value={variant.editedDescription || ''}
-                                onChange={(e) => handleVariantEdit(variant.id, 'description', e.target.value)}
+                                value={variant.editedDescription || ""}
+                                onChange={(e) =>
+                                  handleVariantEdit(
+                                    variant.id,
+                                    "description",
+                                    e.target.value,
+                                  )
+                                }
                                 rows={2}
                                 className="resize-none"
                               />
@@ -943,7 +1121,9 @@ export default function AIEPage() {
 
                           {variant.cta && (
                             <div>
-                              <p className="text-sm font-semibold mb-1">Call-to-Action</p>
+                              <p className="text-sm font-semibold mb-1">
+                                Call-to-Action
+                              </p>
                               <Badge>{variant.cta}</Badge>
                             </div>
                           )}
@@ -952,50 +1132,86 @@ export default function AIEPage() {
 
                           {variant.scoreBreakdown && (
                             <div>
-                              <p className="text-sm font-semibold mb-2 text-gray-700">Quality Scores</p>
+                              <p className="text-sm font-semibold mb-2 text-gray-700">
+                                Quality Scores
+                              </p>
                               <div className="flex items-center gap-1 flex-wrap">
-                                {variant.scoreBreakdown.hook_strength !== undefined && (
-                                  <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-                                    Hook: {(variant.scoreBreakdown.hook_strength * 100).toFixed(0)}%
+                                {variant.scoreBreakdown.hook_strength !==
+                                  undefined && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-blue-50 text-blue-700"
+                                  >
+                                    Hook:{" "}
+                                    {(
+                                      variant.scoreBreakdown.hook_strength * 100
+                                    ).toFixed(0)}
+                                    %
                                   </Badge>
                                 )}
-                                {variant.scoreBreakdown.cta_clarity !== undefined && (
-                                  <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-                                    CTA: {(variant.scoreBreakdown.cta_clarity * 100).toFixed(0)}%
+                                {variant.scoreBreakdown.cta_clarity !==
+                                  undefined && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-blue-50 text-blue-700"
+                                  >
+                                    CTA:{" "}
+                                    {(
+                                      variant.scoreBreakdown.cta_clarity * 100
+                                    ).toFixed(0)}
+                                    %
                                   </Badge>
                                 )}
-                                {variant.scoreBreakdown.platform_compliance !== undefined && (
-                                  <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-                                    Platform: {(variant.scoreBreakdown.platform_compliance * 100).toFixed(0)}%
+                                {variant.scoreBreakdown.platform_compliance !==
+                                  undefined && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-blue-50 text-blue-700"
+                                  >
+                                    Platform:{" "}
+                                    {(
+                                      variant.scoreBreakdown
+                                        .platform_compliance * 100
+                                    ).toFixed(0)}
+                                    %
                                   </Badge>
                                 )}
                               </div>
                             </div>
                           )}
 
-                          {variant.headlineAlternatives && variant.headlineAlternatives.length > 0 && (
-                            <>
-                              <Separator />
-                              <div>
-                                <p className="text-sm font-semibold mb-1 text-gray-700">Alternative Headlines</p>
-                                <div className="space-y-1">
-                                  {variant.headlineAlternatives.slice(0, 2).map((alt, idx) => (
-                                    <p key={idx} className="text-xs text-gray-500">
-                                      • {alt}
-                                    </p>
-                                  ))}
+                          {variant.headlineAlternatives &&
+                            variant.headlineAlternatives.length > 0 && (
+                              <>
+                                <Separator />
+                                <div>
+                                  <p className="text-sm font-semibold mb-1 text-gray-700">
+                                    Alternative Headlines
+                                  </p>
+                                  <div className="space-y-1">
+                                    {variant.headlineAlternatives
+                                      .slice(0, 2)
+                                      .map((alt, idx) => (
+                                        <p
+                                          key={idx}
+                                          className="text-xs text-gray-500"
+                                        >
+                                          • {alt}
+                                        </p>
+                                      ))}
+                                  </div>
                                 </div>
-                              </div>
-                            </>
-                          )}
+                              </>
+                            )}
 
                           <Separator />
 
                           <Button
                             className="w-full h-10 font-medium"
                             style={{
-                              background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                              border: 'none'
+                              background:
+                                "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                              border: "none",
                             }}
                             onClick={() => handleSelectVariant(variant)}
                           >
@@ -1018,7 +1234,7 @@ export default function AIEPage() {
           open={productModalOpen}
           onOpenChange={(open) => {
             setProductModalOpen(open);
-            if (!open) setSearchQuery('');
+            if (!open) setSearchQuery("");
           }}
         >
           <DialogContent className="max-w-4xl w-[90vw] max-h-[80vh] rounded-xl p-0 overflow-hidden flex flex-col">
@@ -1026,7 +1242,7 @@ export default function AIEPage() {
               <button
                 onClick={() => {
                   setProductModalOpen(false);
-                  setSearchQuery('');
+                  setSearchQuery("");
                 }}
                 className="absolute right-6 top-5 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
               >
@@ -1035,7 +1251,10 @@ export default function AIEPage() {
               <div className="flex items-center gap-3">
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)' }}
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                  }}
                 >
                   <Package className="w-5 h-5 text-white" />
                 </div>
@@ -1047,7 +1266,10 @@ export default function AIEPage() {
 
             <div className="p-6 flex flex-col gap-5 overflow-y-auto flex-1 bg-gray-50">
               <div className="flex flex-col gap-2 w-full">
-                <Label htmlFor="product-search" className="text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="product-search"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Search Products
                 </Label>
                 <div className="relative">
@@ -1066,7 +1288,8 @@ export default function AIEPage() {
               {selectedProducts.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
                   <p className="text-sm text-blue-700 font-medium">
-                    {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected
+                    {selectedProducts.length} product
+                    {selectedProducts.length !== 1 ? "s" : ""} selected
                   </p>
                 </div>
               )}
@@ -1080,14 +1303,18 @@ export default function AIEPage() {
 
               {!loadingProducts && products.length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-8">
-                  {searchQuery ? 'No products found' : 'Start typing to search products'}
+                  {searchQuery
+                    ? "No products found"
+                    : "Start typing to search products"}
                 </p>
               )}
 
               {!loadingProducts && products.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {products.map((product) => {
-                    const isSelected = selectedProducts.find(p => p.id === product.id);
+                    const isSelected = selectedProducts.find(
+                      (p) => p.id === product.id,
+                    );
                     return (
                       <button
                         key={product.id}
@@ -1095,8 +1322,8 @@ export default function AIEPage() {
                         onClick={() => handleProductSelect(product)}
                         className={`text-left bg-white rounded-lg p-3 flex flex-col gap-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${
                           isSelected
-                            ? 'border-2 border-blue-500 ring-2 ring-blue-100'
-                            : 'border border-gray-200 hover:border-blue-400'
+                            ? "border-2 border-blue-500 ring-2 ring-blue-100"
+                            : "border border-gray-200 hover:border-blue-400"
                         }`}
                       >
                         {product.images[0]?.url && (
@@ -1134,7 +1361,7 @@ export default function AIEPage() {
                 variant="outline"
                 onClick={() => {
                   setProductModalOpen(false);
-                  setSearchQuery('');
+                  setSearchQuery("");
                 }}
                 className="border-gray-200 hover:bg-gray-50"
               >
@@ -1143,11 +1370,12 @@ export default function AIEPage() {
               <Button
                 onClick={() => {
                   setProductModalOpen(false);
-                  setSearchQuery('');
+                  setSearchQuery("");
                 }}
                 style={{
-                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                  border: 'none'
+                  background:
+                    "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                  border: "none",
                 }}
               >
                 Done
@@ -1173,17 +1401,22 @@ export default function AIEPage() {
           open={imageUrlModalOpen}
           onOpenChange={(open) => {
             setImageUrlModalOpen(open);
-            if (!open) setTempImageUrl('');
+            if (!open) setTempImageUrl("");
           }}
         >
           <DialogContent className="max-w-lg rounded-xl p-0 overflow-hidden">
             <DialogHeader className="px-6 py-5 border-b border-gray-200 bg-white">
-              <DialogTitle className="text-lg font-semibold text-gray-900">Add Product Image URL</DialogTitle>
+              <DialogTitle className="text-lg font-semibold text-gray-900">
+                Add Product Image URL
+              </DialogTitle>
             </DialogHeader>
 
             <div className="p-6 flex flex-col gap-5 bg-gray-50">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="image-url" className="text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="image-url"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Image URL
                 </Label>
                 <Input
@@ -1194,13 +1427,19 @@ export default function AIEPage() {
                   autoFocus
                   className="h-11 border-gray-200"
                 />
-                <p className="text-sm text-gray-500">Enter a direct URL to your product image</p>
+                <p className="text-sm text-gray-500">
+                  Enter a direct URL to your product image
+                </p>
               </div>
 
               {tempImageUrl && (
                 <div className="flex flex-col gap-2">
                   <p className="text-sm font-semibold text-gray-900">Preview</p>
-                  <img src={tempImageUrl} alt="Preview" className="w-32 h-32 object-cover rounded-lg" />
+                  <img
+                    src={tempImageUrl}
+                    alt="Preview"
+                    className="w-32 h-32 object-cover rounded-lg"
+                  />
                 </div>
               )}
             </div>
@@ -1210,7 +1449,7 @@ export default function AIEPage() {
                 variant="outline"
                 onClick={() => {
                   setImageUrlModalOpen(false);
-                  setTempImageUrl('');
+                  setTempImageUrl("");
                 }}
                 className="border-gray-200 hover:bg-gray-50"
               >
@@ -1221,9 +1460,9 @@ export default function AIEPage() {
                 disabled={!tempImageUrl.trim()}
                 style={{
                   background: !tempImageUrl.trim()
-                    ? '#9ca3af'
-                    : 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                  border: 'none'
+                    ? "#9ca3af"
+                    : "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                  border: "none",
                 }}
               >
                 Add Image

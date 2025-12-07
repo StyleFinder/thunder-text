@@ -120,9 +120,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (ad_title.length > 125) {
+    if (ad_title.length > 40) {
       return NextResponse.json(
-        { success: false, error: "Ad title must be 125 characters or less" },
+        { success: false, error: "Ad headline must be 40 characters or less" },
         { status: 400 },
       );
     }

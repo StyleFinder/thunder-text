@@ -1,163 +1,218 @@
-import { callChatCompletion } from '@/lib/services/openai-client';
-import { ResearchContext, AdVariant, AieVariantType, AiePlatform, AieGoal, BrandVoiceContext, AdLengthOption } from '../../../types/aie';
-import { logger } from '@/lib/logger'
+import { callChatCompletion } from "@/lib/services/openai-client";
+import {
+  ResearchContext,
+  AdVariant,
+  AieVariantType,
+  AiePlatform,
+  AieGoal,
+  BrandVoiceContext,
+  AdLengthOption,
+} from "../../../types/aie";
+import { logger } from "@/lib/logger";
 
 export class CreativeAgent {
+  /**
+   * Generate 3 ad variants based on research context and product info
+   */
+  async generateVariants(
+    productInfo: string,
+    context: ResearchContext,
+    platform: AiePlatform,
+    goal: AieGoal,
+    selectedLength: AdLengthOption = "MEDIUM", // Default to MEDIUM if not specified
+  ): Promise<Partial<AdVariant>[]> {
+    // 1. Construct the prompt with rich context
+    const systemPrompt = this.buildSystemPrompt(
+      platform,
+      goal,
+      context.brandVoice,
+      selectedLength,
+    );
+    const userPrompt = this.buildUserPrompt(productInfo, context);
 
-    /**
-     * Generate 3 ad variants based on research context and product info
-     */
-    async generateVariants(
-        productInfo: string,
-        context: ResearchContext,
-        platform: AiePlatform,
-        goal: AieGoal,
-        selectedLength: AdLengthOption = 'MEDIUM' // Default to MEDIUM if not specified
-    ): Promise<Partial<AdVariant>[]> {
+    // 2. Call OpenAI to generate the creative content
+    const response = await callChatCompletion(
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      {
+        model: "gpt-4o", // Use high-quality model for creative work
+        temperature: 0.8, // Higher temperature for creativity
+        maxTokens: 2000,
+      },
+    );
 
-        // 1. Construct the prompt with rich context
-        const systemPrompt = this.buildSystemPrompt(platform, goal, context.brandVoice, selectedLength);
-        const userPrompt = this.buildUserPrompt(productInfo, context);
+    // 3. Parse the JSON response
+    try {
+      const variants = this.parseResponse(response, selectedLength);
+      return variants;
+    } catch (error) {
+      logger.error("Failed to parse Creative Agent response:", error as Error, {
+        component: "agent",
+      });
+      throw new Error("Creative Agent failed to generate valid ad variants.");
+    }
+  }
 
-        // 2. Call OpenAI to generate the creative content
-        const response = await callChatCompletion([
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-        ], {
-            model: 'gpt-4o', // Use high-quality model for creative work
-            temperature: 0.8, // Higher temperature for creativity
-            maxTokens: 2000
-        });
+  /**
+   * Get character limits based on selected ad length
+   * NOTE: All lengths have a HARD MAX of 125 characters for ad copy compliance
+   */
+  private getCharacterLimits(length: AdLengthOption): {
+    ideal: number;
+    max: number;
+    words: string;
+    sentences: string;
+  } {
+    switch (length) {
+      case "SHORT":
+        return {
+          ideal: 80,
+          max: 125,
+          words: "10-15 words",
+          sentences: "1-2 sentences",
+        };
+      case "MEDIUM":
+        return {
+          ideal: 100,
+          max: 125,
+          words: "15-20 words",
+          sentences: "2-3 sentences",
+        };
+      case "LONG":
+        return {
+          ideal: 120,
+          max: 125,
+          words: "18-25 words",
+          sentences: "2-3 sentences",
+        };
+    }
+  }
 
-        // 3. Parse the JSON response
-        try {
-            const variants = this.parseResponse(response, selectedLength);
-            return variants;
-        } catch (error) {
-            logger.error('Failed to parse Creative Agent response:', error as Error, { component: 'agent' });
-            throw new Error('Creative Agent failed to generate valid ad variants.');
+  private buildSystemPrompt(
+    platform: AiePlatform,
+    goal: AieGoal,
+    brandVoice?: BrandVoiceContext,
+    selectedLength: AdLengthOption = "MEDIUM",
+  ): string {
+    let brandVoiceSection = "";
+
+    if (brandVoice) {
+      const parts: string[] = [];
+
+      // Voice characteristics
+      if (brandVoice.tone || brandVoice.style || brandVoice.personality) {
+        parts.push(
+          "═══════════════════════════════════════════════════════════════",
+        );
+        parts.push("BRAND VOICE (CRITICAL - MATCH THIS EXACTLY)");
+        parts.push(
+          "═══════════════════════════════════════════════════════════════",
+        );
+        if (brandVoice.tone) parts.push(`Tone: ${brandVoice.tone}`);
+        if (brandVoice.style) parts.push(`Style: ${brandVoice.style}`);
+        if (brandVoice.personality)
+          parts.push(`Personality: ${brandVoice.personality}`);
+      }
+
+      // Vocabulary guidelines
+      if (
+        brandVoice.preferredTerms.length > 0 ||
+        brandVoice.avoidedTerms.length > 0
+      ) {
+        parts.push("");
+        parts.push("Language Guidelines:");
+        if (brandVoice.preferredTerms.length > 0) {
+          parts.push(
+            `✅ USE these words/phrases: ${brandVoice.preferredTerms.join(", ")}`,
+          );
         }
+        if (brandVoice.avoidedTerms.length > 0) {
+          parts.push(
+            `❌ AVOID these words/phrases: ${brandVoice.avoidedTerms.join(", ")}`,
+          );
+        }
+        if (brandVoice.signaturePhrases.length > 0) {
+          parts.push(
+            `🔑 Signature phrases: ${brandVoice.signaturePhrases.join(", ")}`,
+          );
+        }
+      }
+
+      // Brand values
+      if (brandVoice.coreValues.length > 0 || brandVoice.desiredReputation) {
+        parts.push("");
+        parts.push("Brand Identity:");
+        if (brandVoice.coreValues.length > 0) {
+          parts.push(`Core Values: ${brandVoice.coreValues.join(", ")}`);
+        }
+        if (brandVoice.desiredReputation) {
+          parts.push(`Desired Reputation: ${brandVoice.desiredReputation}`);
+        }
+      }
+
+      // AI engine instructions (pre-generated guidance)
+      if (brandVoice.aiEngineInstructions) {
+        parts.push("");
+        parts.push("AI Content Guidelines:");
+        parts.push(brandVoice.aiEngineInstructions);
+      }
+
+      brandVoiceSection = parts.join("\n");
     }
 
-    /**
-     * Get character limits based on selected ad length
-     */
-    private getCharacterLimits(length: AdLengthOption): {
-        ideal: number;
-        max: number;
-        words: string;
-        sentences: string;
-    } {
-        switch (length) {
-            case 'SHORT':
-                return {
-                    ideal: 90,
-                    max: 90,
-                    words: '10-20 words',
-                    sentences: '1-2 sentences'
-                };
-            case 'MEDIUM':
-                return {
-                    ideal: 140,
-                    max: 180,
-                    words: '20-30 words',
-                    sentences: '2-3 sentences'
-                };
-            case 'LONG':
-                return {
-                    ideal: 275,
-                    max: 350,
-                    words: '40-60 words',
-                    sentences: '3-5 sentences'
-                };
-        }
+    let targetAudienceSection = "";
+    if (
+      brandVoice?.idealCustomerDescription ||
+      (brandVoice?.customerPainPoints?.length ?? 0) > 0
+    ) {
+      const audienceParts: string[] = [];
+      audienceParts.push("");
+      audienceParts.push(
+        "═══════════════════════════════════════════════════════════════",
+      );
+      audienceParts.push("TARGET AUDIENCE");
+      audienceParts.push(
+        "═══════════════════════════════════════════════════════════════",
+      );
+      if (brandVoice?.idealCustomerDescription) {
+        audienceParts.push(
+          `Ideal Customer: ${brandVoice.idealCustomerDescription}`,
+        );
+      }
+      if (
+        brandVoice?.customerPainPoints &&
+        brandVoice.customerPainPoints.length > 0
+      ) {
+        audienceParts.push(
+          `Pain Points to Address: ${brandVoice.customerPainPoints.join("; ")}`,
+        );
+      }
+      if (
+        brandVoice?.customerDesiredOutcomes &&
+        brandVoice.customerDesiredOutcomes.length > 0
+      ) {
+        audienceParts.push(
+          `Desired Outcomes: ${brandVoice.customerDesiredOutcomes.join("; ")}`,
+        );
+      }
+      targetAudienceSection = audienceParts.join("\n");
     }
 
-    private buildSystemPrompt(platform: AiePlatform, goal: AieGoal, brandVoice?: BrandVoiceContext, selectedLength: AdLengthOption = 'MEDIUM'): string {
-        let brandVoiceSection = '';
+    // Build goal-specific CTA guidance
+    const ctaGuidance = this.buildCTAGuidance(goal);
 
-        if (brandVoice) {
-            const parts: string[] = [];
+    // Build icon/emoji guidelines
+    const iconGuidelines = this.buildIconGuidelines(platform);
 
-            // Voice characteristics
-            if (brandVoice.tone || brandVoice.style || brandVoice.personality) {
-                parts.push('═══════════════════════════════════════════════════════════════');
-                parts.push('BRAND VOICE (CRITICAL - MATCH THIS EXACTLY)');
-                parts.push('═══════════════════════════════════════════════════════════════');
-                if (brandVoice.tone) parts.push(`Tone: ${brandVoice.tone}`);
-                if (brandVoice.style) parts.push(`Style: ${brandVoice.style}`);
-                if (brandVoice.personality) parts.push(`Personality: ${brandVoice.personality}`);
-            }
+    // Build mobile-first and visual alignment guidelines
+    const mobileFirstGuidelines = this.buildMobileFirstGuidelines();
 
-            // Vocabulary guidelines
-            if (brandVoice.preferredTerms.length > 0 || brandVoice.avoidedTerms.length > 0) {
-                parts.push('');
-                parts.push('Language Guidelines:');
-                if (brandVoice.preferredTerms.length > 0) {
-                    parts.push(`✅ USE these words/phrases: ${brandVoice.preferredTerms.join(', ')}`);
-                }
-                if (brandVoice.avoidedTerms.length > 0) {
-                    parts.push(`❌ AVOID these words/phrases: ${brandVoice.avoidedTerms.join(', ')}`);
-                }
-                if (brandVoice.signaturePhrases.length > 0) {
-                    parts.push(`🔑 Signature phrases: ${brandVoice.signaturePhrases.join(', ')}`);
-                }
-            }
+    // Get character limits for selected ad length
+    const limits = this.getCharacterLimits(selectedLength);
 
-            // Brand values
-            if (brandVoice.coreValues.length > 0 || brandVoice.desiredReputation) {
-                parts.push('');
-                parts.push('Brand Identity:');
-                if (brandVoice.coreValues.length > 0) {
-                    parts.push(`Core Values: ${brandVoice.coreValues.join(', ')}`);
-                }
-                if (brandVoice.desiredReputation) {
-                    parts.push(`Desired Reputation: ${brandVoice.desiredReputation}`);
-                }
-            }
-
-            // AI engine instructions (pre-generated guidance)
-            if (brandVoice.aiEngineInstructions) {
-                parts.push('');
-                parts.push('AI Content Guidelines:');
-                parts.push(brandVoice.aiEngineInstructions);
-            }
-
-            brandVoiceSection = parts.join('\n');
-        }
-
-        let targetAudienceSection = '';
-        if (brandVoice?.idealCustomerDescription || (brandVoice?.customerPainPoints?.length ?? 0) > 0) {
-            const audienceParts: string[] = [];
-            audienceParts.push('');
-            audienceParts.push('═══════════════════════════════════════════════════════════════');
-            audienceParts.push('TARGET AUDIENCE');
-            audienceParts.push('═══════════════════════════════════════════════════════════════');
-            if (brandVoice?.idealCustomerDescription) {
-                audienceParts.push(`Ideal Customer: ${brandVoice.idealCustomerDescription}`);
-            }
-            if (brandVoice?.customerPainPoints && brandVoice.customerPainPoints.length > 0) {
-                audienceParts.push(`Pain Points to Address: ${brandVoice.customerPainPoints.join('; ')}`);
-            }
-            if (brandVoice?.customerDesiredOutcomes && brandVoice.customerDesiredOutcomes.length > 0) {
-                audienceParts.push(`Desired Outcomes: ${brandVoice.customerDesiredOutcomes.join('; ')}`);
-            }
-            targetAudienceSection = audienceParts.join('\n');
-        }
-
-        // Build goal-specific CTA guidance
-        const ctaGuidance = this.buildCTAGuidance(goal);
-
-        // Build icon/emoji guidelines
-        const iconGuidelines = this.buildIconGuidelines(platform);
-
-        // Build mobile-first and visual alignment guidelines
-        const mobileFirstGuidelines = this.buildMobileFirstGuidelines();
-
-        // Get character limits for selected ad length
-        const limits = this.getCharacterLimits(selectedLength);
-
-        return `
+    return `
 You are the Creative Agent for the Ad Intelligence Engine (AIE).
 Your job is to write high-converting ad copy for ${platform} with the goal of ${goal}.
 
@@ -175,19 +230,24 @@ Generate exactly 3 distinct variants:
 Selected Ad Length: ${selectedLength}
 
 Constraints for ${platform}:
-- Primary Text:
+- Primary Text (Ad Copy):
+  * ⚠️ HARD LIMIT: 125 CHARACTERS MAXIMUM - THIS IS MANDATORY, NO EXCEPTIONS
   * TARGET LENGTH: ${limits.ideal} characters (${limits.words}, ${limits.sentences})
-  * ABSOLUTE MAX: ${limits.max} characters
+  * Count every character including spaces, punctuation, and emojis
+  * If your ad copy exceeds 125 characters, you MUST shorten it
   * MOBILE-FIRST: Front-load value in first sentence to prevent truncation
   * Each sentence = 1 clear idea
-  * ${selectedLength === 'SHORT' ? 'Keep it punchy and direct - no extra words' : ''}
-  * ${selectedLength === 'MEDIUM' ? 'Balance detail with brevity - tell the story concisely' : ''}
-  * ${selectedLength === 'LONG' ? 'Use the space to tell a compelling story or build desire' : ''}
-- Headline: 25-40 characters (shorter is stronger on mobile)
+  * ${selectedLength === "SHORT" ? "Keep it punchy and direct - no extra words" : ""}
+  * ${selectedLength === "MEDIUM" ? "Balance detail with brevity - tell the story concisely" : ""}
+  * ${selectedLength === "LONG" ? "Maximize impact within the 125 char limit" : ""}
+- Headline:
+  * ⚠️ HARD LIMIT: 40 CHARACTERS MAXIMUM - THIS IS MANDATORY
+  * Target 25-35 characters for best mobile display
+  * Shorter is stronger - make every word count
 - Description: 20-30 characters (optional: price, shipping, guarantee)
-- Tone: ${brandVoice?.tone || 'Authentic, punchy, and direct. No fluff.'}
+- Tone: ${brandVoice?.tone || "Authentic, punchy, and direct. No fluff."}
 - Formatting: Return ONLY valid JSON.
-${brandVoice ? '\nIMPORTANT: All copy MUST match the brand voice guidelines above.' : ''}
+${brandVoice ? "\nIMPORTANT: All copy MUST match the brand voice guidelines above." : ""}
 
 ${mobileFirstGuidelines}
 
@@ -195,59 +255,60 @@ ${ctaGuidance}
 
 ${iconGuidelines}
     `.trim();
-    }
+  }
 
-    /**
-     * Build goal-specific CTA guidance
-     */
-    private buildCTAGuidance(goal: AieGoal): string {
-        const ctaMap: Record<AieGoal, string[]> = {
-            conversion: [
-                'Shop Now',
-                'Buy Now',
-                'Get Yours Today',
-                'Add to Cart',
-                'Shop the Collection',
-                'Order Now',
-                'Claim Yours'
-            ],
-            awareness: [
-                'Learn More',
-                'Discover Why',
-                'See How',
-                'Find Out More',
-                'Explore',
-                'Read More'
-            ],
-            engagement: [
-                'Join the Conversation',
-                'Tag Someone',
-                'Share Your Story',
-                'Comment Below',
-                'Tell Us',
-                'Vote Now'
-            ],
-            traffic: [
-                'Visit Our Site',
-                'See the Full Collection',
-                'Browse Now',
-                'Check It Out',
-                'View All',
-                'Explore More'
-            ],
-            app_installs: [
-                'Download Now',
-                'Get the App',
-                'Install Today',
-                'Try It Free',
-                'Start Now',
-                'Join Free'
-            ]
-        };
+  /**
+   * Build goal-specific CTA guidance
+   */
+  private buildCTAGuidance(goal: AieGoal): string {
+    const ctaMap: Record<AieGoal, string[]> = {
+      conversion: [
+        "Shop Now",
+        "Buy Now",
+        "Get Yours Today",
+        "Add to Cart",
+        "Shop the Collection",
+        "Order Now",
+        "Claim Yours",
+      ],
+      awareness: [
+        "Learn More",
+        "Discover Why",
+        "See How",
+        "Find Out More",
+        "Explore",
+        "Read More",
+      ],
+      engagement: [
+        "Join the Conversation",
+        "Tag Someone",
+        "Share Your Story",
+        "Comment Below",
+        "Tell Us",
+        "Vote Now",
+      ],
+      traffic: [
+        "Visit Our Site",
+        "See the Full Collection",
+        "Browse Now",
+        "Check It Out",
+        "View All",
+        "Explore More",
+      ],
+      app_installs: [
+        "Download Now",
+        "Get the App",
+        "Install Today",
+        "Try It Free",
+        "Start Now",
+        "Join Free",
+      ],
+    };
 
-        const examples = ctaMap[goal];
+    // eslint-disable-next-line security/detect-object-injection
+    const examples = ctaMap[goal];
 
-        return `
+    return `
 ═══════════════════════════════════════════════════════════════
 CALL TO ACTION REQUIREMENTS
 ═══════════════════════════════════════════════════════════════
@@ -256,7 +317,7 @@ Goal: ${goal}
 Your ad MUST end with a strong, actionable CTA. Make it the final sentence.
 
 Recommended CTAs for ${goal}:
-${examples.map(cta => `- "${cta}"`).join('\n')}
+${examples.map((cta) => `- "${cta}"`).join("\n")}
 
 Guidelines:
 - Use action verbs (Shop, Get, Discover, Join, etc.)
@@ -270,13 +331,14 @@ Examples:
   Benefit: "Solve your problem today. Get Yours →"
   UGC: "Join 10K+ happy customers. Order Now →"
         `.trim();
-    }
+  }
 
-    /**
-     * Build icon/emoji usage guidelines
-     */
-    private buildIconGuidelines(platform: AiePlatform): string {
-        return `
+  /**
+   * Build icon/emoji usage guidelines
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private buildIconGuidelines(_platform: AiePlatform): string {
+    return `
 ═══════════════════════════════════════════════════════════════
 ICON & EMOJI USAGE (Tasteful Enhancement)
 ═══════════════════════════════════════════════════════════════
@@ -306,13 +368,13 @@ Examples by Variant:
   Benefit: 💪 (strength), 🎯 (target), ⚡ (speed), 🔥 (hot)
   UGC: 👏 (applause), 🙌 (celebration), 🔥 (fire), ⭐ (star)
         `.trim();
-    }
+  }
 
-    /**
-     * Build mobile-first and visual-copy alignment guidelines
-     */
-    private buildMobileFirstGuidelines(): string {
-        return `
+  /**
+   * Build mobile-first and visual-copy alignment guidelines
+   */
+  private buildMobileFirstGuidelines(): string {
+    return `
 ═══════════════════════════════════════════════════════════════
 MOBILE-FIRST OPTIMIZATION (CRITICAL)
 ═══════════════════════════════════════════════════════════════
@@ -320,13 +382,14 @@ MOBILE-FIRST OPTIMIZATION (CRITICAL)
 
 Mobile Rules:
 ✅ DO:
-  - Keep primary text ≤ 90 characters to prevent "See More" truncation
+  - Keep primary text UNDER 125 characters (HARD LIMIT)
   - Front-load the most important message in the FIRST sentence
-  - Use short, punchy sentences (10-20 words each)
+  - Use short, punchy sentences (10-15 words each)
   - Ensure CTA is visible without expanding text
   - Test readability at a glance (3-second rule)
 
 ❌ DON'T:
+  - Exceed 125 characters in ad copy - this is non-negotiable
   - Bury the hook after the first sentence
   - Write long paragraphs that require expansion
   - Put important info at the end (may get cut off)
@@ -348,18 +411,24 @@ Example:
   Copy: "Crafted from premium cotton 💎 Designed to last. Shop Now →"
   ✅ Aligned: mentions materials visible in image
         `.trim();
-    }
+  }
 
-    private buildUserPrompt(productInfo: string, context: ResearchContext): string {
-        const bestPracticesList = context.bestPractices
-            .map(bp => `- ${bp.title}: ${bp.description}`)
-            .join('\n');
+  private buildUserPrompt(
+    productInfo: string,
+    context: ResearchContext,
+  ): string {
+    const bestPracticesList = context.bestPractices
+      .map((bp) => `- ${bp.title}: ${bp.description}`)
+      .join("\n");
 
-        const examplesList = context.adExamples
-            .map(ex => `- "${ex.headline}" (Hook: ${ex.primary_text?.substring(0, 50)}...)`)
-            .join('\n');
+    const examplesList = context.adExamples
+      .map(
+        (ex) =>
+          `- "${ex.headline}" (Hook: ${ex.primary_text?.substring(0, 50)}...)`,
+      )
+      .join("\n");
 
-        return `
+    return `
 Product Info:
 ${productInfo}
 
@@ -373,46 +442,64 @@ Output Format (JSON Array):
 [
   {
     "variant_type": "emotional",
-    "headline": "...",
-    "primary_text": "... (MUST include compelling body copy with a clear CTA at the end)",
+    "headline": "... (MAX 40 CHARACTERS)",
+    "primary_text": "... (MAX 125 CHARACTERS - include compelling copy with CTA at end)",
     "call_to_action": "Shop Now", // Strong action verb CTA
     "description": "..." // OPTIONAL: 20-30 chars for price/shipping/guarantee
   },
   {
     "variant_type": "benefit",
-    "headline": "...",
-    "primary_text": "... (MUST include compelling body copy with a clear CTA at the end)",
+    "headline": "... (MAX 40 CHARACTERS)",
+    "primary_text": "... (MAX 125 CHARACTERS - include compelling copy with CTA at end)",
     "call_to_action": "Get Yours",
     "description": "..."
   },
   {
     "variant_type": "ugc",
-    "headline": "...",
-    "primary_text": "... (MUST include compelling body copy with a clear CTA at the end)",
+    "headline": "... (MAX 40 CHARACTERS)",
+    "primary_text": "... (MAX 125 CHARACTERS - include compelling copy with CTA at end)",
     "call_to_action": "Buy Now",
     "description": "..."
   }
 ]
+
+CRITICAL CHARACTER LIMITS - COUNT CAREFULLY:
+- headline: MAX 40 characters
+- primary_text: MAX 125 characters
     `.trim();
+  }
+
+  private parseResponse(
+    response: string,
+    selectedLength: AdLengthOption,
+  ): Partial<AdVariant>[] {
+    // Clean up markdown code blocks if present
+    const cleanJson = response
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+    const parsed = JSON.parse(cleanJson);
+
+    if (!Array.isArray(parsed) || parsed.length !== 3) {
+      throw new Error("Invalid response format: Expected array of 3 variants");
     }
 
-    private parseResponse(response: string, selectedLength: AdLengthOption): Partial<AdVariant>[] {
-        // Clean up markdown code blocks if present
-        const cleanJson = response.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsed = JSON.parse(cleanJson);
-
-        if (!Array.isArray(parsed) || parsed.length !== 3) {
-            throw new Error('Invalid response format: Expected array of 3 variants');
-        }
-
-        return parsed.map((v: { variant_type: string; headline: string; primary_text: string; call_to_action?: string; description?: string }) => ({
-            variant_type: v.variant_type as AieVariantType,
-            headline: v.headline,
-            primary_text: v.primary_text,
-            call_to_action: v.call_to_action || 'Shop Now',
-            description: v.description || undefined, // Optional field
-            selected_length: selectedLength, // Tag each variant with the selected length
-            is_selected: false
-        }));
-    }
+    return parsed.map(
+      (v: {
+        variant_type: string;
+        headline: string;
+        primary_text: string;
+        call_to_action?: string;
+        description?: string;
+      }) => ({
+        variant_type: v.variant_type as AieVariantType,
+        headline: v.headline,
+        primary_text: v.primary_text,
+        call_to_action: v.call_to_action || "Shop Now",
+        description: v.description || undefined, // Optional field
+        selected_length: selectedLength, // Tag each variant with the selected length
+        is_selected: false,
+      }),
+    );
+  }
 }

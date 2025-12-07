@@ -21,6 +21,10 @@ const FACEBOOK_GRAPH_URL = `https://graph.facebook.com/${FACEBOOK_API_VERSION}`;
 
 /**
  * Get access token and page ID for shop
+ *
+ * Note: instagram_actor_id has been DEPRECATED as of Facebook Marketing API v22.0
+ * We no longer fetch or validate Instagram account IDs for basic ad creation.
+ * Instagram placements require the newer instagram_user_id field and additional setup.
  */
 async function getAccessTokenAndPageId(shopId: string): Promise<{
   accessToken: string;
@@ -61,6 +65,14 @@ async function getAccessTokenAndPageId(shopId: string): Promise<{
     unknown
   > | null;
   const pageId = (metadata?.facebook_page_id as string | undefined) || null;
+
+  logger.info("Retrieved integration metadata", {
+    component: "facebook-ad-drafts-submit",
+    operation: "getAccessTokenAndPageId",
+    shopId,
+    hasPageId: !!pageId,
+    metadataKeys: metadata ? Object.keys(metadata) : [],
+  });
 
   return {
     accessToken,
@@ -162,6 +174,13 @@ async function uploadAdImage(
 
 /**
  * Create ad creative on Facebook
+ *
+ * Note: instagram_actor_id has been DEPRECATED as of API v22.0 (full deprecation Jan 2026)
+ * The new field is instagram_user_id, but it's only required for Instagram-specific ad types
+ * (Threads ads, Click-to-Instagram messaging ads, etc.)
+ *
+ * For basic link ads, only page_id and link_data are required.
+ * The ad will show on Facebook placements. Instagram placement requires additional setup.
  */
 async function createAdCreative(
   accessToken: string,
@@ -172,31 +191,40 @@ async function createAdCreative(
   productUrl: string,
   pageId: string,
 ): Promise<{ id: string }> {
-  logger.info("Creating ad creative on Facebook", {
-    component: "facebook-ad-drafts-submit",
-    operation: "createAdCreative",
-    adAccountId,
-    pageId,
-    title: title.substring(0, 50),
-    productUrl: productUrl.substring(0, 100),
-    imageHash,
-  });
-
   const url = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/adcreatives`);
   url.searchParams.set("access_token", accessToken);
 
-  const creativeData = {
-    name: title,
-    object_story_spec: {
-      page_id: pageId, // Required: Facebook page to post from
-      link_data: {
-        image_hash: imageHash, // Use image hash instead of image_url
-        link: productUrl, // Link to Shopify product page
-        message: body,
-        name: title,
-      },
+  // Build the creative data - instagram_actor_id is deprecated and not needed for basic link ads
+  const objectStorySpec: Record<string, unknown> = {
+    page_id: pageId, // Required: Facebook page to post from
+    link_data: {
+      image_hash: imageHash, // Use image hash instead of image_url
+      link: productUrl, // Link to Shopify product page
+      message: body,
+      name: title,
     },
   };
+
+  const creativeData = {
+    name: title,
+    object_story_spec: objectStorySpec,
+  };
+
+  // DETAILED LOGGING - Log everything being sent
+  logger.info("=== STEP 2: Creating Ad Creative - FULL REQUEST DETAILS ===", {
+    component: "facebook-ad-drafts-submit",
+    operation: "createAdCreative",
+    requestUrl: `${FACEBOOK_GRAPH_URL}/${adAccountId}/adcreatives`,
+    requestBody: JSON.stringify(creativeData, null, 2),
+    adAccountId,
+    pageId,
+    title,
+    titleLength: title.length,
+    body,
+    bodyLength: body.length,
+    imageHash,
+    productUrl,
+  });
 
   const response = await fetch(url.toString(), {
     method: "POST",
@@ -208,24 +236,39 @@ async function createAdCreative(
 
   const data = await response.json();
 
+  // DETAILED LOGGING - Log full response
+  logger.info("=== STEP 2: Facebook Response ===", {
+    component: "facebook-ad-drafts-submit",
+    operation: "createAdCreative-response",
+    httpStatus: response.status,
+    httpOk: response.ok,
+    hasError: !!data.error,
+    fullResponse: JSON.stringify(data, null, 2),
+  });
+
   if (!response.ok || data.error) {
     logger.error(
-      "Facebook API error - Ad Creative",
+      "=== STEP 2 FAILED: Facebook API Error - Ad Creative ===",
       new Error(data.error?.message || "Ad creative creation failed"),
       {
         component: "facebook-ad-drafts-submit",
-        operation: "createAdCreative",
-        status: response.status,
+        operation: "createAdCreative-ERROR",
+        httpStatus: response.status,
         errorCode: data.error?.code,
         errorType: data.error?.type,
         errorSubcode: data.error?.error_subcode,
-        fullError: JSON.stringify(data.error),
+        errorUserTitle: data.error?.error_user_title,
+        errorUserMsg: data.error?.error_user_msg,
+        fullErrorObject: JSON.stringify(data.error, null, 2),
         adAccountId,
         pageId,
         title,
+        titleLength: title.length,
+        body,
+        bodyLength: body.length,
         imageHash,
-        productUrl: productUrl.substring(0, 100),
-        requestBody: JSON.stringify(creativeData),
+        productUrl,
+        requestBody: JSON.stringify(creativeData, null, 2),
       },
     );
     throw new FacebookAPIError(
@@ -236,10 +279,12 @@ async function createAdCreative(
     );
   }
 
-  logger.info("Ad creative created successfully", {
+  logger.info("=== STEP 2 SUCCESS: Ad Creative Created ===", {
     component: "facebook-ad-drafts-submit",
-    operation: "createAdCreative",
+    operation: "createAdCreative-SUCCESS",
     creativeId: data.id,
+    title,
+    bodyLength: body.length,
   });
 
   return data;
@@ -247,8 +292,13 @@ async function createAdCreative(
 
 /**
  * Get or create ad set for campaign
- * Fetches existing ad sets from campaign and uses the first active one
- * If no ad sets exist, creates a minimal one that inherits campaign settings
+ *
+ * IMPORTANT: We always create a new ad set with Facebook-only placements.
+ * This is because existing ad sets in the campaign may have Instagram placements enabled,
+ * which would require an Instagram account (instagram_actor_id is deprecated).
+ *
+ * By creating our own ad set with explicit Facebook-only placements, we avoid the
+ * "Your ad must be associated with an Instagram account" error.
  */
 async function getOrCreateAdSet(
   accessToken: string,
@@ -256,49 +306,7 @@ async function getOrCreateAdSet(
   campaignId: string,
   adName: string,
 ): Promise<string> {
-  logger.info("Fetching existing ad sets from campaign", {
-    component: "facebook-ad-drafts-submit",
-    operation: "getOrCreateAdSet",
-    campaignId,
-    adAccountId,
-  });
-
-  // First, fetch existing ad sets from the campaign
-  const campaignAdSetsUrl = new URL(
-    `${FACEBOOK_GRAPH_URL}/${campaignId}/adsets`,
-  );
-  campaignAdSetsUrl.searchParams.set("access_token", accessToken);
-  campaignAdSetsUrl.searchParams.set(
-    "fields",
-    "id,name,status,effective_status",
-  );
-  campaignAdSetsUrl.searchParams.set("limit", "25");
-
-  const fetchResponse = await fetch(campaignAdSetsUrl.toString());
-  const fetchResult = await fetchResponse.json();
-
-  if (fetchResponse.ok && fetchResult.data && fetchResult.data.length > 0) {
-    // Use the first ad set (preferably active)
-    const activeAdSet =
-      fetchResult.data.find(
-        (as: { status: string; effective_status: string; id: string }) =>
-          as.status === "ACTIVE" || as.effective_status === "ACTIVE",
-      ) || fetchResult.data[0];
-
-    logger.info("Using existing ad set from campaign", {
-      component: "facebook-ad-drafts-submit",
-      operation: "getOrCreateAdSet",
-      adSetId: activeAdSet.id,
-      adSetName: activeAdSet.name,
-      adSetStatus: activeAdSet.status,
-      totalAdSetsFound: fetchResult.data.length,
-    });
-
-    return activeAdSet.id;
-  }
-
-  // If no ad sets exist, create a minimal one that inherits campaign settings
-  logger.info("No existing ad sets found, creating minimal ad set", {
+  logger.info("Creating Facebook-only ad set for campaign", {
     component: "facebook-ad-drafts-submit",
     operation: "getOrCreateAdSet",
     campaignId,
@@ -308,23 +316,41 @@ async function getOrCreateAdSet(
   const adSetUrl = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/adsets`);
   adSetUrl.searchParams.set("access_token", accessToken);
 
-  // Minimal ad set - only required fields, no bid strategy overrides
-  // NO bid_amount, billing_event, optimization_goal - these are inherited from campaign
+  // Create ad set with explicit Facebook-only placements
+  // This avoids the Instagram account requirement since we're not using Instagram placements
   const adSetData = {
     name: `Ad Set for ${adName}`,
     campaign_id: campaignId,
     status: "PAUSED", // Start paused so user can review
+    // Required fields for ad set creation
+    billing_event: "IMPRESSIONS", // Pay per impression
+    optimization_goal: "LINK_CLICKS", // Optimize for link clicks (suitable for product ads)
+    bid_strategy: "LOWEST_COST_WITHOUT_CAP", // Let Facebook optimize bids automatically
+    daily_budget: 500, // $5.00 USD minimum daily budget (in cents)
+    // IMPORTANT: Explicitly set Facebook-only placements to avoid Instagram account requirement
     targeting: {
       geo_locations: {
-        countries: ["US"], // Minimal default targeting
+        countries: ["US"], // Default targeting
       },
+      publisher_platforms: ["facebook"], // Facebook only, no Instagram
+      facebook_positions: [
+        "feed",
+        "marketplace",
+        "video_feeds",
+        "right_hand_column",
+      ], // Common Facebook placements
     },
   };
 
-  logger.info("Creating ad set with minimal config", {
+  logger.info("Creating Facebook-only ad set with full config", {
     component: "facebook-ad-drafts-submit",
     operation: "getOrCreateAdSet",
     adSetData: JSON.stringify(adSetData),
+    billingEvent: "IMPRESSIONS",
+    optimizationGoal: "LINK_CLICKS",
+    bidStrategy: "LOWEST_COST_WITHOUT_CAP",
+    dailyBudget: 500,
+    publisherPlatforms: ["facebook"],
   });
 
   const adSetResponse = await fetch(adSetUrl.toString(), {
@@ -400,13 +426,17 @@ async function createAd(
     status: "PAUSED", // Start paused so user can review
   };
 
-  logger.info("Creating ad with JSON body", {
+  // DETAILED LOGGING - Log everything being sent to Facebook
+  logger.info("=== STEP 4: Creating Ad - FULL REQUEST DETAILS ===", {
     component: "facebook-ad-drafts-submit",
     operation: "createAd",
+    requestUrl: `${FACEBOOK_GRAPH_URL}/${adAccountId}/ads`,
+    requestBody: JSON.stringify(adData, null, 2),
     adAccountId,
     adSetId,
     creativeId,
     adName,
+    adNameLength: adName.length,
   });
 
   const adResponse = await fetch(adUrl.toString(), {
@@ -419,8 +449,18 @@ async function createAd(
 
   const adResult = await adResponse.json();
 
+  // DETAILED LOGGING - Log full Facebook response
+  logger.info("=== STEP 4: Facebook Response ===", {
+    component: "facebook-ad-drafts-submit",
+    operation: "createAd-response",
+    httpStatus: adResponse.status,
+    httpOk: adResponse.ok,
+    hasError: !!adResult.error,
+    fullResponse: JSON.stringify(adResult, null, 2),
+  });
+
   if (!adResponse.ok || adResult.error) {
-    // Extract detailed error info
+    // Extract ALL error info from Facebook response
     const errorDetails = {
       message: adResult.error?.message,
       code: adResult.error?.code,
@@ -429,25 +469,54 @@ async function createAd(
       userTitle: adResult.error?.error_user_title,
       userMsg: adResult.error?.error_user_msg,
       blameFieldSpecs: adResult.error?.error_data?.blame_field_specs,
+      isTransient: adResult.error?.is_transient,
+      fbtraceId: adResult.error?.fbtrace_id,
     };
 
     logger.error(
-      "Facebook API error - Ad Creation",
+      "=== STEP 4 FAILED: Facebook API Error - Ad Creation ===",
       new Error(adResult.error?.message || "Ad creation failed"),
       {
         component: "facebook-ad-drafts-submit",
-        operation: "createAd",
-        status: adResponse.status,
-        ...errorDetails,
-        fullError: JSON.stringify(adResult.error),
+        operation: "createAd-ERROR",
+        httpStatus: adResponse.status,
+        errorCode: errorDetails.code,
+        errorSubcode: errorDetails.subcode,
+        errorType: errorDetails.type,
+        errorMessage: errorDetails.message,
+        errorUserTitle: errorDetails.userTitle,
+        errorUserMsg: errorDetails.userMsg,
+        errorBlameFields: JSON.stringify(errorDetails.blameFieldSpecs),
+        errorIsTransient: errorDetails.isTransient,
+        fbtraceId: errorDetails.fbtraceId,
+        fullErrorObject: JSON.stringify(adResult.error, null, 2),
+        // Request context
         adAccountId,
         adSetId,
         creativeId,
         adName,
+        adNameLength: adName.length,
+        requestBody: JSON.stringify(adData, null, 2),
       },
     );
+
+    // Include more details in the thrown error
+    const errorMessage = [
+      `[STEP 4: Ad Creation]`,
+      errorDetails.message || "Failed to create ad",
+      `(code: ${errorDetails.code || "none"}`,
+      `subcode: ${errorDetails.subcode || "none"}`,
+      `type: ${errorDetails.type || "none"})`,
+      errorDetails.userMsg ? `\nUser Message: ${errorDetails.userMsg}` : "",
+      errorDetails.blameFieldSpecs
+        ? `\nBlame Fields: ${JSON.stringify(errorDetails.blameFieldSpecs)}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
     throw new FacebookAPIError(
-      `[STEP 4: Ad Creation] ${adResult.error?.message || "Failed to create ad"} (subcode: ${errorDetails.subcode || "none"}, blame: ${JSON.stringify(errorDetails.blameFieldSpecs) || "none"})`,
+      errorMessage,
       adResponse.status,
       adResult.error?.code,
       adResult.error?.type,
@@ -537,6 +606,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // DETAILED LOGGING - Log the draft data being submitted
+    logger.info("=== AD SUBMISSION STARTED - FULL DRAFT DATA ===", {
+      component: "facebook-ad-drafts-submit",
+      operation: "POST-start",
+      draftId: draft_id,
+      shop,
+      draft: {
+        id: draft.id,
+        ad_title: draft.ad_title,
+        ad_title_length: draft.ad_title?.length,
+        ad_copy: draft.ad_copy,
+        ad_copy_length: draft.ad_copy?.length,
+        facebook_ad_account_id: draft.facebook_ad_account_id,
+        facebook_campaign_id: draft.facebook_campaign_id,
+        facebook_campaign_name: draft.facebook_campaign_name,
+        shopify_product_id: draft.shopify_product_id,
+        image_urls: draft.image_urls,
+        selected_image_url: draft.selected_image_url,
+        additional_metadata: JSON.stringify(draft.additional_metadata),
+      },
+    });
+
     // Update status to submitting
     await supabaseAdmin
       .from("facebook_ad_drafts")
@@ -545,6 +636,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // Get access token and page ID
+      // Note: instagram_actor_id is deprecated, we no longer use it for basic ad creation
       const { accessToken, pageId } = await getAccessTokenAndPageId(
         shopData.id,
       );
@@ -584,6 +676,7 @@ export async function POST(request: NextRequest) {
       );
 
       // Create ad creative with image hash
+      // Note: instagram_actor_id is deprecated, ads will show on Facebook placements
       const creative = await createAdCreative(
         accessToken,
         draft.facebook_ad_account_id,
