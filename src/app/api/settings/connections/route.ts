@@ -178,6 +178,64 @@ export async function GET(request: NextRequest) {
           },
         );
       }
+    } else if (shopFromUrl && shopFromUrl.includes(".myshopify.com")) {
+      // No cookie-based auth, but URL param looks like a Shopify domain
+      // This could be a standalone user with a linked Shopify store
+      logger.info(
+        "[Connections API] No cookie auth - attempting linked_shopify_domain lookup",
+        {
+          component: "connections",
+          shopifyDomain: shopFromUrl,
+        },
+      );
+
+      // First try regular Shopify store lookup
+      const shopifyResult = await supabaseAdmin
+        .from("shops")
+        .select(
+          "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
+        )
+        .eq("shop_domain", shopFromUrl)
+        .single();
+
+      if (shopifyResult.data && !shopifyResult.error) {
+        shopData = shopifyResult.data;
+        shopError = null;
+        authenticatedShop = shopFromUrl;
+        logger.info("[Connections API] Found Shopify store by shop_domain", {
+          component: "connections",
+          shopDomain: shopFromUrl,
+        });
+      } else {
+        // Try finding a standalone user with this linked_shopify_domain
+        const linkedResult = await supabaseAdmin
+          .from("shops")
+          .select(
+            "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
+          )
+          .eq("linked_shopify_domain", shopFromUrl)
+          .eq("shop_type", "standalone")
+          .single();
+
+        if (linkedResult.data && !linkedResult.error) {
+          shopData = linkedResult.data;
+          shopError = null;
+          authenticatedShop = shopFromUrl;
+          logger.info(
+            "[Connections API] Found standalone user by linked_shopify_domain",
+            {
+              component: "connections",
+              linkedShopifyDomain: shopFromUrl,
+              standaloneEmail: linkedResult.data.shop_domain,
+            },
+          );
+        } else {
+          logger.warn("[Connections API] No shop found for Shopify domain", {
+            component: "connections",
+            shopifyDomain: shopFromUrl,
+          });
+        }
+      }
     }
 
     // If still no authentication found at all
