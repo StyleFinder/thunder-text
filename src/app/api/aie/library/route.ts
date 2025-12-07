@@ -3,67 +3,91 @@
  * Manages store-specific ad library (save, fetch, update, delete ads)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth/ace-compat';
-import { supabaseAdmin } from '@/lib/supabase/admin';
-import { logger } from '@/lib/logger';
+import { NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth/ace-compat";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { logger } from "@/lib/logger";
+
+/**
+ * Helper to look up shop by domain
+ * Checks both shop_domain and linked_shopify_domain for standalone users
+ */
+async function findShopByDomain(
+  shopDomain: string,
+): Promise<{ id: string } | null> {
+  // First try shop_domain (for Shopify-installed shops)
+  const { data: shopByDomain } = await supabaseAdmin
+    .from("shops")
+    .select("id")
+    .eq("shop_domain", shopDomain)
+    .single();
+
+  if (shopByDomain) {
+    return shopByDomain;
+  }
+
+  // Try linked_shopify_domain (for standalone users who linked a Shopify store)
+  const { data: shopByLinkedDomain } = await supabaseAdmin
+    .from("shops")
+    .select("id")
+    .eq("linked_shopify_domain", shopDomain)
+    .single();
+
+  return shopByLinkedDomain || null;
+}
 
 /**
  * GET /api/aie/library
  * Fetch ads from library for a shop
  */
-export const GET = requireAuth('user')(async (request) => {
+export const GET = requireAuth("user")(async (request) => {
   try {
     const { searchParams } = new URL(request.url);
-    const shopId = searchParams.get('shopId');
-    const status = searchParams.get('status'); // draft, active, paused, archived, or "all"
+    const shopId = searchParams.get("shopId");
+    const status = searchParams.get("status"); // draft, active, paused, archived, or "all"
 
     if (!shopId) {
       return NextResponse.json(
-        { success: false, error: { message: 'shopId is required' } },
-        { status: 400 }
+        { success: false, error: { message: "shopId is required" } },
+        { status: 400 },
       );
     }
 
-    // Look up shop UUID
-    const { data: shop, error: shopError } = await supabaseAdmin
-      .from('shops')
-      .select('id')
-      .eq('shop_domain', shopId)
-      .single();
+    // Look up shop UUID (checks both shop_domain and linked_shopify_domain)
+    const shop = await findShopByDomain(shopId);
 
-    if (shopError || !shop) {
+    if (!shop) {
       return NextResponse.json(
         { success: false, error: { message: `Shop not found: ${shopId}` } },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // Build query
     let query = supabaseAdmin
-      .from('ad_library')
-      .select('*')
-      .eq('shop_id', shop.id)
-      .order('created_at', { ascending: false });
+      .from("ad_library")
+      .select("*")
+      .eq("shop_id", shop.id)
+      .order("created_at", { ascending: false });
 
     // Filter by status if provided
-    if (status && status !== 'all') {
-      query = query.eq('status', status);
+    if (status && status !== "all") {
+      query = query.eq("status", status);
     }
 
     const { data: ads, error } = await query;
 
     if (error) {
-      logger.error('Error fetching ad library', new Error(error.message), {
-        component: 'aie-library-api',
-        operation: 'GET',
+      logger.error("Error fetching ad library", new Error(error.message), {
+        component: "aie-library-api",
+        operation: "GET",
         shopId,
         status,
-        errorCode: error.code
+        errorCode: error.code,
       });
       return NextResponse.json(
         { success: false, error: { message: error.message } },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -72,17 +96,19 @@ export const GET = requireAuth('user')(async (request) => {
       data: { ads, count: ads?.length || 0 },
     });
   } catch (err) {
-    logger.error('Ad library fetch error', err as Error, {
-      component: 'aie-library-api',
-      operation: 'GET',
-      shopId: new URL(request.url).searchParams.get('shopId') || undefined
+    logger.error("Ad library fetch error", err as Error, {
+      component: "aie-library-api",
+      operation: "GET",
+      shopId: new URL(request.url).searchParams.get("shopId") || undefined,
     });
     return NextResponse.json(
       {
         success: false,
-        error: { message: err instanceof Error ? err.message : 'Unknown error' },
+        error: {
+          message: err instanceof Error ? err.message : "Unknown error",
+        },
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });
@@ -91,7 +117,7 @@ export const GET = requireAuth('user')(async (request) => {
  * POST /api/aie/library
  * Save a new ad to the library
  */
-export const POST = requireAuth('user')(async (request) => {
+export const POST = requireAuth("user")(async (request) => {
   try {
     const body = await request.json();
     const {
@@ -107,37 +133,43 @@ export const POST = requireAuth('user')(async (request) => {
       variantType,
       imageUrls,
       productMetadata,
-      status = 'draft', // Default to draft
+      status = "draft", // Default to draft
     } = body;
 
     // Validation
-    if (!shopId || !headline || !primaryText || !cta || !platform || !campaignGoal) {
+    if (
+      !shopId ||
+      !headline ||
+      !primaryText ||
+      !cta ||
+      !platform ||
+      !campaignGoal
+    ) {
       return NextResponse.json(
         {
           success: false,
-          error: { message: 'Missing required fields: shopId, headline, primaryText, cta, platform, campaignGoal' },
+          error: {
+            message:
+              "Missing required fields: shopId, headline, primaryText, cta, platform, campaignGoal",
+          },
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Look up shop UUID
-    const { data: shop, error: shopError } = await supabaseAdmin
-      .from('shops')
-      .select('id')
-      .eq('shop_domain', shopId)
-      .single();
+    // Look up shop UUID (checks both shop_domain and linked_shopify_domain)
+    const shop = await findShopByDomain(shopId);
 
-    if (shopError || !shop) {
+    if (!shop) {
       return NextResponse.json(
         { success: false, error: { message: `Shop not found: ${shopId}` } },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // Insert ad into library
     const { data: ad, error } = await supabaseAdmin
-      .from('ad_library')
+      .from("ad_library")
       .insert({
         shop_id: shop.id,
         ad_request_id: adRequestId || null,
@@ -157,36 +189,38 @@ export const POST = requireAuth('user')(async (request) => {
       .single();
 
     if (error) {
-      logger.error('Error saving ad to library', new Error(error.message), {
-        component: 'aie-library-api',
-        operation: 'POST',
+      logger.error("Error saving ad to library", new Error(error.message), {
+        component: "aie-library-api",
+        operation: "POST",
         shopId,
         platform,
         campaignGoal,
-        errorCode: error.code
+        errorCode: error.code,
       });
       return NextResponse.json(
         { success: false, error: { message: error.message } },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     return NextResponse.json({
       success: true,
       data: { ad },
-      message: 'Ad saved to library',
+      message: "Ad saved to library",
     });
   } catch (err) {
-    logger.error('Ad library save error', err as Error, {
-      component: 'aie-library-api',
-      operation: 'POST'
+    logger.error("Ad library save error", err as Error, {
+      component: "aie-library-api",
+      operation: "POST",
     });
     return NextResponse.json(
       {
         success: false,
-        error: { message: err instanceof Error ? err.message : 'Unknown error' },
+        error: {
+          message: err instanceof Error ? err.message : "Unknown error",
+        },
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });
@@ -195,78 +229,85 @@ export const POST = requireAuth('user')(async (request) => {
  * PATCH /api/aie/library
  * Update an existing ad in the library
  */
-export const PATCH = requireAuth('user')(async (request) => {
+export const PATCH = requireAuth("user")(async (request) => {
   try {
     const body = await request.json();
     const { adId, ...updates } = body;
 
     if (!adId) {
       return NextResponse.json(
-        { success: false, error: { message: 'adId is required' } },
-        { status: 400 }
+        { success: false, error: { message: "adId is required" } },
+        { status: 400 },
       );
     }
 
     // Build update object (only include provided fields)
     const updateData: Record<string, unknown> = {};
     if (updates.headline !== undefined) updateData.headline = updates.headline;
-    if (updates.primaryText !== undefined) updateData.primary_text = updates.primaryText;
-    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.primaryText !== undefined)
+      updateData.primary_text = updates.primaryText;
+    if (updates.description !== undefined)
+      updateData.description = updates.description;
     if (updates.cta !== undefined) updateData.cta = updates.cta;
     if (updates.status !== undefined) {
       updateData.status = updates.status;
       // Set published_at when moving to active
-      if (updates.status === 'active') {
+      if (updates.status === "active") {
         updateData.published_at = new Date().toISOString();
       }
       // Set archived_at when archiving
-      if (updates.status === 'archived') {
+      if (updates.status === "archived") {
         updateData.archived_at = new Date().toISOString();
       }
     }
-    if (updates.imageUrls !== undefined) updateData.image_urls = updates.imageUrls;
-    if (updates.impressions !== undefined) updateData.impressions = updates.impressions;
+    if (updates.imageUrls !== undefined)
+      updateData.image_urls = updates.imageUrls;
+    if (updates.impressions !== undefined)
+      updateData.impressions = updates.impressions;
     if (updates.clicks !== undefined) updateData.clicks = updates.clicks;
-    if (updates.conversions !== undefined) updateData.conversions = updates.conversions;
+    if (updates.conversions !== undefined)
+      updateData.conversions = updates.conversions;
     if (updates.spend !== undefined) updateData.spend = updates.spend;
     if (updates.revenue !== undefined) updateData.revenue = updates.revenue;
 
     const { data: ad, error } = await supabaseAdmin
-      .from('ad_library')
+      .from("ad_library")
       .update(updateData)
-      .eq('id', adId)
+      .eq("id", adId)
       .select()
       .single();
 
     if (error) {
-      logger.error('Error updating ad', new Error(error.message), {
-        component: 'aie-library-api',
-        operation: 'PATCH',
+      logger.error("Error updating ad", new Error(error.message), {
+        component: "aie-library-api",
+        operation: "PATCH",
         adId,
-        errorCode: error.code
+        errorCode: error.code,
       });
       return NextResponse.json(
         { success: false, error: { message: error.message } },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     return NextResponse.json({
       success: true,
       data: { ad },
-      message: 'Ad updated successfully',
+      message: "Ad updated successfully",
     });
   } catch (err) {
-    logger.error('Ad library update error', err as Error, {
-      component: 'aie-library-api',
-      operation: 'PATCH'
+    logger.error("Ad library update error", err as Error, {
+      component: "aie-library-api",
+      operation: "PATCH",
     });
     return NextResponse.json(
       {
         success: false,
-        error: { message: err instanceof Error ? err.message : 'Unknown error' },
+        error: {
+          message: err instanceof Error ? err.message : "Unknown error",
+        },
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });
@@ -275,52 +316,54 @@ export const PATCH = requireAuth('user')(async (request) => {
  * DELETE /api/aie/library
  * Delete an ad from the library
  */
-export const DELETE = requireAuth('user')(async (request) => {
+export const DELETE = requireAuth("user")(async (request) => {
   try {
     const { searchParams } = new URL(request.url);
-    const adId = searchParams.get('adId');
+    const adId = searchParams.get("adId");
 
     if (!adId) {
       return NextResponse.json(
-        { success: false, error: { message: 'adId is required' } },
-        { status: 400 }
+        { success: false, error: { message: "adId is required" } },
+        { status: 400 },
       );
     }
 
     const { error } = await supabaseAdmin
-      .from('ad_library')
+      .from("ad_library")
       .delete()
-      .eq('id', adId);
+      .eq("id", adId);
 
     if (error) {
-      logger.error('Error deleting ad', new Error(error.message), {
-        component: 'aie-library-api',
-        operation: 'DELETE',
+      logger.error("Error deleting ad", new Error(error.message), {
+        component: "aie-library-api",
+        operation: "DELETE",
         adId,
-        errorCode: error.code
+        errorCode: error.code,
       });
       return NextResponse.json(
         { success: false, error: { message: error.message } },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Ad deleted successfully',
+      message: "Ad deleted successfully",
     });
   } catch (err) {
-    logger.error('Ad library delete error', err as Error, {
-      component: 'aie-library-api',
-      operation: 'DELETE',
-      adId: new URL(request.url).searchParams.get('adId') || undefined
+    logger.error("Ad library delete error", err as Error, {
+      component: "aie-library-api",
+      operation: "DELETE",
+      adId: new URL(request.url).searchParams.get("adId") || undefined,
     });
     return NextResponse.json(
       {
         success: false,
-        error: { message: err instanceof Error ? err.message : 'Unknown error' },
+        error: {
+          message: err instanceof Error ? err.message : "Unknown error",
+        },
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });
