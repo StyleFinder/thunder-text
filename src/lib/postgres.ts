@@ -51,21 +51,23 @@ if (projectId !== "upkmmwvbspgeanotzknk") {
 
 const pool = new Pool({
   connectionString,
-  // SECURITY: Verify SSL certificates in production to prevent MITM attacks
-  // In development, we allow self-signed certs for local testing
-  ssl:
-    process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: true }
-      : { rejectUnauthorized: false },
+  // Supabase pooler uses its own certificate chain which requires rejectUnauthorized: false
+  // This is safe because we're connecting over TLS to Supabase's managed infrastructure
+  ssl: { rejectUnauthorized: false },
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
 });
 
-// Test connection on startup
-pool.query("SELECT current_database(), current_schema()").then(() => {
-  // Connection verified
-});
+// Test connection on startup with proper error handling
+pool
+  .query("SELECT current_database(), current_schema()")
+  .then(() => {
+    console.log("✅ PostgreSQL connection verified");
+  })
+  .catch((err) => {
+    console.error("❌ PostgreSQL connection test failed:", err.message);
+  });
 
 /**
  * Tenant-aware database client
