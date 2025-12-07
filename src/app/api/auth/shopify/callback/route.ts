@@ -246,8 +246,8 @@ export async function GET(req: NextRequest) {
         );
 
         // Redirect back to connections page with success message
-        // Use 'email' for the shop param since that's how we lookup standalone users
-        const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings/connections?shop=${encodeURIComponent(standaloneUser.email)}&shopify_linked=true&message=${encodeURIComponent(`Successfully linked to ${fullShopDomain}`)}`;
+        // Use the linked Shopify domain for the shop param (not email)
+        const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings/connections?shop=${encodeURIComponent(fullShopDomain)}&shopify_linked=true&message=${encodeURIComponent(`Successfully linked to ${fullShopDomain}`)}`;
 
         return NextResponse.redirect(redirectUrl);
       } catch (linkError) {

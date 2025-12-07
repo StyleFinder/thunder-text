@@ -176,12 +176,17 @@ export const authOptions: NextAuthOptions = {
 
           // SECURITY: Clear failed attempts on successful login
           clearFailedAttempts(credentials.email);
+
+          // For standalone users, prefer linked_shopify_domain over email for URLs
+          // If they haven't linked a Shopify store yet, use their email as identifier
+          const shopDomainForUrls = shop.linked_shopify_domain || shop.email;
+
           return {
             id: shop.id,
             email: shop.email,
             name: shop.display_name || shop.store_name || shop.shop_domain,
             role: "user",
-            shopDomain: shop.shop_domain,
+            shopDomain: shopDomainForUrls,
           };
         }
       },
