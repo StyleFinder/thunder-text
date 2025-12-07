@@ -194,12 +194,6 @@ async function createAdCreative(
         link: productUrl, // Link to Shopify product page
         message: body,
         name: title,
-        call_to_action: {
-          type: "SHOP_NOW",
-          value: {
-            link: productUrl,
-          },
-        },
       },
     },
   };
@@ -396,18 +390,17 @@ async function createAd(
   );
 
   // Now create the ad - only needs creative, name, and status
-  // Use URL params instead of JSON body (more reliable with Facebook API)
   const adUrl = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/ads`);
   adUrl.searchParams.set("access_token", accessToken);
-  adUrl.searchParams.set("name", adName);
-  adUrl.searchParams.set("adset_id", adSetId);
-  adUrl.searchParams.set(
-    "creative",
-    JSON.stringify({ creative_id: creativeId }),
-  );
-  adUrl.searchParams.set("status", "PAUSED"); // Start paused so user can review
 
-  logger.info("Creating ad with params", {
+  const adData = {
+    name: adName,
+    adset_id: adSetId,
+    creative: { creative_id: creativeId },
+    status: "PAUSED", // Start paused so user can review
+  };
+
+  logger.info("Creating ad with JSON body", {
     component: "facebook-ad-drafts-submit",
     operation: "createAd",
     adAccountId,
@@ -418,6 +411,10 @@ async function createAd(
 
   const adResponse = await fetch(adUrl.toString(), {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(adData),
   });
 
   const adResult = await adResponse.json();
