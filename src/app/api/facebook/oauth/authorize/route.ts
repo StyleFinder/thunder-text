@@ -64,10 +64,16 @@ export async function GET(request: NextRequest) {
 
     // Generate secure state parameter with Zod validation
     // Includes cryptographic nonce for CSRF protection and timestamp for replay attack prevention
+    // For standalone users, shopData.shop_domain is their email, but we need a .myshopify.com domain
+    // Use the original shop URL param if it's a .myshopify.com domain, otherwise use shopData.shop_domain
+    const shopDomainForState = shop.includes(".myshopify.com")
+      ? shop
+      : shopData.shop_domain;
+
     const returnTo = searchParams.get("return_to");
     const state = createFacebookOAuthState({
       shop_id: shopData.id,
-      shop_domain: shopData.shop_domain,
+      shop_domain: shopDomainForState,
       host: searchParams.get("host"),
       embedded: searchParams.get("embedded"),
       return_to: (returnTo as "welcome" | "facebook-ads") || undefined,
