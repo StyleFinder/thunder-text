@@ -93,7 +93,7 @@ async function uploadAdImage(
       expected: "act_XXXXXXXXX format",
     });
     throw new FacebookAPIError(
-      `Invalid ad account ID format: ${adAccountId}. Expected act_XXXXXXXXX format.`,
+      `[STEP 1: Image Upload] Invalid ad account ID format: ${adAccountId}. Expected act_XXXXXXXXX format.`,
       400,
       "INVALID_AD_ACCOUNT_ID",
     );
@@ -103,7 +103,7 @@ async function uploadAdImage(
   const imageResponse = await fetch(imageUrl);
   if (!imageResponse.ok) {
     throw new FacebookAPIError(
-      `Failed to fetch image from ${imageUrl}`,
+      `[STEP 1: Image Upload] Failed to fetch image from ${imageUrl}`,
       imageResponse.status,
       "IMAGE_FETCH_ERROR",
     );
@@ -143,7 +143,7 @@ async function uploadAdImage(
       },
     );
     throw new FacebookAPIError(
-      data.error?.message || "Failed to upload image",
+      `[STEP 1: Image Upload] ${data.error?.message || "Failed to upload image"}`,
       response.status,
       data.error?.code,
       data.error?.type,
@@ -229,7 +229,7 @@ async function createAdCreative(
       },
     );
     throw new FacebookAPIError(
-      data.error?.message || "Failed to create ad creative",
+      `[STEP 2: Creative Creation] ${data.error?.message || "Failed to create ad creative"}`,
       response.status,
       data.error?.code,
       data.error?.type,
@@ -355,7 +355,7 @@ async function getOrCreateAdSet(
       },
     );
     throw new FacebookAPIError(
-      adSetResult.error?.message || "Failed to create ad set",
+      `[STEP 3: Ad Set Creation] ${adSetResult.error?.message || "Failed to create ad set"}`,
       adSetResponse.status,
       adSetResult.error?.code,
       adSetResult.error?.type,
@@ -430,7 +430,7 @@ async function createAd(
       },
     );
     throw new FacebookAPIError(
-      adResult.error?.message || "Failed to create ad",
+      `[STEP 4: Ad Creation] ${adResult.error?.message || "Failed to create ad"}`,
       adResponse.status,
       adResult.error?.code,
       adResult.error?.type,
@@ -662,6 +662,13 @@ export async function POST(request: NextRequest) {
           error: error.message,
           code: error.errorCode,
           type: error.errorType,
+          // Include full details for debugging
+          debug: {
+            errorCode: error.errorCode,
+            errorType: error.errorType,
+            statusCode: error.statusCode,
+            message: error.message,
+          },
         },
         { status: error.statusCode || 500 },
       );
