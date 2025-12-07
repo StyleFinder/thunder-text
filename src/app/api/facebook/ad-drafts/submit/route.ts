@@ -196,9 +196,26 @@ async function createAdCreative(
 }
 
 /**
+ * Get campaign details to determine objective
+ */
+async function getCampaignObjective(
+  accessToken: string,
+  campaignId: string,
+): Promise<string> {
+  const url = new URL(`${FACEBOOK_GRAPH_URL}/${campaignId}`);
+  url.searchParams.set("access_token", accessToken);
+  url.searchParams.set("fields", "objective");
+
+  const response = await fetch(url.toString());
+  const data = await response.json();
+
+  return data.objective || "OUTCOME_TRAFFIC";
+}
+
+/**
  * Get or create ad set for campaign
  * Fetches existing ad sets from campaign and uses the first active one
- * This ensures we inherit campaign's bid strategy and optimization settings
+ * If no ad sets exist, creates one with proper billing_event and optimization_goal
  */
 async function getOrCreateAdSet(
   accessToken: string,
@@ -231,23 +248,82 @@ async function getOrCreateAdSet(
     return activeAdSet.id;
   }
 
-  // If no ad sets exist, create a minimal one that inherits campaign settings
+  // If no ad sets exist, create one with required fields
+  // First get the campaign objective to determine appropriate settings
+  const objective = await getCampaignObjective(accessToken, campaignId);
 
   const adSetUrl = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/adsets`);
   adSetUrl.searchParams.set("access_token", accessToken);
 
-  // Minimal ad set - only required fields, no bid strategy overrides
+  // Set billing_event and optimization_goal based on campaign objective
+  // These are REQUIRED by Facebook's API and do NOT inherit from campaign
+  let billingEvent = "IMPRESSIONS";
+  let optimizationGoal = "LINK_CLICKS";
+
+  // Map campaign objectives to appropriate ad set settings
+  // See: https://developers.facebook.com/docs/marketing-api/reference/ad-campaign-group
+  if (
+    objective === "OUTCOME_TRAFFIC" ||
+    objective === "LINK_CLICKS" ||
+    objective === "TRAFFIC"
+  ) {
+    billingEvent = "IMPRESSIONS";
+    optimizationGoal = "LINK_CLICKS";
+  } else if (
+    objective === "OUTCOME_ENGAGEMENT" ||
+    objective === "POST_ENGAGEMENT" ||
+    objective === "ENGAGEMENT"
+  ) {
+    billingEvent = "IMPRESSIONS";
+    optimizationGoal = "POST_ENGAGEMENT";
+  } else if (
+    objective === "OUTCOME_AWARENESS" ||
+    objective === "BRAND_AWARENESS" ||
+    objective === "REACH"
+  ) {
+    billingEvent = "IMPRESSIONS";
+    optimizationGoal = "REACH";
+  } else if (
+    objective === "OUTCOME_SALES" ||
+    objective === "CONVERSIONS" ||
+    objective === "PRODUCT_CATALOG_SALES"
+  ) {
+    // For conversion campaigns, use link clicks as a fallback
+    // Full conversion optimization requires pixel setup
+    billingEvent = "IMPRESSIONS";
+    optimizationGoal = "LINK_CLICKS";
+  } else if (objective === "OUTCOME_LEADS" || objective === "LEAD_GENERATION") {
+    billingEvent = "IMPRESSIONS";
+    optimizationGoal = "LEAD_GENERATION";
+  } else {
+    // Default fallback for any other objective
+    billingEvent = "IMPRESSIONS";
+    optimizationGoal = "LINK_CLICKS";
+  }
+
   const adSetData = {
     name: `Ad Set for ${adName}`,
     campaign_id: campaignId,
     status: "PAUSED", // Start paused so user can review
+    billing_event: billingEvent,
+    optimization_goal: optimizationGoal,
     targeting: {
       geo_locations: {
-        countries: ["US"], // Minimal default targeting
+        countries: ["US"], // Default targeting - user can adjust in Ads Manager
       },
     },
-    // NO bid_amount, billing_event, optimization_goal - these are inherited from campaign
+    // Use lowest bid cap to let Facebook optimize
+    bid_strategy: "LOWEST_COST_WITHOUT_CAP",
   };
+
+  logger.info("Creating ad set with settings", {
+    component: "facebook-ad-drafts-submit",
+    operation: "getOrCreateAdSet",
+    objective,
+    billingEvent,
+    optimizationGoal,
+    campaignId,
+  });
 
   const adSetResponse = await fetch(adSetUrl.toString(), {
     method: "POST",
@@ -269,8 +345,12 @@ async function getOrCreateAdSet(
         status: adSetResponse.status,
         errorCode: adSetResult.error?.code,
         errorType: adSetResult.error?.type,
+        errorSubcode: adSetResult.error?.error_subcode,
+        fullError: JSON.stringify(adSetResult.error),
         campaignId,
         adAccountId,
+        objective,
+        adSetData: JSON.stringify(adSetData),
       },
     );
     throw new FacebookAPIError(
