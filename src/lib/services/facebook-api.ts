@@ -5,9 +5,9 @@
  * Includes token management, refresh logic, and error handling
  */
 
-import { createClient } from '@supabase/supabase-js'
-import { decryptToken, encryptToken } from './encryption'
-import { logger } from '@/lib/logger'
+import { createClient } from "@supabase/supabase-js";
+import { decryptToken, encryptToken } from "./encryption";
+import { logger } from "@/lib/logger";
 
 // Types
 export interface FacebookIntegration {
@@ -78,103 +78,119 @@ export interface FacebookTokenResponse {
   expires_in: number;
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-const FACEBOOK_API_VERSION = 'v21.0'
-const FACEBOOK_GRAPH_URL = `https://graph.facebook.com/${FACEBOOK_API_VERSION}`
+const FACEBOOK_API_VERSION = "v21.0";
+const FACEBOOK_GRAPH_URL = `https://graph.facebook.com/${FACEBOOK_API_VERSION}`;
 
 export class FacebookAPIError extends Error {
   constructor(
     message: string,
     public statusCode?: number,
     public errorCode?: string,
-    public errorType?: string
+    public errorType?: string,
   ) {
-    super(message)
-    this.name = 'FacebookAPIError'
+    super(message);
+    this.name = "FacebookAPIError";
   }
 }
 
 /**
  * Get Facebook integration for a shop
  */
-async function getIntegration(shopId: string): Promise<FacebookIntegration | null> {
+async function getIntegration(
+  shopId: string,
+): Promise<FacebookIntegration | null> {
   const { data, error } = await supabase
-    .from('integrations')
-    .select('*')
-    .eq('shop_id', shopId)
-    .eq('provider', 'facebook')
-    .eq('is_active', true)
-    .single()
+    .from("integrations")
+    .select("*")
+    .eq("shop_id", shopId)
+    .eq("provider", "facebook")
+    .eq("is_active", true)
+    .single();
 
   if (error) {
-    logger.error('Error fetching Facebook integration:', error as Error, { component: 'facebook-api' })
-    return null
+    logger.error("Error fetching Facebook integration:", error as Error, {
+      component: "facebook-api",
+    });
+    return null;
   }
 
-  return data as FacebookIntegration
+  return data as FacebookIntegration;
 }
 
 /**
  * Check if access token is expired or about to expire (within 1 hour)
  */
 function isTokenExpired(expiresAt: string | null): boolean {
-  if (!expiresAt) return false
+  if (!expiresAt) return false;
 
-  const expiryTime = new Date(expiresAt).getTime()
-  const now = Date.now()
-  const oneHour = 60 * 60 * 1000
+  const expiryTime = new Date(expiresAt).getTime();
+  const now = Date.now();
+  const oneHour = 60 * 60 * 1000;
 
-  return expiryTime - now < oneHour
+  return expiryTime - now < oneHour;
 }
 
 /**
  * Refresh Facebook access token using long-lived token exchange
  */
-async function refreshAccessToken(integration: FacebookIntegration): Promise<string> {
+async function refreshAccessToken(
+  integration: FacebookIntegration,
+): Promise<string> {
   try {
     if (!integration.encrypted_access_token) {
-      throw new FacebookAPIError('No encrypted access token found', 500, 'MISSING_TOKEN')
+      throw new FacebookAPIError(
+        "No encrypted access token found",
+        500,
+        "MISSING_TOKEN",
+      );
     }
-    const decryptedToken = await decryptToken(integration.encrypted_access_token)
+    const decryptedToken = await decryptToken(
+      integration.encrypted_access_token,
+    );
 
-    const url = new URL(`${FACEBOOK_GRAPH_URL}/oauth/access_token`)
-    url.searchParams.set('grant_type', 'fb_exchange_token')
-    url.searchParams.set('client_id', process.env.FACEBOOK_APP_ID!)
-    url.searchParams.set('client_secret', process.env.FACEBOOK_APP_SECRET!)
-    url.searchParams.set('fb_exchange_token', decryptedToken)
+    const url = new URL(`${FACEBOOK_GRAPH_URL}/oauth/access_token`);
+    url.searchParams.set("grant_type", "fb_exchange_token");
+    url.searchParams.set("client_id", process.env.FACEBOOK_APP_ID!);
+    url.searchParams.set("client_secret", process.env.FACEBOOK_APP_SECRET!);
+    url.searchParams.set("fb_exchange_token", decryptedToken);
 
-    const response = await fetch(url.toString())
-    const data = await response.json()
+    const response = await fetch(url.toString());
+    const data = await response.json();
 
     if (!response.ok || data.error) {
       throw new FacebookAPIError(
-        data.error?.message || 'Failed to refresh token',
+        data.error?.message || "Failed to refresh token",
         response.status,
         data.error?.code,
-        data.error?.type
-      )
+        data.error?.type,
+      );
     }
 
     // Update token in database
-    const newEncryptedToken = await encryptToken(data.access_token)
-    const expiresAt = new Date(Date.now() + data.expires_in * 1000).toISOString()
+    const newEncryptedToken = await encryptToken(data.access_token);
+    const expiresAt = new Date(
+      Date.now() + data.expires_in * 1000,
+    ).toISOString();
 
     await supabase
-      .from('integrations')
+      .from("integrations")
       .update({
         encrypted_access_token: newEncryptedToken,
         token_expires_at: expiresAt,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
-      .eq('id', integration.id)
+      .eq("id", integration.id);
 
-    return data.access_token
+    return data.access_token;
   } catch (error) {
-    logger.error('Error refreshing Facebook token:', error as Error, { component: 'facebook-api' })
-    throw error
+    logger.error("Error refreshing Facebook token:", error as Error, {
+      component: "facebook-api",
+    });
+    throw error;
   }
 }
 
@@ -182,21 +198,32 @@ async function refreshAccessToken(integration: FacebookIntegration): Promise<str
  * Get valid access token, refreshing if necessary
  */
 async function getAccessToken(shopId: string): Promise<string> {
-  const integration = await getIntegration(shopId)
+  const integration = await getIntegration(shopId);
 
   if (!integration) {
-    throw new FacebookAPIError('Facebook account not connected', 404, 'NOT_CONNECTED')
+    throw new FacebookAPIError(
+      "Facebook account not connected",
+      404,
+      "NOT_CONNECTED",
+    );
   }
 
   // Check if token needs refresh
-  if (integration.token_expires_at && isTokenExpired(integration.token_expires_at)) {
-    return await refreshAccessToken(integration)
+  if (
+    integration.token_expires_at &&
+    isTokenExpired(integration.token_expires_at)
+  ) {
+    return await refreshAccessToken(integration);
   }
 
   if (!integration.encrypted_access_token) {
-    throw new FacebookAPIError('No encrypted access token found', 500, 'MISSING_TOKEN')
+    throw new FacebookAPIError(
+      "No encrypted access token found",
+      500,
+      "MISSING_TOKEN",
+    );
   }
-  return await decryptToken(integration.encrypted_access_token)
+  return await decryptToken(integration.encrypted_access_token);
 }
 
 /**
@@ -205,33 +232,33 @@ async function getAccessToken(shopId: string): Promise<string> {
 async function makeRequest<T>(
   shopId: string,
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T> {
-  const accessToken = await getAccessToken(shopId)
+  const accessToken = await getAccessToken(shopId);
 
-  const url = new URL(`${FACEBOOK_GRAPH_URL}${endpoint}`)
-  url.searchParams.set('access_token', accessToken)
+  const url = new URL(`${FACEBOOK_GRAPH_URL}${endpoint}`);
+  url.searchParams.set("access_token", accessToken);
 
   const response = await fetch(url.toString(), {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...options.headers,
     },
-  })
+  });
 
-  const data = await response.json()
+  const data = await response.json();
 
   if (!response.ok || data.error) {
     throw new FacebookAPIError(
-      data.error?.message || 'Facebook API request failed',
+      data.error?.message || "Facebook API request failed",
       response.status,
       data.error?.code,
-      data.error?.type
-    )
+      data.error?.type,
+    );
   }
 
-  return data as T
+  return data as T;
 }
 
 /**
@@ -239,57 +266,73 @@ async function makeRequest<T>(
  */
 export async function getAdAccounts(shopId: string): Promise<AdAccount[]> {
   try {
-    const integration = await getIntegration(shopId)
+    const integration = await getIntegration(shopId);
 
     if (!integration) {
-      throw new FacebookAPIError('Facebook account not connected', 404, 'NOT_CONNECTED')
+      throw new FacebookAPIError(
+        "Facebook account not connected",
+        404,
+        "NOT_CONNECTED",
+      );
     }
 
-    const userId = integration.provider_account_id
+    const userId = integration.provider_account_id;
 
     const data = await makeRequest<FacebookAPIResponse<AdAccount[]>>(
       shopId,
-      `/${userId}/adaccounts?fields=id,account_id,name,account_status,currency,timezone_name`
-    )
+      `/${userId}/adaccounts?fields=id,account_id,name,account_status,currency,timezone_name`,
+    );
 
-    return data.data || []
+    return data.data || [];
   } catch (error) {
-    logger.error('Error fetching ad accounts:', error as Error, { component: 'facebook-api' })
-    throw error
+    logger.error("Error fetching ad accounts:", error as Error, {
+      component: "facebook-api",
+    });
+    throw error;
   }
 }
 
 /**
  * Get campaigns for a specific ad account
- * Note: Facebook API doesn't support status filtering, so we filter client-side
+ * Uses Facebook's filtering parameter to request specific campaign statuses
+ * By default fetches ACTIVE and PAUSED campaigns (users often pause campaigns temporarily)
  */
 export async function getCampaigns(
   shopId: string,
   adAccountId: string,
   options: {
-    status?: 'ACTIVE' | 'PAUSED' | 'ARCHIVED' | 'DELETED'
-    limit?: number
-  } = {}
+    status?: "ACTIVE" | "PAUSED" | "ARCHIVED" | "DELETED";
+    limit?: number;
+  } = {},
 ): Promise<Campaign[]> {
   try {
-    const { status, limit = 100 } = options
+    const { status, limit = 100 } = options;
 
-    const fields = 'id,name,status,objective,daily_budget,lifetime_budget,created_time,updated_time'
-    const endpoint = `/${adAccountId}/campaigns?fields=${fields}&limit=${limit}`
+    const fields =
+      "id,name,status,objective,daily_budget,lifetime_budget,created_time,updated_time";
 
-    const data = await makeRequest<FacebookAPIResponse<Campaign[]>>(shopId, endpoint)
+    // Build filtering parameter to explicitly request campaign statuses
+    // If specific status provided, filter to that; otherwise get ACTIVE and PAUSED
+    const statusesToFetch = status ? [status] : ["ACTIVE", "PAUSED"];
+    const filtering = encodeURIComponent(
+      JSON.stringify([
+        { field: "effective_status", operator: "IN", value: statusesToFetch },
+      ]),
+    );
 
-    let campaigns = data.data || []
+    const endpoint = `/${adAccountId}/campaigns?fields=${fields}&limit=${limit}&filtering=${filtering}`;
 
-    // Filter by status client-side if specified
-    if (status) {
-      campaigns = campaigns.filter(campaign => campaign.status === status)
-    }
+    const data = await makeRequest<FacebookAPIResponse<Campaign[]>>(
+      shopId,
+      endpoint,
+    );
 
-    return campaigns
+    return data.data || [];
   } catch (error) {
-    logger.error('Error fetching campaigns:', error as Error, { component: 'facebook-api' })
-    throw error
+    logger.error("Error fetching campaigns:", error as Error, {
+      component: "facebook-api",
+    });
+    throw error;
   }
 }
 
@@ -298,20 +341,23 @@ export async function getCampaigns(
  */
 export async function getCampaign(
   shopId: string,
-  campaignId: string
+  campaignId: string,
 ): Promise<Campaign> {
   try {
-    const fields = 'id,name,status,objective,daily_budget,lifetime_budget,created_time,updated_time'
+    const fields =
+      "id,name,status,objective,daily_budget,lifetime_budget,created_time,updated_time";
 
     const data = await makeRequest<Campaign>(
       shopId,
-      `/${campaignId}?fields=${fields}`
-    )
+      `/${campaignId}?fields=${fields}`,
+    );
 
-    return data
+    return data;
   } catch (error) {
-    logger.error('Error fetching campaign:', error as Error, { component: 'facebook-api' })
-    throw error
+    logger.error("Error fetching campaign:", error as Error, {
+      component: "facebook-api",
+    });
+    throw error;
   }
 }
 
@@ -319,31 +365,31 @@ export async function getCampaign(
  * Check if Facebook integration is active for a shop
  */
 export async function isFacebookConnected(shopId: string): Promise<boolean> {
-  const integration = await getIntegration(shopId)
-  return integration !== null && (integration.is_active ?? false)
+  const integration = await getIntegration(shopId);
+  return integration !== null && (integration.is_active ?? false);
 }
 
 /**
  * Get Facebook integration metadata (account name, ad accounts count)
  */
 export async function getIntegrationInfo(shopId: string): Promise<{
-  connected: boolean
-  accountName: string | null
-  adAccountsCount: number
-  adAccounts: Array<{ id: string; name: string }>
+  connected: boolean;
+  accountName: string | null;
+  adAccountsCount: number;
+  adAccounts: Array<{ id: string; name: string }>;
 }> {
-  const integration = await getIntegration(shopId)
+  const integration = await getIntegration(shopId);
 
   if (!integration) {
     return {
       connected: false,
       accountName: null,
       adAccountsCount: 0,
-      adAccounts: []
-    }
+      adAccounts: [],
+    };
   }
 
-  const adAccounts = integration.additional_metadata?.ad_accounts || []
+  const adAccounts = integration.additional_metadata?.ad_accounts || [];
 
   return {
     connected: true,
@@ -351,9 +397,9 @@ export async function getIntegrationInfo(shopId: string): Promise<{
     adAccountsCount: adAccounts.length,
     adAccounts: adAccounts.map((acc: { id: string; name: string }) => ({
       id: acc.id,
-      name: acc.name
-    }))
-  }
+      name: acc.name,
+    })),
+  };
 }
 
 /**
@@ -362,82 +408,95 @@ export async function getIntegrationInfo(shopId: string): Promise<{
  */
 export async function getCampaignInsights(
   shopId: string,
-  adAccountId: string
+  adAccountId: string,
 ): Promise<CampaignInsight[]> {
   try {
     // First, get all active campaigns
-    const campaigns = await getCampaigns(shopId, adAccountId, { status: 'ACTIVE' })
+    const campaigns = await getCampaigns(shopId, adAccountId, {
+      status: "ACTIVE",
+    });
 
     if (campaigns.length === 0) {
-      return []
+      return [];
     }
 
     // Calculate date range in YYYY-MM-DD format (last 30 days)
-    const today = new Date()
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(today.getDate() - 30)
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
 
-    const since = thirtyDaysAgo.toISOString().split('T')[0]
-    const until = today.toISOString().split('T')[0]
+    const since = thirtyDaysAgo.toISOString().split("T")[0];
+    const until = today.toISOString().split("T")[0];
 
     // Get insights for all active campaigns
     const fields = [
-      'campaign_id',
-      'campaign_name',
-      'spend',
-      'actions',
-      'action_values',
-      'impressions',
-      'clicks'
-    ].join(',')
+      "campaign_id",
+      "campaign_name",
+      "spend",
+      "actions",
+      "action_values",
+      "impressions",
+      "clicks",
+    ].join(",");
 
-    const timeRange = JSON.stringify({ since, until })
-    const filtering = JSON.stringify([{
-      field: 'campaign.effective_status',
-      operator: 'IN',
-      value: ['ACTIVE']
-    }])
+    const timeRange = JSON.stringify({ since, until });
+    const filtering = JSON.stringify([
+      {
+        field: "campaign.effective_status",
+        operator: "IN",
+        value: ["ACTIVE"],
+      },
+    ]);
 
-    const endpoint = `/${adAccountId}/insights?fields=${fields}&level=campaign&filtering=${encodeURIComponent(filtering)}&time_range=${encodeURIComponent(timeRange)}`
+    const endpoint = `/${adAccountId}/insights?fields=${fields}&level=campaign&filtering=${encodeURIComponent(filtering)}&time_range=${encodeURIComponent(timeRange)}`;
 
-    const data = await makeRequest<FacebookAPIResponse<FacebookInsightData[]>>(shopId, endpoint)
+    const data = await makeRequest<FacebookAPIResponse<FacebookInsightData[]>>(
+      shopId,
+      endpoint,
+    );
 
-    const insights: CampaignInsight[] = []
+    const insights: CampaignInsight[] = [];
 
     for (const insight of data.data || []) {
-      const spend = parseFloat(insight.spend || '0')
-      const clicks = parseInt(insight.clicks || '0')
+      const spend = parseFloat(insight.spend || "0");
+      const clicks = parseInt(insight.clicks || "0");
 
       // Extract purchase actions and values
-      const actions = insight.actions || []
-      const actionValues = insight.action_values || []
+      const actions = insight.actions || [];
+      const actionValues = insight.action_values || [];
 
-      const purchaseAction = actions.find((a) => a.action_type === 'purchase')
-      const purchaseValue = actionValues.find((a) => a.action_type === 'purchase')
+      const purchaseAction = actions.find((a) => a.action_type === "purchase");
+      const purchaseValue = actionValues.find(
+        (a) => a.action_type === "purchase",
+      );
 
-      const purchases = purchaseAction ? parseInt(purchaseAction.value) : 0
-      const purchaseValueAmount = purchaseValue ? parseFloat(purchaseValue.value) : 0
+      const purchases = purchaseAction ? parseInt(purchaseAction.value) : 0;
+      const purchaseValueAmount = purchaseValue
+        ? parseFloat(purchaseValue.value)
+        : 0;
 
       // Calculate conversion rate: (purchases / clicks) * 100
-      const conversionRate = clicks > 0 ? (purchases / clicks) * 100 : 0
+      const conversionRate = clicks > 0 ? (purchases / clicks) * 100 : 0;
 
       // Calculate ROAS: purchase_value / spend
-      const roas = spend > 0 ? purchaseValueAmount / spend : 0
+      const roas = spend > 0 ? purchaseValueAmount / spend : 0;
 
       insights.push({
-        campaign_id: insight.campaign_id || '',
-        campaign_name: insight.campaign_name || '',
+        campaign_id: insight.campaign_id || "",
+        campaign_name: insight.campaign_name || "",
         spend: spend.toFixed(2),
         purchases: purchases.toString(),
         purchase_value: purchaseValueAmount.toFixed(2),
         conversion_rate: conversionRate.toFixed(2),
-        roas: roas.toFixed(2)
-      })
+        roas: roas.toFixed(2),
+      });
     }
 
-    return insights
+    return insights;
   } catch (error) {
-    logger.error('Error fetching campaign insights:', error as Error, { component: 'facebook-api' })
-    throw error
+    logger.error("Error fetching campaign insights:", error as Error, {
+      component: "facebook-api",
+    });
+    throw error;
   }
 }
