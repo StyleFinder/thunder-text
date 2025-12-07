@@ -409,6 +409,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!draft.facebook_ad_account_id) {
+      return NextResponse.json(
+        { success: false, error: "Ad draft is missing Facebook ad account ID" },
+        { status: 400 },
+      );
+    }
+
+    if (!draft.facebook_campaign_id) {
+      return NextResponse.json(
+        { success: false, error: "Ad draft is missing Facebook campaign ID" },
+        { status: 400 },
+      );
+    }
+
     // Update status to submitting
     await supabaseAdmin
       .from("facebook_ad_drafts")

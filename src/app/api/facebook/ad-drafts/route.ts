@@ -155,6 +155,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!facebook_ad_account_id) {
+      return NextResponse.json(
+        { success: false, error: "Facebook ad account ID is required" },
+        { status: 400 },
+      );
+    }
+
     // Get shop_id (with fallback for standalone users)
     const { data: shopData, error: shopError } = await lookupShopWithFallback<{
       id: string;
@@ -181,7 +188,7 @@ export async function POST(request: NextRequest) {
         selected_image_url: selected_image_url || image_urls[0],
         facebook_campaign_id,
         facebook_campaign_name,
-        facebook_ad_account_id: facebook_ad_account_id || null,
+        facebook_ad_account_id,
         status: "draft",
       })
       .select()
