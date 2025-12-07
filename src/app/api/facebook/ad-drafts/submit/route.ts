@@ -246,20 +246,24 @@ async function createAdCreative(
 }
 
 /**
- * Get existing ad set from campaign
- * Campaigns should already have ad sets configured in Facebook Ads Manager
+ * Get or create ad set for campaign
+ * Fetches existing ad sets from campaign and uses the first active one
+ * If no ad sets exist, creates a minimal one that inherits campaign settings
  */
-async function getAdSet(
+async function getOrCreateAdSet(
   accessToken: string,
+  adAccountId: string,
   campaignId: string,
+  adName: string,
 ): Promise<string> {
   logger.info("Fetching existing ad sets from campaign", {
     component: "facebook-ad-drafts-submit",
-    operation: "getAdSet",
+    operation: "getOrCreateAdSet",
     campaignId,
+    adAccountId,
   });
 
-  // Fetch existing ad sets from the campaign
+  // First, fetch existing ad sets from the campaign
   const campaignAdSetsUrl = new URL(
     `${FACEBOOK_GRAPH_URL}/${campaignId}/adsets`,
   );
@@ -273,57 +277,98 @@ async function getAdSet(
   const fetchResponse = await fetch(campaignAdSetsUrl.toString());
   const fetchResult = await fetchResponse.json();
 
-  if (!fetchResponse.ok || fetchResult.error) {
+  if (fetchResponse.ok && fetchResult.data && fetchResult.data.length > 0) {
+    // Use the first ad set (preferably active)
+    const activeAdSet =
+      fetchResult.data.find(
+        (as: { status: string; effective_status: string; id: string }) =>
+          as.status === "ACTIVE" || as.effective_status === "ACTIVE",
+      ) || fetchResult.data[0];
+
+    logger.info("Using existing ad set from campaign", {
+      component: "facebook-ad-drafts-submit",
+      operation: "getOrCreateAdSet",
+      adSetId: activeAdSet.id,
+      adSetName: activeAdSet.name,
+      adSetStatus: activeAdSet.status,
+      totalAdSetsFound: fetchResult.data.length,
+    });
+
+    return activeAdSet.id;
+  }
+
+  // If no ad sets exist, create a minimal one that inherits campaign settings
+  logger.info("No existing ad sets found, creating minimal ad set", {
+    component: "facebook-ad-drafts-submit",
+    operation: "getOrCreateAdSet",
+    campaignId,
+    adAccountId,
+  });
+
+  const adSetUrl = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/adsets`);
+  adSetUrl.searchParams.set("access_token", accessToken);
+
+  // Minimal ad set - only required fields, no bid strategy overrides
+  // NO bid_amount, billing_event, optimization_goal - these are inherited from campaign
+  const adSetData = {
+    name: `Ad Set for ${adName}`,
+    campaign_id: campaignId,
+    status: "PAUSED", // Start paused so user can review
+    targeting: {
+      geo_locations: {
+        countries: ["US"], // Minimal default targeting
+      },
+    },
+  };
+
+  logger.info("Creating ad set with minimal config", {
+    component: "facebook-ad-drafts-submit",
+    operation: "getOrCreateAdSet",
+    adSetData: JSON.stringify(adSetData),
+  });
+
+  const adSetResponse = await fetch(adSetUrl.toString(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(adSetData),
+  });
+
+  const adSetResult = await adSetResponse.json();
+
+  if (!adSetResponse.ok || adSetResult.error) {
     logger.error(
-      "Failed to fetch ad sets from campaign",
-      new Error(fetchResult.error?.message || "Failed to fetch ad sets"),
+      "Failed to create ad set",
+      new Error(adSetResult.error?.message || "Ad set creation failed"),
       {
         component: "facebook-ad-drafts-submit",
-        operation: "getAdSet",
-        status: fetchResponse.status,
-        errorCode: fetchResult.error?.code,
-        fullError: JSON.stringify(fetchResult.error),
+        operation: "getOrCreateAdSet",
+        status: adSetResponse.status,
+        errorCode: adSetResult.error?.code,
+        errorType: adSetResult.error?.type,
+        errorSubcode: adSetResult.error?.error_subcode,
+        fullError: JSON.stringify(adSetResult.error),
         campaignId,
+        adAccountId,
+        requestBody: JSON.stringify(adSetData),
       },
     );
     throw new FacebookAPIError(
-      fetchResult.error?.message || "Failed to fetch ad sets from campaign",
-      fetchResponse.status,
-      fetchResult.error?.code,
-      fetchResult.error?.type,
+      adSetResult.error?.message || "Failed to create ad set",
+      adSetResponse.status,
+      adSetResult.error?.code,
+      adSetResult.error?.type,
     );
   }
 
-  if (!fetchResult.data || fetchResult.data.length === 0) {
-    logger.error("No ad sets found in campaign", undefined, {
-      component: "facebook-ad-drafts-submit",
-      operation: "getAdSet",
-      campaignId,
-    });
-    throw new FacebookAPIError(
-      "No ad sets found in this campaign. Please create an ad set in Facebook Ads Manager first.",
-      400,
-      "NO_AD_SET",
-    );
-  }
-
-  // Use the first ad set (preferably active)
-  const activeAdSet =
-    fetchResult.data.find(
-      (as: { status: string; effective_status: string; id: string }) =>
-        as.status === "ACTIVE" || as.effective_status === "ACTIVE",
-    ) || fetchResult.data[0];
-
-  logger.info("Using existing ad set from campaign", {
+  logger.info("Ad set created successfully", {
     component: "facebook-ad-drafts-submit",
-    operation: "getAdSet",
-    adSetId: activeAdSet.id,
-    adSetName: activeAdSet.name,
-    adSetStatus: activeAdSet.status,
-    totalAdSetsFound: fetchResult.data.length,
+    operation: "getOrCreateAdSet",
+    adSetId: adSetResult.id,
   });
 
-  return activeAdSet.id;
+  return adSetResult.id;
 }
 
 /**
@@ -336,8 +381,13 @@ async function createAd(
   creativeId: string,
   adName: string,
 ): Promise<{ id: string; adset_id?: string }> {
-  // Get existing ad set from campaign (campaigns should already have ad sets configured)
-  const adSetId = await getAdSet(accessToken, campaignId);
+  // Get or create ad set (preferring existing ones)
+  const adSetId = await getOrCreateAdSet(
+    accessToken,
+    adAccountId,
+    campaignId,
+    adName,
+  );
 
   // Now create the ad - only needs creative, name, and status
   const adUrl = new URL(`${FACEBOOK_GRAPH_URL}/${adAccountId}/ads`);
