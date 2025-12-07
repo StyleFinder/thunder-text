@@ -4,60 +4,65 @@
  * Retrieves active campaigns for a specific ad account
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { getCampaigns, FacebookAPIError } from '@/lib/services/facebook-api'
-import { logger } from '@/lib/logger'
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { getCampaigns, FacebookAPIError } from "@/lib/services/facebook-api";
+import { logger } from "@/lib/logger";
+import { lookupShopWithFallback } from "@/lib/shop-lookup";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const shop = searchParams.get('shop')
-    const adAccountId = searchParams.get('ad_account_id')
-    const status = searchParams.get('status') as 'ACTIVE' | 'PAUSED' | 'ARCHIVED' | 'DELETED' | null
-    const limit = searchParams.get('limit')
+    const { searchParams } = new URL(request.url);
+    const shop = searchParams.get("shop");
+    const adAccountId = searchParams.get("ad_account_id");
+    const status = searchParams.get("status") as
+      | "ACTIVE"
+      | "PAUSED"
+      | "ARCHIVED"
+      | "DELETED"
+      | null;
+    const limit = searchParams.get("limit");
 
     if (!shop) {
       return NextResponse.json(
-        { success: false, error: 'Shop parameter is required' },
-        { status: 400 }
-      )
+        { success: false, error: "Shop parameter is required" },
+        { status: 400 },
+      );
     }
 
     if (!adAccountId) {
       return NextResponse.json(
-        { success: false, error: 'Ad account ID parameter is required' },
-        { status: 400 }
-      )
+        { success: false, error: "Ad account ID parameter is required" },
+        { status: 400 },
+      );
     }
 
-    // Get shop_id from shop domain
-    const { data: shopData, error: shopError } = await supabase
-      .from('shops')
-      .select('id')
-      .eq('shop_domain', shop)
-      .single()
+    // Get shop_id from shop domain (with fallback for standalone users)
+    const { data: shopData, error: shopError } = await lookupShopWithFallback<{
+      id: string;
+      shop_domain: string;
+    }>(supabase, shop, "id, shop_domain", "campaigns");
 
     if (shopError || !shopData) {
       return NextResponse.json(
-        { success: false, error: 'Shop not found' },
-        { status: 404 }
-      )
+        { success: false, error: "Shop not found" },
+        { status: 404 },
+      );
     }
 
     // Get campaigns from Facebook API
     const campaigns = await getCampaigns(shopData.id, adAccountId, {
-      status: status || 'ACTIVE',
-      limit: limit ? parseInt(limit) : 100
-    })
+      status: status || "ACTIVE",
+      limit: limit ? parseInt(limit) : 100,
+    });
 
     return NextResponse.json({
       success: true,
-      data: campaigns.map(campaign => ({
+      data: campaigns.map((campaign) => ({
         id: campaign.id,
         name: campaign.name,
         status: campaign.status,
@@ -65,23 +70,24 @@ export async function GET(request: NextRequest) {
         daily_budget: campaign.daily_budget,
         lifetime_budget: campaign.lifetime_budget,
         created_time: campaign.created_time,
-        updated_time: campaign.updated_time
-      }))
-    })
-
+        updated_time: campaign.updated_time,
+      })),
+    });
   } catch (error) {
-    logger.error('Error in GET /api/facebook/campaigns:', error as Error, { component: 'campaigns' })
+    logger.error("Error in GET /api/facebook/campaigns:", error as Error, {
+      component: "campaigns",
+    });
 
     if (error instanceof FacebookAPIError) {
-      if (error.errorCode === 'NOT_CONNECTED') {
+      if (error.errorCode === "NOT_CONNECTED") {
         return NextResponse.json(
           {
             success: false,
-            error: 'Facebook account not connected',
-            code: 'NOT_CONNECTED'
+            error: "Facebook account not connected",
+            code: "NOT_CONNECTED",
           },
-          { status: 404 }
-        )
+          { status: 404 },
+        );
       }
 
       return NextResponse.json(
@@ -89,19 +95,19 @@ export async function GET(request: NextRequest) {
           success: false,
           error: error.message,
           code: error.errorCode,
-          type: error.errorType
+          type: error.errorType,
         },
-        { status: error.statusCode || 500 }
-      )
+        { status: error.statusCode || 500 },
+      );
     }
 
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch campaigns',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: "Failed to fetch campaigns",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }

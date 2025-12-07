@@ -18,10 +18,11 @@
  * }
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
-import { decryptToken } from '@/lib/services/encryption'
-import { logger } from '@/lib/logger'
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase";
+import { decryptToken } from "@/lib/services/encryption";
+import { logger } from "@/lib/logger";
+import { lookupShopWithFallback } from "@/lib/shop-lookup";
 
 /**
  * Revoke Facebook access token
@@ -31,107 +32,127 @@ import { logger } from '@/lib/logger'
  */
 async function revokeToken(accessToken: string): Promise<boolean> {
   try {
-    const revokeUrl = new URL('https://graph.facebook.com/v21.0/me/permissions')
-    revokeUrl.searchParams.set('access_token', accessToken)
+    const revokeUrl = new URL(
+      "https://graph.facebook.com/v21.0/me/permissions",
+    );
+    revokeUrl.searchParams.set("access_token", accessToken);
 
     const response = await fetch(revokeUrl.toString(), {
-      method: 'DELETE'
-    })
+      method: "DELETE",
+    });
 
     if (!response.ok) {
-      const error = await response.text()
-      logger.error(`Facebook token revocation failed: ${error}`, undefined, { component: 'disconnect' })
-      return false
+      const error = await response.text();
+      logger.error(`Facebook token revocation failed: ${error}`, undefined, {
+        component: "disconnect",
+      });
+      return false;
     }
 
-    const result = await response.json()
-    return result.success === true
+    const result = await response.json();
+    return result.success === true;
   } catch (error) {
-    logger.error('Error revoking Facebook token:', error as Error, { component: 'disconnect' })
-    return false
+    logger.error("Error revoking Facebook token:", error as Error, {
+      component: "disconnect",
+    });
+    return false;
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { shop } = body
+    const body = await request.json();
+    const { shop } = body;
 
     if (!shop) {
       return NextResponse.json(
-        { error: 'Missing shop parameter' },
-        { status: 400 }
-      )
+        { error: "Missing shop parameter" },
+        { status: 400 },
+      );
     }
 
-    // Get shop record
-    const { data: shopData, error: shopError } = await supabaseAdmin
-      .from('shops')
-      .select('id, shop_domain')
-      .eq('shop_domain', shop)
-      .single()
+    // Get shop record (with fallback for standalone users)
+    const { data: shopData, error: shopError } = await lookupShopWithFallback<{
+      id: string;
+      shop_domain: string;
+    }>(supabaseAdmin, shop, "id, shop_domain", "disconnect");
 
     if (shopError || !shopData) {
-      logger.error(`Shop not found: ${shop}`, shopError as Error, { component: 'disconnect' })
-      return NextResponse.json(
-        { error: 'Shop not found' },
-        { status: 404 }
-      )
+      logger.error(`Shop not found: ${shop}`, shopError as Error, {
+        component: "disconnect",
+      });
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
     }
 
     // Get Facebook integration
     const { data: integration, error: integrationError } = await supabaseAdmin
-      .from('integrations')
-      .select('*')
-      .eq('shop_id', shopData.id)
-      .eq('provider', 'facebook')
-      .single()
+      .from("integrations")
+      .select("*")
+      .eq("shop_id", shopData.id)
+      .eq("provider", "facebook")
+      .single();
 
     if (integrationError || !integration) {
-      console.log('No Facebook integration found for shop:', shop)
+      console.log("No Facebook integration found for shop:", shop);
       return NextResponse.json(
-        { error: 'Facebook integration not found' },
-        { status: 404 }
-      )
+        { error: "Facebook integration not found" },
+        { status: 404 },
+      );
     }
 
     // Best effort: Try to revoke token with Facebook
     try {
-      const decryptedToken = await decryptToken(integration.encrypted_access_token)
-      const revoked = await revokeToken(decryptedToken)
+      const decryptedToken = await decryptToken(
+        integration.encrypted_access_token,
+      );
+      const revoked = await revokeToken(decryptedToken);
       if (revoked) {
-        console.log('Facebook token revoked successfully')
+        console.log("Facebook token revoked successfully");
       } else {
-        console.log('Facebook token revocation failed, but continuing with local deletion')
+        console.log(
+          "Facebook token revocation failed, but continuing with local deletion",
+        );
       }
     } catch (error) {
-      logger.error('Error during token revocation (continuing anyway):', error as Error, { component: 'disconnect' })
+      logger.error(
+        "Error during token revocation (continuing anyway):",
+        error as Error,
+        { component: "disconnect" },
+      );
     }
 
     // Delete integration from database
     const { error: deleteError } = await supabaseAdmin
-      .from('integrations')
+      .from("integrations")
       .delete()
-      .eq('shop_id', shopData.id)
-      .eq('provider', 'facebook')
+      .eq("shop_id", shopData.id)
+      .eq("provider", "facebook");
 
     if (deleteError) {
-      logger.error('Failed to delete Facebook integration:', deleteError as Error, { component: 'disconnect' })
-      throw deleteError
+      logger.error(
+        "Failed to delete Facebook integration:",
+        deleteError as Error,
+        { component: "disconnect" },
+      );
+      throw deleteError;
     }
 
-    console.log('Facebook integration disconnected successfully for shop:', shop)
+    console.log(
+      "Facebook integration disconnected successfully for shop:",
+      shop,
+    );
 
     return NextResponse.json({
       success: true,
-      message: 'Facebook account disconnected successfully'
-    })
-
+      message: "Facebook account disconnected successfully",
+    });
   } catch (error) {
-    logger.error('Error in Facebook OAuth disconnect:', error as Error, { component: 'disconnect' })
+    logger.error("Error in Facebook OAuth disconnect:", error as Error, {
+      component: "disconnect",
+    });
     return NextResponse.json(
-      { error: 'Failed to disconnect Facebook account' },
-      { status: 500 }
-    )
+      { error: "Failed to disconnect Facebook account" },
+      { status: 500 },
+    );
   }
 }

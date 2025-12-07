@@ -4,70 +4,74 @@
  * Retrieves campaign insights (conversion rate, ROAS, spend) for active campaigns
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { getCampaignInsights, FacebookAPIError } from '@/lib/services/facebook-api'
-import { logger } from '@/lib/logger'
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import {
+  getCampaignInsights,
+  FacebookAPIError,
+} from "@/lib/services/facebook-api";
+import { logger } from "@/lib/logger";
+import { lookupShopWithFallback } from "@/lib/shop-lookup";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const shop = searchParams.get('shop')
-    const adAccountId = searchParams.get('ad_account_id')
+    const { searchParams } = new URL(request.url);
+    const shop = searchParams.get("shop");
+    const adAccountId = searchParams.get("ad_account_id");
 
     if (!shop) {
       return NextResponse.json(
-        { success: false, error: 'Shop parameter is required' },
-        { status: 400 }
-      )
+        { success: false, error: "Shop parameter is required" },
+        { status: 400 },
+      );
     }
 
     if (!adAccountId) {
       return NextResponse.json(
-        { success: false, error: 'Ad account ID parameter is required' },
-        { status: 400 }
-      )
+        { success: false, error: "Ad account ID parameter is required" },
+        { status: 400 },
+      );
     }
 
-    // Get shop_id from shop domain
-    const { data: shopData, error: shopError } = await supabase
-      .from('shops')
-      .select('id')
-      .eq('shop_domain', shop)
-      .single()
+    // Get shop_id from shop domain (with fallback for standalone users)
+    const { data: shopData, error: shopError } = await lookupShopWithFallback<{
+      id: string;
+      shop_domain: string;
+    }>(supabase, shop, "id, shop_domain", "insights");
 
     if (shopError || !shopData) {
       return NextResponse.json(
-        { success: false, error: 'Shop not found' },
-        { status: 404 }
-      )
+        { success: false, error: "Shop not found" },
+        { status: 404 },
+      );
     }
 
     // Get campaign insights from Facebook API
-    const insights = await getCampaignInsights(shopData.id, adAccountId)
+    const insights = await getCampaignInsights(shopData.id, adAccountId);
 
     return NextResponse.json({
       success: true,
-      data: insights
-    })
-
+      data: insights,
+    });
   } catch (error) {
-    logger.error('Error in GET /api/facebook/insights:', error as Error, { component: 'insights' })
+    logger.error("Error in GET /api/facebook/insights:", error as Error, {
+      component: "insights",
+    });
 
     if (error instanceof FacebookAPIError) {
-      if (error.errorCode === 'NOT_CONNECTED') {
+      if (error.errorCode === "NOT_CONNECTED") {
         return NextResponse.json(
           {
             success: false,
-            error: 'Facebook account not connected',
-            code: 'NOT_CONNECTED'
+            error: "Facebook account not connected",
+            code: "NOT_CONNECTED",
           },
-          { status: 404 }
-        )
+          { status: 404 },
+        );
       }
 
       return NextResponse.json(
@@ -75,19 +79,19 @@ export async function GET(request: NextRequest) {
           success: false,
           error: error.message,
           code: error.errorCode,
-          type: error.errorType
+          type: error.errorType,
         },
-        { status: error.statusCode || 500 }
-      )
+        { status: error.statusCode || 500 },
+      );
     }
 
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch campaign insights',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: "Failed to fetch campaign insights",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }

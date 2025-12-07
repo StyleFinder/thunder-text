@@ -4,23 +4,24 @@
  * Manages Facebook notification settings for email alerts
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { logger } from '@/lib/logger'
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { logger } from "@/lib/logger";
+import { lookupShopWithFallback } from "@/lib/shop-lookup";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 interface FacebookNotificationSettings {
-  primary_email: string
-  additional_emails: string[]
-  custom_conversion_benchmark: number
-  custom_roas_benchmark: number
-  alert_threshold_percentage: number
-  notify_on_conversion: boolean
-  notify_on_roas: boolean
-  is_enabled: boolean
+  primary_email: string;
+  additional_emails: string[];
+  custom_conversion_benchmark: number;
+  custom_roas_benchmark: number;
+  alert_threshold_percentage: number;
+  notify_on_conversion: boolean;
+  notify_on_roas: boolean;
+  is_enabled: boolean;
 }
 
 /**
@@ -28,63 +29,64 @@ interface FacebookNotificationSettings {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const shop = searchParams.get('shop')
+    const { searchParams } = new URL(request.url);
+    const shop = searchParams.get("shop");
 
     if (!shop) {
       return NextResponse.json(
-        { success: false, error: 'Shop parameter is required' },
-        { status: 400 }
-      )
+        { success: false, error: "Shop parameter is required" },
+        { status: 400 },
+      );
     }
 
-    // Get shop_id from shop domain
-    const { data: shopData, error: shopError } = await supabase
-      .from('shops')
-      .select('id')
-      .eq('shop_domain', shop)
-      .single()
+    // Get shop_id from shop domain (with fallback for standalone users)
+    const { data: shopData, error: shopError } = await lookupShopWithFallback<{
+      id: string;
+      shop_domain: string;
+    }>(supabase, shop, "id, shop_domain", "settings");
 
     if (shopError || !shopData) {
       return NextResponse.json(
-        { success: false, error: 'Shop not found' },
-        { status: 404 }
-      )
+        { success: false, error: "Shop not found" },
+        { status: 404 },
+      );
     }
 
     // Get notification settings
     const { data: settings, error: settingsError } = await supabase
-      .from('facebook_notification_settings')
-      .select('*')
-      .eq('shop_id', shopData.id)
-      .single()
+      .from("facebook_notification_settings")
+      .select("*")
+      .eq("shop_id", shopData.id)
+      .single();
 
     if (settingsError) {
       // If no settings exist yet, return null (not an error)
-      if (settingsError.code === 'PGRST116') {
+      if (settingsError.code === "PGRST116") {
         return NextResponse.json({
           success: true,
           data: null,
-        })
+        });
       }
 
-      throw settingsError
+      throw settingsError;
     }
 
     return NextResponse.json({
       success: true,
       data: settings,
-    })
+    });
   } catch (error) {
-    logger.error('Error in GET /api/facebook/settings:', error as Error, { component: 'settings' })
+    logger.error("Error in GET /api/facebook/settings:", error as Error, {
+      component: "settings",
+    });
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch settings',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        error: "Failed to fetch settings",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }
 
@@ -93,31 +95,33 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { shop, ...settingsData } = body as { shop: string } & FacebookNotificationSettings
+    const body = await request.json();
+    const { shop, ...settingsData } = body as {
+      shop: string;
+    } & FacebookNotificationSettings;
 
     if (!shop) {
       return NextResponse.json(
-        { success: false, error: 'Shop parameter is required' },
-        { status: 400 }
-      )
+        { success: false, error: "Shop parameter is required" },
+        { status: 400 },
+      );
     }
 
     // Validate required fields
     if (!settingsData.primary_email) {
       return NextResponse.json(
-        { success: false, error: 'Primary email is required' },
-        { status: 400 }
-      )
+        { success: false, error: "Primary email is required" },
+        { status: 400 },
+      );
     }
 
     // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(settingsData.primary_email)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid primary email format' },
-        { status: 400 }
-      )
+        { success: false, error: "Invalid primary email format" },
+        { status: 400 },
+      );
     }
 
     // Validate additional emails
@@ -125,8 +129,8 @@ export async function POST(request: NextRequest) {
       if (!emailRegex.test(email)) {
         return NextResponse.json(
           { success: false, error: `Invalid email format: ${email}` },
-          { status: 400 }
-        )
+          { status: 400 },
+        );
       }
     }
 
@@ -136,9 +140,9 @@ export async function POST(request: NextRequest) {
       settingsData.custom_roas_benchmark <= 0
     ) {
       return NextResponse.json(
-        { success: false, error: 'Benchmarks must be greater than 0' },
-        { status: 400 }
-      )
+        { success: false, error: "Benchmarks must be greater than 0" },
+        { status: 400 },
+      );
     }
 
     // Validate threshold
@@ -147,28 +151,27 @@ export async function POST(request: NextRequest) {
       settingsData.alert_threshold_percentage > 100
     ) {
       return NextResponse.json(
-        { success: false, error: 'Alert threshold must be between 0 and 100' },
-        { status: 400 }
-      )
+        { success: false, error: "Alert threshold must be between 0 and 100" },
+        { status: 400 },
+      );
     }
 
-    // Get shop_id from shop domain
-    const { data: shopData, error: shopError } = await supabase
-      .from('shops')
-      .select('id')
-      .eq('shop_domain', shop)
-      .single()
+    // Get shop_id from shop domain (with fallback for standalone users)
+    const { data: shopData, error: shopError } = await lookupShopWithFallback<{
+      id: string;
+      shop_domain: string;
+    }>(supabase, shop, "id, shop_domain", "settings");
 
     if (shopError || !shopData) {
       return NextResponse.json(
-        { success: false, error: 'Shop not found' },
-        { status: 404 }
-      )
+        { success: false, error: "Shop not found" },
+        { status: 404 },
+      );
     }
 
     // Upsert settings (insert or update if exists)
     const { data: settings, error: upsertError } = await supabase
-      .from('facebook_notification_settings')
+      .from("facebook_notification_settings")
       .upsert(
         {
           shop_id: shopData.id,
@@ -183,29 +186,31 @@ export async function POST(request: NextRequest) {
           updated_at: new Date().toISOString(),
         },
         {
-          onConflict: 'shop_id',
-        }
+          onConflict: "shop_id",
+        },
       )
       .select()
-      .single()
+      .single();
 
     if (upsertError) {
-      throw upsertError
+      throw upsertError;
     }
 
     return NextResponse.json({
       success: true,
       data: settings,
-    })
+    });
   } catch (error) {
-    logger.error('Error in POST /api/facebook/settings:', error as Error, { component: 'settings' })
+    logger.error("Error in POST /api/facebook/settings:", error as Error, {
+      component: "settings",
+    });
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to save settings',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        error: "Failed to save settings",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }
