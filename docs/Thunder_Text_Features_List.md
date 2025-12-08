@@ -51,6 +51,7 @@ Thunder Text is a comprehensive AI-powered Shopify application that transforms p
 - **Size Options**: Configure available size variants for products
 - **Usage Limits**: Set and monitor API usage restrictions
 - **Backup/Restore**: Export and import complete app configurations
+- **AI Discovery (llms.txt)**: Generate llms.txt file for AI assistant product discovery
 
 ### 6. **Help & Support**
 - **Getting Started**: Comprehensive onboarding guide and tutorials
@@ -208,6 +209,14 @@ Thunder Text is a comprehensive AI-powered Shopify application that transforms p
 - **Custom Integration**: API endpoints for custom integrations
 - **Advanced Analytics**: Enterprise-grade reporting and analytics
 - **Priority Support**: Dedicated support channels for enterprise customers
+
+### **AI Discovery (llms.txt)**
+- **llms.txt Generation**: Create an llms.txt file to help AI assistants discover and recommend your products
+- **Full Catalog Export**: Automatically fetches all active products from your Shopify store
+- **Structured Format**: Products organized by category with titles, prices, descriptions, and URLs
+- **Download & Copy**: Easy download or clipboard copy of generated llms.txt content
+- **AI Assistant Compatibility**: Works with ChatGPT, Gemini, Claude, and other AI assistants
+- **SEO for AI**: Similar to robots.txt for search engines, llms.txt optimizes your store for AI discovery
 
 ### **API & Integration**
 - **REST API**: Comprehensive API for external integrations
