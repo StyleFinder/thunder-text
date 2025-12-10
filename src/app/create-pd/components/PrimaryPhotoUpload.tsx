@@ -2,9 +2,21 @@
 /* eslint-disable @next/next/no-img-element */
 // Using native img for blob URL previews - Next.js Image doesn't support blob URLs well
 
-import { Upload, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Upload, Loader2, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { UploadedFile, ColorVariant } from "../hooks/useColorDetection";
+
+// Supported image formats - these are widely supported by AI vision APIs
+const SUPPORTED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+];
+
+const SUPPORTED_EXTENSIONS = ".jpg,.jpeg,.png,.webp,.gif";
 
 interface PrimaryPhotoUploadProps {
   photos: UploadedFile[];
@@ -25,14 +37,43 @@ export function PrimaryPhotoUpload({
   onPhotoRemove,
   onVariantOverride,
 }: PrimaryPhotoUploadProps) {
+  const [formatError, setFormatError] = useState<string | null>(null);
+
   const handleClick = () => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "image/*";
+    input.accept = SUPPORTED_EXTENSIONS;
     input.multiple = true;
     input.onchange = (e) => {
       const files = Array.from((e.target as HTMLInputElement).files || []);
-      onPhotosAdd(files);
+
+      // Filter files by supported types
+      const validFiles: File[] = [];
+      const invalidFiles: string[] = [];
+
+      files.forEach((file) => {
+        if (SUPPORTED_IMAGE_TYPES.includes(file.type.toLowerCase())) {
+          validFiles.push(file);
+        } else {
+          invalidFiles.push(file.name);
+        }
+      });
+
+      // Show error for unsupported files
+      if (invalidFiles.length > 0) {
+        setFormatError(
+          `Unsupported format: ${invalidFiles.join(", ")}. Please use JPG, PNG, WebP, or GIF.`,
+        );
+        // Clear error after 5 seconds
+        setTimeout(() => setFormatError(null), 5000);
+      } else {
+        setFormatError(null);
+      }
+
+      // Only add valid files
+      if (validFiles.length > 0) {
+        onPhotosAdd(validFiles);
+      }
     };
     input.click();
   };
@@ -97,6 +138,41 @@ export function PrimaryPhotoUpload({
               >
                 Please specify the product type in Step 1 before uploading
                 images.
+              </p>
+            </div>
+          )}
+
+          {formatError && (
+            <div
+              style={{
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: "8px",
+                padding: "16px",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "12px",
+              }}
+            >
+              <AlertCircle
+                style={{
+                  color: "#dc2626",
+                  width: "20px",
+                  height: "20px",
+                  flexShrink: 0,
+                  marginTop: "1px",
+                }}
+              />
+              <p
+                style={{
+                  fontSize: "14px",
+                  color: "#991b1b",
+                  margin: 0,
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                }}
+              >
+                {formatError}
               </p>
             </div>
           )}

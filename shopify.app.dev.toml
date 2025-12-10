@@ -1,10 +1,11 @@
-# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+# Development App Configuration
+# Use with: shopify app dev --config shopify.app.dev.toml
 
-client_id = "613bffa12a51873c2739ae67163a72e2"
-name = "Thunder Text Dev911"
-application_url = "https://app.zunosai.com"
+client_id = "b5651b35edf4f4c2222243626a5f721a"
+name = "Thunder Text Dev"
+application_url = "https://thundertext-dev.ngrok.app"
 embedded = false
-handle = "thunder-text-29"
+handle = "thunder-text-dev"
 
 [build]
 dev_store_url = "zunosai-staging-test-store.myshopify.com"
@@ -20,24 +21,19 @@ uri = "/api/webhooks/app-uninstalled"
 topics = ["shop/update"]
 uri = "/api/webhooks/shop-update"
 
-# Mandatory Privacy/GDPR Compliance Webhooks
-# Required for Shopify App Store approval
-# @see https://shopify.dev/docs/apps/build/privacy-law-compliance
-
 [[webhooks.subscriptions]]
 compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
 uri = "/api/webhooks/compliance"
 
 [access_scopes]
-# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_content,read_files,read_inventory,read_metaobject_definitions,read_metaobjects,read_product_feeds,read_product_listings,read_products,write_content,write_files,write_inventory,write_metaobject_definitions,write_metaobjects,write_product_feeds,write_product_listings,write_products"
 optional_scopes = [ ]
 use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://app.zunosai.com/api/auth/callback",
-  "https://app.zunosai.com/api/auth/shopify/callback",
+  "https://thundertext-dev.ngrok.app/api/auth/callback",
+  "https://thundertext-dev.ngrok.app/api/auth/shopify/callback",
   "http://localhost:3050/api/auth/shopify/callback"
 ]
 

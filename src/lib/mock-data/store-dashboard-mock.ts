@@ -6,8 +6,8 @@
 export interface Campaign {
   id: string;
   name: string;
-  platform: 'meta' | 'google' | 'tiktok' | 'pinterest';
-  status: 'active' | 'paused' | 'completed';
+  platform: "meta" | "google" | "tiktok" | "pinterest";
+  status: "active" | "paused" | "completed";
   budget?: number;
   spend: number;
   impressions: number;
@@ -38,8 +38,13 @@ export interface StoreOwnerInfo {
   yearsInBusiness: number;
   city: string;
   state: string;
-  storeType: 'online' | 'brick-and-mortar' | 'both';
-  ecommercePlatform: 'shopify' | 'woocommerce' | 'bigcommerce' | 'custom' | 'other';
+  storeType: "online" | "brick-and-mortar" | "both";
+  ecommercePlatform:
+    | "shopify"
+    | "woocommerce"
+    | "bigcommerce"
+    | "custom"
+    | "other";
 }
 
 export interface StoreMetrics {
@@ -63,7 +68,7 @@ export interface StoreDashboardData {
   shopId: string;
   shopName: string;
   ownerInfo: StoreOwnerInfo;
-  connectedPlatforms: Array<'meta' | 'google' | 'tiktok' | 'pinterest'>;
+  connectedPlatforms: Array<"meta" | "google" | "tiktok" | "pinterest">;
   advertisingGoals: string;
   campaigns: Campaign[];
   metrics: StoreMetrics;
@@ -72,164 +77,167 @@ export interface StoreDashboardData {
 
 // Mock data for testing
 export const mockStoreDashboard: StoreDashboardData = {
-  shopId: '38b6c917-c23d-4fa6-9fa3-165f7ca959d2',
-  shopName: 'Chic Boutique',
+  shopId: "38b6c917-c23d-4fa6-9fa3-165f7ca959d2",
+  shopName: "Chic Boutique",
   ownerInfo: {
-    name: 'Sarah Johnson',
-    email: 'sarah@chicboutique.com',
-    phone: '(555) 123-4567',
+    name: "Sarah Johnson",
+    email: "sarah@chicboutique.com",
+    phone: "(555) 123-4567",
     industryNiche: "Women's Clothing",
     yearsInBusiness: 3,
-    city: 'Austin',
-    state: 'TX',
-    storeType: 'both',
-    ecommercePlatform: 'shopify'
+    city: "Austin",
+    state: "TX",
+    storeType: "both",
+    ecommercePlatform: "shopify",
   },
-  connectedPlatforms: ['meta', 'google'],
-  advertisingGoals: 'Increase brand awareness and drive sales for new summer collection. Target ROAS of 4.0+ and expand customer base by 25% in Q2 2025.',
+  connectedPlatforms: ["meta", "google"],
+  advertisingGoals:
+    "Increase brand awareness and drive sales for new summer collection. Target ROAS of 4.0+ and expand customer base by 25% in Q2 2025.",
   campaigns: [
     // Meta Campaigns
     {
-      id: 'meta-1',
-      name: 'Summer Collection Launch',
-      platform: 'meta',
-      status: 'active',
-      spend: 1245.50,
+      id: "meta-1",
+      name: "Summer Collection Launch",
+      platform: "meta",
+      status: "active",
+      spend: 1245.5,
       impressions: 45230,
       clicks: 1356,
       ctr: 3.0,
       conversions: 89,
       roas: 4.2,
-      startDate: '2025-10-01',
+      startDate: "2025-10-01",
     },
     {
-      id: 'meta-2',
-      name: 'Retargeting - Cart Abandoners',
-      platform: 'meta',
-      status: 'active',
+      id: "meta-2",
+      name: "Retargeting - Cart Abandoners",
+      platform: "meta",
+      status: "active",
       spend: 567.25,
       impressions: 18900,
       clicks: 892,
       ctr: 4.7,
       conversions: 67,
       roas: 5.8,
-      startDate: '2025-10-15',
+      startDate: "2025-10-15",
     },
     {
-      id: 'meta-3',
-      name: 'New Customer Acquisition',
-      platform: 'meta',
-      status: 'active',
-      spend: 890.00,
+      id: "meta-3",
+      name: "New Customer Acquisition",
+      platform: "meta",
+      status: "active",
+      spend: 890.0,
       impressions: 32100,
       clicks: 1023,
       ctr: 3.2,
       conversions: 45,
       roas: 3.1,
-      startDate: '2025-10-20',
+      startDate: "2025-10-20",
     },
     // Google Campaigns
     {
-      id: 'google-1',
-      name: 'Shopping - Best Sellers',
-      platform: 'google',
-      status: 'active',
-      spend: 678.90,
+      id: "google-1",
+      name: "Shopping - Best Sellers",
+      platform: "google",
+      status: "active",
+      spend: 678.9,
       impressions: 28450,
       clicks: 756,
       ctr: 2.7,
       conversions: 52,
       roas: 4.5,
-      startDate: '2025-10-05',
+      startDate: "2025-10-05",
     },
     {
-      id: 'google-2',
-      name: 'Search - Brand Terms',
-      platform: 'google',
-      status: 'active',
+      id: "google-2",
+      name: "Search - Brand Terms",
+      platform: "google",
+      status: "active",
       spend: 345.75,
       impressions: 12300,
       clicks: 489,
       ctr: 4.0,
       conversions: 38,
       roas: 6.2,
-      startDate: '2025-10-10',
+      startDate: "2025-10-10",
     },
   ],
   metrics: {
-    averageOrderValue: 87.50,
+    averageOrderValue: 87.5,
     topProducts: [
       {
-        id: 'prod-1',
-        name: 'Floral Maxi Dress',
+        id: "prod-1",
+        name: "Floral Maxi Dress",
         sales: 156,
-        revenue: 12480.00,
+        revenue: 12480.0,
       },
       {
-        id: 'prod-2',
-        name: 'Denim Jacket - Classic Blue',
+        id: "prod-2",
+        name: "Denim Jacket - Classic Blue",
         sales: 134,
-        revenue: 10720.00,
+        revenue: 10720.0,
       },
       {
-        id: 'prod-3',
-        name: 'Silk Blouse - White',
+        id: "prod-3",
+        name: "Silk Blouse - White",
         sales: 98,
-        revenue: 6370.00,
+        revenue: 6370.0,
       },
       {
-        id: 'prod-4',
-        name: 'High-Waist Jeans',
+        id: "prod-4",
+        name: "High-Waist Jeans",
         sales: 87,
-        revenue: 6960.00,
+        revenue: 6960.0,
       },
       {
-        id: 'prod-5',
-        name: 'Summer Sandals',
+        id: "prod-5",
+        name: "Summer Sandals",
         sales: 76,
-        revenue: 3040.00,
+        revenue: 3040.0,
       },
     ],
     topCategories: [
       {
-        name: 'Dresses',
+        name: "Dresses",
         salesCount: 287,
-        revenue: 22960.00,
+        revenue: 22960.0,
       },
       {
-        name: 'Tops & Blouses',
+        name: "Tops & Blouses",
         salesCount: 245,
-        revenue: 15925.00,
+        revenue: 15925.0,
       },
       {
-        name: 'Bottoms',
+        name: "Bottoms",
         salesCount: 198,
-        revenue: 15840.00,
+        revenue: 15840.0,
       },
       {
-        name: 'Outerwear',
+        name: "Outerwear",
         salesCount: 156,
-        revenue: 18720.00,
+        revenue: 18720.0,
       },
       {
-        name: 'Accessories',
+        name: "Accessories",
         salesCount: 134,
-        revenue: 5360.00,
+        revenue: 5360.0,
       },
     ],
   },
   coachNotes: [
     {
-      id: 'note-1',
-      coachName: 'Michael Chen',
-      content: 'Initial consultation completed. Sarah is very motivated and has clear goals. Recommended focusing on Meta retargeting given the strong ROAS. Will follow up in 2 weeks to review performance.',
-      createdAt: '2025-10-01T14:30:00Z',
+      id: "note-1",
+      coachName: "Michael Chen",
+      content:
+        "Initial consultation completed. Sarah is very motivated and has clear goals. Recommended focusing on Meta retargeting given the strong ROAS. Will follow up in 2 weeks to review performance.",
+      createdAt: "2025-10-01T14:30:00Z",
     },
     {
-      id: 'note-2',
-      coachName: 'Jessica Rivera',
-      content: 'Covering for Michael this week. Reviewed campaign performance - Meta retargeting is performing exceptionally well at 5.8 ROAS. Suggested increasing budget by 20%. New customer acquisition campaign needs optimization - CTR is good but conversions are lower than expected.',
-      createdAt: '2025-10-22T10:15:00Z',
+      id: "note-2",
+      coachName: "Jessica Rivera",
+      content:
+        "Covering for Michael this week. Reviewed campaign performance - Meta retargeting is performing exceptionally well at 5.8 ROAS. Suggested increasing budget by 20%. New customer acquisition campaign needs optimization - CTR is good but conversions are lower than expected.",
+      createdAt: "2025-10-22T10:15:00Z",
     },
   ],
 };
@@ -237,98 +245,114 @@ export const mockStoreDashboard: StoreDashboardData = {
 // Additional mock stores for BHB dashboard list
 export const mockStores = [
   {
-    id: '38b6c917-c23d-4fa6-9fa3-165f7ca959d2',
-    shopName: 'Chic Boutique',
-    displayName: 'Chic Boutique',
-    ownerName: 'Sarah Johnson',
+    id: "38b6c917-c23d-4fa6-9fa3-165f7ca959d2",
+    shopName: "Chic Boutique",
+    displayName: "Chic Boutique",
+    ownerName: "Sarah Johnson",
     industryNiche: "Women's Clothing",
-    city: 'Austin',
-    state: 'TX',
-    storeType: 'both' as const,
-    ecommercePlatform: 'shopify' as const,
-    totalSpend: 3727.40,
+    city: "Austin",
+    state: "TX",
+    storeType: "both" as const,
+    ecommercePlatform: "shopify" as const,
+    totalSpend: 3727.4,
     totalRevenue: 15689.75,
     roas: 4.2,
-    connectedPlatforms: ['meta', 'google'],
+    connectedPlatforms: ["meta", "google"],
   },
   {
-    id: '11111111-1111-1111-1111-111111111111',
-    shopName: 'Baby Bliss Co',
-    displayName: 'Baby Bliss Co',
-    ownerName: 'Amanda Martinez',
-    industryNiche: 'Baby Goods',
-    city: 'Portland',
-    state: 'OR',
-    storeType: 'online' as const,
-    ecommercePlatform: 'shopify' as const,
-    totalSpend: 2156.80,
-    totalRevenue: 9627.60,
+    id: "11111111-1111-1111-1111-111111111111",
+    shopName: "Baby Bliss Co",
+    displayName: "Baby Bliss Co",
+    ownerName: "Amanda Martinez",
+    industryNiche: "Baby Goods",
+    city: "Portland",
+    state: "OR",
+    storeType: "online" as const,
+    ecommercePlatform: "shopify" as const,
+    totalSpend: 2156.8,
+    totalRevenue: 9627.6,
     roas: 4.5,
-    connectedPlatforms: ['meta', 'pinterest'],
+    connectedPlatforms: ["meta", "pinterest"],
   },
   {
-    id: '22222222-2222-2222-2222-222222222222',
-    shopName: 'Glow Beauty Bar',
-    displayName: 'Glow Beauty Bar',
-    ownerName: 'Priya Patel',
-    industryNiche: 'Health & Beauty',
-    city: 'Los Angeles',
-    state: 'CA',
-    storeType: 'both' as const,
-    ecommercePlatform: 'shopify' as const,
+    id: "22222222-2222-2222-2222-222222222222",
+    shopName: "Glow Beauty Bar",
+    displayName: "Glow Beauty Bar",
+    ownerName: "Priya Patel",
+    industryNiche: "Health & Beauty",
+    city: "Los Angeles",
+    state: "CA",
+    storeType: "both" as const,
+    ecommercePlatform: "shopify" as const,
     totalSpend: 4890.25,
-    totalRevenue: 19561.00,
+    totalRevenue: 19561.0,
     roas: 4.0,
-    connectedPlatforms: ['meta', 'google', 'tiktok'],
+    connectedPlatforms: ["meta", "google", "tiktok"],
   },
   {
-    id: '33333333-3333-3333-3333-333333333333',
-    shopName: 'Rustic Home Goods',
-    displayName: 'Rustic Home Goods',
-    ownerName: 'Tom Davidson',
-    industryNiche: 'Home Goods',
-    city: 'Nashville',
-    state: 'TN',
-    storeType: 'brick-and-mortar' as const,
-    ecommercePlatform: 'woocommerce' as const,
-    totalSpend: 1567.50,
+    id: "33333333-3333-3333-3333-333333333333",
+    shopName: "Rustic Home Goods",
+    displayName: "Rustic Home Goods",
+    ownerName: "Tom Davidson",
+    industryNiche: "Home Goods",
+    city: "Nashville",
+    state: "TN",
+    storeType: "brick-and-mortar" as const,
+    ecommercePlatform: "woocommerce" as const,
+    totalSpend: 1567.5,
     totalRevenue: 5495.25,
     roas: 3.5,
-    connectedPlatforms: ['meta', 'google'],
+    connectedPlatforms: ["meta", "google"],
   },
   {
-    id: '44444444-4444-4444-4444-444444444444',
-    shopName: 'Wild West Apparel',
-    displayName: 'Wild West Apparel',
-    ownerName: 'Jake Thompson',
-    industryNiche: 'Western Wear',
-    city: 'Denver',
-    state: 'CO',
-    storeType: 'online' as const,
-    ecommercePlatform: 'bigcommerce' as const,
-    totalSpend: 3245.90,
+    id: "44444444-4444-4444-4444-444444444444",
+    shopName: "Wild West Apparel",
+    displayName: "Wild West Apparel",
+    ownerName: "Jake Thompson",
+    industryNiche: "Western Wear",
+    city: "Denver",
+    state: "CO",
+    storeType: "online" as const,
+    ecommercePlatform: "bigcommerce" as const,
+    totalSpend: 3245.9,
     totalRevenue: 14206.05,
     roas: 4.4,
-    connectedPlatforms: ['meta'],
+    connectedPlatforms: ["meta"],
   },
 ];
 
 // Helper function to get mock data by shop ID
-export function getMockStoreDashboard(shopId: string): StoreDashboardData | null {
-  if (shopId === '38b6c917-c23d-4fa6-9fa3-165f7ca959d2') {
+export function getMockStoreDashboard(
+  shopId: string,
+): StoreDashboardData | null {
+  if (shopId === "38b6c917-c23d-4fa6-9fa3-165f7ca959d2") {
     return mockStoreDashboard;
   }
 
   // For other shops, generate realistic mock data with campaigns
-  const store = mockStores.find(s => s.id === shopId);
-  if (!store) return null;
+  const store = mockStores.find((s) => s.id === shopId);
+
+  // If store not in mock list, generate generic mock data for any shop ID
+  // This allows real stores from the database to have store detail pages
+  if (!store) {
+    return generateGenericMockData(shopId);
+  }
 
   // Generate 2-4 mock campaigns per store
   const numCampaigns = Math.floor(Math.random() * 3) + 2;
   const mockCampaigns: Campaign[] = [];
 
-  const campaignTypes = ['Product Launch', 'Seasonal Sale', 'Brand Awareness', 'Retargeting', 'Collection Promotion'];
-  const platforms: Array<'meta' | 'google' | 'tiktok' | 'pinterest'> = store.connectedPlatforms as Array<'meta' | 'google' | 'tiktok' | 'pinterest'>;
+  const campaignTypes = [
+    "Product Launch",
+    "Seasonal Sale",
+    "Brand Awareness",
+    "Retargeting",
+    "Collection Promotion",
+  ];
+  const platforms: Array<"meta" | "google" | "tiktok" | "pinterest"> =
+    store.connectedPlatforms as Array<
+      "meta" | "google" | "tiktok" | "pinterest"
+    >;
 
   for (let i = 0; i < numCampaigns; i++) {
     const spend = Math.random() * 2000 + 500;
@@ -340,7 +364,7 @@ export function getMockStoreDashboard(shopId: string): StoreDashboardData | null
       id: `campaign-${store.id}-${i}`,
       name: `${campaignTypes[i % campaignTypes.length]} - ${platforms[i % platforms.length].toUpperCase()}`,
       platform: platforms[i % platforms.length],
-      status: i === 0 ? 'active' : (Math.random() > 0.3 ? 'active' : 'paused'),
+      status: i === 0 ? "active" : Math.random() > 0.3 ? "active" : "paused",
       budget: spend * 1.2,
       spend,
       impressions: Math.floor(clicks * (Math.random() * 50 + 30)),
@@ -351,7 +375,9 @@ export function getMockStoreDashboard(shopId: string): StoreDashboardData | null
       ctr: (clicks / (clicks * (Math.random() * 50 + 30))) * 100,
       cpc: spend / clicks,
       conversionRate: (purchases / clicks) * 100,
-      startDate: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString(),
+      startDate: new Date(
+        Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000,
+      ).toISOString(),
       endDate: undefined,
     });
   }
@@ -361,8 +387,12 @@ export function getMockStoreDashboard(shopId: string): StoreDashboardData | null
     shopName: store.shopName,
     ownerInfo: {
       name: store.ownerName,
-      email: `contact@${store.shopName.toLowerCase().replace(/\s+/g, '')}.com`,
-      phone: '(555) ' + Math.floor(Math.random() * 900 + 100) + '-' + Math.floor(Math.random() * 9000 + 1000),
+      email: `contact@${store.shopName.toLowerCase().replace(/\s+/g, "")}.com`,
+      phone:
+        "(555) " +
+        Math.floor(Math.random() * 900 + 100) +
+        "-" +
+        Math.floor(Math.random() * 9000 + 1000),
       industryNiche: store.industryNiche,
       yearsInBusiness: Math.floor(Math.random() * 5) + 1,
       city: store.city,
@@ -370,35 +400,156 @@ export function getMockStoreDashboard(shopId: string): StoreDashboardData | null
       storeType: store.storeType,
       ecommercePlatform: store.ecommercePlatform,
     },
-    connectedPlatforms: store.connectedPlatforms as Array<'meta' | 'google' | 'tiktok' | 'pinterest'>,
+    connectedPlatforms: store.connectedPlatforms as Array<
+      "meta" | "google" | "tiktok" | "pinterest"
+    >,
     advertisingGoals: `Grow ${store.industryNiche.toLowerCase()} sales through targeted digital advertising. Focus on customer acquisition and brand awareness in the ${store.city} market.`,
     campaigns: mockCampaigns,
     metrics: {
       averageOrderValue: Math.floor(Math.random() * 50 + 50),
       topProducts: [
         {
-          id: '1',
+          id: "1",
           name: `Best Seller #1`,
           sales: Math.floor(Math.random() * 100 + 50),
-          revenue: Math.floor(Math.random() * 5000 + 2000)
+          revenue: Math.floor(Math.random() * 5000 + 2000),
         },
         {
-          id: '2',
+          id: "2",
           name: `Best Seller #2`,
           sales: Math.floor(Math.random() * 80 + 30),
-          revenue: Math.floor(Math.random() * 4000 + 1500)
+          revenue: Math.floor(Math.random() * 4000 + 1500),
         },
         {
-          id: '3',
+          id: "3",
           name: `Best Seller #3`,
           sales: Math.floor(Math.random() * 60 + 20),
-          revenue: Math.floor(Math.random() * 3000 + 1000)
+          revenue: Math.floor(Math.random() * 3000 + 1000),
         },
       ],
       topCategories: [
-        { name: store.industryNiche, salesCount: Math.floor(Math.random() * 200 + 100), revenue: Math.floor(Math.random() * 10000 + 5000) },
-        { name: 'Accessories', salesCount: Math.floor(Math.random() * 150 + 50), revenue: Math.floor(Math.random() * 8000 + 3000) },
-        { name: 'Sale Items', salesCount: Math.floor(Math.random() * 100 + 30), revenue: Math.floor(Math.random() * 5000 + 2000) },
+        {
+          name: store.industryNiche,
+          salesCount: Math.floor(Math.random() * 200 + 100),
+          revenue: Math.floor(Math.random() * 10000 + 5000),
+        },
+        {
+          name: "Accessories",
+          salesCount: Math.floor(Math.random() * 150 + 50),
+          revenue: Math.floor(Math.random() * 8000 + 3000),
+        },
+        {
+          name: "Sale Items",
+          salesCount: Math.floor(Math.random() * 100 + 30),
+          revenue: Math.floor(Math.random() * 5000 + 2000),
+        },
+      ],
+    },
+    coachNotes: [],
+  };
+}
+
+// Generate generic mock data for stores not in the hardcoded list
+// This ensures any real store from the database can have a store detail page
+function generateGenericMockData(shopId: string): StoreDashboardData {
+  const platforms: Array<"meta" | "google" | "tiktok" | "pinterest"> = [
+    "meta",
+    "google",
+  ];
+  const numCampaigns = Math.floor(Math.random() * 3) + 2;
+  const mockCampaigns: Campaign[] = [];
+  const campaignTypes = [
+    "Product Launch",
+    "Seasonal Sale",
+    "Brand Awareness",
+    "Retargeting",
+    "Collection Promotion",
+  ];
+
+  for (let i = 0; i < numCampaigns; i++) {
+    const spend = Math.random() * 2000 + 500;
+    const revenue = spend * (Math.random() * 3 + 1.5);
+    const clicks = Math.floor(spend * (Math.random() * 20 + 10));
+    const purchases = Math.floor(clicks * (Math.random() * 0.04 + 0.01));
+
+    mockCampaigns.push({
+      id: `campaign-${shopId}-${i}`,
+      name: `${campaignTypes[i % campaignTypes.length]} - ${platforms[i % platforms.length].toUpperCase()}`,
+      platform: platforms[i % platforms.length],
+      status: i === 0 ? "active" : Math.random() > 0.3 ? "active" : "paused",
+      budget: spend * 1.2,
+      spend,
+      impressions: Math.floor(clicks * (Math.random() * 50 + 30)),
+      clicks,
+      conversions: purchases,
+      revenue,
+      roas: revenue / spend,
+      ctr: (clicks / (clicks * (Math.random() * 50 + 30))) * 100,
+      cpc: spend / clicks,
+      conversionRate: (purchases / clicks) * 100,
+      startDate: new Date(
+        Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+      endDate: undefined,
+    });
+  }
+
+  return {
+    shopId,
+    shopName: "Store Dashboard",
+    ownerInfo: {
+      name: "Store Owner",
+      email: "contact@store.com",
+      phone: "(555) 555-5555",
+      industryNiche: "Retail",
+      yearsInBusiness: 2,
+      city: "New York",
+      state: "NY",
+      storeType: "online",
+      ecommercePlatform: "shopify",
+    },
+    connectedPlatforms: platforms,
+    advertisingGoals:
+      "Grow sales through targeted digital advertising. Focus on customer acquisition and brand awareness.",
+    campaigns: mockCampaigns,
+    metrics: {
+      averageOrderValue: Math.floor(Math.random() * 50 + 50),
+      topProducts: [
+        {
+          id: "1",
+          name: "Best Seller #1",
+          sales: Math.floor(Math.random() * 100 + 50),
+          revenue: Math.floor(Math.random() * 5000 + 2000),
+        },
+        {
+          id: "2",
+          name: "Best Seller #2",
+          sales: Math.floor(Math.random() * 80 + 30),
+          revenue: Math.floor(Math.random() * 4000 + 1500),
+        },
+        {
+          id: "3",
+          name: "Best Seller #3",
+          sales: Math.floor(Math.random() * 60 + 20),
+          revenue: Math.floor(Math.random() * 3000 + 1000),
+        },
+      ],
+      topCategories: [
+        {
+          name: "Featured Products",
+          salesCount: Math.floor(Math.random() * 200 + 100),
+          revenue: Math.floor(Math.random() * 10000 + 5000),
+        },
+        {
+          name: "Accessories",
+          salesCount: Math.floor(Math.random() * 150 + 50),
+          revenue: Math.floor(Math.random() * 8000 + 3000),
+        },
+        {
+          name: "Sale Items",
+          salesCount: Math.floor(Math.random() * 100 + 30),
+          revenue: Math.floor(Math.random() * 5000 + 2000),
+        },
       ],
     },
     coachNotes: [],

@@ -84,16 +84,45 @@ export async function GET(request: NextRequest) {
 
     // If we have cookie-based auth, try that first
     if (authenticatedShop) {
-      const result = await supabaseAdmin
-        .from("shops")
-        .select(
-          "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
-        )
-        .eq("shop_domain", authenticatedShop)
-        .single();
+      // For .myshopify.com domains, check linked_shopify_domain FIRST
+      // This ensures standalone users with linked stores consistently use their standalone account
+      if (authenticatedShop.includes(".myshopify.com")) {
+        const linkedResult = await supabaseAdmin
+          .from("shops")
+          .select(
+            "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
+          )
+          .eq("linked_shopify_domain", authenticatedShop)
+          .eq("shop_type", "standalone")
+          .single();
 
-      shopData = result.data;
-      shopError = result.error;
+        if (linkedResult.data && !linkedResult.error) {
+          shopData = linkedResult.data;
+          shopError = null;
+          logger.info(
+            "[Connections API] Found standalone user by linked_shopify_domain",
+            {
+              component: "connections",
+              linkedShopifyDomain: authenticatedShop,
+              standaloneEmail: linkedResult.data.shop_domain,
+            },
+          );
+        }
+      }
+
+      // If no standalone user found (or not a .myshopify.com domain), try shop_domain
+      if (!shopData) {
+        const result = await supabaseAdmin
+          .from("shops")
+          .select(
+            "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
+          )
+          .eq("shop_domain", authenticatedShop)
+          .single();
+
+        shopData = result.data;
+        shopError = result.error;
+      }
 
       // If cookie-based auth failed and URL param looks like standalone user email, try fallback
       // Standalone users have their email in the 'email' column, not 'shop_domain'
@@ -143,7 +172,7 @@ export async function GET(request: NextRequest) {
         shopFromUrl.includes(".myshopify.com")
       ) {
         logger.info(
-          "[Connections API] Primary lookup failed, trying linked_shopify_domain lookup",
+          "[Connections API] Primary lookup failed, trying linked_shopify_domain lookup first",
           {
             component: "connections",
             primaryDomain: authenticatedShop,
@@ -151,47 +180,47 @@ export async function GET(request: NextRequest) {
           },
         );
 
-        // First try regular Shopify store lookup
-        const shopifyFallbackResult = await supabaseAdmin
+        // First try finding a standalone user with this linked_shopify_domain (prioritize standalone)
+        const linkedFallbackResult = await supabaseAdmin
           .from("shops")
           .select(
             "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
           )
-          .eq("shop_domain", shopFromUrl)
+          .eq("linked_shopify_domain", shopFromUrl)
+          .eq("shop_type", "standalone")
           .single();
 
-        if (shopifyFallbackResult.data && !shopifyFallbackResult.error) {
-          shopData = shopifyFallbackResult.data;
+        if (linkedFallbackResult.data && !linkedFallbackResult.error) {
+          shopData = linkedFallbackResult.data;
           shopError = null;
           authenticatedShop = shopFromUrl;
           logger.info(
-            "[Connections API] Fallback successful - found Shopify store by shop_domain",
+            "[Connections API] Fallback successful - found standalone user by linked_shopify_domain",
             {
               component: "connections",
-              shopDomain: shopFromUrl,
+              linkedShopifyDomain: shopFromUrl,
+              standaloneEmail: linkedFallbackResult.data.shop_domain,
             },
           );
         } else {
-          // Try finding a standalone user with this linked_shopify_domain
-          const linkedFallbackResult = await supabaseAdmin
+          // Fallback to regular Shopify store lookup
+          const shopifyFallbackResult = await supabaseAdmin
             .from("shops")
             .select(
               "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
             )
-            .eq("linked_shopify_domain", shopFromUrl)
-            .eq("shop_type", "standalone")
+            .eq("shop_domain", shopFromUrl)
             .single();
 
-          if (linkedFallbackResult.data && !linkedFallbackResult.error) {
-            shopData = linkedFallbackResult.data;
+          if (shopifyFallbackResult.data && !shopifyFallbackResult.error) {
+            shopData = shopifyFallbackResult.data;
             shopError = null;
             authenticatedShop = shopFromUrl;
             logger.info(
-              "[Connections API] Fallback successful - found standalone user by linked_shopify_domain",
+              "[Connections API] Fallback successful - found Shopify store by shop_domain",
               {
                 component: "connections",
-                linkedShopifyDomain: shopFromUrl,
-                standaloneEmail: linkedFallbackResult.data.shop_domain,
+                shopDomain: shopFromUrl,
               },
             );
           }
@@ -245,53 +274,53 @@ export async function GET(request: NextRequest) {
       // No cookie-based auth, but URL param looks like a Shopify domain
       // This could be a standalone user with a linked Shopify store
       logger.info(
-        "[Connections API] No cookie auth - attempting linked_shopify_domain lookup",
+        "[Connections API] No cookie auth - attempting linked_shopify_domain lookup first",
         {
           component: "connections",
           shopifyDomain: shopFromUrl,
         },
       );
 
-      // First try regular Shopify store lookup
-      const shopifyResult = await supabaseAdmin
+      // First try finding a standalone user with this linked_shopify_domain (prioritize standalone)
+      const linkedResult = await supabaseAdmin
         .from("shops")
         .select(
           "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
         )
-        .eq("shop_domain", shopFromUrl)
+        .eq("linked_shopify_domain", shopFromUrl)
+        .eq("shop_type", "standalone")
         .single();
 
-      if (shopifyResult.data && !shopifyResult.error) {
-        shopData = shopifyResult.data;
+      if (linkedResult.data && !linkedResult.error) {
+        shopData = linkedResult.data;
         shopError = null;
         authenticatedShop = shopFromUrl;
-        logger.info("[Connections API] Found Shopify store by shop_domain", {
-          component: "connections",
-          shopDomain: shopFromUrl,
-        });
+        logger.info(
+          "[Connections API] Found standalone user by linked_shopify_domain",
+          {
+            component: "connections",
+            linkedShopifyDomain: shopFromUrl,
+            standaloneEmail: linkedResult.data.shop_domain,
+          },
+        );
       } else {
-        // Try finding a standalone user with this linked_shopify_domain
-        const linkedResult = await supabaseAdmin
+        // Fallback to regular Shopify store lookup
+        const shopifyResult = await supabaseAdmin
           .from("shops")
           .select(
             "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
           )
-          .eq("linked_shopify_domain", shopFromUrl)
-          .eq("shop_type", "standalone")
+          .eq("shop_domain", shopFromUrl)
           .single();
 
-        if (linkedResult.data && !linkedResult.error) {
-          shopData = linkedResult.data;
+        if (shopifyResult.data && !shopifyResult.error) {
+          shopData = shopifyResult.data;
           shopError = null;
           authenticatedShop = shopFromUrl;
-          logger.info(
-            "[Connections API] Found standalone user by linked_shopify_domain",
-            {
-              component: "connections",
-              linkedShopifyDomain: shopFromUrl,
-              standaloneEmail: linkedResult.data.shop_domain,
-            },
-          );
+          logger.info("[Connections API] Found Shopify store by shop_domain", {
+            component: "connections",
+            shopDomain: shopFromUrl,
+          });
         } else {
           logger.warn("[Connections API] No shop found for Shopify domain", {
             component: "connections",
@@ -313,11 +342,51 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get all integrations for this shop
+    // For standalone users, get integrations from their MASTER shop (linked Shopify store)
+    // Standalone users inherit connection status from their master account
+    let integrationsShopId = shopData.id;
+
+    if (shopData.shop_type === "standalone" && shopData.linked_shopify_domain) {
+      // Look up the master shop by the linked_shopify_domain
+      const { data: masterShop, error: masterError } = await supabaseAdmin
+        .from("shops")
+        .select(
+          "id, is_active, shop_type, shopify_access_token, shop_domain, linked_shopify_domain",
+        )
+        .eq("shop_domain", shopData.linked_shopify_domain)
+        .eq("shop_type", "shopify")
+        .single();
+
+      if (masterShop && !masterError) {
+        integrationsShopId = masterShop.id;
+        // masterShopData is available for future use if needed
+        logger.info(
+          "[Connections API] Standalone user inheriting integrations from master shop",
+          {
+            component: "connections",
+            standaloneEmail: shopData.shop_domain,
+            masterShopDomain: masterShop.shop_domain,
+            masterShopId: masterShop.id,
+          },
+        );
+      } else {
+        logger.warn(
+          "[Connections API] Standalone user has linked_shopify_domain but master shop not found",
+          {
+            component: "connections",
+            standaloneEmail: shopData.shop_domain,
+            linkedShopifyDomain: shopData.linked_shopify_domain,
+            error: masterError?.message,
+          },
+        );
+      }
+    }
+
+    // Get all integrations for the appropriate shop (master shop for standalone users)
     const { data: integrations, error: integrationsError } = await supabaseAdmin
       .from("integrations")
       .select("*")
-      .eq("shop_id", shopData.id)
+      .eq("shop_id", integrationsShopId)
       .eq("is_active", true);
 
     if (integrationsError) {

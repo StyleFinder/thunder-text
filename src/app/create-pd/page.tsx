@@ -4,17 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useState, useCallback, useEffect, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  Loader2,
-  Zap,
-  ArrowLeft,
-  Sparkles,
-  Camera,
-  Image as ImageIcon,
-  Settings2,
-  FileText,
-  CheckCircle2
-} from "lucide-react";
+import { Loader2, Zap, ArrowLeft, Sparkles, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -61,7 +51,12 @@ interface GeneratedContent {
 }
 
 // Step indicator component
-function StepIndicator({ step, title, isActive, isComplete }: {
+function StepIndicator({
+  step,
+  title,
+  isActive,
+  isComplete,
+}: {
   step: number;
   title: string;
   isActive?: boolean;
@@ -72,10 +67,10 @@ function StepIndicator({ step, title, isActive, isComplete }: {
       <div
         className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
           isComplete
-            ? 'bg-green-100 text-green-600'
+            ? "bg-green-100 text-green-600"
             : isActive
-              ? 'bg-blue-100 text-blue-600'
-              : 'bg-gray-100 text-gray-500'
+              ? "bg-blue-100 text-blue-600"
+              : "bg-gray-100 text-gray-500"
         }`}
       >
         {isComplete ? <CheckCircle2 className="w-4 h-4" /> : step}
@@ -114,6 +109,7 @@ function CreateProductContent() {
     colorDetectionLoading,
     detectColorsFromPhotos,
     updateVariantOverride,
+    clearVariants,
   } = useColorDetection({ shop });
 
   const {
@@ -123,6 +119,7 @@ function CreateProductContent() {
     handleSecondaryPhotosDrop,
     removePrimaryPhoto,
     removeSecondaryPhoto,
+    clearAllPhotos,
   } = useFileUpload();
 
   const { sizingOptions, defaultSizing } = useShopSizes({ shop });
@@ -162,6 +159,38 @@ function CreateProductContent() {
     unknown
   > | null>(null);
   const [progress, setProgress] = useState(0);
+
+  // Reset form to initial state for creating a new product
+  const resetForm = useCallback(() => {
+    // Clear all photos and detected colors
+    clearAllPhotos();
+    clearVariants();
+
+    // Reset form fields
+    setSelectedTemplate("general");
+    setProductType("");
+    setAvailableSizing(defaultSizing || "");
+    setTemplatePreview(null);
+    setFabricMaterial("");
+    setOccasionUse("");
+    setTargetAudience("");
+    setKeyFeatures("");
+    setAdditionalNotes("");
+    setCategoryDetected(false);
+    setSuggestedCategory(null);
+
+    // Reset generation state
+    setGenerating(false);
+    setError(null);
+    setShowModal(false);
+    setGeneratedContent(null);
+    setCreatingProduct(false);
+    setProductCreated(null);
+    setProgress(0);
+
+    // Scroll to top of page
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [clearAllPhotos, clearVariants, defaultSizing]);
 
   // Apply initial form values from pre-populated data
   useEffect(() => {
@@ -540,18 +569,26 @@ function CreateProductContent() {
           <div className="flex items-center gap-4">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+              style={{
+                background: "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+              }}
             >
               <Sparkles className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Create New Product</h1>
-              <p className="text-gray-500 text-sm">Generate AI-powered product descriptions from images</p>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Create New Product
+              </h1>
+              <p className="text-gray-500 text-sm">
+                Generate AI-powered product descriptions from images
+              </p>
             </div>
           </div>
           <Button
             variant="outline"
-            onClick={() => window.location.href = `/dashboard?${searchParams?.toString() || ""}`}
+            onClick={() =>
+              (window.location.href = `/dashboard?${searchParams?.toString() || ""}`)
+            }
             className="border-gray-200 hover:bg-gray-50"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -568,9 +605,15 @@ function CreateProductContent() {
 
         {/* Step 1: Product Type Selection */}
         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <StepIndicator step={1} title="What Product Are You Selling?" isActive={!productType} isComplete={!!productType} />
+          <StepIndicator
+            step={1}
+            title="What Product Are You Selling?"
+            isActive={!productType}
+            isComplete={!!productType}
+          />
           <p className="text-gray-500 text-sm mb-4 ml-11">
-            Specify the primary product type first. This helps the AI focus on the correct item when analyzing images.
+            Specify the primary product type first. This helps the AI focus on
+            the correct item when analyzing images.
           </p>
           <div className="ml-11">
             <ProductTypeSelector
@@ -590,7 +633,8 @@ function CreateProductContent() {
             isComplete={primaryPhotos.length > 0}
           />
           <p className="text-gray-500 text-sm mb-4 ml-11">
-            Upload clear photos of your product. The AI will analyze these to generate descriptions.
+            Upload clear photos of your product. The AI will analyze these to
+            generate descriptions.
           </p>
           <div className="ml-11">
             <PrimaryPhotoUpload
@@ -614,7 +658,8 @@ function CreateProductContent() {
             isComplete={secondaryPhotos.length > 0}
           />
           <p className="text-gray-500 text-sm mb-4 ml-11">
-            Add more photos showing different angles, details, or styling options.
+            Add more photos showing different angles, details, or styling
+            options.
           </p>
           <div className="ml-11">
             <SecondaryPhotoUpload
@@ -634,7 +679,8 @@ function CreateProductContent() {
             {primaryPhotos.length === 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 ml-11">
                 <p className="text-sm text-blue-700">
-                  Upload primary photos first, then select the product category below
+                  Upload primary photos first, then select the product category
+                  below
                 </p>
               </div>
             )}
@@ -646,15 +692,19 @@ function CreateProductContent() {
                 </p>
                 <p className="text-sm text-green-600">
                   Confidence: {(suggestedCategory.confidence * 100).toFixed(0)}%
-                  {suggestedCategory.confidence >= 0.6 ? " (Auto-assigned)" : " (Please review)"}
+                  {suggestedCategory.confidence >= 0.6
+                    ? " (Auto-assigned)"
+                    : " (Please review)"}
                 </p>
                 {suggestedCategory.confidence < 0.6 && (
                   <Button
                     size="sm"
                     className="mt-2"
-                    style={{ background: '#16a34a' }}
+                    style={{ background: "#16a34a" }}
                     onClick={() => {
-                      setSelectedTemplate(suggestedCategory.category as ProductCategory);
+                      setSelectedTemplate(
+                        suggestedCategory.category as ProductCategory,
+                      );
                       setCategoryDetected(true);
                     }}
                   >
@@ -667,10 +717,16 @@ function CreateProductContent() {
             <div className="space-y-4 ml-11">
               {/* Available Sizing */}
               <div className="space-y-2">
-                <Label htmlFor="sizing-select" className="text-gray-700 font-medium">
+                <Label
+                  htmlFor="sizing-select"
+                  className="text-gray-700 font-medium"
+                >
                   Available Sizing
                 </Label>
-                <Select value={availableSizing} onValueChange={setAvailableSizing}>
+                <Select
+                  value={availableSizing}
+                  onValueChange={setAvailableSizing}
+                >
                   <SelectTrigger id="sizing-select">
                     <SelectValue placeholder="Select the available size range" />
                   </SelectTrigger>
@@ -702,7 +758,10 @@ function CreateProductContent() {
 
             <div className="space-y-4 ml-11">
               <div className="space-y-2">
-                <Label htmlFor="fabric-material" className="text-gray-700 font-medium">
+                <Label
+                  htmlFor="fabric-material"
+                  className="text-gray-700 font-medium"
+                >
                   Fabric/Material Content
                 </Label>
                 <Textarea
@@ -716,7 +775,10 @@ function CreateProductContent() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="occasion-use" className="text-gray-700 font-medium">
+                <Label
+                  htmlFor="occasion-use"
+                  className="text-gray-700 font-medium"
+                >
                   Occasion Use
                 </Label>
                 <Textarea
@@ -730,7 +792,10 @@ function CreateProductContent() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="target-audience" className="text-gray-700 font-medium">
+                <Label
+                  htmlFor="target-audience"
+                  className="text-gray-700 font-medium"
+                >
                   Target Audience
                 </Label>
                 <Textarea
@@ -752,7 +817,10 @@ function CreateProductContent() {
 
           <div className="space-y-4 ml-11">
             <div className="space-y-2">
-              <Label htmlFor="key-features" className="text-gray-700 font-medium">
+              <Label
+                htmlFor="key-features"
+                className="text-gray-700 font-medium"
+              >
                 List the main features and benefits
               </Label>
               <Textarea
@@ -766,7 +834,10 @@ function CreateProductContent() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="additional-notes" className="text-gray-700 font-medium">
+              <Label
+                htmlFor="additional-notes"
+                className="text-gray-700 font-medium"
+              >
                 Additional Notes
               </Label>
               <Textarea
@@ -799,16 +870,20 @@ function CreateProductContent() {
           </Button>
           <Button
             onClick={handleGenerateDescription}
-            disabled={primaryPhotos.length === 0 || !selectedTemplate || generating}
+            disabled={
+              primaryPhotos.length === 0 || !selectedTemplate || generating
+            }
             className="px-6"
             style={{
-              background: primaryPhotos.length === 0 || !selectedTemplate || generating
-                ? '#e5e7eb'
-                : 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-              color: primaryPhotos.length === 0 || !selectedTemplate || generating
-                ? '#9ca3af'
-                : '#ffffff',
-              border: 'none'
+              background:
+                primaryPhotos.length === 0 || !selectedTemplate || generating
+                  ? "#e5e7eb"
+                  : "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+              color:
+                primaryPhotos.length === 0 || !selectedTemplate || generating
+                  ? "#9ca3af"
+                  : "#ffffff",
+              border: "none",
             }}
           >
             {generating ? (
@@ -845,10 +920,7 @@ function CreateProductContent() {
         creatingProduct={creatingProduct}
       />
 
-      <ProductCreatedModal
-        data={productCreated}
-        onClose={() => setProductCreated(null)}
-      />
+      <ProductCreatedModal data={productCreated} onClose={resetForm} />
     </div>
   );
 }
@@ -861,12 +933,17 @@ export default function CreateProductPage() {
           <div className="flex flex-col items-center gap-4">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+              style={{
+                background: "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+              }}
             >
               <Zap className="w-6 h-6 text-white" />
             </div>
             <div className="flex items-center gap-3">
-              <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#0066cc' }} />
+              <Loader2
+                className="h-5 w-5 animate-spin"
+                style={{ color: "#0066cc" }}
+              />
               <p className="text-sm text-gray-500">Loading Create Product...</p>
             </div>
           </div>

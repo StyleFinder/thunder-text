@@ -17,6 +17,10 @@ import {
   Megaphone,
   ArrowLeft,
   Sparkles,
+  ChevronDown,
+  Settings2,
+  Facebook,
+  AlertCircle,
 } from "lucide-react";
 import { authenticatedFetch } from "@/lib/shopify/api-client";
 import { Button } from "@/components/ui/button";
@@ -42,6 +46,22 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { logger } from "@/lib/logger";
+import { getCharacterLimits } from "@/lib/aie/utils/platformConstraints";
+import type { AiePlatform } from "@/types/aie";
+
+interface Campaign {
+  id: string;
+  name: string;
+  status: string;
+  objective: string;
+}
+
+interface AdAccount {
+  id: string;
+  name: string;
+  account_id: string;
+  currency: string;
+}
 
 interface ShopifyProduct {
   id: string;
@@ -231,6 +251,17 @@ export default function AIEPage() {
   const [description, setDescription] = useState<string>("");
   const [targetAudience, setTargetAudience] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
+
+  // Advanced ad length options
+  const [showAdvancedOptions, setShowAdvancedOptions] =
+    useState<boolean>(false);
+  const [adLengthMode, setAdLengthMode] = useState<string>("AUTO");
+  const [audienceTemperature, setAudienceTemperature] =
+    useState<string>("COLD");
+  const [productComplexity, setProductComplexity] = useState<string>("LOW");
+  const [productPrice, setProductPrice] = useState<string>("");
+  const [hasStrongStory, setHasStrongStory] = useState<boolean>(false);
+  const [isPremiumBrand, setIsPremiumBrand] = useState<boolean>(false);
   const [loadingStep, setLoadingStep] = useState<string>("");
   const [loadingProgress, setLoadingProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
@@ -239,6 +270,14 @@ export default function AIEPage() {
     [],
   );
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
+
+  // Facebook Campaign selection state
+  const [adAccounts, setAdAccounts] = useState<AdAccount[]>([]);
+  const [selectedAdAccount, setSelectedAdAccount] = useState<string>("");
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<string>("");
+  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
+  const [facebookConnected, setFacebookConnected] = useState(false);
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -263,12 +302,25 @@ export default function AIEPage() {
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const platformOptions = [
-    { label: "Meta (Facebook)", value: "meta" },
-    { label: "Instagram", value: "instagram" },
-    { label: "Google Ads", value: "google" },
-    { label: "TikTok", value: "tiktok" },
-    { label: "Pinterest", value: "pinterest" },
+    { label: "Meta (Facebook)", value: "meta", available: true },
+    { label: "Instagram", value: "instagram", available: true },
+    { label: "Google Ads", value: "google", available: false },
+    { label: "TikTok", value: "tiktok", available: false },
+    { label: "Pinterest", value: "pinterest", available: false },
   ];
+
+  // Get the display name for the selected platform's campaign section
+  const getPlatformCampaignLabel = (platformValue: string): string => {
+    const labels: Record<string, string> = {
+      meta: "Facebook",
+      instagram: "Instagram",
+      google: "Google",
+      tiktok: "TikTok",
+      pinterest: "Pinterest",
+    };
+    // eslint-disable-next-line security/detect-object-injection
+    return labels[platformValue] || "Facebook";
+  };
 
   const goalOptions = [
     { label: "Conversions", value: "conversion" },
@@ -324,6 +376,70 @@ export default function AIEPage() {
       setLoadingProducts(false);
     }
   }, [shop, debouncedSearchQuery]);
+
+  // Fetch Facebook Ad Accounts
+  const fetchAdAccounts = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `/api/facebook/ad-accounts?shop=${encodeURIComponent(shop)}`,
+      );
+      const data = await response.json();
+
+      if (data.success && data.data?.length > 0) {
+        setAdAccounts(data.data);
+        setFacebookConnected(true);
+        // Auto-select first account if only one
+        if (data.data.length === 1) {
+          setSelectedAdAccount(data.data[0].id);
+        }
+      } else if (data.code === "NOT_CONNECTED") {
+        setFacebookConnected(false);
+      }
+    } catch (err) {
+      logger.error("Error fetching ad accounts:", err as Error, {
+        component: "aie",
+      });
+      setFacebookConnected(false);
+    }
+  }, [shop]);
+
+  // Fetch Facebook Campaigns for selected ad account
+  const fetchCampaigns = useCallback(
+    async (adAccountId: string) => {
+      setIsLoadingCampaigns(true);
+      try {
+        const response = await fetch(
+          `/api/facebook/campaigns?shop=${encodeURIComponent(shop)}&ad_account_id=${encodeURIComponent(adAccountId)}`,
+        );
+        const data = await response.json();
+
+        if (data.success) {
+          setCampaigns(data.data || []);
+        }
+      } catch (err) {
+        logger.error("Error fetching campaigns:", err as Error, {
+          component: "aie",
+        });
+      } finally {
+        setIsLoadingCampaigns(false);
+      }
+    },
+    [shop],
+  );
+
+  // Load ad accounts on mount
+  useEffect(() => {
+    if (shop) {
+      fetchAdAccounts();
+    }
+  }, [shop, fetchAdAccounts]);
+
+  // Load campaigns when ad account changes
+  useEffect(() => {
+    if (selectedAdAccount && shop) {
+      fetchCampaigns(selectedAdAccount);
+    }
+  }, [selectedAdAccount, shop, fetchCampaigns]);
 
   useEffect(() => {
     if (productModalOpen) {
@@ -460,6 +576,13 @@ export default function AIEPage() {
             productMetadata.length > 0 ? productMetadata : undefined,
           // Indicate if this is a collection ad (multi-product)
           isCollectionAd: selectedProducts.length > 1,
+          // Advanced ad length options
+          adLengthMode: adLengthMode || "AUTO",
+          audienceTemperature: audienceTemperature || undefined,
+          productComplexity: productComplexity || undefined,
+          productPrice: productPrice ? parseFloat(productPrice) : undefined,
+          hasStrongStory: hasStrongStory || undefined,
+          isPremiumBrand: isPremiumBrand || undefined,
         }),
       });
 
@@ -515,7 +638,10 @@ export default function AIEPage() {
     );
   };
 
-  const handleSelectVariant = async (variant: EditableVariant) => {
+  const handleSelectVariant = async (
+    variant: EditableVariant,
+    postToFacebook: boolean = false,
+  ) => {
     try {
       // Save selected variant to ad library
       const response = await fetch("/api/aie/library", {
@@ -542,6 +668,14 @@ export default function AIEPage() {
               handle: p.handle,
             })),
           },
+          // Include Facebook campaign data if selected
+          facebookCampaign:
+            selectedCampaign && selectedAdAccount
+              ? {
+                  adAccountId: selectedAdAccount,
+                  campaignId: selectedCampaign,
+                }
+              : undefined,
           status: "draft",
         }),
       });
@@ -549,10 +683,57 @@ export default function AIEPage() {
       const data = await response.json();
 
       if (data.success && data.data?.ad?.id) {
+        const adId = data.data.ad.id;
+
+        // If user wants to post directly to Facebook and has a campaign selected
+        if (postToFacebook && selectedCampaign && selectedAdAccount) {
+          try {
+            const postResponse = await fetch("/api/facebook/create-ad", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                shop,
+                adId,
+                adAccountId: selectedAdAccount,
+                campaignId: selectedCampaign,
+              }),
+            });
+
+            const postData = await postResponse.json();
+
+            if (postData.success) {
+              setResultsModalOpen(false);
+              setError(null);
+              // Navigate to ads library with success message
+              router.push(`/ads-library?shop=${shop}&posted=true`);
+              return;
+            } else {
+              // Ad saved but posting failed - go to edit page
+              logger.error(
+                "Failed to post to Facebook:",
+                new Error(postData.error?.message || "Unknown error"),
+                {
+                  component: "aie",
+                },
+              );
+              setError(
+                `Ad saved but Facebook posting failed: ${postData.error?.message || "Unknown error"}. You can try again from the edit page.`,
+              );
+            }
+          } catch (postErr) {
+            logger.error("Error posting to Facebook:", postErr as Error, {
+              component: "aie",
+            });
+            setError(
+              "Ad saved but Facebook posting failed. You can try again from the edit page.",
+            );
+          }
+        }
+
         setResultsModalOpen(false);
         setError(null);
         // Navigate to the ad editor page
-        router.push(`/ads-library/${data.data.ad.id}/edit?shop=${shop}`);
+        router.push(`/ads-library/${adId}/edit?shop=${shop}`);
       } else {
         throw new Error(data.error?.message || "Failed to save ad");
       }
@@ -646,8 +827,19 @@ export default function AIEPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {platformOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
+                        <SelectItem
+                          key={opt.value}
+                          value={opt.value}
+                          disabled={!opt.available}
+                        >
+                          <span className="flex items-center gap-2">
+                            {opt.label}
+                            {!opt.available && (
+                              <span className="text-xs text-gray-400 italic">
+                                Coming Soon
+                              </span>
+                            )}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -675,6 +867,118 @@ export default function AIEPage() {
                   </Select>
                 </div>
               </div>
+
+              {/* Platform Campaign Selection */}
+              <Card className="border-blue-200 bg-blue-50/30">
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Facebook className="w-5 h-5 text-blue-600" />
+                    <Label className="text-base font-semibold text-gray-900">
+                      {getPlatformCampaignLabel(platform)} Campaign (Optional)
+                    </Label>
+                  </div>
+
+                  {!facebookConnected ? (
+                    <Alert className="bg-yellow-50 border-yellow-200">
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <AlertDescription className="text-yellow-700">
+                        Connect your Facebook account in{" "}
+                        <a
+                          href={`/settings/connections?shop=${shop}`}
+                          className="underline font-medium"
+                        >
+                          Settings
+                        </a>{" "}
+                        to post ads directly to campaigns.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Ad Account Selection */}
+                      <div className="flex flex-col gap-2">
+                        <Label
+                          htmlFor="adAccount"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Ad Account
+                        </Label>
+                        <Select
+                          value={selectedAdAccount}
+                          onValueChange={setSelectedAdAccount}
+                        >
+                          <SelectTrigger
+                            id="adAccount"
+                            className="h-11 border-gray-200 bg-white"
+                          >
+                            <SelectValue placeholder="Select an ad account" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {adAccounts.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name} ({account.currency})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Campaign Selection */}
+                      <div className="flex flex-col gap-2">
+                        <Label
+                          htmlFor="campaign"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Campaign
+                        </Label>
+                        <Select
+                          value={selectedCampaign}
+                          onValueChange={setSelectedCampaign}
+                          disabled={!selectedAdAccount || isLoadingCampaigns}
+                        >
+                          <SelectTrigger
+                            id="campaign"
+                            className="h-11 border-gray-200 bg-white"
+                          >
+                            <SelectValue
+                              placeholder={
+                                isLoadingCampaigns
+                                  ? "Loading campaigns..."
+                                  : !selectedAdAccount
+                                    ? "Select an ad account first"
+                                    : campaigns.length === 0
+                                      ? "No active campaigns found"
+                                      : "Select a campaign"
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {campaigns.map((campaign) => (
+                              <SelectItem key={campaign.id} value={campaign.id}>
+                                {campaign.name} ({campaign.status})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {selectedAdAccount &&
+                          campaigns.length === 0 &&
+                          !isLoadingCampaigns && (
+                            <p className="text-xs text-gray-500">
+                              No active campaigns found. Create a campaign in
+                              Facebook Ads Manager first.
+                            </p>
+                          )}
+                      </div>
+                    </div>
+                  )}
+
+                  {facebookConnected && (
+                    <p className="text-xs text-gray-500">
+                      Select a campaign now to post your ad directly after
+                      generation, or skip to just save to your library.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Product/Image Selection Buttons */}
               <div className="flex flex-col gap-3">
@@ -829,6 +1133,172 @@ export default function AIEPage() {
                 <p className="text-sm text-gray-500">
                   Helps personalize the ad copy
                 </p>
+              </div>
+
+              {/* Advanced Options - Collapsible */}
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Settings2 className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">
+                      Advanced Options
+                    </span>
+                  </div>
+                  <ChevronDown
+                    className={`w-4 h-4 text-gray-500 transition-transform ${
+                      showAdvancedOptions ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {showAdvancedOptions && (
+                  <div className="p-4 border-t border-gray-200 bg-white space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-2">
+                        <Label
+                          htmlFor="adLengthMode"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Ad Length
+                        </Label>
+                        <Select
+                          value={adLengthMode}
+                          onValueChange={setAdLengthMode}
+                        >
+                          <SelectTrigger
+                            id="adLengthMode"
+                            className="h-11 border-gray-200"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="AUTO">
+                              Auto (Recommended)
+                            </SelectItem>
+                            <SelectItem value="SHORT">Short</SelectItem>
+                            <SelectItem value="MEDIUM">Medium</SelectItem>
+                            <SelectItem value="LONG">Long</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-gray-500">
+                          AUTO intelligently selects based on context
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <Label
+                          htmlFor="audienceTemperature"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Audience Temperature
+                        </Label>
+                        <Select
+                          value={audienceTemperature}
+                          onValueChange={setAudienceTemperature}
+                        >
+                          <SelectTrigger
+                            id="audienceTemperature"
+                            className="h-11 border-gray-200"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="COLD">
+                              Cold (New prospects)
+                            </SelectItem>
+                            <SelectItem value="WARM">
+                              Warm (Engaged users)
+                            </SelectItem>
+                            <SelectItem value="HOT">
+                              Hot (Ready to buy)
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <Label
+                          htmlFor="productComplexity"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Product Complexity
+                        </Label>
+                        <Select
+                          value={productComplexity}
+                          onValueChange={setProductComplexity}
+                        >
+                          <SelectTrigger
+                            id="productComplexity"
+                            className="h-11 border-gray-200"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="LOW">
+                              Low (Simple product)
+                            </SelectItem>
+                            <SelectItem value="MEDIUM">
+                              Medium (Some features)
+                            </SelectItem>
+                            <SelectItem value="HIGH">
+                              High (Complex/Technical)
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <Label
+                          htmlFor="productPrice"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Product Price ($)
+                        </Label>
+                        <Input
+                          id="productPrice"
+                          type="number"
+                          value={productPrice}
+                          onChange={(e) => setProductPrice(e.target.value)}
+                          placeholder="e.g., 49.99"
+                          className="h-11 border-gray-200"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Helps determine copy length
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={hasStrongStory}
+                          onChange={(e) => setHasStrongStory(e.target.checked)}
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">
+                          Has Strong Story
+                        </span>
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isPremiumBrand}
+                          onChange={(e) => setIsPremiumBrand(e.target.checked)}
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">
+                          Premium Brand
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <Button
@@ -1061,13 +1531,20 @@ export default function AIEPage() {
                                 )
                               }
                               rows={2}
-                              maxLength={40}
+                              maxLength={
+                                getCharacterLimits(platform as AiePlatform)
+                                  .headline.max
+                              }
                               className="resize-none"
                             />
                             <p
-                              className={`text-xs ${(variant.editedHeadline?.length || 0) > 40 ? "text-red-500" : "text-gray-500"}`}
+                              className={`text-xs ${(variant.editedHeadline?.length || 0) > getCharacterLimits(platform as AiePlatform).headline.max ? "text-red-500" : "text-gray-500"}`}
                             >
-                              {variant.editedHeadline?.length || 0}/40
+                              {variant.editedHeadline?.length || 0}/
+                              {
+                                getCharacterLimits(platform as AiePlatform)
+                                  .headline.max
+                              }{" "}
                               characters
                             </p>
                           </div>
@@ -1087,13 +1564,20 @@ export default function AIEPage() {
                                 )
                               }
                               rows={3}
-                              maxLength={125}
+                              maxLength={
+                                getCharacterLimits(platform as AiePlatform)
+                                  .primaryText.max
+                              }
                               className="resize-none"
                             />
                             <p
-                              className={`text-xs ${(variant.editedPrimaryText?.length || 0) > 125 ? "text-red-500" : "text-gray-500"}`}
+                              className={`text-xs ${(variant.editedPrimaryText?.length || 0) > getCharacterLimits(platform as AiePlatform).primaryText.max ? "text-red-500" : "text-gray-500"}`}
                             >
-                              {variant.editedPrimaryText?.length || 0}/125
+                              {variant.editedPrimaryText?.length || 0}/
+                              {
+                                getCharacterLimits(platform as AiePlatform)
+                                  .primaryText.max
+                              }{" "}
                               characters
                             </p>
                           </div>
@@ -1206,17 +1690,37 @@ export default function AIEPage() {
 
                           <Separator />
 
-                          <Button
-                            className="w-full h-10 font-medium"
-                            style={{
-                              background:
-                                "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
-                              border: "none",
-                            }}
-                            onClick={() => handleSelectVariant(variant)}
-                          >
-                            Select This Variant
-                          </Button>
+                          <div className="space-y-2">
+                            <Button
+                              className="w-full h-10 font-medium"
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                                border: "none",
+                              }}
+                              onClick={() =>
+                                handleSelectVariant(variant, false)
+                              }
+                            >
+                              Save to Library
+                            </Button>
+                            {selectedCampaign && selectedAdAccount && (
+                              <Button
+                                className="w-full h-10 font-medium"
+                                style={{
+                                  background:
+                                    "linear-gradient(135deg, #1877f2 0%, #4267b2 100%)",
+                                  border: "none",
+                                }}
+                                onClick={() =>
+                                  handleSelectVariant(variant, true)
+                                }
+                              >
+                                <Facebook className="w-4 h-4 mr-2" />
+                                Save & Post to Facebook
+                              </Button>
+                            )}
+                          </div>
                         </CardContent>
                       </Card>
                     );

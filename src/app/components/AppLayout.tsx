@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import { Suspense } from 'react'
-import { usePathname } from 'next/navigation'
-import { AppNavigation } from './AppNavigation'
+import { Suspense } from "react";
+import { usePathname } from "next/navigation";
+import { AppNavigation } from "./AppNavigation";
 
 interface AppLayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 function LoadingFallback() {
@@ -16,28 +16,26 @@ function LoadingFallback() {
         <p className="text-sm text-muted-foreground">Loading...</p>
       </div>
     </div>
-  )
+  );
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
-  // Hide navigation on auth, coach login, and welcome pages
-  const isAuthPage = pathname?.startsWith('/auth') || pathname?.startsWith('/coach') || pathname?.startsWith('/welcome')
+  // Hide navigation on auth, coach login, welcome, and BHB pages (BHB has its own layout)
+  const isAuthPage =
+    pathname?.startsWith("/auth") ||
+    pathname?.startsWith("/coach") ||
+    pathname?.startsWith("/welcome") ||
+    pathname?.startsWith("/bhb");
 
   if (isAuthPage) {
-    return (
-      <Suspense fallback={<LoadingFallback />}>
-        {children}
-      </Suspense>
-    )
+    return <Suspense fallback={<LoadingFallback />}>{children}</Suspense>;
   }
 
   return (
     <AppNavigation>
-      <Suspense fallback={<LoadingFallback />}>
-        {children}
-      </Suspense>
+      <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
     </AppNavigation>
-  )
+  );
 }

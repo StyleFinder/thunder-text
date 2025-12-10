@@ -6,7 +6,19 @@ import { logger } from "@/lib/logger";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { productInfo, platform, goal, adLengthMode } = body;
+    const {
+      productInfo,
+      platform,
+      goal,
+      adLengthMode,
+      targetAudience,
+      imageUrls,
+      audienceTemperature,
+      productComplexity,
+      productPrice,
+      hasStrongStory,
+      isPremiumBrand,
+    } = body;
 
     if (!productInfo || !platform || !goal) {
       return NextResponse.json(
@@ -63,6 +75,14 @@ export async function POST(req: NextRequest) {
       goal: goal as AieGoal,
       shopId: body.shopId, // Pass shopId if provided
       adLengthMode: (adLengthMode as AdLengthMode) || "AUTO", // Default to AUTO if not provided
+      targetAudience: targetAudience || undefined, // Pass target audience if provided
+      imageUrls: imageUrls || undefined, // Pass image URLs for vision analysis
+      // Advanced ad length selection inputs
+      audienceTemperature: audienceTemperature || undefined,
+      productComplexity: productComplexity || undefined,
+      productPrice: productPrice || undefined,
+      hasStrongStory: hasStrongStory || undefined,
+      isPremiumBrand: isPremiumBrand || undefined,
     });
 
     // Transform snake_case to camelCase for frontend compatibility
