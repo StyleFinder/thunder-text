@@ -4,7 +4,44 @@ This document provides a comprehensive guide to fully testing Thunder Text, incl
 
 ---
 
-## 1. Current Testing Infrastructure
+## 1. CI/CD Pipeline Status
+
+### GitHub Actions Workflow ✅ COMPLETE
+
+The CI/CD pipeline is fully configured and operational.
+
+| Job                    | Status  | Duration | Triggers On          |
+| ---------------------- | ------- | -------- | -------------------- |
+| Unit & Integration     | ✅ Pass | ~1m 30s  | Push to main/develop |
+| E2E Tests (Playwright) | ✅ Pass | ~6m 54s  | PR to main/develop   |
+| PR Summary Comment     | ✅ Pass | Auto     | Pull requests only   |
+
+### Branch Protection ✅ ENABLED
+
+The `main` branch is protected with required status checks:
+
+```
+main branch protection:
+├─ ✅ Required Status Checks:
+│   ├─ "Unit & Integration Tests" - Must pass before merge
+│   └─ "E2E Tests" - Must pass before merge
+├─ ✅ Strict Updates: Branch must be up-to-date with main
+├─ ✅ Force Push Blocked: Prevents history rewriting
+└─ ✅ Branch Deletion Blocked: Prevents accidental deletion
+```
+
+### Environment Secrets (Preview)
+
+All secrets are configured in GitHub Environment "Preview":
+
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_SERVICE_KEY`
+- `NEXTAUTH_SECRET`, `OPENAI_API_KEY`, `STRIPE_SECRET_KEY`
+- `DATABASE_URL`, `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`
+
+---
+
+## 2. Testing Infrastructure
 
 ### Testing Framework Stack
 
@@ -46,7 +83,7 @@ Target thresholds for future enforcement:
 
 ---
 
-## 2. Testing Pyramid for Thunder Text
+## 3. Testing Pyramid for Thunder Text
 
 ```
         ┌─────────────────┐
@@ -63,7 +100,7 @@ Target thresholds for future enforcement:
 
 ---
 
-## 3. Edge Cases to Test
+## 4. Edge Cases to Test
 
 ### Authentication & Sessions (CRITICAL)
 
@@ -117,7 +154,7 @@ Target thresholds for future enforcement:
 
 ---
 
-## 4. Manual Testing Phases
+## 5. Manual Testing Phases
 
 ### Phase 1: OAuth & Installation (CRITICAL)
 
@@ -161,7 +198,7 @@ Target thresholds for future enforcement:
 
 ---
 
-## 5. Best Practices for SaaS Testing
+## 6. Best Practices for SaaS Testing
 
 ### A. Unit Testing Best Practices
 
@@ -229,7 +266,7 @@ it('Shop A cannot access Shop B data', async () => { ... });
 
 ---
 
-## 6. E2E Testing with Playwright
+## 7. E2E Testing with Playwright
 
 ### Setup
 
@@ -279,7 +316,7 @@ projects:
 
 ---
 
-## 7. Current Testing Gaps
+## 8. Current Testing Gaps
 
 ### Missing Test Coverage
 
@@ -355,7 +392,7 @@ export const TEST_SHOP = {
 
 ---
 
-## 7. Test Execution Checklist
+## 9. Test Execution Checklist
 
 ### Before Each Release
 
@@ -375,7 +412,7 @@ export const TEST_SHOP = {
 
 ---
 
-## 8. Key Files Reference
+## 10. Key Files Reference
 
 ### Test Configuration
 
@@ -402,12 +439,12 @@ export const TEST_SHOP = {
 
 ## Summary
 
-Thunder Text has a comprehensive testing foundation with Jest 30, React Testing Library, Playwright E2E, and thorough integration tests.
+Thunder Text has a comprehensive testing foundation with Jest 30, React Testing Library, Playwright E2E, and thorough integration tests. **CI/CD is fully operational with branch protection enabled.**
 
 ### Current Test Coverage
 
 - **18 integration test suites** covering all API tiers (260 tests)
-- **42 E2E tests** covering authentication, onboarding, and workflow flows
+- **94 E2E tests** covering authentication, onboarding, and workflow flows
 - **3 tiers covered**: Critical/Security, Core Features, BHB Coaching
 
 ### Testing Stack
@@ -416,24 +453,52 @@ Thunder Text has a comprehensive testing foundation with Jest 30, React Testing 
 | ----------- | ---------- | ----- | -------------------------- |
 | Unit        | Jest + RTL | ~100+ | `npm test`                 |
 | Integration | Jest       | 260   | `npm run test:integration` |
-| E2E         | Playwright | 42    | `npm run test:e2e`         |
+| E2E         | Playwright | 94    | `npm run test:e2e`         |
+
+### Completed Milestones ✅
+
+1. ✅ **CI/CD Pipeline** - GitHub Actions workflow operational
+2. ✅ **Branch Protection** - main branch requires passing tests
+3. ✅ **E2E Tests** - 94 Playwright tests covering auth, onboarding, workflows
+4. ✅ **Integration Tests** - 260 tests across all API tiers
+5. ✅ **Multi-tenant Isolation** - RLS testing via tenant-isolation.test.ts
+6. ✅ **AI Generation Validation** - Covered in aie-generate, generate tests
 
 ### Remaining Gaps
 
-1. ~~**No E2E tests**~~ ✅ DONE - Auth flows automated with Playwright
-2. ~~**E2E coverage expansion**~~ ✅ DONE - Onboarding flows automated
-3. **ESM mocking limitations** - Some tests are behavioral docs, not real endpoint tests
-4. **In-memory rate limiting** - Needs Redis for production
-5. **E2E coverage expansion** - Product generation, content center, billing (pending)
+1. **ESM mocking limitations** - Some tests are behavioral docs, not real endpoint tests
+2. **In-memory rate limiting** - Needs Redis for production
+3. **Flaky E2E test** - 1 skipped (dropdown timing in CI)
 
-### Testing Priorities
+---
 
-1. ✅ Authentication & OAuth flows (covered in Tier 1 + E2E)
-2. ✅ Multi-tenant isolation (covered in tenant-isolation.test.ts)
-3. ✅ AI generation validation (covered in aie-generate, generate tests)
-4. ✅ E2E tests with Playwright (auth flows complete)
-5. ⏳ Performance under load (recommended addition)
-6. ⏳ More E2E flows (onboarding, generation)
+## 11. Next Steps
+
+### Immediate Priority (This Sprint)
+
+| Task                            | Why                                         | Effort |
+| ------------------------------- | ------------------------------------------- | ------ |
+| Fix flaky E2E test              | Dropdown timing issue in onboarding.spec.ts | Low    |
+| Add `develop` branch protection | Same rules as main for staging safety       | Low    |
+| Enable coverage thresholds      | Enforce 80% when coverage improves          | Medium |
+
+### Short-Term (Next 2-4 Weeks)
+
+| Task                   | Why                                      | Effort |
+| ---------------------- | ---------------------------------------- | ------ |
+| Add more E2E tests     | Product generation, content center flows | Medium |
+| Test data factory      | Centralized fixture generation           | Medium |
+| API contract tests     | Validate request/response schemas        | Medium |
+| Performance benchmarks | Track response times in CI               | Medium |
+
+### Long-Term (Future Sprints)
+
+| Task                     | Why                                        | Effort |
+| ------------------------ | ------------------------------------------ | ------ |
+| Load testing framework   | Validate performance under stress          | High   |
+| Visual regression tests  | Catch UI changes with snapshots            | High   |
+| Redis rate limiting      | Production-ready rate limiting             | High   |
+| Convert behavioral tests | Real endpoint tests when Jest ESM improves | Medium |
 
 ### Bug Fix Note
 
