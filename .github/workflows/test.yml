@@ -24,6 +24,7 @@ jobs:
   unit-integration:
     name: Unit & Integration Tests
     runs-on: ubuntu-latest
+    environment: Preview  # Use Preview environment for secrets
 
     # Environment variables needed for tests
     env:
@@ -81,6 +82,7 @@ jobs:
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
+    environment: Preview  # Use Preview environment for secrets
 
     env:
       NODE_ENV: test
