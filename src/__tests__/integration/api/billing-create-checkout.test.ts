@@ -18,7 +18,9 @@ import { createServiceClient } from "../../utils/auth-helpers";
 jest.mock("@/lib/stripe", () => ({
   stripe: {
     customers: {
-      create: jest.fn<() => Promise<unknown>>().mockResolvedValue({ id: "cus_test_123" }),
+      create: jest
+        .fn<() => Promise<unknown>>()
+        .mockResolvedValue({ id: "cus_test_123" }),
     },
     subscriptions: {
       retrieve: jest.fn<() => Promise<unknown>>().mockResolvedValue({
@@ -85,7 +87,10 @@ describe("POST /api/billing/create-checkout", () => {
   afterAll(async () => {
     // Cleanup: Delete test shop and billing events
     if (testShopId) {
-      await serviceClient.from("billing_events").delete().eq("shop_id", testShopId);
+      await serviceClient
+        .from("billing_events")
+        .delete()
+        .eq("shop_id", testShopId);
       await serviceClient.from("shops").delete().eq("id", testShopId);
     }
   });
@@ -167,8 +172,10 @@ describe("POST /api/billing/create-checkout", () => {
 
   describe("Shop Not Found", () => {
     it("should return 404 for non-existent shopId", async () => {
+      // Use "free" plan which checks shop existence before Stripe price validation
+      // Paid plans check STRIPE_PRICE_* env vars first, which may not be set in CI
       const request = createPostRequest({
-        plan: "starter",
+        plan: "free",
         shopId: "00000000-0000-0000-0000-000000000000",
       });
 
@@ -229,7 +236,9 @@ describe("POST /api/billing/create-checkout", () => {
 
       const response = await POST(request);
 
-      expect(response.headers.get("content-type")).toContain("application/json");
+      expect(response.headers.get("content-type")).toContain(
+        "application/json",
+      );
     });
 
     it("should return success field in response", async () => {
