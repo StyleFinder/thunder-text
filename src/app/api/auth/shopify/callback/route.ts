@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth-options";
 import { logger } from "@/lib/logger";
 
 /**
- * Unified Shopify OAuth Callback Handler
+ * Shopify OAuth Callback Handler
  *
- * This handles OAuth callbacks for all Shopify authentication flows:
- * - Welcome page flow (new installations) → redirects to /welcome?step=social
- * - Embedded app flow (re-authentication) → redirects to /dashboard
+ * This handles OAuth callbacks for Shopify authentication:
+ * - New installations → creates shop record, redirects to /welcome?step=social
+ * - Re-authentication → updates tokens, redirects to /dashboard
  *
  * Security features:
  * - State parameter validation (CSRF protection)
@@ -52,25 +54,16 @@ export async function GET(req: NextRequest) {
       validateShopifyOAuthState,
       verifyStoredOAuthState,
       clearStoredOAuthState,
-      isStandaloneShopifyLinkState,
-      validateStandaloneShopifyLinkState,
     } = await import("@/lib/security/oauth-validation");
 
     // SECURITY: Verify stored state to prevent replay attacks
-    // This checks that the returned state matches exactly what we generated
-    // Check both regular "shopify" and "shopify_link" state types
-    const isLinkState = isStandaloneShopifyLinkState(state);
-    const stateType = isLinkState ? "shopify_link" : "shopify";
-
     logger.info("[Shopify Callback] Verifying OAuth state", {
       component: "callback",
       shop,
-      stateType,
-      isLinkState,
       statePrefix: state.substring(0, 20),
     });
 
-    const stateMatchesStored = await verifyStoredOAuthState(state, stateType);
+    const stateMatchesStored = await verifyStoredOAuthState(state, "shopify");
     if (!stateMatchesStored) {
       logger.error(
         "[Shopify Callback] State replay attack detected - state does not match stored value",
@@ -78,8 +71,7 @@ export async function GET(req: NextRequest) {
         {
           component: "callback",
           shop,
-          stateType,
-          hint: "Cookie may not have been set or was cleared. Check link route logs.",
+          hint: "Cookie may not have been set or was cleared.",
         },
       );
       return NextResponse.redirect(
@@ -88,26 +80,23 @@ export async function GET(req: NextRequest) {
     }
 
     // SECURITY: Clear the stored state immediately (single-use)
-    await clearStoredOAuthState(stateType);
+    await clearStoredOAuthState("shopify");
 
     // Validate state parameter format and contents (CSRF protection)
-    // Skip this for link states - they use a different schema and are validated later
-    if (!isLinkState) {
-      try {
-        validateShopifyOAuthState(state, shop);
-      } catch (error) {
-        logger.error(
-          "[Shopify Callback] State validation failed",
-          error as Error,
-          {
-            component: "callback",
-            shop,
-          },
-        );
-        return NextResponse.redirect(
-          `${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=invalid_state`,
-        );
-      }
+    try {
+      validateShopifyOAuthState(state, shop);
+    } catch (error) {
+      logger.error(
+        "[Shopify Callback] State validation failed",
+        error as Error,
+        {
+          component: "callback",
+          shop,
+        },
+      );
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=invalid_state`,
+      );
     }
 
     // Verify HMAC if present (Shopify security check)
@@ -168,113 +157,38 @@ export async function GET(req: NextRequest) {
       ? shop
       : `${shop}.myshopify.com`;
 
-    // ============================================================
-    // STANDALONE USER SHOPIFY LINK FLOW
-    // ============================================================
-    // Check if this is a standalone user linking to a Shopify store
-    if (isStandaloneShopifyLinkState(state)) {
-      try {
-        // Validate the standalone link state
-        const linkState = validateStandaloneShopifyLinkState(
-          state,
-          fullShopDomain,
-        );
+    // Get the current user session (if logged in via email/password signup)
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
-        logger.info("[Shopify Callback] Processing standalone user link", {
-          component: "callback",
-          standaloneUserId: linkState.standalone_user_id,
-          targetShop: fullShopDomain,
-        });
-
-        // Verify the standalone user still exists
-        const { data: standaloneUser, error: userError } = await supabaseAdmin
-          .from("shops")
-          .select("id, shop_domain, shop_type, email")
-          .eq("id", linkState.standalone_user_id)
-          .eq("shop_type", "standalone")
-          .single();
-
-        if (userError || !standaloneUser) {
-          logger.error(
-            "[Shopify Callback] Standalone user not found during link",
-            undefined,
-            {
-              component: "callback",
-              standaloneUserId: linkState.standalone_user_id,
-              error: userError?.message,
-            },
-          );
-          return NextResponse.redirect(
-            `${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=user_not_found`,
-          );
-        }
-
-        // Update the standalone user with the linked Shopify domain and access token
-        const { error: updateError } = await supabaseAdmin
-          .from("shops")
-          .update({
-            linked_shopify_domain: fullShopDomain,
-            shopify_access_token: access_token,
-            shopify_scope: scope || "",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", standaloneUser.id);
-
-        if (updateError) {
-          logger.error(
-            "[Shopify Callback] Failed to link Shopify domain",
-            updateError as Error,
-            {
-              component: "callback",
-              standaloneUserId: standaloneUser.id,
-              targetShop: fullShopDomain,
-            },
-          );
-          return NextResponse.redirect(
-            `${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=link_failed`,
-          );
-        }
-
-        logger.info(
-          "[Shopify Callback] Successfully linked standalone user to Shopify",
-          {
-            component: "callback",
-            standaloneUserId: standaloneUser.id,
-            standaloneEmail: standaloneUser.email,
-            linkedShop: fullShopDomain,
-          },
-        );
-
-        // Redirect back to connections page with success message
-        // Use the linked Shopify domain for the shop param (not email)
-        const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings/connections?shop=${encodeURIComponent(fullShopDomain)}&shopify_linked=true&message=${encodeURIComponent(`Successfully linked to ${fullShopDomain}`)}`;
-
-        return NextResponse.redirect(redirectUrl);
-      } catch (linkError) {
-        logger.error(
-          "[Shopify Callback] Standalone link validation failed",
-          linkError as Error,
-          {
-            component: "callback",
-            shop: fullShopDomain,
-          },
-        );
-        return NextResponse.redirect(
-          `${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=invalid_link_state`,
-        );
-      }
-    }
-
-    // ============================================================
-    // STANDARD SHOPIFY OAUTH FLOW (New installations or re-auth)
-    // ============================================================
-
-    // Check if shop already exists
+    // Check if shop already exists by Shopify domain
     const { data: existingShop } = await supabaseAdmin
       .from("shops")
       .select("id")
       .eq("shop_domain", fullShopDomain)
       .single();
+
+    // Also check for a pending shop record for this user (created during email/password signup)
+    // Pending shop domains follow the pattern: pending-{timestamp}.{any-domain}
+    let pendingShop = null;
+    if (userId && !existingShop) {
+      const { data: pendingRecord } = await supabaseAdmin
+        .from("shops")
+        .select("id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals")
+        .eq("id", userId)
+        .like("shop_domain", "pending-%")
+        .single();
+
+      if (pendingRecord) {
+        pendingShop = pendingRecord;
+        logger.info("[Shopify Callback] Found pending shop record for user", {
+          component: "callback",
+          userId,
+          pendingShopId: pendingRecord.id,
+          shop: fullShopDomain,
+        });
+      }
+    }
 
     let shopId: string;
     let isNewInstallation = false;
@@ -282,12 +196,12 @@ export async function GET(req: NextRequest) {
     if (existingShop) {
       shopId = existingShop.id;
 
-      // Update existing shop
+      // Update existing shop with new tokens
       await supabaseAdmin
         .from("shops")
         .update({
-          access_token,
-          scope: scope || "",
+          shopify_access_token: access_token,
+          shopify_scope: scope || "",
           shop_type: "shopify",
           is_active: true,
           updated_at: new Date().toISOString(),
@@ -298,16 +212,45 @@ export async function GET(req: NextRequest) {
         component: "callback",
         shop: fullShopDomain,
       });
+    } else if (pendingShop) {
+      // User signed up via email/password and now connecting Shopify
+      // Update the pending shop record with real Shopify domain
+      shopId = pendingShop.id;
+      isNewInstallation = true;
+
+      await supabaseAdmin
+        .from("shops")
+        .update({
+          shop_domain: fullShopDomain,
+          shopify_access_token: access_token,
+          shopify_scope: scope || "",
+          shop_type: "shopify",
+          is_active: true,
+          installed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", shopId);
+
+      logger.info("[Shopify Callback] Merged pending shop with Shopify store", {
+        component: "callback",
+        shop: fullShopDomain,
+        pendingShopId: shopId,
+        preservedData: {
+          email: pendingShop.email,
+          store_name: pendingShop.store_name,
+          owner_name: pendingShop.owner_name,
+        },
+      });
     } else {
-      // Create new shop
+      // Create new shop (direct Shopify OAuth without prior signup)
       isNewInstallation = true;
 
       const { data: newShop, error: insertError } = await supabaseAdmin
         .from("shops")
         .insert({
           shop_domain: fullShopDomain,
-          access_token,
-          scope: scope || "",
+          shopify_access_token: access_token,
+          shopify_scope: scope || "",
           shop_type: "shopify",
           is_active: true,
           installed_at: new Date().toISOString(),
@@ -330,7 +273,10 @@ export async function GET(req: NextRequest) {
       }
 
       shopId = newShop.id;
+    }
 
+    // For new installations (both fresh and pending shop merges), set up subscription and prompts
+    if (isNewInstallation) {
       // Grant Default Trial Subscription (14 Days) for new installations
       const trialEndDate = new Date();
       trialEndDate.setDate(trialEndDate.getDate() + 14);

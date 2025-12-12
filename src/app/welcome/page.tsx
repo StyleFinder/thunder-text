@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,15 +10,28 @@ import {
   CheckCircle2,
   FileText,
   Target,
-  Users,
   Sparkles,
   ArrowRight,
   Store,
   Zap,
   ChevronLeft,
   ExternalLink,
-  Check
+  Check,
+  Phone,
+  MapPin,
+  Building2,
+  Calendar,
+  BarChart3,
+  Gift,
+  User
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { logger } from '@/lib/logger';
 
 type OnboardingStep = 'welcome' | 'shopify' | 'social' | 'complete';
@@ -29,6 +43,17 @@ interface ConnectionStatus {
   google: boolean;
   pinterest: boolean;
   tiktok: boolean;
+}
+
+interface StoreProfile {
+  storeName: string;
+  ownerName: string;
+  email: string;
+  phone: string;
+  city: string;
+  state: string;
+  storeType: 'online' | 'brick-and-mortar' | 'both' | '';
+  yearsInBusiness: string;
 }
 
 // Animated background gradient mesh
@@ -288,6 +313,7 @@ function CelebrationParticles() {
 export default function WelcomePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
   const [shopDomain, setShopDomain] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
@@ -300,6 +326,17 @@ export default function WelcomePage() {
     pinterest: false,
     tiktok: false,
   });
+  const [storeProfile, setStoreProfile] = useState<StoreProfile>({
+    storeName: '',
+    ownerName: '',
+    email: '',
+    phone: '',
+    city: '',
+    state: '',
+    storeType: '',
+    yearsInBusiness: '',
+  });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const steps: { id: OnboardingStep; label: string }[] = [
     { id: 'welcome', label: 'Welcome' },
@@ -356,6 +393,107 @@ export default function WelcomePage() {
     checkExistingConnections();
   }, [checkExistingConnections]);
 
+  // Fetch user email and existing profile data
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const shop = searchParams.get('shop');
+
+      // Try to fetch by shop param first, then by user ID from session
+      let apiUrl = '';
+      if (shop) {
+        apiUrl = `/api/shop/profile?shop=${shop}`;
+      } else if (session?.user?.id) {
+        apiUrl = `/api/shop/profile?userId=${session.user.id}`;
+      } else if (session?.user?.email) {
+        // Fallback: set email from session even if we can't fetch profile
+        setStoreProfile(prev => ({
+          ...prev,
+          email: session.user.email || '',
+        }));
+        return;
+      } else {
+        return;
+      }
+
+      try {
+        const response = await fetch(apiUrl);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.shop) {
+            setStoreProfile(prev => ({
+              ...prev,
+              storeName: data.shop.store_name || data.shop.display_name || '',
+              ownerName: data.shop.owner_name || '',
+              email: data.shop.email || '',
+              phone: data.shop.owner_phone || '',
+              city: data.shop.city || '',
+              state: data.shop.state || '',
+              storeType: data.shop.store_type || '',
+              yearsInBusiness: data.shop.years_in_business?.toString() || '',
+            }));
+          }
+        } else if (session?.user?.email) {
+          // If API fails but we have session email, use that
+          setStoreProfile(prev => ({
+            ...prev,
+            email: session.user.email || '',
+          }));
+        }
+      } catch (error) {
+        logger.error('Error fetching user profile:', error as Error, { component: 'welcome' });
+        // Fallback to session email on error
+        if (session?.user?.email) {
+          setStoreProfile(prev => ({
+            ...prev,
+            email: session.user.email || '',
+          }));
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [searchParams, session]);
+
+  const saveStoreProfile = async () => {
+    const shop = searchParams.get('shop');
+    const userId = session?.user?.id;
+
+    // Need either shop or userId to save
+    if (!shop && !userId) {
+      logger.warn('No shop or userId available to save profile', { component: 'welcome' });
+      return true; // Continue even without identifiers
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const response = await fetch('/api/shop/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shop: shop || undefined,
+          userId: !shop ? userId : undefined,
+          store_name: storeProfile.storeName,
+          owner_name: storeProfile.ownerName,
+          owner_phone: storeProfile.phone,
+          city: storeProfile.city,
+          state: storeProfile.state,
+          store_type: storeProfile.storeType || null,
+          years_in_business: storeProfile.yearsInBusiness ? parseInt(storeProfile.yearsInBusiness) : null,
+        }),
+      });
+
+      if (!response.ok) {
+        logger.error('Failed to save store profile', undefined, { component: 'welcome' });
+      }
+      return true;
+    } catch (error) {
+      logger.error('Error saving store profile:', error as Error, { component: 'welcome' });
+      return true; // Continue even if save fails
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   const transitionTo = (step: OnboardingStep) => {
     setIsTransitioning(true);
     setTimeout(() => {
@@ -375,6 +513,8 @@ export default function WelcomePage() {
       normalizedShop = `${normalizedShop}.myshopify.com`;
     }
     sessionStorage.setItem('onboarding_return', 'social');
+
+    // Standard Shopify OAuth flow
     window.location.href = `/api/auth/shopify?shop=${normalizedShop}`;
   };
 
@@ -422,12 +562,12 @@ export default function WelcomePage() {
           {/* Logo & Brand */}
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
-                <Zap className="w-6 h-6" style={{ color: '#ffcc00' }} />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#000000' }}>
+                <BarChart3 className="w-6 h-6" style={{ color: '#ffffff' }} />
               </div>
-              <span className="text-xl font-bold" style={{ color: '#ffffff' }}>Thunder Text</span>
+              <span className="text-xl font-bold" style={{ color: '#ffffff' }}>BoutiqueHub Black</span>
             </div>
-            <p className="text-sm ml-[52px]" style={{ color: 'rgba(255,255,255,0.7)' }}>AI-Powered E-commerce Suite</p>
+            <p className="text-sm ml-[52px]" style={{ color: 'rgba(255,255,255,0.7)' }}>Powered by Thunder Text</p>
           </div>
 
           {/* Step Indicator */}
@@ -440,10 +580,10 @@ export default function WelcomePage() {
         <div className="flex-1 bg-gray-50 flex flex-col">
           {/* Mobile Header */}
           <div className="lg:hidden px-6 py-4 flex items-center gap-3" style={{ backgroundColor: '#002952' }}>
-            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
-              <Zap className="w-5 h-5 text-amber-400" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#000000' }}>
+              <BarChart3 className="w-5 h-5 text-white" />
             </div>
-            <span className="text-lg font-bold text-white">Thunder Text</span>
+            <span className="text-lg font-bold text-white">BoutiqueHub Black</span>
           </div>
 
           {/* Content Area */}
@@ -453,51 +593,192 @@ export default function WelcomePage() {
               {/* Step 1: Welcome */}
               {currentStep === 'welcome' && (
                 <div className="animate-welcome-fade-in-up">
-                  {/* Trial Badge */}
+                  {/* BHB Badge - Primary */}
                   <div
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6"
-                    style={{ backgroundColor: '#fef3c7', color: '#92400e' }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-4"
+                    style={{ backgroundColor: '#000000', color: '#ffffff' }}
                   >
-                    <Sparkles className="w-4 h-4" />
-                    14-Day Free Trial — No Credit Card Required
+                    <BarChart3 className="w-4 h-4" />
+                    BoutiqueHub Black Member
                   </div>
 
-                  <h1 className="text-3xl lg:text-[42px] font-bold text-gray-900 mb-4 leading-tight">
-                    <span className="whitespace-nowrap">Create Product & Ad Copy</span><br />
-                    <span
-                      className="text-transparent bg-clip-text"
-                      style={{ backgroundImage: 'linear-gradient(90deg, #0066cc 0%, #0099ff 100%)' }}
-                    >
-                      That Actually Sells
-                    </span>
+                  <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+                    Welcome to BoutiqueHub Black
                   </h1>
-
-                  <p className="text-lg text-gray-600 mb-10 leading-relaxed">
-                    Stop spending hours writing product descriptions. Let AI analyze your images
-                    and create SEO-optimized, conversion-focused copy in seconds.
+                  <p className="text-gray-600 mb-2">
+                    Connect your store and ad accounts to power your BHB coaching dashboard.
                   </p>
 
-                  {/* Feature Grid */}
-                  <div className="grid gap-4 mb-10">
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <FeatureCard
-                        icon={FileText}
-                        title="Thunder Text"
-                        description="AI product descriptions from your images"
-                        delay={100}
+                  {/* Thunder Text Trial Badge - Secondary */}
+                  <div
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-6"
+                    style={{ backgroundColor: '#dbeafe', color: '#1e40af' }}
+                  >
+                    <Gift className="w-3.5 h-3.5" />
+                    Plus: Free Thunder Text trial included — no credit card required
+                  </div>
+
+                  {/* Feature Cards - 3 items: BHB Dashboard, Thunder Text, ACE */}
+                  <div className="grid md:grid-cols-3 gap-3 mb-8">
+                    <FeatureCard
+                      icon={BarChart3}
+                      title="BHB Dashboard"
+                      description="Store insights for your coach"
+                      delay={100}
+                    />
+                    <FeatureCard
+                      icon={FileText}
+                      title="Thunder Text"
+                      description="AI product descriptions"
+                      delay={200}
+                    />
+                    <FeatureCard
+                      icon={Target}
+                      title="ACE Engine"
+                      description="AI-powered ad copy"
+                      delay={300}
+                    />
+                  </div>
+
+                  {/* Store Profile Form */}
+                  <div className="space-y-4 mb-8">
+                    {/* Store Name */}
+                    <div className="space-y-2">
+                      <Label htmlFor="store-name" className="text-gray-700 font-medium flex items-center gap-2">
+                        <Store className="w-4 h-4 text-gray-400" />
+                        Store Name *
+                      </Label>
+                      <Input
+                        id="store-name"
+                        type="text"
+                        placeholder="Your Store Name"
+                        value={storeProfile.storeName}
+                        onChange={(e) => setStoreProfile(prev => ({ ...prev, storeName: e.target.value }))}
+                        className="h-11"
                       />
-                      <FeatureCard
-                        icon={Target}
-                        title="ACE Engine"
-                        description="High-converting social media ads"
-                        delay={200}
+                    </div>
+
+                    {/* Owner Name */}
+                    <div className="space-y-2">
+                      <Label htmlFor="owner-name" className="text-gray-700 font-medium flex items-center gap-2">
+                        <User className="w-4 h-4 text-gray-400" />
+                        Your Name *
+                      </Label>
+                      <Input
+                        id="owner-name"
+                        type="text"
+                        placeholder="Jane Smith"
+                        value={storeProfile.ownerName}
+                        onChange={(e) => setStoreProfile(prev => ({ ...prev, ownerName: e.target.value }))}
+                        className="h-11"
                       />
-                      <FeatureCard
-                        icon={Users}
-                        title="BHB Coach"
-                        description="Personal strategy & optimization"
-                        delay={300}
+                    </div>
+
+                    {/* Email (read-only, auto-filled) */}
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-gray-700 font-medium">
+                        Email
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={storeProfile.email}
+                        disabled
+                        className="h-11 bg-gray-50 text-gray-500"
                       />
+                    </div>
+
+                    {/* Phone */}
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-gray-700 font-medium flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-gray-400" />
+                        Phone Number
+                      </Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="(555) 555-5555"
+                        value={storeProfile.phone}
+                        onChange={(e) => setStoreProfile(prev => ({ ...prev, phone: e.target.value }))}
+                        className="h-11"
+                      />
+                    </div>
+
+                    {/* City & State */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="city" className="text-gray-700 font-medium flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-gray-400" />
+                          City
+                        </Label>
+                        <Input
+                          id="city"
+                          type="text"
+                          placeholder="New York"
+                          value={storeProfile.city}
+                          onChange={(e) => setStoreProfile(prev => ({ ...prev, city: e.target.value }))}
+                          className="h-11"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="state" className="text-gray-700 font-medium">
+                          State
+                        </Label>
+                        <Input
+                          id="state"
+                          type="text"
+                          placeholder="NY"
+                          value={storeProfile.state}
+                          onChange={(e) => setStoreProfile(prev => ({ ...prev, state: e.target.value }))}
+                          className="h-11"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Store Type */}
+                    <div className="space-y-2">
+                      <Label htmlFor="store-type" className="text-gray-700 font-medium flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-gray-400" />
+                        Business Type
+                      </Label>
+                      <Select
+                        value={storeProfile.storeType}
+                        onValueChange={(value) => setStoreProfile(prev => ({ ...prev, storeType: value as StoreProfile['storeType'] }))}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select business type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="online">Online Only</SelectItem>
+                          <SelectItem value="brick-and-mortar">Brick & Mortar Only</SelectItem>
+                          <SelectItem value="both">Both Online & Brick & Mortar</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Years in Business */}
+                    <div className="space-y-2">
+                      <Label htmlFor="years" className="text-gray-700 font-medium flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        Years in Business
+                      </Label>
+                      <Select
+                        value={storeProfile.yearsInBusiness}
+                        onValueChange={(value) => setStoreProfile(prev => ({ ...prev, yearsInBusiness: value }))}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select years in business" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Less than 1 year</SelectItem>
+                          <SelectItem value="1">1 year</SelectItem>
+                          <SelectItem value="2">2 years</SelectItem>
+                          <SelectItem value="3">3 years</SelectItem>
+                          <SelectItem value="4">4 years</SelectItem>
+                          <SelectItem value="5">5+ years</SelectItem>
+                          <SelectItem value="10">10+ years</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -508,10 +789,23 @@ export default function WelcomePage() {
                       background: 'linear-gradient(135deg, #0066cc 0%, #0052a3 100%)',
                       boxShadow: '0 4px 14px 0 rgba(0,102,204,0.3)'
                     }}
-                    onClick={() => transitionTo('shopify')}
+                    disabled={isSavingProfile || !storeProfile.storeName || !storeProfile.ownerName}
+                    onClick={async () => {
+                      await saveStoreProfile();
+                      transitionTo('shopify');
+                    }}
                   >
-                    Get Started
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                    {isSavingProfile ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        Continue
+                        <ArrowRight className="w-5 h-5 ml-2" />
+                      </>
+                    )}
                   </Button>
                 </div>
               )}
@@ -711,7 +1005,7 @@ export default function WelcomePage() {
                     </Button>
                     <Button
                       className="flex-1 h-12"
-                      onClick={() => router.push(`/?shop=${searchParams.get('shop')}`)}
+                      onClick={() => transitionTo('complete')}
                     >
                       Done Connecting
                     </Button>
@@ -745,7 +1039,7 @@ export default function WelcomePage() {
                     You're All Set!
                   </h1>
                   <p className="text-lg text-gray-600 mb-8">
-                    Your 14-day free trial is now active
+                    Your free trial plan is now active
                   </p>
 
                   {/* What's Included */}
@@ -753,9 +1047,8 @@ export default function WelcomePage() {
                     <h3 className="font-semibold text-gray-900 mb-4">What's included in your trial:</h3>
                     <ul className="space-y-3">
                       {[
-                        'Unlimited AI product descriptions',
+                        'Engaging AI product descriptions',
                         'AI-powered ad copy generation',
-                        'Personal BHB Coach support',
                         'Brand voice training & best practices',
                         'Full access to all features',
                       ].map((item, i) => (

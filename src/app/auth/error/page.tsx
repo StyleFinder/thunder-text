@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, ArrowLeft, Zap, RefreshCw, UserPlus } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Zap, RefreshCw } from 'lucide-react';
 
 export default function AuthErrorPage() {
   const searchParams = useSearchParams();
@@ -99,7 +99,6 @@ export default function AuthErrorPage() {
                   variant="outline"
                   className="w-full h-11 border-gray-200 hover:bg-gray-50"
                 >
-                  <UserPlus className="w-4 h-4 mr-2" />
                   Create Account
                 </Button>
               </Link>

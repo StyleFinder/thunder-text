@@ -1,0 +1,179 @@
+name: Test Suite
+
+# WHEN does this workflow run?
+on:
+  push:
+    branches: [main, develop] # Run on direct pushes to main/develop
+  pull_request:
+    branches: [main, develop] # Run on PRs targeting main/develop
+
+# SECURITY: Minimal permissions (principle of least privilege)
+permissions:
+  contents: read # Read code for checkout
+  pull-requests: write # Write PR comments with test results
+
+# Cancel previous runs if a new commit is pushed (saves CI minutes)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================
+  # JOB 1: Unit & Integration Tests (Fast)
+  # ============================================
+  unit-integration:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+
+    # Environment variables needed for tests
+    env:
+      NODE_ENV: test
+      # These come from GitHub Secrets (Settings > Secrets > Actions)
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+
+    steps:
+      # Step 1: Download your code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Setup Node.js with caching for faster installs
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm" # Cache node_modules between runs
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+        # 'npm ci' is faster than 'npm install' in CI
+        # It uses exact versions from package-lock.json
+
+      # Step 4: Type check (catch TypeScript errors)
+      - name: TypeScript type check
+        run: npm run type-check
+
+      # Step 5: Run unit tests with coverage
+      - name: Run unit tests
+        run: npm run test:ci
+
+      # Step 6: Run integration tests
+      - name: Run integration tests
+        run: npm run test:integration
+        timeout-minutes: 10 # Fail if tests hang
+
+      # Step 7: Upload coverage report (optional but useful)
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  # ============================================
+  # JOB 2: E2E Tests (Slower, runs in parallel)
+  # ============================================
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+      # Test user credentials for E2E auth (optional - has fallback defaults)
+      E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+      E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      # Playwright needs browser binaries installed
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        # --with-deps installs system dependencies (fonts, libs)
+        # Only chromium to save time (not firefox/webkit)
+
+      # Build the app (E2E tests need a running app)
+      - name: Build application
+        run: npm run build
+
+      # Run E2E tests
+      - name: Run E2E tests
+        run: npm run test:e2e
+        timeout-minutes: 15
+
+      # Upload test artifacts if tests fail (screenshots, traces)
+      - name: Upload Playwright report
+        if: failure() # Only upload on failure
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      # Upload screenshots/traces for debugging
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 7
+
+  # ============================================
+  # JOB 3: Comment on PR with results
+  # ============================================
+  pr-comment:
+    name: PR Summary
+    runs-on: ubuntu-latest
+    needs: [unit-integration, e2e] # Wait for both test jobs
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Comment test results on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const unitResult = '${{ needs.unit-integration.result }}';
+            const e2eResult = '${{ needs.e2e.result }}';
+
+            const unitIcon = unitResult === 'success' ? '✅' : '❌';
+            const e2eIcon = e2eResult === 'success' ? '✅' : '❌';
+
+            const body = `## 🧪 Test Results Summary
+
+            | Test Suite | Status |
+            |------------|--------|
+            | Unit & Integration | ${unitIcon} ${unitResult} |
+            | E2E (Playwright) | ${e2eIcon} ${e2eResult} |
+
+            ${unitResult === 'success' && e2eResult === 'success'
+              ? '### ✅ All tests passed! Ready for review.'
+              : '### ❌ Some tests failed. Please check the logs above.'}
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

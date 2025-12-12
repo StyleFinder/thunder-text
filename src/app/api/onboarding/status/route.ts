@@ -26,10 +26,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Get shop data including onboarding status
+    // Note: userId from getUserId() is actually the shop UUID (id), not the shop_domain
     const { data: shop, error: shopError } = await supabaseAdmin
       .from("shops")
       .select("shop_domain, onboarding_completed, onboarding_completed_at, user_type")
-      .eq("shop_domain", userId)
+      .eq("id", userId)
       .single();
 
     if (shopError || !shop) {

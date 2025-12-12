@@ -11,13 +11,23 @@ import { authOptions } from '@/lib/auth/auth-options';
 import { logger } from '@/lib/logger'
 
 /**
+ * Session role type from next-auth.d.ts
+ */
+type SessionRole = 'shop' | 'coach' | 'admin';
+
+/**
+ * Role parameter type - includes 'user' as legacy alias for 'shop'
+ */
+type RequiredRole = SessionRole | 'user';
+
+/**
  * Extended request type with user context (ACE-compatible)
  */
 export interface AuthenticatedRequest extends NextRequest {
   user: {
     userId: string;
     shop: string | undefined;
-    role: 'user' | 'coach' | 'admin';
+    role: SessionRole;
     email: string;
   };
 }
@@ -27,6 +37,13 @@ export interface AuthenticatedRequest extends NextRequest {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RouteHandler = (req: AuthenticatedRequest, context?: any) => Promise<Response>;
+
+/**
+ * Normalize role: 'user' is legacy alias for 'shop'
+ */
+function normalizeRole(role: RequiredRole): SessionRole {
+  return role === 'user' ? 'shop' : role;
+}
 
 /**
  * Require authentication with specific role
@@ -39,10 +56,12 @@ type RouteHandler = (req: AuthenticatedRequest, context?: any) => Promise<Respon
  * });
  * ```
  *
- * @param requiredRole - Required user role ('user', 'coach', or 'admin')
+ * @param requiredRole - Required user role ('user'/'shop', 'coach', or 'admin')
  * @returns Wrapped route handler with auth enforcement
  */
-export function requireAuth(requiredRole: 'user' | 'coach' | 'admin' = 'user') {
+export function requireAuth(requiredRole: RequiredRole = 'user') {
+  const normalizedRole = normalizeRole(requiredRole);
+
   return function (handler: RouteHandler) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return async (req: NextRequest, context?: any): Promise<Response> => {
@@ -59,9 +78,9 @@ export function requireAuth(requiredRole: 'user' | 'coach' | 'admin' = 'user') {
 
         // Check role authorization
         const userRole = session.user.role;
-        const roleHierarchy = { user: 0, coach: 1, admin: 2 };
+        const roleHierarchy: Record<SessionRole, number> = { shop: 0, coach: 1, admin: 2 };
 
-        if (roleHierarchy[userRole] < roleHierarchy[requiredRole]) {
+        if (roleHierarchy[userRole] < roleHierarchy[normalizedRole]) {
           return NextResponse.json(
             { error: 'Forbidden - Insufficient permissions' },
             { status: 403 }

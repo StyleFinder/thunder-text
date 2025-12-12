@@ -90,24 +90,6 @@ export const TikTokOAuthStateSchema = z.object({
 export type TikTokOAuthState = z.infer<typeof TikTokOAuthStateSchema>;
 
 /**
- * Standalone User Shopify Link State Schema
- * Used when a standalone user is linking to a Shopify store they have staff access to
- */
-export const StandaloneShopifyLinkStateSchema = z.object({
-  standalone_user_id: z.string().uuid("Invalid standalone user ID"),
-  standalone_email: z.string().email("Invalid email format"),
-  target_shop: z
-    .string()
-    .regex(/^[a-z0-9-]+\.myshopify\.com$/, "Invalid shop domain format"),
-  timestamp: z.number().int().positive("Timestamp must be positive"),
-  nonce: z.string().min(32, "Nonce must be at least 32 characters"),
-});
-
-export type StandaloneShopifyLinkState = z.infer<
-  typeof StandaloneShopifyLinkStateSchema
->;
-
-/**
  * Generate a cryptographically secure nonce for CSRF protection
  * Uses crypto.randomBytes for secure random generation
  */
@@ -424,107 +406,6 @@ export function validateTikTokOAuthState(stateParam: string): TikTokOAuthState {
   }
 
   return validated;
-}
-
-/**
- * Create Standalone User Shopify Link state parameter
- *
- * @param standalone_user_id - UUID of the standalone user
- * @param standalone_email - Email of the standalone user (their shop_domain)
- * @param target_shop - Target Shopify store domain (e.g., store.myshopify.com)
- * @returns Base64url encoded state string
- */
-export function createStandaloneShopifyLinkState(params: {
-  standalone_user_id: string;
-  standalone_email: string;
-  target_shop: string;
-}): string {
-  const state: StandaloneShopifyLinkState = {
-    standalone_user_id: params.standalone_user_id,
-    standalone_email: params.standalone_email,
-    target_shop: params.target_shop,
-    timestamp: Date.now(),
-    nonce: generateNonce(),
-  };
-
-  // Validate the state before encoding
-  StandaloneShopifyLinkStateSchema.parse(state);
-
-  return Buffer.from(JSON.stringify(state)).toString("base64url");
-}
-
-/**
- * Validate and parse Standalone User Shopify Link state parameter
- *
- * @param stateParam - Base64url encoded state string
- * @param expectedShop - Expected shop domain to prevent shop swapping attacks
- * @returns Parsed and validated state data
- * @throws ZodError if validation fails
- * @throws Error if state is expired, invalid, or shop doesn't match
- */
-export function validateStandaloneShopifyLinkState(
-  stateParam: string,
-  expectedShop: string,
-): StandaloneShopifyLinkState {
-  // Decode base64url
-  let decoded: string;
-  try {
-    decoded = Buffer.from(stateParam, "base64url").toString("utf-8");
-  } catch {
-    throw new Error("Invalid state encoding");
-  }
-
-  // Parse JSON
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(decoded);
-  } catch {
-    throw new Error("Invalid state JSON");
-  }
-
-  // Validate with Zod schema
-  const validated = StandaloneShopifyLinkStateSchema.parse(parsed);
-
-  // Verify shop matches expected value (prevent shop swapping)
-  if (validated.target_shop !== expectedShop) {
-    throw new Error(
-      `Shop mismatch: expected ${expectedShop}, got ${validated.target_shop}`,
-    );
-  }
-
-  // Check timestamp to prevent replay attacks
-  const stateAge = Date.now() - validated.timestamp;
-  if (stateAge > MAX_STATE_AGE_MS) {
-    throw new Error(
-      `State parameter expired (age: ${Math.round(stateAge / 1000)}s, max: ${MAX_STATE_AGE_MS / 1000}s)`,
-    );
-  }
-
-  if (stateAge < 0) {
-    throw new Error(
-      "State parameter from the future - possible clock skew or tampering",
-    );
-  }
-
-  return validated;
-}
-
-/**
- * Check if a state parameter is a standalone user link state
- * Used to determine which callback flow to use
- */
-export function isStandaloneShopifyLinkState(stateParam: string): boolean {
-  try {
-    const decoded = Buffer.from(stateParam, "base64url").toString("utf-8");
-    const parsed = JSON.parse(decoded);
-    return (
-      "standalone_user_id" in parsed &&
-      "standalone_email" in parsed &&
-      "target_shop" in parsed
-    );
-  } catch {
-    return false;
-  }
 }
 
 // =============================================================================

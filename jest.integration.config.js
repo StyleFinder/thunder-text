@@ -9,7 +9,8 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   displayName: "integration",
   testEnvironment: "node", // Use Node environment for integration tests
-  setupFilesAfterEnv: ["<rootDir>/jest.integration.setup.js"], // Use integration-specific setup
+  setupFiles: ["<rootDir>/jest.integration.env.js"], // Load env vars BEFORE module imports
+  setupFilesAfterEnv: ["<rootDir>/jest.integration.setup.js"], // Validation AFTER env loaded
   testMatch: [
     "<rootDir>/src/__tests__/security/**/*.test.ts",
     "<rootDir>/src/__tests__/integration/**/*.test.ts",

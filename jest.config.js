@@ -9,7 +9,14 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jsdom',
-  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
+  testPathIgnorePatterns: [
+    '<rootDir>/.next/',
+    '<rootDir>/node_modules/',
+    '<rootDir>/packages/',  // Exclude monorepo packages (have their own test config)
+    '<rootDir>/src/__tests__/security/',  // These need integration test config (node environment)
+    '<rootDir>/src/__tests__/integration/',  // These need integration test config
+    '<rootDir>/src/__tests__/utils/',  // Test utilities/helpers, not actual tests
+  ],
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
   },

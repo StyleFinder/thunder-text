@@ -163,18 +163,13 @@ export function PerformanceTable({
                         onClick={() => onToggleFavorite(shop.shop_id)}
                         className="p-1 rounded-lg hover:bg-gray-100 transition-all duration-200
                                    transform hover:scale-110"
-                        title={
-                          isFavorited
-                            ? "Remove from favorites"
-                            : "Add to favorites"
-                        }
+                        title={isFavorited ? "Remove from favorites" : "Add to favorites"}
                       >
                         <Star
-                          className={`w-5 h-5 transition-colors ${
-                            isFavorited
-                              ? "fill-amber-400 text-amber-400"
-                              : "text-gray-300 group-hover:text-gray-400"
-                          }`}
+                          className={`w-5 h-5 transition-colors ${isFavorited
+                            ? "fill-amber-400 text-amber-400"
+                            : "text-gray-300 group-hover:text-gray-400"
+                            }`}
                         />
                       </button>
                     </td>
@@ -262,13 +257,12 @@ export function PerformanceTable({
                     {/* ROAS */}
                     <td className="px-4 py-3 text-right">
                       <span
-                        className={`text-sm font-semibold ${
-                          shop.avg_roas >= 2.0
-                            ? "text-emerald-600"
-                            : shop.avg_roas >= 1.0
-                              ? "text-gray-900"
-                              : "text-rose-600"
-                        }`}
+                        className={`text-sm font-semibold ${shop.avg_roas >= 2.0
+                          ? "text-emerald-600"
+                          : shop.avg_roas >= 1.0
+                            ? "text-gray-900"
+                            : "text-rose-600"
+                          }`}
                       >
                         {shop.avg_roas.toFixed(2)}x
                       </span>
@@ -279,9 +273,7 @@ export function PerformanceTable({
                       {shop.campaigns.length > 0 && (
                         <button
                           onClick={() => toggleExpand(shop.shop_id)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium
-                                     text-gray-600 hover:text-gray-900 hover:bg-gray-100
-                                     rounded-lg transition-all duration-200"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
                         >
                           {isExpanded ? (
                             <>
@@ -313,10 +305,7 @@ export function PerformanceTable({
                             <span className="text-sm text-gray-700">
                               {campaign.campaign_name}
                             </span>
-                            <PerformanceBadge
-                              tier={campaign.performance_tier}
-                              size="sm"
-                            />
+                            <PerformanceBadge tier={campaign.performance_tier} size="sm" />
                           </div>
                         </td>
                         <td className="px-4 py-2.5 text-right text-sm text-gray-600" />

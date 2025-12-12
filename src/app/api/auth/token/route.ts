@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     // Get shop and access token from database
     const { data: shopData, error: shopError } = await supabaseAdmin
       .from('shops')
-      .select('id, shopify_access_token, shopify_access_token_legacy, token_expires_at')
+      .select('id, shopify_access_token, shopify_access_token_legacy')
       .eq('shop_domain', fullShopDomain)
       .eq('is_active', true)
       .single()
@@ -50,25 +50,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check if token is expired (if expiry tracking is enabled)
-    if (shopData.token_expires_at) {
-      const expiresAt = new Date(shopData.token_expires_at)
-      const now = new Date()
-
-      if (expiresAt <= now) {
-        return NextResponse.json(
-          { success: false, error: 'Token expired', requiresRefresh: true },
-          { status: 401, headers: corsHeaders }
-        )
-      }
-    }
-
     // Return the access token
     return NextResponse.json(
       {
         success: true,
         token: accessToken,
-        expiresAt: shopData.token_expires_at
       },
       { headers: corsHeaders }
     )

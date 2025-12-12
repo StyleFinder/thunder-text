@@ -1,5 +1,6 @@
-# Development App Configuration
-# Use with: shopify app dev --config shopify.app.dev.toml
+# DEVELOPMENT APP CONFIGURATION
+# This is for local development and testing only
+# DO NOT deploy this to production
 
 client_id = "b5651b35edf4f4c2222243626a5f721a"
 name = "Thunder Text Dev"
@@ -8,7 +9,7 @@ embedded = false
 handle = "thunder-text-dev"
 
 [build]
-dev_store_url = "zunosai-staging-test-store.myshopify.com"
+dev_store_url = "zunosai-dev.myshopify.com"
 
 [webhooks]
 api_version = "2025-01"
@@ -34,6 +35,7 @@ use_legacy_install_flow = false
 redirect_urls = [
   "https://thundertext-dev.ngrok.app/api/auth/callback",
   "https://thundertext-dev.ngrok.app/api/auth/shopify/callback",
+  "http://localhost:3050/api/auth/callback",
   "http://localhost:3050/api/auth/shopify/callback"
 ]
 

@@ -178,16 +178,8 @@ export async function GET(
       "fields",
       "id,name,status,objective,daily_budget,lifetime_budget",
     );
-    campaignsUrl.searchParams.set(
-      "filtering",
-      JSON.stringify([
-        {
-          field: "effective_status",
-          operator: "IN",
-          value: ["ACTIVE", "PAUSED"],
-        },
-      ]),
-    );
+    // Don't filter by status - show all campaigns to ensure visibility
+    // Note: effective_status can be ACTIVE, PAUSED, DELETED, ARCHIVED, IN_PROCESS, WITH_ISSUES
     campaignsUrl.searchParams.set("limit", "100");
 
     const campaignsResponse = await fetch(campaignsUrl.toString());
@@ -228,7 +220,7 @@ export async function GET(
           name: selectedAdAccount.name,
         },
         campaigns: [],
-        message: "No active or paused campaigns found",
+        message: "No campaigns found in this ad account",
       });
     }
 
@@ -253,16 +245,7 @@ export async function GET(
       "time_range",
       JSON.stringify({ since, until }),
     );
-    insightsUrl.searchParams.set(
-      "filtering",
-      JSON.stringify([
-        {
-          field: "campaign.effective_status",
-          operator: "IN",
-          value: ["ACTIVE", "PAUSED"],
-        },
-      ]),
-    );
+    // Don't filter insights by status - get data for all campaigns
 
     const insightsResponse = await fetch(insightsUrl.toString());
     const insightsData = await insightsResponse.json();

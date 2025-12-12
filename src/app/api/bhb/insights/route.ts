@@ -102,7 +102,6 @@ async function fetchFacebookCampaignData(
   shopId: string,
   integration: {
     encrypted_access_token?: string;
-    access_token?: string;
     additional_metadata?: { ad_accounts?: Array<{ id: string; name: string }> };
   },
 ): Promise<{
@@ -137,12 +136,7 @@ async function fetchFacebookCampaignData(
     const selectedAdAccount = adAccounts[0];
 
     // Decrypt access token
-    let accessToken: string;
-    if (integration.encrypted_access_token) {
-      accessToken = await decryptToken(integration.encrypted_access_token);
-    } else if (integration.access_token) {
-      accessToken = integration.access_token;
-    } else {
+    if (!integration.encrypted_access_token) {
       return {
         campaigns: [],
         ad_account_id: selectedAdAccount.id,
@@ -151,22 +145,16 @@ async function fetchFacebookCampaignData(
       };
     }
 
+    const accessToken = await decryptToken(integration.encrypted_access_token);
+
     // Fetch campaigns from Facebook API
     const campaignsUrl = new URL(
       `${FACEBOOK_GRAPH_URL}/${selectedAdAccount.id}/campaigns`,
     );
     campaignsUrl.searchParams.set("access_token", accessToken);
     campaignsUrl.searchParams.set("fields", "id,name,status,objective");
-    campaignsUrl.searchParams.set(
-      "filtering",
-      JSON.stringify([
-        {
-          field: "effective_status",
-          operator: "IN",
-          value: ["ACTIVE", "PAUSED"],
-        },
-      ]),
-    );
+    // Don't filter by status - show all campaigns to ensure visibility
+    // Note: effective_status can be ACTIVE, PAUSED, DELETED, ARCHIVED, IN_PROCESS, WITH_ISSUES
     campaignsUrl.searchParams.set("limit", "100");
 
     const campaignsResponse = await fetch(campaignsUrl.toString());
@@ -221,16 +209,7 @@ async function fetchFacebookCampaignData(
       "time_range",
       JSON.stringify({ since, until }),
     );
-    insightsUrl.searchParams.set(
-      "filtering",
-      JSON.stringify([
-        {
-          field: "campaign.effective_status",
-          operator: "IN",
-          value: ["ACTIVE", "PAUSED"],
-        },
-      ]),
-    );
+    // Don't filter insights by status - get data for all campaigns
 
     const insightsResponse = await fetch(insightsUrl.toString());
     const insightsData = await insightsResponse.json();
@@ -393,13 +372,19 @@ export async function GET() {
     }
 
     // Get all Facebook integrations in a single query for efficiency
-    const { data: integrations } = await supabaseAdmin
+    const { data: integrations, error: integrationsError } = await supabaseAdmin
       .from("integrations")
       .select(
-        "shop_id, encrypted_access_token, access_token, additional_metadata",
+        "shop_id, encrypted_access_token, additional_metadata",
       )
       .eq("provider", "facebook")
       .eq("is_active", true);
+
+    if (integrationsError) {
+      logger.error("Error fetching integrations:", integrationsError as Error, {
+        component: "bhb-insights",
+      });
+    }
 
     // Create a map of shop_id to integration
 

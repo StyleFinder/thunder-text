@@ -404,7 +404,7 @@ export default function BHBDashboard() {
 
           <div className="animate-bhb-fade-in animate-stagger-3">
             <StatCard
-              label="Total Spend (30d)"
+              label="Total Spend (30days)"
               value={formatCurrency(summary.total_spend)}
               subtext={`${summary.total_purchases.toLocaleString()} purchases`}
               icon={() => (
@@ -427,7 +427,7 @@ export default function BHBDashboard() {
 
           <div className="animate-bhb-fade-in animate-stagger-4">
             <StatCard
-              label="Average ROAS"
+              label="Average ROAS (30days)"
               value={`${summary.avg_roas.toFixed(2)}x`}
               valueColor={
                 summary.avg_roas >= 2.0
