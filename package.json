@@ -54,7 +54,7 @@
     "@shopify/app-bridge-utils": "^3.5.1",
     "@shopify/shopify-api": "^11.14.1",
     "@supabase/ssr": "^0.7.0",
-    "@supabase/supabase-js": "^2.57.2",
+    "@supabase/supabase-js": "^2.84.0",
     "@types/dompurify": "^3.0.5",
     "@types/qrcode": "^1.5.6",
     "axios": "^1.12.2",
