@@ -16,6 +16,7 @@ const customJestConfig = {
     '<rootDir>/src/__tests__/security/',  // These need integration test config (node environment)
     '<rootDir>/src/__tests__/integration/',  // These need integration test config
     '<rootDir>/src/__tests__/utils/',  // Test utilities/helpers, not actual tests
+    '<rootDir>/src/__tests__/mocks/',  // Mock files, not actual tests
     '<rootDir>/e2e/',  // E2E tests are run by Playwright, not Jest
   ],
   transform: {
