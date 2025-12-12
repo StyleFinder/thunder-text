@@ -476,11 +476,10 @@ Thunder Text has a comprehensive testing foundation with Jest 30, React Testing 
 
 ### Immediate Priority (This Sprint)
 
-| Task                            | Why                                         | Effort |
-| ------------------------------- | ------------------------------------------- | ------ |
-| Fix flaky E2E test              | Dropdown timing issue in onboarding.spec.ts | Low    |
-| Add `develop` branch protection | Same rules as main for staging safety       | Low    |
-| Enable coverage thresholds      | Enforce 80% when coverage improves          | Medium |
+| Task                       | Why                                         | Effort |
+| -------------------------- | ------------------------------------------- | ------ |
+| Fix flaky E2E test         | Dropdown timing issue in onboarding.spec.ts | Low    |
+| Enable coverage thresholds | Enforce 80% when coverage improves          | Medium |
 
 ### Short-Term (Next 2-4 Weeks)
 
