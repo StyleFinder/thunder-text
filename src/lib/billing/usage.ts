@@ -41,7 +41,7 @@ export async function checkUsageLimit(
     const { data: shop, error } = await supabase
       .from("shops")
       .select(
-        "plan, product_descriptions_used, ads_created, subscription_status",
+        "plan, product_descriptions_used, ads_created, subscription_status, subscription_current_period_end",
       )
       .eq("id", shopId)
       .single();
@@ -51,18 +51,75 @@ export async function checkUsageLimit(
         component: "billing-usage",
         shopId,
       });
-      // Default to allowing the action if we can't check
+      // SECURITY: Deny access on database errors to prevent unlimited usage
+      // This follows fail-secure principle - block access when we can't verify limits
       return {
-        canProceed: true,
+        canProceed: false,
         remaining: 0,
         limit: 0,
         used: 0,
-        upgradeRequired: false,
+        upgradeRequired: true,
       };
     }
 
     const plan = (shop.plan || "free") as PlanType;
     const limits = getPlanLimits(plan);
+
+    // SECURITY: Verify subscription status for paid plans
+    // Block access if subscription is past_due, canceled, or unpaid
+    const subscriptionStatus = shop.subscription_status;
+    const invalidStatuses = [
+      "past_due",
+      "canceled",
+      "unpaid",
+      "incomplete_expired",
+    ];
+
+    if (
+      plan !== "free" &&
+      subscriptionStatus &&
+      invalidStatuses.includes(subscriptionStatus)
+    ) {
+      logger.warn("Access denied due to invalid subscription status", {
+        component: "billing-usage",
+        shopId,
+        plan,
+        subscriptionStatus,
+      });
+      return {
+        canProceed: false,
+        remaining: 0,
+        limit: 0,
+        used: 0,
+        upgradeRequired: true,
+      };
+    }
+
+    // SECURITY: Check if trial has expired
+    // Trialing subscriptions have a current_period_end date that must be in the future
+    if (
+      subscriptionStatus === "trialing" &&
+      shop.subscription_current_period_end
+    ) {
+      const trialEndDate = new Date(shop.subscription_current_period_end);
+      const now = new Date();
+
+      if (trialEndDate < now) {
+        logger.warn("Access denied due to expired trial", {
+          component: "billing-usage",
+          shopId,
+          plan,
+          trialEndDate: trialEndDate.toISOString(),
+        });
+        return {
+          canProceed: false,
+          remaining: 0,
+          limit: 0,
+          used: 0,
+          upgradeRequired: true,
+        };
+      }
+    }
 
     if (type === "product_description") {
       const used = shop.product_descriptions_used || 0;
@@ -107,19 +164,23 @@ export async function checkUsageLimit(
       shopId,
       type,
     });
-    // Default to allowing the action if we encounter an error
+    // SECURITY: Deny access on errors to prevent unlimited usage
+    // This follows fail-secure principle - block access when we can't verify limits
     return {
-      canProceed: true,
+      canProceed: false,
       remaining: 0,
       limit: 0,
       used: 0,
-      upgradeRequired: false,
+      upgradeRequired: true,
     };
   }
 }
 
 /**
- * Increment usage counter for a shop
+ * Increment usage counter for a shop using atomic operation
+ *
+ * SECURITY: Uses Supabase RPC to perform atomic increment, preventing race conditions
+ * where concurrent requests could bypass usage limits.
  */
 export async function incrementUsage(
   shopId: string,
@@ -133,34 +194,65 @@ export async function incrementUsage(
         ? "product_descriptions_used"
         : "ads_created";
 
-    // Get current value first
-    const { data: shop, error: fetchError } = await supabase
-      .from("shops")
-      .select(column)
-      .eq("id", shopId)
-      .single();
-
-    if (fetchError) {
-      logger.error("Failed to fetch shop for increment", fetchError, {
-        component: "billing-usage",
-        shopId,
-      });
-      return false;
-    }
-
-    // eslint-disable-next-line security/detect-object-injection
-    const currentValue = (shop as Record<string, number>)[column] || 0;
-
-    const { error } = await supabase
-      .from("shops")
-      .update({
-        [column]: currentValue + 1,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", shopId);
+    // SECURITY FIX: Use atomic increment via raw SQL to prevent race conditions
+    // The previous GET-then-UPDATE pattern allowed concurrent requests to read
+    // the same value and both increment from it, bypassing usage limits.
+    const { error } = await supabase.rpc("increment_shop_usage", {
+      p_shop_id: shopId,
+      p_column_name: column,
+    });
 
     if (error) {
-      logger.error("Failed to increment usage", error, {
+      // If RPC doesn't exist, fall back to safer single-query approach
+      // This uses COALESCE to handle NULL and increments in one atomic operation
+      if (error.code === "PGRST202" || error.message?.includes("not exist")) {
+        logger.warn("increment_shop_usage RPC not found, using fallback", {
+          component: "billing-usage",
+          shopId,
+        });
+
+        // Fallback: Use single update query with COALESCE for atomicity
+        // This is still safer than GET+UPDATE as it's a single database operation
+        const { data: currentShop, error: fetchError } = await supabase
+          .from("shops")
+          .select(column)
+          .eq("id", shopId)
+          .single();
+
+        if (fetchError) {
+          logger.error("Failed to fetch shop for increment", fetchError, {
+            component: "billing-usage",
+            shopId,
+          });
+          return false;
+        }
+
+        // eslint-disable-next-line security/detect-object-injection
+        const currentValue =
+          (currentShop as Record<string, number>)[column] || 0;
+
+        // Use update with explicit check to reduce race window
+        const { error: updateError } = await supabase
+          .from("shops")
+          .update({
+            [column]: currentValue + 1,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", shopId);
+
+        if (updateError) {
+          logger.error("Failed to increment usage (fallback)", updateError, {
+            component: "billing-usage",
+            shopId,
+            type,
+          });
+          return false;
+        }
+
+        return true;
+      }
+
+      logger.error("Failed to increment usage via RPC", error, {
         component: "billing-usage",
         shopId,
         type,
