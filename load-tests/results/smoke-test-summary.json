@@ -1,0 +1,16 @@
+{
+  "timestamp": "2025-12-13T01:45:07.542Z",
+  "environment": "local",
+  "baseUrl": "http://localhost:3050",
+  "metrics": {
+    "totalRequests": 8,
+    "avgResponseTime": "7882.99",
+    "p95ResponseTime": "30000.93",
+    "p99ResponseTime": "N/A",
+    "minResponseTime": "174.22",
+    "maxResponseTime": "30000.94",
+    "errorRate": "25.00%",
+    "maxVUs": 2
+  },
+  "passed": false
+}

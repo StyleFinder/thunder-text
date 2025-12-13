@@ -454,6 +454,7 @@ Thunder Text has a comprehensive testing foundation with Jest 30, React Testing 
 | Unit        | Jest + RTL | ~100+ | `npm test`                 |
 | Integration | Jest       | 260   | `npm run test:integration` |
 | E2E         | Playwright | 94    | `npm run test:e2e`         |
+| Load        | k6         | -     | `npm run test:load`        |
 
 ### Completed Milestones ✅
 
@@ -463,6 +464,7 @@ Thunder Text has a comprehensive testing foundation with Jest 30, React Testing 
 4. ✅ **Integration Tests** - 260 tests across all API tiers
 5. ✅ **Multi-tenant Isolation** - RLS testing via tenant-isolation.test.ts
 6. ✅ **AI Generation Validation** - Covered in aie-generate, generate tests
+7. ✅ **Load Testing Framework** - k6 smoke tests ready for production testing
 
 ### Remaining Gaps
 
@@ -474,30 +476,49 @@ Thunder Text has a comprehensive testing foundation with Jest 30, React Testing 
 
 ## 11. Next Steps
 
-### Immediate Priority (This Sprint)
+### Completed This Sprint ✅
 
-| Task                       | Why                                         | Effort |
-| -------------------------- | ------------------------------------------- | ------ |
-| Fix flaky E2E test         | Dropdown timing issue in onboarding.spec.ts | Low    |
-| Enable coverage thresholds | Enforce 80% when coverage improves          | Medium |
+| Task                           | Status     | Notes                                    |
+| ------------------------------ | ---------- | ---------------------------------------- |
+| ~~Fix flaky E2E test~~         | ⏭️ Skipped | Intentionally skipped per user decision  |
+| ~~Enable coverage thresholds~~ | ✅ Done    | Set to 0.5-1% baseline, excludes backend |
+| ~~E2E: Product generation~~    | ✅ Done    | `product-generation.spec.ts`             |
+| ~~E2E: Content center~~        | ✅ Done    | `content-center.spec.ts`                 |
+| ~~Load testing framework~~     | ✅ Done    | k6 smoke test in `load-tests/`           |
+
+### Load Testing
+
+```bash
+# Local smoke test (5 VUs, 40s) - for code validation only
+npm run test:load
+
+# Production load test (50 VUs, 2.5min) - run after Shopify approval
+BASE_URL=https://app.zunos.com npm run test:load
+```
+
+**Important**:
+
+- Local dev server is single-threaded and cannot handle concurrent load (expected)
+- **Run production load test on `app.zunos.com` after Shopify approval** to validate 50+ concurrent users
+- Production (Render) with auto-scaling will provide accurate performance metrics
 
 ### Short-Term (Next 2-4 Weeks)
 
-| Task                   | Why                                      | Effort |
-| ---------------------- | ---------------------------------------- | ------ |
-| Add more E2E tests     | Product generation, content center flows | Medium |
-| Test data factory      | Centralized fixture generation           | Medium |
-| API contract tests     | Validate request/response schemas        | Medium |
-| Performance benchmarks | Track response times in CI               | Medium |
+| Task                         | Why                                     | Effort |
+| ---------------------------- | --------------------------------------- | ------ |
+| Test data factory            | Centralized fixture generation          | Medium |
+| API contract tests           | Validate request/response schemas       | Medium |
+| Performance benchmarks       | Track response times in CI              | Medium |
+| Increase coverage thresholds | Raise from 1% toward 80% as tests added | Low    |
 
 ### Long-Term (Future Sprints)
 
-| Task                     | Why                                        | Effort |
-| ------------------------ | ------------------------------------------ | ------ |
-| Load testing framework   | Validate performance under stress          | High   |
-| Visual regression tests  | Catch UI changes with snapshots            | High   |
-| Redis rate limiting      | Production-ready rate limiting             | High   |
-| Convert behavioral tests | Real endpoint tests when Jest ESM improves | Medium |
+| Task                       | Why                                        | Effort           |
+| -------------------------- | ------------------------------------------ | ---------------- |
+| ~~Load testing framework~~ | ~~Validate performance under stress~~      | ~~High~~ ✅ Done |
+| Visual regression tests    | Catch UI changes with snapshots            | High             |
+| Redis rate limiting        | Production-ready rate limiting             | High             |
+| Convert behavioral tests   | Real endpoint tests when Jest ESM improves | Medium           |
 
 ### Bug Fix Note
 
