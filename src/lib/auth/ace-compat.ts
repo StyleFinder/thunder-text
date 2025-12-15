@@ -33,11 +33,12 @@ export interface AuthenticatedRequest extends NextRequest {
 }
 
 /**
- * Route handler type - supports context parameter for dynamic routes
+ * Route handler type - supports optional context parameter for dynamic routes
+ * Using 'any' for context to be compatible with Next.js App Router's varying context types
  */
+
 type RouteHandler = (
   req: AuthenticatedRequest,
-
   context?: any,
 ) => Promise<Response>;
 
@@ -66,9 +67,9 @@ export function requireAuth(requiredRole: RequiredRole = "user") {
   const normalizedRole = normalizeRole(requiredRole);
 
   return function (handler: RouteHandler) {
-    return async (
+    const wrappedHandler = async (
       req: NextRequest,
-      context?: Record<string, unknown>,
+      context?: any,
     ): Promise<Response> => {
       try {
         // Get NextAuth session
@@ -133,5 +134,8 @@ export function requireAuth(requiredRole: RequiredRole = "user") {
         );
       }
     };
+
+    // Return the handler - Next.js will accept this signature
+    return wrappedHandler;
   };
 }
