@@ -1,34 +1,41 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Zap, Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Zap,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const registered = searchParams.get('registered') === 'true';
-  const loggedOut = searchParams.get('logged_out') === 'true';
+  const registered = searchParams.get("registered") === "true";
+  const loggedOut = searchParams.get("logged_out") === "true";
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     }));
     setError(null);
   };
@@ -39,27 +46,50 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const result = await signIn('credentials', {
+      const result = await signIn("credentials", {
         email: formData.email,
         password: formData.password,
-        userType: 'shop', // For standalone shop users
+        userType: "shop", // For standalone shop users
         redirect: false,
       });
 
       if (result?.error) {
-        if (result.error.includes('ACCOUNT_LOCKED')) {
-          const seconds = result.error.split(':')[1];
+        if (result.error.includes("ACCOUNT_LOCKED")) {
+          const seconds = result.error.split(":")[1];
           setError(`Account locked. Please try again in ${seconds} seconds.`);
         } else {
-          setError('Invalid email or password');
+          setError("Invalid email or password");
         }
         return;
       }
 
-      // Redirect to welcome/onboarding flow
-      router.push('/welcome');
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
+      // Check onboarding status to determine redirect destination
+      try {
+        const statusResponse = await fetch("/api/onboarding/status");
+        const statusData = await statusResponse.json();
+
+        if (statusResponse.ok && statusData.success && statusData.data) {
+          const { onboarding_completed, shop_domain } = statusData.data;
+
+          if (onboarding_completed) {
+            // Established user with completed onboarding - go to dashboard
+            router.push(`/dashboard?shop=${shop_domain}`);
+          } else {
+            // New user - go to welcome/onboarding
+            router.push("/welcome");
+          }
+        } else {
+          // Account not found in shops table - show error
+          setError(
+            "Account not found. Please check your credentials or create an account.",
+          );
+        }
+      } catch {
+        // Error checking status - show error instead of redirecting
+        setError("Unable to verify account. Please try again.");
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -69,7 +99,8 @@ export default function LoginPage() {
     <div
       className="min-h-screen flex items-center justify-center p-6"
       style={{
-        background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+        background:
+          "linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)",
       }}
     >
       <div className="w-full max-w-md">
@@ -77,7 +108,9 @@ export default function LoginPage() {
         <div className="flex items-center justify-center gap-3 mb-8">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+            style={{
+              background: "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+            }}
           >
             <Zap className="w-5 h-5 text-white" />
           </div>
@@ -87,7 +120,9 @@ export default function LoginPage() {
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Welcome Back
+            </h1>
             <p className="text-gray-500">
               Sign in to your Thunder Text account
             </p>
@@ -140,7 +175,7 @@ export default function LoginPage() {
                 <Link
                   href="/auth/forgot-password"
                   className="text-sm font-medium hover:underline"
-                  style={{ color: '#0066cc' }}
+                  style={{ color: "#0066cc" }}
                 >
                   Forgot password?
                 </Link>
@@ -149,7 +184,7 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={handleChange}
@@ -162,7 +197,11 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -171,8 +210,8 @@ export default function LoginPage() {
               type="submit"
               className="w-full h-11 text-base font-medium"
               style={{
-                background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                border: 'none'
+                background: "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                border: "none",
               }}
               disabled={isLoading}
             >
@@ -182,20 +221,30 @@ export default function LoginPage() {
                   Signing in...
                 </>
               ) : (
-                'Sign In'
+                "Sign In"
               )}
             </Button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+          <div className="mt-6 pt-6 border-t border-gray-200 text-center space-y-3">
             <p className="text-sm text-gray-500">
-              Don&apos;t have an account?{' '}
+              Don&apos;t have an account?{" "}
               <Link
                 href="/auth/signup"
                 className="font-medium hover:underline"
-                style={{ color: '#0066cc' }}
+                style={{ color: "#0066cc" }}
               >
                 Create account
+              </Link>
+            </p>
+            <p className="text-sm text-gray-500">
+              Are you a coach?{" "}
+              <Link
+                href="/coach/login"
+                className="font-medium hover:underline"
+                style={{ color: "#0066cc" }}
+              >
+                Coach login
               </Link>
             </p>
           </div>

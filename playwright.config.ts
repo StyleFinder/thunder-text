@@ -72,6 +72,26 @@ export default defineConfig({
     },
 
     // ============================================
+    // Auth Flow Outcome Tests - Test login/redirect outcomes
+    // ============================================
+    {
+      name: "auth-flow-tests",
+      testMatch: /auth-flows\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+      // No dependencies - these test login flows and their outcomes
+    },
+
+    // ============================================
+    // Edge Case Tests - Test edge case behaviors
+    // ============================================
+    {
+      name: "edge-case-tests",
+      testMatch: /edge-cases\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+      // No dependencies - these test edge cases like lockout, session persistence
+    },
+
+    // ============================================
     // Authenticated Tests - Depend on setup
     // ============================================
     {
@@ -82,8 +102,8 @@ export default defineConfig({
         storageState: STORAGE_STATE,
       },
       dependencies: ["setup"],
-      // Exclude auth tests (they run without auth state)
-      testIgnore: /auth\.(spec|setup)\.ts/,
+      // Exclude auth tests and edge-case tests (they run without auth state)
+      testIgnore: /auth(-flows)?\.(spec|setup)\.ts|edge-cases\.spec\.ts/,
     },
 
     // Uncomment to test on more browsers:

@@ -7,7 +7,6 @@ import {
   Settings,
   PlusCircle,
   HelpCircle,
-  Edit,
   FileText,
   TrendingUp,
   Megaphone,
@@ -18,6 +17,9 @@ import {
   Flame,
   LogOut,
   Library,
+  ChevronDown,
+  FilePlus,
+  Package,
 } from "lucide-react";
 import { useNavigation } from "../hooks/useNavigation";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,14 @@ interface AppNavigationProps {
   children: React.ReactNode;
 }
 
+interface NavSubItem {
+  url: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  onClick: () => void;
+  matches: boolean;
+}
+
 interface NavItem {
   url: string;
   label: string;
@@ -40,13 +50,30 @@ interface NavItem {
   onClick: () => void;
   matches: boolean;
   allowedRoles?: string[]; // undefined = all roles
+  subItems?: NavSubItem[]; // For nested navigation
+  isParentOnly?: boolean; // True if this is a parent menu with no direct navigation
 }
 
 function NavigationContent({ children }: AppNavigationProps) {
   const [mobileNavigationActive, setMobileNavigationActive] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState(true);
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(
+    new Set(["Create Description"]),
+  ); // Default expanded
   const { data: session, status } = useSession();
   const { buildUrl, navigateTo, isActive, getAuthParams } = useNavigation();
+
+  const toggleMenu = (label: string) => {
+    setExpandedMenus((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) {
+        next.delete(label);
+      } else {
+        next.add(label);
+      }
+      return next;
+    });
+  };
 
   const { hasAuth, shop } = getAuthParams();
 
@@ -118,32 +145,46 @@ function NavigationContent({ children }: AppNavigationProps) {
       }),
       allowedRoles: ["coach"], // Coaches only
     },
-    // Store owner tools
+    // Store owner tools - Create Description with sub-menu
     {
-      url: buildUrl("/create-pd"),
+      url: "#",
       label: "Create Description",
       icon: PlusCircle,
-      onClick: () => navigateTo("/create-pd"),
+      onClick: () => toggleMenu("Create Description"),
       matches: isActive({
         label: "Create Description",
         url: buildUrl("/create-pd"),
-        matchPaths: ["/create-pd", "/generate"],
+        matchPaths: ["/create-pd", "/generate", "/enhance"],
         exactMatch: false,
       }),
       allowedRoles: ["user", "admin"],
-    },
-    {
-      url: buildUrl("/enhance"),
-      label: "Enhance Product",
-      icon: Edit,
-      onClick: () => navigateTo("/enhance"),
-      matches: isActive({
-        label: "Enhance Product",
-        url: buildUrl("/enhance"),
-        matchPaths: ["/enhance"],
-        exactMatch: false,
-      }),
-      allowedRoles: ["user", "admin"],
+      isParentOnly: true,
+      subItems: [
+        {
+          url: buildUrl("/create-pd"),
+          label: "New Product",
+          icon: FilePlus,
+          onClick: () => navigateTo("/create-pd"),
+          matches: isActive({
+            label: "New Product",
+            url: buildUrl("/create-pd"),
+            matchPaths: ["/create-pd", "/generate"],
+            exactMatch: false,
+          }),
+        },
+        {
+          url: buildUrl("/enhance"),
+          label: "Existing Product",
+          icon: Package,
+          onClick: () => navigateTo("/enhance"),
+          matches: isActive({
+            label: "Existing Product",
+            url: buildUrl("/enhance"),
+            matchPaths: ["/enhance"],
+            exactMatch: false,
+          }),
+        },
+      ],
     },
     {
       url: buildUrl("/aie"),
@@ -305,42 +346,121 @@ function NavigationContent({ children }: AppNavigationProps) {
             >
               {navigationItems.map((item) => {
                 const Icon = item.icon;
+                const isExpanded = expandedMenus.has(item.label);
+                const hasSubItems = item.subItems && item.subItems.length > 0;
+
                 return (
-                  <button
-                    key={item.label}
-                    onClick={item.onClick}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      fontSize: "14px",
-                      fontWeight: item.matches ? 600 : 500,
-                      backgroundColor: "transparent",
-                      color: item.matches ? "#0066cc" : "#111827",
-                      border: "none",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                      textAlign: "left",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!item.matches) {
-                        e.currentTarget.style.backgroundColor = "#f9fafb";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!item.matches) {
-                        e.currentTarget.style.backgroundColor = "transparent";
-                      }
-                    }}
-                  >
-                    <Icon
-                      className={`h-5 w-5 flex-shrink-0 ${item.matches ? "text-[#0066cc]" : "text-[#6b7280]"}`}
-                    />
-                    <span>{item.label}</span>
-                  </button>
+                  <div key={item.label}>
+                    <button
+                      onClick={item.onClick}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        width: "100%",
+                        padding: "10px 12px",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                        fontWeight: item.matches ? 600 : 500,
+                        backgroundColor:
+                          item.matches && !hasSubItems
+                            ? "#e6f0ff"
+                            : "transparent",
+                        color: item.matches ? "#0066cc" : "#111827",
+                        border: "none",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        textAlign: "left",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!item.matches || hasSubItems) {
+                          e.currentTarget.style.backgroundColor = "#f9fafb";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!item.matches || hasSubItems) {
+                          e.currentTarget.style.backgroundColor =
+                            item.matches && !hasSubItems
+                              ? "#e6f0ff"
+                              : "transparent";
+                        }
+                      }}
+                    >
+                      <Icon
+                        className={`h-5 w-5 flex-shrink-0 ${item.matches ? "text-[#0066cc]" : "text-[#6b7280]"}`}
+                      />
+                      <span style={{ flex: 1 }}>{item.label}</span>
+                      {hasSubItems && (
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+                          style={{ color: "#6b7280" }}
+                        />
+                      )}
+                    </button>
+
+                    {/* Sub-items */}
+                    {hasSubItems && isExpanded && (
+                      <div
+                        style={{
+                          marginLeft: "12px",
+                          marginTop: "4px",
+                          paddingLeft: "12px",
+                          borderLeft: "2px solid #e5e7eb",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "2px",
+                        }}
+                      >
+                        {item.subItems!.map((subItem) => {
+                          const SubIcon = subItem.icon;
+                          return (
+                            <button
+                              key={subItem.label}
+                              onClick={subItem.onClick}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "10px",
+                                width: "100%",
+                                padding: "8px 10px",
+                                borderRadius: "6px",
+                                fontSize: "13px",
+                                fontWeight: subItem.matches ? 600 : 500,
+                                backgroundColor: subItem.matches
+                                  ? "#e6f0ff"
+                                  : "transparent",
+                                color: subItem.matches ? "#0066cc" : "#4b5563",
+                                border: "none",
+                                cursor: "pointer",
+                                transition: "all 0.15s ease",
+                                textAlign: "left",
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!subItem.matches) {
+                                  e.currentTarget.style.backgroundColor =
+                                    "#f3f4f6";
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!subItem.matches) {
+                                  e.currentTarget.style.backgroundColor =
+                                    "transparent";
+                                } else {
+                                  e.currentTarget.style.backgroundColor =
+                                    "#e6f0ff";
+                                }
+                              }}
+                            >
+                              <SubIcon
+                                className={`h-4 w-4 flex-shrink-0 ${subItem.matches ? "text-[#0066cc]" : "text-[#9ca3af]"}`}
+                              />
+                              <span>{subItem.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
 
@@ -608,35 +728,102 @@ function NavigationContent({ children }: AppNavigationProps) {
               >
                 {navigationItems.map((item) => {
                   const Icon = item.icon;
+                  const isExpanded = expandedMenus.has(item.label);
+                  const hasSubItems = item.subItems && item.subItems.length > 0;
+
                   return (
-                    <button
-                      key={item.label}
-                      onClick={() => {
-                        item.onClick();
-                        setMobileNavigationActive(false);
-                      }}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        width: "100%",
-                        padding: "10px 12px",
-                        borderRadius: "8px",
-                        fontSize: "14px",
-                        fontWeight: item.matches ? 600 : 500,
-                        backgroundColor: "transparent",
-                        color: item.matches ? "#0066cc" : "#111827",
-                        border: "none",
-                        cursor: "pointer",
-                        transition: "all 0.15s ease",
-                        textAlign: "left",
-                      }}
-                    >
-                      <Icon
-                        className={`h-5 w-5 flex-shrink-0 ${item.matches ? "text-[#0066cc]" : "text-[#6b7280]"}`}
-                      />
-                      {item.label}
-                    </button>
+                    <div key={item.label}>
+                      <button
+                        onClick={() => {
+                          if (hasSubItems) {
+                            toggleMenu(item.label);
+                          } else {
+                            item.onClick();
+                            setMobileNavigationActive(false);
+                          }
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                          width: "100%",
+                          padding: "10px 12px",
+                          borderRadius: "8px",
+                          fontSize: "14px",
+                          fontWeight: item.matches ? 600 : 500,
+                          backgroundColor: "transparent",
+                          color: item.matches ? "#0066cc" : "#111827",
+                          border: "none",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                          textAlign: "left",
+                        }}
+                      >
+                        <Icon
+                          className={`h-5 w-5 flex-shrink-0 ${item.matches ? "text-[#0066cc]" : "text-[#6b7280]"}`}
+                        />
+                        <span style={{ flex: 1 }}>{item.label}</span>
+                        {hasSubItems && (
+                          <ChevronDown
+                            className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+                            style={{ color: "#6b7280" }}
+                          />
+                        )}
+                      </button>
+
+                      {/* Sub-items for mobile */}
+                      {hasSubItems && isExpanded && (
+                        <div
+                          style={{
+                            marginLeft: "12px",
+                            marginTop: "4px",
+                            paddingLeft: "12px",
+                            borderLeft: "2px solid #e5e7eb",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "2px",
+                          }}
+                        >
+                          {item.subItems!.map((subItem) => {
+                            const SubIcon = subItem.icon;
+                            return (
+                              <button
+                                key={subItem.label}
+                                onClick={() => {
+                                  subItem.onClick();
+                                  setMobileNavigationActive(false);
+                                }}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "10px",
+                                  width: "100%",
+                                  padding: "8px 10px",
+                                  borderRadius: "6px",
+                                  fontSize: "13px",
+                                  fontWeight: subItem.matches ? 600 : 500,
+                                  backgroundColor: subItem.matches
+                                    ? "#e6f0ff"
+                                    : "transparent",
+                                  color: subItem.matches
+                                    ? "#0066cc"
+                                    : "#4b5563",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  transition: "all 0.15s ease",
+                                  textAlign: "left",
+                                }}
+                              >
+                                <SubIcon
+                                  className={`h-4 w-4 flex-shrink-0 ${subItem.matches ? "text-[#0066cc]" : "text-[#9ca3af]"}`}
+                                />
+                                <span>{subItem.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
 

@@ -1,100 +1,101 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/auth-options";
 import { createCorsHeaders } from "@/lib/middleware/cors";
 import { getProducts } from "@/lib/shopify/get-products";
 import { getAccessToken } from "@/lib/shopify-auth";
 import { logger } from "@/lib/logger";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
-// Helper to check if a string looks like an email
-function isEmail(str: string): boolean {
-  return str.includes("@") && !str.includes(".myshopify.com");
-}
-
-// Get the linked Shopify domain for a standalone user (by email)
-async function getLinkedShopifyDomain(email: string): Promise<string | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    logger.error(
-      "Missing Supabase configuration for standalone user lookup",
-      undefined,
-      { component: "products" },
-    );
-    return null;
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
-  const { data, error } = await supabase
-    .from("shops")
-    .select("linked_shopify_domain")
-    .eq("email", email)
-    .eq("is_active", true)
-    .single();
-
-  if (error) {
-    logger.error("Error looking up linked Shopify domain", error as Error, {
-      component: "products",
-      email,
-    });
-    return null;
-  }
-
-  return data?.linked_shopify_domain || null;
-}
-
+/**
+ * GET /api/shopify/products
+ *
+ * Fetch products from Shopify for the authenticated shop
+ *
+ * SECURITY: Uses session-based authentication. The shop param is IGNORED -
+ * shop domain is derived from the authenticated session.
+ * No default fallback shop - authentication is required.
+ */
 export async function GET(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request);
 
   try {
+    // SECURITY: Require session authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Authentication required",
+          details: "Please sign in to access products",
+        },
+        { status: 401, headers: corsHeaders },
+      );
+    }
+
+    // Get shop domain from session (not from query params!)
+    const shopDomain = (session.user as { shopDomain?: string }).shopDomain;
+    if (!shopDomain) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "No shop associated with account",
+          details: "Please ensure your Shopify store is connected",
+        },
+        { status: 403, headers: corsHeaders },
+      );
+    }
+
+    // Verify shop exists and is active in database
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from("shops")
+      .select("id, shop_domain, is_active, linked_shopify_domain")
+      .eq("shop_domain", shopDomain)
+      .single();
+
+    if (shopError || !shopData) {
+      logger.error("Shop not found for products:", shopError as Error, {
+        component: "products",
+        shopDomain,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Shop not found",
+          details: "Please ensure the app is properly installed",
+        },
+        { status: 404, headers: corsHeaders },
+      );
+    }
+
+    if (!shopData.is_active) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Shop is not active",
+          details: "Please contact support to reactivate your account",
+        },
+        { status: 403, headers: corsHeaders },
+      );
+    }
+
+    // Use the shop domain from session/database (linked domain if available)
+    const fullShop = shopData.linked_shopify_domain || shopData.shop_domain;
+
     const { searchParams } = new URL(request.url);
-    let shop =
-      searchParams.get("shop") || "zunosai-staging-test-store.myshopify.com";
     const query = searchParams.get("query") || undefined;
 
-    // Get session token from Authorization header
+    // Get session token from Authorization header (for Shopify token exchange)
     const authHeader = request.headers.get("authorization");
     const sessionToken = authHeader?.startsWith("Bearer ")
       ? authHeader.substring(7)
       : undefined;
 
-    // Check if shop is actually an email (standalone user)
-    // If so, look up their linked Shopify domain
-    if (isEmail(shop)) {
-      logger.info(
-        "Standalone user detected, looking up linked Shopify domain",
-        { component: "products", email: shop },
-      );
-      const linkedDomain = await getLinkedShopifyDomain(shop);
-
-      if (!linkedDomain) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "No linked Shopify store",
-            details: "Please connect your Shopify store first",
-            hint: "Go to Settings > Connections to link your Shopify store",
-          },
-          { status: 400, headers: corsHeaders },
-        );
-      }
-
-      logger.info("Found linked Shopify domain", {
-        component: "products",
-        linkedDomain,
-      });
-      shop = linkedDomain;
-    }
-
-    // Ensure shop has .myshopify.com
-    const fullShop = shop.includes(".myshopify.com")
-      ? shop
-      : `${shop}.myshopify.com`;
-
-    console.log("🔐 Has session token:", !!sessionToken);
-    console.log("🏪 Using shop:", fullShop);
+    logger.info("Fetching products for authenticated shop", {
+      component: "products",
+      shop: fullShop,
+      hasSessionToken: !!sessionToken,
+    });
 
     // Get access token using proper Token Exchange
     let accessToken: string;

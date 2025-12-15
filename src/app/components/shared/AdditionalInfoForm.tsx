@@ -1,41 +1,33 @@
-'use client'
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface AdditionalInfoFormProps {
-  mode?: 'create' | 'enhance'
-  fabricMaterial: string
-  setFabricMaterial: (value: string) => void
-  occasionUse: string
-  setOccasionUse: (value: string) => void
-  targetAudience: string
-  setTargetAudience: (value: string) => void
-  keyFeatures: string
-  setKeyFeatures: (value: string) => void
-  additionalNotes: string
-  setAdditionalNotes: (value: string) => void
-  prefilled?: boolean
+  mode?: "create" | "enhance";
+  fabricMaterial: string;
+  setFabricMaterial: (value: string) => void;
+  occasionUse: string;
+  setOccasionUse: (value: string) => void;
+  keyFeatures: string;
+  setKeyFeatures: (value: string) => void;
+  additionalNotes: string;
+  setAdditionalNotes: (value: string) => void;
 }
 
 export function AdditionalInfoForm({
-  mode = 'create',
+  mode = "create",
   fabricMaterial,
   setFabricMaterial,
   occasionUse,
   setOccasionUse,
-  targetAudience,
-  setTargetAudience,
   keyFeatures,
   setKeyFeatures,
   additionalNotes,
   setAdditionalNotes,
-  prefilled = false
 }: AdditionalInfoFormProps) {
-  const labelSuffix = prefilled ? ' (pre-filled)' : ''
-
   return (
     <>
       <Card>
@@ -44,9 +36,7 @@ export function AdditionalInfoForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="fabricMaterial">
-              Fabric/Material Content{labelSuffix}
-            </Label>
+            <Label htmlFor="fabricMaterial">Fabric/Material Content</Label>
             <Input
               id="fabricMaterial"
               value={fabricMaterial}
@@ -60,9 +50,7 @@ export function AdditionalInfoForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="occasionUse">
-              Occasion Use{labelSuffix}
-            </Label>
+            <Label htmlFor="occasionUse">Occasion Use</Label>
             <Input
               id="occasionUse"
               value={occasionUse}
@@ -74,22 +62,6 @@ export function AdditionalInfoForm({
               When or where would customers use this product?
             </p>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="targetAudience">
-              Target Audience{labelSuffix}
-            </Label>
-            <Input
-              id="targetAudience"
-              value={targetAudience}
-              onChange={(e) => setTargetAudience(e.target.value)}
-              placeholder="e.g. young professionals, parents, fitness enthusiasts"
-              autoComplete="off"
-            />
-            <p className="text-sm text-muted-foreground">
-              Who is this product designed for?
-            </p>
-          </div>
         </CardContent>
       </Card>
 
@@ -99,9 +71,7 @@ export function AdditionalInfoForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="keyFeatures">
-              Key Features{labelSuffix}
-            </Label>
+            <Label htmlFor="keyFeatures">Key Features</Label>
             <Textarea
               id="keyFeatures"
               value={keyFeatures}
@@ -116,9 +86,7 @@ export function AdditionalInfoForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="additionalNotes">
-              Additional Notes
-            </Label>
+            <Label htmlFor="additionalNotes">Additional Notes</Label>
             <Textarea
               id="additionalNotes"
               value={additionalNotes}
@@ -128,13 +96,13 @@ export function AdditionalInfoForm({
               autoComplete="off"
             />
             <p className="text-sm text-muted-foreground">
-              {mode === 'enhance'
-                ? 'Additional context for the AI to consider'
-                : 'Optional: Add any special instructions or details'}
+              {mode === "enhance"
+                ? "Additional context for the AI to consider"
+                : "Optional: Add any special instructions or details"}
             </p>
           </div>
         </CardContent>
       </Card>
     </>
-  )
+  );
 }

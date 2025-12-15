@@ -3,8 +3,11 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
 import {
   checkLockoutStatus,
+  checkLockoutStatusFromDatabase,
   recordFailedAttempt,
+  recordFailedAttemptWithPersistence,
   clearFailedAttempts,
+  clearFailedAttemptsWithPersistence,
 } from "@/lib/security/login-protection";
 import {
   isTwoFactorEnabled,
@@ -45,7 +48,14 @@ export const authOptions: NextAuthOptions = {
         }
 
         // SECURITY: Check if account is locked due to failed attempts
-        const lockoutStatus = checkLockoutStatus(credentials.email);
+        // For shop users, check database first to persist across restarts
+        let lockoutStatus = checkLockoutStatus(credentials.email);
+        if (credentials.userType === "shop") {
+          // Shop users have database-backed lockout for persistence
+          lockoutStatus = await checkLockoutStatusFromDatabase(
+            credentials.email,
+          );
+        }
         if (lockoutStatus.isLocked) {
           // Throw error with lockout info (caught by NextAuth error handler)
           throw new Error(
@@ -168,19 +178,19 @@ export const authOptions: NextAuthOptions = {
             shop.password_hash,
           );
           if (!isValid) {
-            // SECURITY: Record failed attempt
-            recordFailedAttempt(credentials.email);
+            // SECURITY: Record failed attempt with database persistence
+            await recordFailedAttemptWithPersistence(credentials.email);
             return null;
           }
 
-          // SECURITY: Clear failed attempts on successful login
-          clearFailedAttempts(credentials.email);
+          // SECURITY: Clear failed attempts on successful login (with persistence)
+          await clearFailedAttemptsWithPersistence(credentials.email);
 
           // Check if Shopify is connected (has access token and real domain)
           const hasShopifyLinked = !!(
             shop.shopify_access_token &&
             shop.shop_domain &&
-            !shop.shop_domain.startsWith('pending-')
+            !shop.shop_domain.startsWith("pending-")
           );
 
           logger.info("[Auth] Shop user login successful", {
@@ -248,7 +258,8 @@ export const authOptions: NextAuthOptions = {
         session.user.shopDomain = token.shopDomain;
         session.user.twoFactorEnabled = token.twoFactorEnabled as boolean;
         session.user.hasShopifyLinked = token.hasShopifyLinked as boolean;
-        session.user.staffRole = (token.staffRole as 'owner' | 'staff') || "owner";
+        session.user.staffRole =
+          (token.staffRole as "owner" | "staff") || "owner";
         // SECURITY: Expose token status to client for refresh handling
         session.accessTokenExpired =
           (token.accessTokenExpired as boolean) || false;

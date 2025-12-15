@@ -41,14 +41,10 @@ export async function POST(request: NextRequest) {
 
     // If no header, try to decode token
     if (!shopDomain) {
-      // Check if it's a dev token (for development/testing with authenticated=true)
-      if (authToken === "dev-token") {
-        // Dev token - shop domain must be in header
-        // Continue - shop domain will be validated below
-      }
+      // SECURITY: dev-token bypass removed - all authentication must go through proper channels
       // Check if token is the shop domain itself (standalone SaaS authentication)
       // This is used when shop domain is passed as the auth token for non-embedded apps
-      else if (
+      if (
         authToken.includes(".myshopify.com") ||
         authToken.includes("zunosai")
       ) {

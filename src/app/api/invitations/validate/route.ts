@@ -2,6 +2,13 @@
  * Invitation Token Validation API
  *
  * GET /api/invitations/validate?token=xxx - Validate an invitation token
+ *
+ * SECURITY NOTES:
+ * - This endpoint is intentionally unauthenticated (users click invitation links before signing in)
+ * - Rate limiting should be implemented at the infrastructure level (Vercel/Cloudflare)
+ * - Uses generic error messages to prevent token enumeration
+ * - Tokens are UUID v4 (122 bits of entropy) making brute force impractical
+ * - TODO: Add IP-based rate limiting middleware (recommended: 10 requests/minute per IP)
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -11,6 +18,13 @@ import { logger } from "@/lib/logger";
 /**
  * GET /api/invitations/validate
  * Validate an invitation token and return invitation details
+ *
+ * SECURITY: Intentionally unauthenticated - users validate tokens before login.
+ * Protection relies on:
+ * 1. High entropy tokens (UUID v4)
+ * 2. Token expiration
+ * 3. Generic error messages
+ * 4. Infrastructure-level rate limiting (TODO)
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -19,7 +33,7 @@ export async function GET(req: NextRequest) {
   if (!token) {
     return NextResponse.json(
       { error: "Token parameter required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -35,7 +49,7 @@ export async function GET(req: NextRequest) {
         invited_name,
         status,
         expires_at
-      `
+      `,
       )
       .eq("token", token)
       .single();
@@ -48,9 +62,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         {
           valid: false,
-          error: "Invalid invitation link"
+          error: "Invalid invitation link",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -77,7 +91,8 @@ export async function GET(req: NextRequest) {
     if (invitation.status !== "pending") {
       const statusMessages: Record<string, string> = {
         accepted: "This invitation has already been used.",
-        expired: "This invitation has expired. Please ask for a new invitation.",
+        expired:
+          "This invitation has expired. Please ask for a new invitation.",
         revoked: "This invitation has been cancelled.",
       };
 
@@ -130,7 +145,7 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json(
       { valid: false, error: "Failed to validate invitation" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

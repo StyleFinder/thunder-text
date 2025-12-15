@@ -92,6 +92,15 @@ const eslintConfig = [
       "react/no-unescaped-entities": "warn",
       "@typescript-eslint/no-empty-object-type": "warn",
       "@typescript-eslint/ban-ts-comment": "warn",
+      // Allow underscore-prefixed variables to be unused (common for unused params in callbacks)
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
     },
   },
 ];

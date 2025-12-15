@@ -114,6 +114,11 @@ export async function authenticateRequest(
     }
 
     // Successfully authenticated - use shop_id as userId
+    // SECURITY: Set user context for Sentry error tracking
+    logger.setUser(shopData.id, {
+      shop: shopData.shop_domain,
+    });
+
     return {
       authenticated: true,
       userId: shopData.id,
@@ -225,6 +230,13 @@ export async function validateApiKeyWithDetails(
       authenticated: false,
       error: validationResult.error || "Invalid API key",
     };
+  }
+
+  // SECURITY: Set user context for Sentry error tracking
+  if (validationResult.shopId) {
+    logger.setUser(validationResult.shopId, {
+      shop: `api-key:${validationResult.keyId}`,
+    });
   }
 
   return {

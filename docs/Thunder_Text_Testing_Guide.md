@@ -471,6 +471,21 @@ Thunder Text has a comprehensive testing foundation with Jest 30, React Testing 
 1. **ESM mocking limitations** - Some tests are behavioral docs, not real endpoint tests
 2. **In-memory rate limiting** - Needs Redis for production
 3. **Flaky E2E test** - 1 skipped (dropdown timing in CI)
+4. **E2E Flow Outcome Tests** - E2E tests verify UI elements but not backend state changes (see `E2E_TEST_COVERAGE_MATRIX.md`)
+
+### Critical E2E Gap Discovered (December 2025)
+
+During bug investigation, we found that E2E tests only test UI elements, not flow outcomes:
+
+- **Bug 1**: Login always redirected to `/welcome` regardless of `onboarding_completed` status
+- **Bug 2**: `/api/onboarding/complete` was using wrong DB column (`shop_domain` instead of `id`)
+
+**Root Cause**: E2E tests didn't verify:
+
+1. Correct redirect URL based on user state
+2. Database state changes after completing flows
+
+**Solution**: See `docs/E2E_TEST_COVERAGE_MATRIX.md` for comprehensive test coverage requirements.
 
 ---
 
@@ -504,12 +519,17 @@ BASE_URL=https://app.zunos.com npm run test:load
 
 ### Short-Term (Next 2-4 Weeks)
 
-| Task                         | Why                                     | Effort |
-| ---------------------------- | --------------------------------------- | ------ |
-| Test data factory            | Centralized fixture generation          | Medium |
-| API contract tests           | Validate request/response schemas       | Medium |
-| Performance benchmarks       | Track response times in CI              | Medium |
-| Increase coverage thresholds | Raise from 1% toward 80% as tests added | Low    |
+| Task                          | Why                                            | Effort   |
+| ----------------------------- | ---------------------------------------------- | -------- |
+| **E2E Flow Outcome Tests**    | Verify redirects based on user state           | **HIGH** |
+| **E2E DB State Verification** | Verify database changes after completing flows | **HIGH** |
+| **Cross-Role E2E Tests**      | Verify role separation (coach vs store)        | Medium   |
+| Test data factory             | Centralized fixture generation                 | Medium   |
+| API contract tests            | Validate request/response schemas              | Medium   |
+| Performance benchmarks        | Track response times in CI                     | Medium   |
+| Increase coverage thresholds  | Raise from 1% toward 80% as tests added        | Low      |
+
+**Priority**: E2E Flow Outcome Tests should be completed FIRST - see `docs/E2E_TEST_COVERAGE_MATRIX.md`
 
 ### Long-Term (Future Sprints)
 
@@ -526,3 +546,103 @@ During test development, a bug was discovered and fixed in `/api/onboarding/stat
 
 - The route was querying `shops` table by `shop_domain` using the UUID returned from `getUserId()`
 - Fixed to query by `id` column since `getUserId()` returns the shop UUID, not domain
+
+---
+
+## 12. Security Remediation Roadmap
+
+Based on the **Alan Knox Technical Assessment** (December 12, 2025), conducted on branch `feature/ad-account-selector` which predates recent security improvements.
+
+### Assessment Summary
+
+| Area                    | Rating | Notes                                         |
+| ----------------------- | ------ | --------------------------------------------- |
+| Software Best Practices | B      | Good foundation                               |
+| Architecture            | B+     | Sophisticated AI pipeline                     |
+| Security                | C+     | Excellent utilities, inconsistent application |
+| Scalability             | B      | Ready for growth                              |
+| Billing/Operations      | C      | Edge cases unhandled                          |
+| API Consistency         | C-     | Multiple response formats                     |
+
+### Items Already Addressed ✅
+
+| Finding                            | Status   | Evidence                               |
+| ---------------------------------- | -------- | -------------------------------------- |
+| No branch protection               | ✅ Fixed | `main` requires passing CI checks      |
+| CI/CD disconnected from deployment | ✅ Fixed | GitHub Actions workflow operational    |
+| No RLS integration tests           | ✅ Fixed | `rls-integration.test.ts` (576+ lines) |
+| No multi-tenant isolation tests    | ✅ Fixed | `tenant-isolation.test.ts` (12 tests)  |
+| No load testing framework          | ✅ Fixed | k6 smoke tests in `load-tests/`        |
+| No E2E testing infrastructure      | ✅ Fixed | 94 Playwright tests                    |
+| Limited integration test coverage  | ✅ Fixed | 260 tests across 18 suites             |
+
+### Day 1 Critical Fixes (IMMEDIATE)
+
+| Issue                                 | Risk     | File                                   | Fix Required                                            |
+| ------------------------------------- | -------- | -------------------------------------- | ------------------------------------------------------- |
+| Usage check grants unlimited on error | CRITICAL | `src/lib/billing/usage.ts:54-61`       | Return `canProceed: false` on DB error                  |
+| Stripe webhook idempotency missing    | CRITICAL | `src/app/api/webhooks/stripe/route.ts` | Check for duplicate `stripe_event_id` before processing |
+| Dev-token bypass in production        | CRITICAL | 4 files (see audit)                    | Remove dev token authentication patterns                |
+| Usage counter race condition          | HIGH     | `src/lib/billing/usage.ts:136-160`     | Use atomic increment instead of GET+UPDATE              |
+
+### Week 1 Priorities
+
+| Issue                                  | Risk   | Action Required                                  |
+| -------------------------------------- | ------ | ------------------------------------------------ |
+| Add `logger.setUser()` to routes       | MEDIUM | Add user context to authenticated route handlers |
+| Complete API route auth audit          | HIGH   | Verify all 151 routes have appropriate auth      |
+| Facebook webhook verification          | HIGH   | Add signature verification to Facebook webhooks  |
+| Verify subscription status enforcement | HIGH   | Ensure expired subscriptions block access        |
+
+### 30-Day Goals
+
+| Issue                         | Risk   | Action Required                             |
+| ----------------------------- | ------ | ------------------------------------------- |
+| GDPR deletion endpoint        | HIGH   | Implement `/api/gdpr/customer-data-request` |
+| Feature flag infrastructure   | MEDIUM | Add LaunchDarkly or similar                 |
+| CORS header audit             | HIGH   | Ensure all routes have proper CORS headers  |
+| Database transaction wrappers | MEDIUM | Wrap multi-step operations in transactions  |
+
+### 60-Day Goals
+
+| Issue                      | Risk   | Action Required                     |
+| -------------------------- | ------ | ----------------------------------- |
+| Complete security coverage | HIGH   | Auth on all high-risk routes        |
+| 50% test coverage          | MEDIUM | Increase from current baseline      |
+| Monitoring dashboards      | MEDIUM | Set up observability infrastructure |
+| Accessibility (WCAG)       | MEDIUM | Begin accessibility implementation  |
+
+### Code Locations for Critical Fixes
+
+```typescript
+// 1. Usage check error fallback - src/lib/billing/usage.ts:49-61
+// CURRENT (vulnerable):
+if (error || !shop) {
+  return { canProceed: true, ... }; // ⚠️ Grants access on error
+}
+// FIX: Return canProceed: false on error
+
+// 2. Usage counter race condition - src/lib/billing/usage.ts:136-160
+// CURRENT (race condition):
+const { data: shop } = await supabase.from("shops").select(column)...
+await supabase.from("shops").update({ [column]: currentValue + 1 })...
+// FIX: Use Supabase RPC with atomic increment
+
+// 3. Stripe webhook idempotency - src/app/api/webhooks/stripe/route.ts
+// CURRENT: Logs event but doesn't check for duplicates
+// FIX: Query billing_events for stripe_event_id before processing
+
+// 4. Dev token bypass - check these files:
+// - src/app/api/generate/create/route.ts
+// - src/app/api/facebook/oauth/callback/route.ts
+// - src/app/api/facebook/oauth/disconnect/route.ts
+// - src/lib/shopify-auth.ts
+```
+
+### Tracking Progress
+
+Track remediation progress in this document. When a fix is implemented:
+
+1. Move the item from "Critical Fixes" to "Items Already Addressed"
+2. Add the commit hash or PR number as evidence
+3. Update the corresponding integration test if applicable

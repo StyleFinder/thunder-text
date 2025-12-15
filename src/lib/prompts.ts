@@ -1,47 +1,29 @@
+/**
+ * Prompt System - Server-side Database Functions
+ *
+ * This file contains server-side functions that require supabaseAdmin.
+ * For client-side types and constants, import from @/lib/prompts-types instead.
+ */
 import { supabaseAdmin } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
-// Types for prompt system
-export interface SystemPrompt {
-  id: string;
-  name: string;
-  content: string;
-  is_default: boolean;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  store_id: string;
-}
+// Re-export types and constants from prompts-types for backward compatibility
+// Server-side API routes can continue importing from @/lib/prompts
+export {
+  PRODUCT_CATEGORIES,
+  type ProductCategory,
+  type SystemPrompt,
+  type CategoryTemplate,
+  type CombinedPrompt,
+} from "@/lib/prompts-types";
 
-export interface CategoryTemplate {
-  id: string;
-  name: string;
-  category: string;
-  content: string;
-  is_default: boolean;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  store_id: string;
-}
-
-export interface CombinedPrompt {
-  system_prompt: string;
-  category_template: string;
-  combined: string;
-}
-
-// Product categories - keeping for backward compatibility with existing components
-export const PRODUCT_CATEGORIES = [
-  { value: "womens_clothing", label: "Women's Clothing" },
-  { value: "jewelry_accessories", label: "Jewelry & Accessories" },
-  { value: "home_living", label: "Home & Living" },
-  { value: "beauty_personal_care", label: "Beauty & Personal Care" },
-  { value: "electronics", label: "Electronics" },
-  { value: "general", label: "General Products" },
-] as const;
-
-export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number]["value"];
+import {
+  PRODUCT_CATEGORIES,
+  type ProductCategory,
+  type SystemPrompt,
+  type CategoryTemplate,
+  type CombinedPrompt,
+} from "@/lib/prompts-types";
 
 // Product categories are now user-defined via template names
 // The category field in the database is auto-generated from template names

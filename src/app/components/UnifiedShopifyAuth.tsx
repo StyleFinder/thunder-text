@@ -105,32 +105,53 @@ function UnifiedShopifyAuthContent({ children }: UnifiedShopifyAuthProps) {
       setShop(shopParam);
       setHost(hostParam);
 
-      // Check if test store or manual setup store (allow non-embedded access)
-      const isTestStore =
-        shopParam.includes("zunosai-staging-test-store") ||
-        shopParam.includes("shopstylefinder.myshopify.com");
+      // For non-embedded access, check if store has a stored access token
+      // This allows any store with valid stored credentials to work outside Shopify admin
+      if (!isEmbedded) {
+        try {
+          // Check if store has a valid stored token
+          const tokenCheckResponse = await fetch(
+            `/api/shopify/check-token?shop=${encodeURIComponent(shopParam)}`,
+          );
+          const tokenCheckData = await tokenCheckResponse.json();
 
-      if (!isEmbedded && !isTestStore) {
-        logger.error(
-          "App must be accessed through Shopify admin",
-          new Error("Not in embedded context"),
-          {
+          if (tokenCheckData.hasToken) {
+            // Store has a valid token, allow non-embedded access
+            logger.info(
+              "Store has stored token, allowing non-embedded access",
+              {
+                component: "UnifiedShopifyAuth",
+                operation: "initializeAuth",
+                shop: shopParam,
+              },
+            );
+            setIsAuthenticated(true);
+            setIsLoading(false);
+            return;
+          }
+
+          // No stored token, must access through Shopify admin
+          logger.warn("No stored token found, embedded access required", {
             component: "UnifiedShopifyAuth",
             operation: "initializeAuth",
             shop: shopParam,
-          },
-        );
-        setError("This app must be accessed through your Shopify admin panel");
-        setIsAuthenticated(false);
-        setIsLoading(false);
-        return;
-      }
-
-      // For test store or manual setup in non-embedded mode
-      if (!isEmbedded && isTestStore) {
-        setIsAuthenticated(true);
-        setIsLoading(false);
-        return;
+          });
+          setError(
+            "This app must be accessed through your Shopify admin panel",
+          );
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          return;
+        } catch (checkError) {
+          logger.error("Failed to check store token", checkError as Error, {
+            component: "UnifiedShopifyAuth",
+            operation: "initializeAuth",
+            shop: shopParam,
+          });
+          setError("Failed to verify store authentication");
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Embedded context - initialize App Bridge

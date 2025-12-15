@@ -17,7 +17,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { logger } from "@/lib/logger";
 import { authenticatedFetch } from "@/lib/shopify/api-client";
-import { type ProductCategory } from "@/lib/prompts";
+import { type ProductCategory } from "@/lib/prompts-types";
 
 // Extracted components
 import {

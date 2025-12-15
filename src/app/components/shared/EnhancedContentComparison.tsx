@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -71,33 +70,21 @@ export default function EnhancedContentComparison({
 }: EnhancedContentComparisonProps) {
   const [editedContent, setEditedContent] = useState(enhancedContent);
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [selectedTab, setSelectedTab] = useState("main");
 
-  // Track which fields to apply
+  // Track which fields to apply (only title and description for Main Content)
   const [fieldsToApply, setFieldsToApply] = useState({
     title: !!enhancedContent.title,
     description: !!enhancedContent.description,
-    seoTitle: !!enhancedContent.seoTitle,
-    seoDescription: !!enhancedContent.seoDescription,
-    promoText: !!enhancedContent.promoText,
-    bulletPoints:
-      !!enhancedContent.bulletPoints && enhancedContent.bulletPoints.length > 0,
   });
 
   // Sync editedContent when enhancedContent prop changes
   useEffect(() => {
     setEditedContent(enhancedContent);
 
-    // Also update fieldsToApply based on new content
+    // Also update fieldsToApply based on new content (only title and description)
     setFieldsToApply({
       title: !!enhancedContent.title,
       description: !!enhancedContent.description,
-      seoTitle: !!enhancedContent.seoTitle,
-      seoDescription: !!enhancedContent.seoDescription,
-      promoText: !!enhancedContent.promoText,
-      bulletPoints:
-        !!enhancedContent.bulletPoints &&
-        enhancedContent.bulletPoints.length > 0,
     });
   }, [enhancedContent]);
 
@@ -161,7 +148,7 @@ export default function EnhancedContentComparison({
   };
 
   const handleApplyChanges = () => {
-    // Only apply fields that are checked
+    // Only apply fields that are checked (title and description only)
     const contentToApply: ContentData = {};
 
     if (fieldsToApply.title && editedContent.title) {
@@ -169,18 +156,6 @@ export default function EnhancedContentComparison({
     }
     if (fieldsToApply.description && editedContent.description) {
       contentToApply.description = editedContent.description;
-    }
-    if (fieldsToApply.seoTitle && editedContent.seoTitle) {
-      contentToApply.seoTitle = editedContent.seoTitle;
-    }
-    if (fieldsToApply.seoDescription && editedContent.seoDescription) {
-      contentToApply.seoDescription = editedContent.seoDescription;
-    }
-    if (fieldsToApply.promoText && editedContent.promoText) {
-      contentToApply.promoText = editedContent.promoText;
-    }
-    if (fieldsToApply.bulletPoints && editedContent.bulletPoints) {
-      contentToApply.bulletPoints = editedContent.bulletPoints;
     }
 
     onApply(contentToApply);
@@ -370,49 +345,6 @@ export default function EnhancedContentComparison({
     );
   };
 
-  const renderBulletPoints = () => {
-    if (!editedContent.bulletPoints || editedContent.bulletPoints.length === 0)
-      return null;
-
-    return (
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5" style={{ color: colors.smartBlue }} />
-            <h3 className="font-semibold text-base">Key Features</h3>
-            <Badge
-              variant="secondary"
-              style={{
-                backgroundColor: colors.info,
-                color: colors.white,
-              }}
-            >
-              {editedContent.bulletPoints.length} points
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div
-            className="p-4 rounded-lg"
-            style={{ backgroundColor: colors.white }}
-          >
-            <ul className="space-y-3 pl-6 list-disc">
-              {editedContent.bulletPoints.map((point, index) => (
-                <li
-                  key={index}
-                  className="text-sm"
-                  style={{ color: colors.oxfordNavyDark }}
-                >
-                  {point}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
   // Calculate selected count
   const selectedCount = Object.values(fieldsToApply).filter(Boolean).length;
 
@@ -451,10 +383,6 @@ export default function EnhancedContentComparison({
                       setFieldsToApply({
                         title: true,
                         description: true,
-                        seoTitle: true,
-                        seoDescription: true,
-                        promoText: true,
-                        bulletPoints: true,
                       })
                     }
                   >
@@ -467,10 +395,6 @@ export default function EnhancedContentComparison({
                       setFieldsToApply({
                         title: false,
                         description: false,
-                        seoTitle: false,
-                        seoDescription: false,
-                        promoText: false,
-                        bulletPoints: false,
                       })
                     }
                   >
@@ -481,133 +405,38 @@ export default function EnhancedContentComparison({
             </CardContent>
           </Card>
 
-          {/* Tabbed Content */}
-          <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="main">
-                Main Content
-                <Badge variant="secondary" className="ml-2">
-                  {
-                    [enhancedContent.title, enhancedContent.description].filter(
-                      Boolean,
-                    ).length
-                  }
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="seo">
-                SEO & Marketing
-                <Badge variant="secondary" className="ml-2">
-                  {
-                    [
-                      enhancedContent.seoTitle,
-                      enhancedContent.seoDescription,
-                      enhancedContent.promoText,
-                    ].filter(Boolean).length
-                  }
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="features">
-                Key Features
-                <Badge variant="secondary" className="ml-2">
-                  {editedContent.bulletPoints?.length || 0}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Main Content Tab */}
-            <TabsContent value="main" className="space-y-6 min-h-[600px]">
-              {enhancedContent.title &&
-                renderModernField(
-                  "Product Title",
-                  "title",
-                  originalContent.title,
-                  enhancedContent.title,
-                  false,
-                  false,
-                )}
-
-              {enhancedContent.description &&
-                renderModernField(
-                  "Product Description",
-                  "description",
-                  originalContent.description,
-                  enhancedContent.description,
-                  true,
-                  true,
-                )}
-
-              {!enhancedContent.title && !enhancedContent.description && (
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    No main content was generated. Try enabling title or
-                    description generation in enhancement options.
-                  </AlertDescription>
-                </Alert>
+          {/* Main Content */}
+          <div className="space-y-6 min-h-[400px]">
+            {enhancedContent.title &&
+              renderModernField(
+                "Product Title",
+                "title",
+                originalContent.title,
+                enhancedContent.title,
+                false,
+                false,
               )}
-            </TabsContent>
 
-            {/* SEO & Marketing Tab */}
-            <TabsContent value="seo" className="space-y-6 min-h-[600px]">
-              {enhancedContent.seoTitle &&
-                renderModernField(
-                  "SEO Title",
-                  "seoTitle",
-                  originalContent.seoTitle,
-                  enhancedContent.seoTitle,
-                  false,
-                  false,
-                )}
-
-              {enhancedContent.seoDescription &&
-                renderModernField(
-                  "SEO Meta Description",
-                  "seoDescription",
-                  originalContent.seoDescription,
-                  enhancedContent.seoDescription,
-                  true,
-                  false,
-                )}
-
-              {enhancedContent.promoText &&
-                renderModernField(
-                  "Promotional Copy",
-                  "promoText",
-                  originalContent.promoText,
-                  enhancedContent.promoText,
-                  true,
-                  true,
-                )}
-
-              {!enhancedContent.seoTitle &&
-                !enhancedContent.seoDescription &&
-                !enhancedContent.promoText && (
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      No SEO or marketing content was generated. Enable these
-                      options in enhancement settings to generate them.
-                    </AlertDescription>
-                  </Alert>
-                )}
-            </TabsContent>
-
-            {/* Key Features Tab */}
-            <TabsContent value="features" className="space-y-6 min-h-[600px]">
-              {editedContent.bulletPoints &&
-              editedContent.bulletPoints.length > 0 ? (
-                renderBulletPoints()
-              ) : (
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    No key features were generated. The AI will extract features
-                    when analyzing product images.
-                  </AlertDescription>
-                </Alert>
+            {enhancedContent.description &&
+              renderModernField(
+                "Product Description",
+                "description",
+                originalContent.description,
+                enhancedContent.description,
+                true,
+                true,
               )}
-            </TabsContent>
-          </Tabs>
+
+            {!enhancedContent.title && !enhancedContent.description && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  No main content was generated. Try enabling title or
+                  description generation in enhancement options.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
 
           {/* Selected Fields Summary */}
           {selectedCount > 0 && (

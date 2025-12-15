@@ -1,10 +1,19 @@
 import OpenAI from "openai";
 import { getCombinedPrompt, type ProductCategory } from "./prompts";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
 
 // Master OpenAI client with centralized API key
+// SECURITY: No fallback - fail fast if API key is missing
+const getOpenAIApiKey = (): string => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY environment variable is required");
+  }
+  return apiKey;
+};
+
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "placeholder-api-key",
+  apiKey: getOpenAIApiKey(),
 });
 
 export interface ProductDescriptionRequest {
@@ -139,7 +148,9 @@ export class AIDescriptionGenerator {
         },
       };
     } catch (error) {
-      logger.error("AI generation error:", error as Error, { component: 'openai' });
+      logger.error("AI generation error:", error as Error, {
+        component: "openai",
+      });
       throw new Error(
         `Failed to generate product description: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
@@ -165,7 +176,7 @@ export class AIDescriptionGenerator {
       logger.error(
         "❌ Failed to load custom prompts, falling back to default",
         error as Error,
-        { component: 'openai' }
+        { component: "openai" },
       );
     }
 
@@ -238,7 +249,9 @@ CRITICAL: The "description" field must strictly follow the custom prompt guideli
         };
       }
     } catch (error) {
-      logger.error("Failed to parse JSON response:", error as Error, { component: 'openai' });
+      logger.error("Failed to parse JSON response:", error as Error, {
+        component: "openai",
+      });
     }
 
     // Fallback parsing if JSON extraction fails
@@ -304,12 +317,14 @@ CRITICAL: The "description" field must strictly follow the custom prompt guideli
         logger.error(
           "❌ Failed to load custom prompts for enhancement, falling back to default",
           error as Error,
-          { component: 'openai' }
+          { component: "openai" },
         );
       }
 
       // Use the same detailed template instructions as create workflow
-      const templateInstructions = customPrompts?.combined || `
+      const templateInstructions =
+        customPrompts?.combined ||
+        `
 You are an expert e-commerce copywriter. Create compelling product descriptions that convert browsers into buyers.
 
 CORE PRINCIPLES:
@@ -343,7 +358,7 @@ REQUIRED SECTIONS:
       }
       if (request.enhancementOptions.enhanceDescription) {
         outputFields.push(
-          '"description": "Complete detailed product description with ALL template sections (Product Details, Perfect For, Styling Tips, Materials & Details, FAQ, Care and Sizing, Why You will Love It) - 200-400 words using HTML formatting"'
+          '"description": "Complete detailed product description with ALL template sections (Product Details, Perfect For, Styling Tips, Materials & Details, FAQ, Care and Sizing, Why You will Love It) - 200-400 words using HTML formatting"',
         );
       }
       if (request.enhancementOptions.generateSEO) {
@@ -449,7 +464,9 @@ More plain text here describing what it's perfect for.`;
           parsed = JSON.parse(content);
         }
       } catch (e) {
-        logger.error("Failed to parse enhanced content:", e as Error, { component: 'openai' });
+        logger.error("Failed to parse enhanced content:", e as Error, {
+          component: "openai",
+        });
         // Fallback structure
         parsed = {
           description: content,
@@ -469,7 +486,9 @@ More plain text here describing what it's perfect for.`;
         },
       };
     } catch (error) {
-      logger.error("AI enhancement error:", error as Error, { component: 'openai' });
+      logger.error("AI enhancement error:", error as Error, {
+        component: "openai",
+      });
       throw new Error(
         `Failed to enhance product description: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
