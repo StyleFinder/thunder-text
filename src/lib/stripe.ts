@@ -1,13 +1,54 @@
 import Stripe from "stripe";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("STRIPE_SECRET_KEY is not set in environment variables");
+// Lazy initialization to avoid build-time errors when env vars aren't available
+let _stripe: Stripe | null = null;
+
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error("STRIPE_SECRET_KEY is not set in environment variables");
+    }
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2025-11-17.clover",
+      typescript: true,
+    });
+  }
+  return _stripe;
 }
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2025-11-17.clover",
-  typescript: true,
-});
+// For backwards compatibility - accessing this will trigger lazy init
+export const stripe = {
+  get customers() {
+    return getStripe().customers;
+  },
+  get subscriptions() {
+    return getStripe().subscriptions;
+  },
+  get checkout() {
+    return getStripe().checkout;
+  },
+  get billingPortal() {
+    return getStripe().billingPortal;
+  },
+  get webhooks() {
+    return getStripe().webhooks;
+  },
+  get prices() {
+    return getStripe().prices;
+  },
+  get products() {
+    return getStripe().products;
+  },
+  get invoices() {
+    return getStripe().invoices;
+  },
+  get paymentIntents() {
+    return getStripe().paymentIntents;
+  },
+  get paymentMethods() {
+    return getStripe().paymentMethods;
+  },
+};
 
 // Plan configuration
 export const PLANS = {
