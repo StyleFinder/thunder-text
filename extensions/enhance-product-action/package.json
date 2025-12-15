@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@shopify/ui-extensions-react": "^2024.4.0",
-    "react": "^18.0.0"
+    "react": "^19.2.3"
   },
   "devDependencies": {},
   "type": "module"
