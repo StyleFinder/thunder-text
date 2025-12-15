@@ -1,50 +1,66 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/auth-options";
 import { getUsageStats } from "@/lib/billing/usage";
-import { PLANS, PlanType } from "@/lib/stripe";
+import { PLANS, PlanType } from "@/lib/billing/plans";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
+/**
+ * GET /api/billing/subscription
+ *
+ * Get subscription and usage information for the authenticated shop
+ *
+ * SECURITY: Uses session-based authentication. The shopId/shop params are IGNORED -
+ * shop ID is derived from the authenticated session.
+ */
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const shopId = searchParams.get("shopId");
-    const shopDomain = searchParams.get("shop");
-
-    if (!shopId && !shopDomain) {
+    // SECURITY: Require session authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
       return NextResponse.json(
-        { success: false, error: "Missing required parameter: shopId or shop" },
-        { status: 400 },
+        { success: false, error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+
+    // Get shop domain from session (not from query params!)
+    const sessionShopDomain = (session.user as { shopDomain?: string })
+      .shopDomain;
+    if (!sessionShopDomain) {
+      return NextResponse.json(
+        { success: false, error: "No shop associated with account" },
+        { status: 403 },
       );
     }
 
     const supabase = getSupabaseAdmin();
-    let actualShopId = shopId;
 
-    // If we only have shop domain, look up the shop ID
-    if (!actualShopId && shopDomain) {
-      const { data: shop, error } = await supabase
-        .from("shops")
-        .select("id")
-        .eq("shop_domain", shopDomain)
-        .single();
+    // SECURITY: Get shop from session-derived domain, not from query params
+    const { data: shop, error } = await supabase
+      .from("shops")
+      .select("id")
+      .eq("shop_domain", sessionShopDomain)
+      .single();
 
-      if (error || !shop) {
-        logger.error("Shop not found by domain", error as Error, {
-          component: "billing-subscription",
-          shopDomain,
-        });
-        return NextResponse.json(
-          { success: false, error: "Shop not found" },
-          { status: 404 },
-        );
-      }
-
-      actualShopId = shop.id;
+    if (error || !shop) {
+      logger.error("Shop not found for subscription", error as Error, {
+        component: "billing-subscription",
+        shopDomain: sessionShopDomain,
+      });
+      return NextResponse.json(
+        { success: false, error: "Shop not found" },
+        { status: 404 },
+      );
     }
 
-    const usageStats = await getUsageStats(actualShopId!);
+    // Note: shopId/shop params from URL are ignored - we use session-derived shopId
+    const actualShopId = shop.id;
+
+    const usageStats = await getUsageStats(actualShopId);
 
     if (!usageStats) {
       return NextResponse.json(

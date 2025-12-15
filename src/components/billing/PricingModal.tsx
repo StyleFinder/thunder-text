@@ -146,35 +146,12 @@ export function PricingModal({
     setError(null);
 
     try {
-      const response = await fetch("/api/billing/create-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plan: planId,
-          shopId,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || "Failed to create checkout");
-      }
-
-      // Check if subscription was updated directly (existing subscription modified)
-      if (data.updated) {
-        // Redirect to settings page with success message
-        window.location.href = data.redirectUrl;
-        return;
-      }
-
-      // New subscription - redirect to Stripe Checkout
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-
-      throw new Error("Invalid response from server");
+      // Billing integration is currently unavailable
+      // Plan changes will be handled through a future billing system
+      setError(
+        "Plan upgrades are currently unavailable. Please contact support for assistance.",
+      );
+      setLoading(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setLoading(null);

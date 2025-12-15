@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { getPlanLimits, PlanType } from "@/lib/stripe";
+import { getPlanLimits, PlanType } from "@/lib/billing/plans";
 import { logger } from "@/lib/logger";
 
 export type UsageType = "product_description" | "ad";
@@ -227,8 +227,9 @@ export async function incrementUsage(
           return false;
         }
 
-        // eslint-disable-next-line security/detect-object-injection
+        // Column is validated via strict type checking - only "product_descriptions_used" or "ads_created"
         const currentValue =
+          // eslint-disable-next-line security/detect-object-injection
           (currentShop as Record<string, number>)[column] || 0;
 
         // Use update with explicit check to reduce race window
