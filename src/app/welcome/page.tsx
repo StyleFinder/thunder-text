@@ -56,7 +56,7 @@ interface StoreProfile {
 }
 
 // Check if we're in development mode (localhost or ngrok)
-const isDevelopment = () => {
+const _isDevelopment = () => {
   if (typeof window === "undefined") return false;
   const hostname = window.location.hostname;
   return (
@@ -366,7 +366,9 @@ export default function WelcomePage() {
   });
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   // Dev mode: shop domain input for traditional OAuth flow
-  const [devShopDomain, setDevShopDomain] = useState("zunosai-staging-test-store");
+  const [_devShopDomain, _setDevShopDomain] = useState(
+    "zunosai-staging-test-store",
+  );
 
   const steps: { id: OnboardingStep; label: string }[] = [
     { id: "welcome", label: "Welcome" },
@@ -614,19 +616,27 @@ export default function WelcomePage() {
 
   const handleGoToDashboard = async () => {
     const shop = searchParams.get("shop");
-    if (!shop) {
-      router.push("/dashboard");
-      return;
-    }
+
+    // Always mark onboarding as complete - API uses NextAuth session if no shop param
     try {
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+      // Add shop token if available (for Shopify app context)
+      if (shop) {
+        headers.Authorization = `Bearer ${shop}`;
+      }
       await fetch("/api/onboarding/complete", {
         method: "POST",
-        headers: { Authorization: `Bearer ${shop}` },
+        headers,
+        credentials: "include", // Include session cookies
       });
     } catch (error) {
       console.error("[Welcome] Error marking onboarding complete:", error);
     }
-    router.push(`/dashboard?shop=${shop}`);
+
+    // Redirect to dashboard with shop param if available
+    router.push(shop ? `/dashboard?shop=${shop}` : "/dashboard");
   };
 
   return (
@@ -1056,8 +1066,8 @@ export default function WelcomePage() {
                       <div className="p-6 rounded-xl bg-gradient-to-br from-[#96bf48]/10 to-[#96bf48]/5 border border-[#96bf48]/20">
                         <p className="text-gray-700 mb-4">
                           To connect your Shopify store, install Thunder Text
-                          directly from Shopify. This ensures a secure connection
-                          to your store.
+                          directly from Shopify. This ensures a secure
+                          connection to your store.
                         </p>
                         <Button
                           className="w-full h-12 text-base font-semibold bg-[#008060] hover:bg-[#006e52]"
@@ -1065,7 +1075,9 @@ export default function WelcomePage() {
                             // Use Shopify's hosted OAuth install flow
                             // This complies with requirement 2.3.1 - no manual myshopify.com URL entry
                             // Uses environment-based client_id (dev or prod)
-                            const clientId = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || "613bffa12a51873c2739ae67163a72e2";
+                            const clientId =
+                              process.env.NEXT_PUBLIC_SHOPIFY_API_KEY ||
+                              "613bffa12a51873c2739ae67163a72e2";
                             window.location.href = `https://admin.shopify.com/oauth/install?client_id=${clientId}`;
                           }}
                         >
