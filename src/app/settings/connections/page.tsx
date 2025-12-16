@@ -13,16 +13,6 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { logger } from "@/lib/logger";
 import {
   Loader2,
@@ -35,7 +25,9 @@ import {
   Send,
   Zap,
   MessageSquare,
+  Settings2,
 } from "lucide-react";
+import { AdAccountSelectorModal } from "@/components/AdAccountSelectorModal";
 
 interface Connection {
   provider: string;
@@ -48,6 +40,13 @@ interface ConnectionsResponse {
   success: boolean;
   connections: Connection[];
   error?: string;
+}
+
+interface AdAccount {
+  id: string;
+  account_id: string;
+  name: string;
+  status: number;
 }
 
 // Provider display information with Lucide icons
@@ -116,13 +115,12 @@ export default function ConnectionsPage() {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Shopify link modal state
-  const [showShopifyLinkModal, setShowShopifyLinkModal] = useState(false);
-  const [shopifyDomainInput, setShopifyDomainInput] = useState("");
-  const [shopifyLinkLoading, setShopifyLinkLoading] = useState(false);
-  const [shopifyLinkShopId, setShopifyLinkShopId] = useState<string | null>(
-    null,
-  );
+  // Shopify API key for OAuth install link
+  const SHOPIFY_API_KEY = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
+
+  // Ad account selector modal state
+  const [showAdAccountSelector, setShowAdAccountSelector] = useState(false);
+  const [adAccounts, setAdAccounts] = useState<AdAccount[]>([]);
 
   const fetchConnections = useCallback(async () => {
     try {
@@ -168,10 +166,18 @@ export default function ConnectionsPage() {
     // Check for OAuth success messages
     const googleConnected = searchParams?.get("google_connected");
     const shopifyLinked = searchParams?.get("shopify_linked");
+    const facebookConnected = searchParams?.get("facebook_connected");
+    const selectAdAccounts = searchParams?.get("select_ad_accounts");
     const message = searchParams?.get("message");
 
-    if ((googleConnected || shopifyLinked) && message) {
+    if ((googleConnected || shopifyLinked || facebookConnected) && message) {
       setSuccessMessage(message);
+
+      // If Facebook connected with multiple ad accounts, show selector modal
+      if (facebookConnected && selectAdAccounts === "true" && shop) {
+        fetchAdAccounts();
+      }
+
       // Clean URL
       window.history.replaceState(
         {},
@@ -179,23 +185,62 @@ export default function ConnectionsPage() {
         `/settings/connections${shop ? `?shop=${shop}` : ""}`,
       );
 
-      // Clear message after 5 seconds
-      setTimeout(() => setSuccessMessage(null), 5000);
+      // Clear message after 5 seconds (unless ad account selector is showing)
+      if (selectAdAccounts !== "true") {
+        setTimeout(() => setSuccessMessage(null), 5000);
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionStatus, shop, searchParams, fetchConnections]);
 
-  function handleConnect(provider: string, shopId?: string) {
-    // For Shopify with a shop_id, this is a standalone user linking flow
-    if (provider === "shopify" && shopId) {
-      setShopifyLinkShopId(shopId);
-      setShopifyDomainInput("");
-      setShowShopifyLinkModal(true);
+  // Fetch ad accounts for selection
+  async function fetchAdAccounts() {
+    if (!shop) return;
+
+    try {
+      const response = await fetch(
+        `/api/facebook/ad-accounts/select?shop=${encodeURIComponent(shop)}`,
+      );
+      const data = await response.json();
+
+      if (data.success && data.ad_accounts && data.ad_accounts.length > 0) {
+        setAdAccounts(data.ad_accounts);
+        setShowAdAccountSelector(true);
+      }
+    } catch (err) {
+      logger.error("Error fetching ad accounts:", err as Error, {
+        component: "connections",
+      });
+    }
+  }
+
+  // Handle ad account selection complete
+  function handleAdAccountSelectionComplete() {
+    setSuccessMessage("Ad accounts configured successfully!");
+    setTimeout(() => setSuccessMessage(null), 5000);
+    fetchConnections(); // Refresh connections to show updated data
+  }
+
+  // Open ad account selector for existing connection
+  function handleManageAdAccounts() {
+    fetchAdAccounts();
+  }
+
+  function handleConnect(provider: string) {
+    // For Shopify, redirect to Shopify's OAuth install page
+    // This complies with requirement 2.3.1 - no manual myshopify.com URL entry
+    if (provider === "shopify") {
+      if (SHOPIFY_API_KEY) {
+        // Use Shopify's hosted OAuth install flow - they handle store selection
+        window.location.href = `https://admin.shopify.com/oauth/install?client_id=${SHOPIFY_API_KEY}`;
+      } else {
+        alert("Shopify configuration error. Please contact support.");
+      }
       return;
     }
 
-    // Redirect to OAuth flow for the provider
+    // Redirect to OAuth flow for other providers
     const oauthUrls: Record<string, string> = {
-      shopify: "/api/auth/shopify",
       meta: "/api/facebook/oauth/authorize",
       google: "/api/google/oauth/authorize",
       tiktok: "/api/tiktok/oauth/authorize",
@@ -222,27 +267,6 @@ export default function ConnectionsPage() {
     } else {
       alert(`OAuth flow for ${provider} not yet implemented`);
     }
-  }
-
-  // Handle Shopify link submission for standalone users
-  function handleShopifyLinkSubmit() {
-    if (!shopifyDomainInput.trim() || !shopifyLinkShopId) {
-      return;
-    }
-
-    setShopifyLinkLoading(true);
-
-    // Normalize the domain - user can enter just the store name or full domain
-    let normalizedDomain = shopifyDomainInput.trim().toLowerCase();
-    if (!normalizedDomain.includes(".myshopify.com")) {
-      // Remove any .myshopify or trailing dots
-      normalizedDomain = normalizedDomain.replace(/\.myshopify\.?$/, "");
-      normalizedDomain = `${normalizedDomain}.myshopify.com`;
-    }
-
-    // Redirect to the Shopify link OAuth endpoint
-    const linkUrl = `/api/auth/shopify/link?standalone_user_id=${encodeURIComponent(shopifyLinkShopId)}&target_shop=${encodeURIComponent(normalizedDomain)}`;
-    window.location.href = linkUrl;
   }
 
   async function handleDisconnect(provider: string) {
@@ -436,6 +460,24 @@ export default function ConnectionsPage() {
                           Core platform - always connected
                         </p>
                       </div>
+                    ) : connection.provider === "meta" ? (
+                      <div className="space-y-2">
+                        <Button
+                          variant="outline"
+                          onClick={handleManageAdAccounts}
+                          className="w-full"
+                        >
+                          <Settings2 className="mr-2 h-4 w-4" />
+                          Manage Ad Accounts
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleDisconnect(connection.provider)}
+                          className="w-full bg-red-600 text-white hover:bg-red-700 border-red-600"
+                        >
+                          Disconnect
+                        </Button>
+                      </div>
                     ) : (
                       <Button
                         variant="outline"
@@ -447,12 +489,7 @@ export default function ConnectionsPage() {
                     )
                   ) : (
                     <Button
-                      onClick={() =>
-                        handleConnect(
-                          connection.provider,
-                          connection.metadata?.shop_id,
-                        )
-                      }
+                      onClick={() => handleConnect(connection.provider)}
                       className="w-full bg-primary text-white"
                     >
                       Connect {info.name}
@@ -465,68 +502,16 @@ export default function ConnectionsPage() {
         </div>
       </div>
 
-      {/* Shopify Link Modal for Standalone Users */}
-      <Dialog
-        open={showShopifyLinkModal}
-        onOpenChange={setShowShopifyLinkModal}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Connect to Shopify Store</DialogTitle>
-            <DialogDescription>
-              Enter the Shopify store domain you have staff access to.
-              You&apos;ll be redirected to Shopify to authorize access.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="shopify-domain">Shopify Store Domain</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="shopify-domain"
-                  placeholder="your-store"
-                  value={shopifyDomainInput}
-                  onChange={(e) => setShopifyDomainInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleShopifyLinkSubmit();
-                    }
-                  }}
-                  className="flex-1"
-                />
-                <span className="text-sm text-gray-500">.myshopify.com</span>
-              </div>
-              <p className="text-xs text-gray-500">
-                Enter just the store name (e.g., &quot;my-store&quot;) or the
-                full domain
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowShopifyLinkModal(false)}
-              disabled={shopifyLinkLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleShopifyLinkSubmit}
-              disabled={!shopifyDomainInput.trim() || shopifyLinkLoading}
-            >
-              {shopifyLinkLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                "Connect"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Ad Account Selector Modal */}
+      {shop && (
+        <AdAccountSelectorModal
+          open={showAdAccountSelector}
+          onOpenChange={setShowAdAccountSelector}
+          adAccounts={adAccounts}
+          shop={shop}
+          onComplete={handleAdAccountSelectionComplete}
+        />
+      )}
     </div>
   );
 }

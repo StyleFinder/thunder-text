@@ -262,3 +262,48 @@
 .animate-welcome-confetti {
   animation: welcome-confetti 3s ease-out forwards;
 }
+
+/* BHB Dashboard Animations */
+@keyframes bhb-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bhb-slide-in-right {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-bhb-fade-in {
+  animation: bhb-fade-in 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-bhb-slide-in {
+  animation: bhb-slide-in-right 0.3s ease-out forwards;
+}
+
+/* Staggered animation delays for cards */
+.animate-stagger-1 { animation-delay: 50ms; }
+.animate-stagger-2 { animation-delay: 100ms; }
+.animate-stagger-3 { animation-delay: 150ms; }
+.animate-stagger-4 { animation-delay: 200ms; }
+
+/* Tailwind animate-in utilities for expandable rows */
+@keyframes slide-in-from-top-1 {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation-duration: 0.2s;
+  animation-fill-mode: both;
+}
+
+.slide-in-from-top-1 {
+  animation-name: slide-in-from-top-1;
+}
+
+.duration-200 {
+  animation-duration: 200ms;
+}

@@ -1,364 +1,253 @@
 "use client";
 
 import { useState } from "react";
-import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  AlertCircle,
   Zap,
-  FileText,
-  Target,
-  Users,
-  ArrowRight,
   Loader2,
-  Mail,
-  Lock,
-  Sparkles,
+  AlertCircle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
-import { logger } from "@/lib/logger";
-
-// Gradient mesh background for left panel
-function GradientMesh() {
-  return (
-    <div className="absolute inset-0 overflow-hidden">
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)",
-        }}
-      />
-      {/* Animated orbs */}
-      <div
-        className="absolute w-96 h-96 rounded-full blur-3xl opacity-20 animate-welcome-float"
-        style={{
-          background: "radial-gradient(circle, #0099ff 0%, transparent 70%)",
-          top: "10%",
-          right: "-10%",
-        }}
-      />
-      <div
-        className="absolute w-80 h-80 rounded-full blur-3xl opacity-15 animate-welcome-float-slow"
-        style={{
-          background: "radial-gradient(circle, #ffcc00 0%, transparent 70%)",
-          bottom: "20%",
-          left: "-5%",
-        }}
-      />
-      <div
-        className="absolute w-64 h-64 rounded-full blur-3xl opacity-10 animate-welcome-float-slower"
-        style={{
-          background: "radial-gradient(circle, #0066cc 0%, transparent 70%)",
-          top: "50%",
-          right: "20%",
-        }}
-      />
-    </div>
-  );
-}
-
-// Feature item for left panel
-function FeatureItem({
-  icon: Icon,
-  text,
-}: {
-  icon: React.ElementType;
-  text: string;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{ background: "rgba(255, 255, 255, 0.1)" }}
-      >
-        <Icon className="w-4 h-4 text-white" />
-      </div>
-      <span style={{ color: "rgba(255, 255, 255, 0.9)" }} className="text-sm">
-        {text}
-      </span>
-    </div>
-  );
-}
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const registered = searchParams.get("registered") === "true";
+  const loggedOut = searchParams.get("logged_out") === "true";
+
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+    setError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      userType: "shop",
-      redirect: false,
-    });
-
-    if (result?.error) {
-      logger.error(`[Login Page] Login failed: ${result.error}`, undefined, {
-        component: "login",
+    try {
+      const result = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        userType: "shop", // For standalone shop users
+        redirect: false,
       });
 
-      if (result.error.includes("ACCOUNT_LOCKED")) {
-        const lockoutSeconds = parseInt(result.error.split(":")[1]) || 900;
-        const lockoutMinutes = Math.ceil(lockoutSeconds / 60);
-        setError(
-          `Account temporarily locked due to too many failed attempts. Please try again in ${lockoutMinutes} minute${lockoutMinutes > 1 ? "s" : ""}.`,
-        );
-      } else {
-        setError("Invalid email or password");
+      if (result?.error) {
+        if (result.error.includes("ACCOUNT_LOCKED")) {
+          const seconds = result.error.split(":")[1];
+          setError(`Account locked. Please try again in ${seconds} seconds.`);
+        } else {
+          setError("Invalid email or password");
+        }
+        return;
       }
-      setLoading(false);
-      return;
+
+      // Check onboarding status to determine redirect destination
+      try {
+        const statusResponse = await fetch("/api/onboarding/status");
+        const statusData = await statusResponse.json();
+
+        if (statusResponse.ok && statusData.success && statusData.data) {
+          const { onboarding_completed, shop_domain } = statusData.data;
+
+          if (onboarding_completed) {
+            // Established user with completed onboarding - go to dashboard
+            router.push(`/dashboard?shop=${shop_domain}`);
+          } else {
+            // New user - go to welcome/onboarding
+            router.push("/welcome");
+          }
+        } else {
+          // Account not found in shops table - show error
+          setError(
+            "Account not found. Please check your credentials or create an account.",
+          );
+        }
+      } catch {
+        // Error checking status - show error instead of redirecting
+        setError("Unable to verify account. Please try again.");
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-
-    console.log("[Login Page] Login successful, fetching session...");
-
-    // Get the session to retrieve the shop domain
-    const session = await getSession();
-    const shopDomain = session?.user?.shopDomain;
-
-    // Build redirect URL with shop parameter if available
-    let callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
-
-    if (shopDomain && !callbackUrl.includes("shop=")) {
-      const separator = callbackUrl.includes("?") ? "&" : "?";
-      callbackUrl = `${callbackUrl}${separator}shop=${encodeURIComponent(shopDomain)}`;
-    }
-
-    console.log("[Login Page] Redirecting to:", callbackUrl);
-    router.push(callbackUrl);
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Panel - Brand/Marketing */}
-      <div className="hidden lg:flex lg:w-[420px] xl:w-[480px] relative flex-col justify-between p-8 overflow-hidden">
-        <GradientMesh />
-
-        {/* Content */}
-        <div className="relative z-10">
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-12">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{
-                background: "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
-              }}
-            >
-              <Zap className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-white">Thunder Text</span>
+    <div
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{
+        background:
+          "linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)",
+      }}
+    >
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{
+              background: "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+            }}
+          >
+            <Zap className="w-5 h-5 text-white" />
           </div>
+          <span className="text-xl font-bold text-white">Thunder Text</span>
+        </div>
 
-          {/* Headline */}
-          <div className="mb-10">
-            <h1
-              className="text-3xl font-bold mb-3 leading-tight"
-              style={{ color: "white" }}
-            >
-              Welcome back to
-              <br />
-              <span
-                className="text-transparent bg-clip-text"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(90deg, #ffcc00 0%, #ff9900 100%)",
-                }}
-              >
-                Thunder Text
-              </span>
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Welcome Back
             </h1>
-            <p
-              style={{ color: "rgba(255, 255, 255, 0.7)" }}
-              className="text-base"
-            >
-              Sign in to continue creating amazing product descriptions and
-              high-converting ads.
+            <p className="text-gray-500">
+              Sign in to your Thunder Text account
             </p>
           </div>
 
-          {/* Features */}
-          <div className="space-y-4">
-            <FeatureItem
-              icon={FileText}
-              text="AI-powered product descriptions"
-            />
-            <FeatureItem icon={Target} text="High-converting ad copy" />
-            <FeatureItem icon={Users} text="Personal BHB coaching" />
-            <FeatureItem icon={Sparkles} text="Brand voice consistency" />
-          </div>
-        </div>
+          {registered && (
+            <Alert className="mb-6 bg-green-50 border-green-200">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-700">
+                Account created! Please sign in to continue.
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {/* Bottom stats */}
-        <div
-          className="relative z-10 pt-8 border-t"
-          style={{ borderColor: "rgba(255, 255, 255, 0.1)" }}
-        >
-          <div className="flex gap-8">
-            <div>
-              <div className="text-2xl font-bold text-white">10,000+</div>
-              <div
-                style={{ color: "rgba(255, 255, 255, 0.6)" }}
-                className="text-sm"
-              >
-                Products created
+          {loggedOut && (
+            <Alert className="mb-6 bg-blue-50 border-blue-200">
+              <CheckCircle2 className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-700">
+                You have been logged out successfully.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="you@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                disabled={isLoading}
+                className="h-11"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-sm font-medium hover:underline"
+                  style={{ color: "#0066cc" }}
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  disabled={isLoading}
+                  className="h-11 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
               </div>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-white">500+</div>
-              <div
-                style={{ color: "rgba(255, 255, 255, 0.6)" }}
-                className="text-sm"
-              >
-                Happy stores
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Right Panel - Login Form */}
-      <div className="flex-1 flex items-center justify-center bg-gray-50 p-6 lg:p-12">
-        <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
+            <Button
+              type="submit"
+              className="w-full h-11 text-base font-medium"
               style={{
                 background: "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                border: "none",
               }}
+              disabled={isLoading}
             >
-              <Zap className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-gray-900">
-              Thunder Text
-            </span>
-          </div>
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </Button>
+          </form>
 
-          {/* Form Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Sign in to your account
-              </h2>
-              <p className="text-gray-500">
-                Enter your credentials to continue
-              </p>
-            </div>
-
-            {error && (
-              <Alert variant="destructive" className="mb-6">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-700">
-                  Email address
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                    className="pl-10 h-11"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-gray-700">
-                    Password
-                  </Label>
-                  <Link
-                    href="/auth/forgot-password"
-                    className="text-sm font-medium hover:underline"
-                    style={{ color: "#0066cc" }}
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    className="pl-10 h-11"
-                  />
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full h-11 text-base font-medium"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
-                  border: "none",
-                }}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  <>
-                    Sign in
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </>
-                )}
-              </Button>
-            </form>
-
-            {/* Sign up link */}
-            <p className="mt-6 text-center text-sm text-gray-500">
+          <div className="mt-6 pt-6 border-t border-gray-200 text-center space-y-3">
+            <p className="text-sm text-gray-500">
               Don&apos;t have an account?{" "}
               <Link
                 href="/auth/signup"
                 className="font-medium hover:underline"
                 style={{ color: "#0066cc" }}
               >
-                Sign up for free
+                Create account
+              </Link>
+            </p>
+            <p className="text-sm text-gray-500">
+              Are you a coach?{" "}
+              <Link
+                href="/coach/login"
+                className="font-medium hover:underline"
+                style={{ color: "#0066cc" }}
+              >
+                Coach login
               </Link>
             </p>
           </div>
-
-          {/* Coach login link */}
-          <p className="mt-4 text-center text-sm text-gray-400">
-            Are you a coach?{" "}
-            <Link
-              href="/coach/login"
-              className="font-medium hover:underline"
-              style={{ color: "#0066cc" }}
-            >
-              Coach Login
-            </Link>
-          </p>
         </div>
       </div>
     </div>

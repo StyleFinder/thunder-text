@@ -1,12 +1,103 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/auth-options";
 import { aieEngine } from "@/lib/aie/engine";
 import { AiePlatform, AieGoal, AdLengthMode } from "@/types/aie";
 import { logger } from "@/lib/logger";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { checkUsageLimit, incrementUsage } from "@/lib/billing/usage";
 
+/**
+ * POST /api/aie/generate
+ *
+ * Generate AI-powered ad variants
+ *
+ * SECURITY: Requires session authentication to prevent AI abuse.
+ * Usage is tracked and limited based on subscription plan.
+ */
 export async function POST(req: NextRequest) {
   try {
+    // SECURITY: Require session authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+
+    // Get shop domain from session
+    const shopDomain = (session.user as { shopDomain?: string }).shopDomain;
+    if (!shopDomain) {
+      return NextResponse.json(
+        { error: "No shop associated with account" },
+        { status: 403 },
+      );
+    }
+
+    // Verify shop exists and get shop ID
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from("shops")
+      .select("id, is_active, plan")
+      .eq("shop_domain", shopDomain)
+      .single();
+
+    if (shopError || !shopData) {
+      logger.error("Shop not found for AIE generate:", shopError as Error, {
+        component: "generate",
+        shopDomain,
+      });
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+
+    if (!shopData.is_active) {
+      return NextResponse.json(
+        { error: "Shop is not active" },
+        { status: 403 },
+      );
+    }
+
+    // Use session-derived shop ID
+    const shopId = shopData.id;
+
+    // SECURITY: Check usage limits and subscription status before generating
+    // This blocks expired, canceled, past_due, and unpaid subscriptions
+    const usageCheck = await checkUsageLimit(shopId, "ad");
+    if (!usageCheck.canProceed) {
+      logger.warn("AIE generate blocked due to usage/subscription limits", {
+        component: "aie-generate",
+        shopId,
+        used: usageCheck.used,
+        limit: usageCheck.limit,
+        upgradeRequired: usageCheck.upgradeRequired,
+      });
+      return NextResponse.json(
+        {
+          error: "Usage limit reached or subscription inactive",
+          upgradeRequired: usageCheck.upgradeRequired,
+          used: usageCheck.used,
+          limit: usageCheck.limit,
+        },
+        { status: 429 },
+      );
+    }
+
     const body = await req.json();
-    const { productInfo, platform, goal, adLengthMode } = body;
+    const {
+      productInfo,
+      platform,
+      goal,
+      adLengthMode,
+      targetAudience,
+      imageUrls,
+      audienceTemperature,
+      productComplexity,
+      productPrice,
+      hasStrongStory,
+      isPremiumBrand,
+    } = body;
+
+    // Note: shopId from body is ignored - we use session-derived shopId
 
     if (!productInfo || !platform || !goal) {
       return NextResponse.json(
@@ -56,13 +147,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Run the AIE Engine
+    // Run the AIE Engine with session-derived shopId
     const result = await aieEngine.generateAds({
       productInfo,
       platform: platform as AiePlatform,
       goal: goal as AieGoal,
-      shopId: body.shopId, // Pass shopId if provided
-      adLengthMode: (adLengthMode as AdLengthMode) || "AUTO", // Default to AUTO if not provided
+      shopId, // SECURITY: Use session-derived shopId
+      adLengthMode: (adLengthMode as AdLengthMode) || "AUTO",
+      targetAudience: targetAudience || undefined,
+      imageUrls: imageUrls || undefined,
+      audienceTemperature: audienceTemperature || undefined,
+      productComplexity: productComplexity || undefined,
+      productPrice: productPrice || undefined,
+      hasStrongStory: hasStrongStory || undefined,
+      isPremiumBrand: isPremiumBrand || undefined,
     });
 
     // Transform snake_case to camelCase for frontend compatibility
@@ -92,6 +190,9 @@ export async function POST(req: NextRequest) {
         generationReasoning: v.generation_reasoning,
       }),
     );
+
+    // SECURITY: Increment usage after successful generation
+    await incrementUsage(shopId, "ad");
 
     return NextResponse.json({
       success: true,

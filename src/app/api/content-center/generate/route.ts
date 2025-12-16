@@ -11,7 +11,8 @@ import { withRateLimit, RATE_LIMITS } from "@/lib/middleware/rate-limit";
 import { generateContent } from "@/lib/services/content-generator";
 import { postProcessContent } from "@/lib/services/content-post-processor";
 import { validateWordCountForType } from "@/lib/services/parameter-handler";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
+import { checkUsageLimit, incrementUsage } from "@/lib/billing/usage";
 
 /**
  * Route segment config - content generation limits
@@ -19,7 +20,7 @@ import { logger } from '@/lib/logger'
  * - 120s timeout for OpenAI API calls
  */
 export const maxDuration = 120;
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 /**
  * POST /api/content-center/generate
@@ -49,6 +50,33 @@ export async function POST(
       return rateLimitCheck as NextResponse<
         ApiResponse<GenerateContentResponse>
       >;
+
+    // SECURITY: Check usage limits and subscription status before generating
+    // This blocks expired, canceled, past_due, and unpaid subscriptions
+    // userId here is actually the store_id (shop ID)
+    const usageCheck = await checkUsageLimit(userId, "product_description");
+    if (!usageCheck.canProceed) {
+      logger.warn(
+        "Content-center generate blocked due to usage/subscription limits",
+        {
+          component: "content-center-generate",
+          storeId: userId,
+          used: usageCheck.used,
+          limit: usageCheck.limit,
+          upgradeRequired: usageCheck.upgradeRequired,
+        },
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Usage limit reached or subscription inactive",
+          upgradeRequired: usageCheck.upgradeRequired,
+          used: usageCheck.used,
+          limit: usageCheck.limit,
+        },
+        { status: 429 },
+      );
+    }
 
     const body: GenerateContentRequest = await request.json();
 
@@ -149,7 +177,9 @@ export async function POST(
       .single();
 
     if (contentError) {
-      logger.error("Error storing generated content:", contentError as Error, { component: 'generate' });
+      logger.error("Error storing generated content:", contentError as Error, {
+        component: "generate",
+      });
       return NextResponse.json(
         { success: false, error: "Failed to store generated content" },
         { status: 500 },
@@ -157,6 +187,9 @@ export async function POST(
     }
 
     const generationTime = Date.now() - startTime;
+
+    // SECURITY: Increment usage after successful generation
+    await incrementUsage(userId, "product_description");
 
     // Calculate cost estimate (GPT-4 pricing: $0.03/1K input, $0.06/1K output)
     const inputCost = ((generationResult.tokensUsed * 0.5) / 1000) * 0.03;
@@ -175,7 +208,11 @@ export async function POST(
       { status: 201 },
     );
   } catch (error) {
-    logger.error("Error in POST /api/content-center/generate:", error as Error, { component: 'generate' });
+    logger.error(
+      "Error in POST /api/content-center/generate:",
+      error as Error,
+      { component: "generate" },
+    );
 
     if (error instanceof VoiceProfileNotFoundError) {
       return NextResponse.json(

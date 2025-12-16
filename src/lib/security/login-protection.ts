@@ -7,8 +7,11 @@
  * - Account lockout after threshold
  * - IP-based rate limiting
  *
- * Note: Uses in-memory store for single-instance deployment.
- * For multi-instance, migrate to Redis.
+ * ARCHITECTURE:
+ * - Uses in-memory store as fast cache for immediate protection
+ * - Persists to database (shops.failed_login_attempts, shops.locked_until)
+ *   for durability across restarts and multi-instance deployments
+ * - Database is source of truth; memory is sync'd on read
  */
 
 import { logger } from "@/lib/logger";
@@ -24,7 +27,7 @@ const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 const ATTEMPT_WINDOW_MS = 60 * 60 * 1000; // 1 hour window for counting attempts
 
-// In-memory store for failed attempts (acceptable for single-instance)
+// In-memory store for failed attempts (fast cache)
 // Key: email or IP, Value: { attempts, lastAttempt, lockedUntil }
 interface LoginAttemptRecord {
   attempts: number;
@@ -61,6 +64,7 @@ export interface LockoutStatus {
 
 /**
  * Check if an account/IP is currently locked out
+ * Uses in-memory cache first, falls back to database for persistence
  */
 export function checkLockoutStatus(identifier: string): LockoutStatus {
   const record = loginAttemptStore.get(identifier);
@@ -109,7 +113,90 @@ export function checkLockoutStatus(identifier: string): LockoutStatus {
 }
 
 /**
- * Record a failed login attempt
+ * Check lockout status from database (async version)
+ * Use this to sync memory state with database on login attempts
+ */
+export async function checkLockoutStatusFromDatabase(
+  email: string,
+): Promise<LockoutStatus> {
+  try {
+    const supabaseAdmin = await getSupabaseAdmin();
+    const { data: shop } = await supabaseAdmin
+      .from("shops")
+      .select("failed_login_attempts, locked_until, last_failed_login_at")
+      .eq("email", email.toLowerCase())
+      .single();
+
+    if (!shop) {
+      return {
+        isLocked: false,
+        remainingAttempts: MAX_FAILED_ATTEMPTS,
+        lockoutEndsAt: null,
+        lockoutRemainingSeconds: null,
+      };
+    }
+
+    const now = Date.now();
+    const lockedUntil = shop.locked_until
+      ? new Date(shop.locked_until).getTime()
+      : null;
+
+    // Check if locked
+    if (lockedUntil && now < lockedUntil) {
+      // Sync to memory cache
+      loginAttemptStore.set(email.toLowerCase(), {
+        attempts: shop.failed_login_attempts || MAX_FAILED_ATTEMPTS,
+        lastAttempt: shop.last_failed_login_at
+          ? new Date(shop.last_failed_login_at).getTime()
+          : now,
+        lockedUntil,
+      });
+
+      return {
+        isLocked: true,
+        remainingAttempts: 0,
+        lockoutEndsAt: new Date(lockedUntil),
+        lockoutRemainingSeconds: Math.ceil((lockedUntil - now) / 1000),
+      };
+    }
+
+    // Lockout expired or never set
+    const attempts = shop.failed_login_attempts || 0;
+    const lastAttempt = shop.last_failed_login_at
+      ? new Date(shop.last_failed_login_at).getTime()
+      : 0;
+
+    // Check if attempts are within window
+    const attemptsInWindow =
+      now - lastAttempt < ATTEMPT_WINDOW_MS ? attempts : 0;
+
+    // Sync to memory cache
+    if (attemptsInWindow > 0) {
+      loginAttemptStore.set(email.toLowerCase(), {
+        attempts: attemptsInWindow,
+        lastAttempt,
+        lockedUntil: null,
+      });
+    }
+
+    return {
+      isLocked: false,
+      remainingAttempts: Math.max(0, MAX_FAILED_ATTEMPTS - attemptsInWindow),
+      lockoutEndsAt: null,
+      lockoutRemainingSeconds: null,
+    };
+  } catch (error) {
+    logger.error("[Login Protection] Failed to check database lockout", {
+      component: "login-protection",
+      error,
+    });
+    // Fall back to memory-only check
+    return checkLockoutStatus(email);
+  }
+}
+
+/**
+ * Record a failed login attempt (in-memory only, synchronous)
  * Returns the updated lockout status
  */
 export function recordFailedAttempt(identifier: string): LockoutStatus {
@@ -155,10 +242,112 @@ export function recordFailedAttempt(identifier: string): LockoutStatus {
 }
 
 /**
- * Clear failed attempts on successful login
+ * Record a failed login attempt and persist to database
+ * Use this for shop user logins to ensure lockout persists across restarts
+ */
+export async function recordFailedAttemptWithPersistence(
+  email: string,
+): Promise<LockoutStatus> {
+  // First, update in-memory store
+  const status = recordFailedAttempt(email.toLowerCase());
+
+  // Then persist to database
+  try {
+    const supabaseAdmin = await getSupabaseAdmin();
+    const now = new Date().toISOString();
+
+    // Get current state from database
+    const { data: shop } = await supabaseAdmin
+      .from("shops")
+      .select("failed_login_attempts, last_failed_login_at")
+      .eq("email", email.toLowerCase())
+      .single();
+
+    if (shop) {
+      const lastAttempt = shop.last_failed_login_at
+        ? new Date(shop.last_failed_login_at).getTime()
+        : 0;
+      const nowMs = Date.now();
+
+      // Check if we should reset the counter (window expired)
+      let newAttempts: number;
+      if (nowMs - lastAttempt > ATTEMPT_WINDOW_MS) {
+        newAttempts = 1;
+      } else {
+        newAttempts = (shop.failed_login_attempts || 0) + 1;
+      }
+
+      const shouldLock = newAttempts >= MAX_FAILED_ATTEMPTS;
+      const lockedUntil = shouldLock
+        ? new Date(nowMs + LOCKOUT_DURATION_MS).toISOString()
+        : null;
+
+      await supabaseAdmin
+        .from("shops")
+        .update({
+          failed_login_attempts: newAttempts,
+          last_failed_login_at: now,
+          locked_until: lockedUntil,
+        })
+        .eq("email", email.toLowerCase());
+
+      logger.info("[Login Protection] Failed attempt persisted to database", {
+        component: "login-protection",
+        email: `${email.substring(0, 3)}***`,
+        attempts: newAttempts,
+        isLocked: shouldLock,
+      });
+    }
+  } catch (error) {
+    logger.error("[Login Protection] Failed to persist to database", {
+      component: "login-protection",
+      error,
+    });
+    // Memory store still has the data, so protection still works
+  }
+
+  return status;
+}
+
+/**
+ * Clear failed attempts on successful login (in-memory only)
  */
 export function clearFailedAttempts(identifier: string): void {
   loginAttemptStore.delete(identifier);
+}
+
+/**
+ * Clear failed attempts and reset database columns
+ * Use this for shop user logins to ensure clean state persists
+ */
+export async function clearFailedAttemptsWithPersistence(
+  email: string,
+): Promise<void> {
+  // Clear in-memory store
+  clearFailedAttempts(email.toLowerCase());
+
+  // Clear database columns
+  try {
+    const supabaseAdmin = await getSupabaseAdmin();
+    await supabaseAdmin
+      .from("shops")
+      .update({
+        failed_login_attempts: 0,
+        locked_until: null,
+        last_failed_login_at: null,
+      })
+      .eq("email", email.toLowerCase());
+
+    logger.info("[Login Protection] Cleared failed attempts in database", {
+      component: "login-protection",
+      email: `${email.substring(0, 3)}***`,
+    });
+  } catch (error) {
+    logger.error("[Login Protection] Failed to clear database lockout", {
+      component: "login-protection",
+      error,
+    });
+  }
 }
 
 /**

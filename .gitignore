@@ -55,3 +55,6 @@ packages/node_modules
 # Package build artifacts
 packages/*/.next
 packages/*/node_modules
+
+# Playwright auth state
+e2e/.auth/

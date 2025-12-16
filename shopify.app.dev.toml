@@ -1,0 +1,43 @@
+# DEVELOPMENT APP CONFIGURATION
+# This is for local development and testing only
+# DO NOT deploy this to production
+
+client_id = "b5651b35edf4f4c2222243626a5f721a"
+name = "Thunder Text Dev"
+application_url = "https://thundertext-dev.ngrok.app"
+embedded = false
+handle = "thunder-text-dev"
+
+[build]
+dev_store_url = "zunosai-dev.myshopify.com"
+
+[webhooks]
+api_version = "2025-01"
+
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "/api/webhooks/app-uninstalled"
+
+[[webhooks.subscriptions]]
+topics = ["shop/update"]
+uri = "/api/webhooks/shop-update"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+uri = "/api/webhooks/compliance"
+
+[access_scopes]
+scopes = "read_content,read_files,read_inventory,read_metaobject_definitions,read_metaobjects,read_product_feeds,read_product_listings,read_products,write_content,write_files,write_inventory,write_metaobject_definitions,write_metaobjects,write_product_feeds,write_product_listings,write_products"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [
+  "https://thundertext-dev.ngrok.app/api/auth/callback",
+  "https://thundertext-dev.ngrok.app/api/auth/shopify/callback",
+  "http://localhost:3050/api/auth/callback",
+  "http://localhost:3050/api/auth/shopify/callback"
+]
+
+[pos]
+embedded = false

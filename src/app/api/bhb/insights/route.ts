@@ -2,14 +2,19 @@
  * GET /api/bhb/insights
  *
  * Aggregates campaign performance across ALL shops for BHB Dashboard
+ * Fetches LIVE data from Facebook Marketing API for connected shops
  * Requires admin or coach authentication
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
+import { decryptToken } from "@/lib/services/encryption";
+
+const FACEBOOK_API_VERSION = "v21.0";
+const FACEBOOK_GRAPH_URL = `https://graph.facebook.com/${FACEBOOK_API_VERSION}`;
 
 interface ShopCampaignPerformance {
   shop_id: string;
@@ -18,6 +23,10 @@ interface ShopCampaignPerformance {
   facebook_connected: boolean;
   ad_account_id: string | null;
   ad_account_name: string | null;
+  google_ads_connected?: boolean;
+  google_ad_account_id?: string | null;
+  tiktok_ads_connected?: boolean;
+  tiktok_ad_account_id?: string | null;
   coach_assigned: string | null;
   campaigns: Array<{
     campaign_id: string;
@@ -35,6 +44,23 @@ interface ShopCampaignPerformance {
   avg_roas: number;
   avg_conversion_rate: number;
   error?: string;
+}
+
+interface FacebookCampaign {
+  id: string;
+  name: string;
+  status: string;
+  objective?: string;
+}
+
+interface FacebookInsight {
+  campaign_id: string;
+  campaign_name: string;
+  impressions?: string;
+  clicks?: string;
+  spend: string;
+  actions?: Array<{ action_type: string; value: string }>;
+  action_values?: Array<{ action_type: string; value: string }>;
 }
 
 /**
@@ -69,69 +95,253 @@ function calculatePerformanceTier(
   return "poor";
 }
 
+/**
+ * Fetch live campaign data from Facebook Marketing API
+ */
+async function fetchFacebookCampaignData(
+  shopId: string,
+  integration: {
+    encrypted_access_token?: string;
+    additional_metadata?: { ad_accounts?: Array<{ id: string; name: string }> };
+  },
+): Promise<{
+  campaigns: Array<{
+    campaign_id: string;
+    campaign_name: string;
+    spend: number;
+    purchases: number;
+    purchase_value: number;
+    conversion_rate: number;
+    roas: number;
+    performance_tier: "excellent" | "good" | "average" | "poor" | "critical";
+  }>;
+  ad_account_id: string | null;
+  ad_account_name: string | null;
+  error?: string;
+}> {
+  try {
+    // Get ad accounts from integration metadata
+    const adAccounts = integration.additional_metadata?.ad_accounts || [];
+
+    if (adAccounts.length === 0) {
+      return {
+        campaigns: [],
+        ad_account_id: null,
+        ad_account_name: null,
+        error: "No ad accounts found",
+      };
+    }
+
+    // Use first ad account
+    const selectedAdAccount = adAccounts[0];
+
+    // Decrypt access token
+    if (!integration.encrypted_access_token) {
+      return {
+        campaigns: [],
+        ad_account_id: selectedAdAccount.id,
+        ad_account_name: selectedAdAccount.name,
+        error: "No access token found",
+      };
+    }
+
+    const accessToken = await decryptToken(integration.encrypted_access_token);
+
+    // Fetch campaigns from Facebook API
+    const campaignsUrl = new URL(
+      `${FACEBOOK_GRAPH_URL}/${selectedAdAccount.id}/campaigns`,
+    );
+    campaignsUrl.searchParams.set("access_token", accessToken);
+    campaignsUrl.searchParams.set("fields", "id,name,status,objective");
+    // Don't filter by status - show all campaigns to ensure visibility
+    // Note: effective_status can be ACTIVE, PAUSED, DELETED, ARCHIVED, IN_PROCESS, WITH_ISSUES
+    campaignsUrl.searchParams.set("limit", "100");
+
+    const campaignsResponse = await fetch(campaignsUrl.toString());
+    const campaignsData = await campaignsResponse.json();
+
+    if (campaignsData.error) {
+      logger.error(
+        "Facebook API error fetching campaigns for insights",
+        new Error(campaignsData.error.message),
+        {
+          component: "bhb-insights",
+          shopId,
+          errorCode: campaignsData.error.code,
+        },
+      );
+      return {
+        campaigns: [],
+        ad_account_id: selectedAdAccount.id,
+        ad_account_name: selectedAdAccount.name,
+        error: campaignsData.error.message,
+      };
+    }
+
+    const campaigns: FacebookCampaign[] = campaignsData.data || [];
+
+    if (campaigns.length === 0) {
+      return {
+        campaigns: [],
+        ad_account_id: selectedAdAccount.id,
+        ad_account_name: selectedAdAccount.name,
+      };
+    }
+
+    // Fetch insights for campaigns (last 30 days)
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+
+    const since = thirtyDaysAgo.toISOString().split("T")[0];
+    const until = today.toISOString().split("T")[0];
+
+    const insightsUrl = new URL(
+      `${FACEBOOK_GRAPH_URL}/${selectedAdAccount.id}/insights`,
+    );
+    insightsUrl.searchParams.set("access_token", accessToken);
+    insightsUrl.searchParams.set(
+      "fields",
+      "campaign_id,campaign_name,spend,impressions,clicks,actions,action_values",
+    );
+    insightsUrl.searchParams.set("level", "campaign");
+    insightsUrl.searchParams.set(
+      "time_range",
+      JSON.stringify({ since, until }),
+    );
+    // Don't filter insights by status - get data for all campaigns
+
+    const insightsResponse = await fetch(insightsUrl.toString());
+    const insightsData = await insightsResponse.json();
+
+    // Create a map of campaign insights
+    const insightsMap = new Map<string, FacebookInsight>();
+    if (insightsData.data) {
+      for (const insight of insightsData.data) {
+        insightsMap.set(insight.campaign_id, insight);
+      }
+    }
+
+    // Merge campaigns with insights
+    const campaignMetrics = campaigns.map((campaign) => {
+      const insight = insightsMap.get(campaign.id);
+
+      const spend = insight ? parseFloat(insight.spend || "0") : 0;
+      const clicks = insight?.clicks ? parseInt(insight.clicks) : 0;
+
+      // Extract purchase data from actions
+      const actions = insight?.actions || [];
+      const actionValues = insight?.action_values || [];
+
+      const purchaseAction = actions.find((a) => a.action_type === "purchase");
+      const purchaseValue = actionValues.find(
+        (a) => a.action_type === "purchase",
+      );
+
+      const purchases = purchaseAction ? parseInt(purchaseAction.value) : 0;
+      const purchaseValueAmount = purchaseValue
+        ? parseFloat(purchaseValue.value)
+        : 0;
+
+      const roas = spend > 0 ? purchaseValueAmount / spend : 0;
+      const conversionRate = clicks > 0 ? (purchases / clicks) * 100 : 0;
+
+      return {
+        campaign_id: campaign.id,
+        campaign_name: campaign.name,
+        spend,
+        purchases,
+        purchase_value: purchaseValueAmount,
+        conversion_rate: conversionRate,
+        roas,
+        performance_tier: calculatePerformanceTier(roas, conversionRate, spend),
+      };
+    });
+
+    return {
+      campaigns: campaignMetrics,
+      ad_account_id: selectedAdAccount.id,
+      ad_account_name: selectedAdAccount.name,
+    };
+  } catch (error) {
+    logger.error("Error fetching Facebook campaign data", error as Error, {
+      component: "bhb-insights",
+      shopId,
+    });
+    return {
+      campaigns: [],
+      ad_account_id: null,
+      ad_account_name: null,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
 export async function GET() {
   try {
     // Require admin or coach authentication
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
-      logger.warn('Unauthorized access attempt to BHB insights', {
-        component: 'bhb-insights'
+      logger.warn("Unauthorized access attempt to BHB insights", {
+        component: "bhb-insights",
       });
       return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
+        { success: false, error: "Authentication required" },
+        { status: 401 },
       );
     }
 
     // Verify user is admin or coach
-    const userType = (session.user as { userType?: string }).userType;
-    if (userType !== 'admin' && userType !== 'coach') {
-      logger.warn('Forbidden access attempt to BHB insights', {
-        component: 'bhb-insights',
+    const userRole = (session.user as { role?: string }).role;
+    if (userRole !== "admin" && userRole !== "coach") {
+      logger.warn("Forbidden access attempt to BHB insights", {
+        component: "bhb-insights",
         userId: session.user.id,
-        userType
+        userRole,
       });
       return NextResponse.json(
-        { success: false, error: 'Admin or coach access required' },
-        { status: 403 }
+        { success: false, error: "Admin or coach access required" },
+        { status: 403 },
       );
     }
 
-    logger.info('BHB insights accessed', {
-      component: 'bhb-insights',
+    logger.info("BHB insights accessed", {
+      component: "bhb-insights",
       userId: session.user.id,
-      userType
+      userRole,
     });
 
-    // Get all active shops - try with new columns first, fallback if they don't exist
-    let shops;
-    let shopsError;
-
-    // Try fetching with new columns (coach_assigned, display_name)
+    // Get all active shops
     const result = await supabaseAdmin
       .from("shops")
       .select("id, shop_domain, display_name, is_active, coach_assigned")
       .eq("is_active", true)
+      .not("shop_domain", "ilike", "%@%")
       .order("shop_domain");
 
+    let shops: any[] | null = result.data;
+    let shopsError = result.error;
+
     // If columns don't exist yet, fallback to basic query
-    if (result.error?.code === '42703') {
-      logger.debug('New columns not found, using fallback query', { component: 'bhb-insights' });
+    if (result.error?.code === "42703") {
+      logger.debug("New columns not found, using fallback query", {
+        component: "bhb-insights",
+      });
       const fallbackResult = await supabaseAdmin
         .from("shops")
         .select("id, shop_domain, is_active")
         .eq("is_active", true)
+        .not("shop_domain", "ilike", "%@%")
         .order("shop_domain");
       shops = fallbackResult.data;
       shopsError = fallbackResult.error;
-    } else {
-      shops = result.data;
-      shopsError = result.error;
     }
 
     if (shopsError) {
-      logger.error("Error fetching shops:", shopsError as Error, { component: 'insights' });
+      logger.error("Error fetching shops:", shopsError as Error, {
+        component: "bhb-insights",
+      });
       return NextResponse.json(
         { success: false, error: "Failed to fetch shops" },
         { status: 500 },
@@ -161,97 +371,93 @@ export async function GET() {
       });
     }
 
+    // Get all Facebook integrations in a single query for efficiency
+    const { data: integrations, error: integrationsError } = await supabaseAdmin
+      .from("integrations")
+      .select(
+        "shop_id, encrypted_access_token, additional_metadata",
+      )
+      .eq("provider", "facebook")
+      .eq("is_active", true);
+
+    if (integrationsError) {
+      logger.error("Error fetching integrations:", integrationsError as Error, {
+        component: "bhb-insights",
+      });
+    }
+
+    // Create a map of shop_id to integration
+
+    const integrationsMap = new Map<string, any>();
+    if (integrations) {
+      for (const integration of integrations) {
+        integrationsMap.set(integration.shop_id, integration);
+      }
+    }
+
     // Fetch campaign data for each shop
     const shopsPerformance: ShopCampaignPerformance[] = await Promise.all(
       shops.map(async (shop) => {
-        // Get Facebook ad account for this shop
-        const { data: adAccount, error: adAccountError } = await supabaseAdmin
-          .from("facebook_ad_accounts")
-          .select("id, account_name")
-          .eq("shop_id", shop.id)
-          .maybeSingle();
+        const integration = integrationsMap.get(shop.id);
+        const hasFacebookIntegration = !!integration;
 
-        if (adAccountError) {
-          logger.debug('Ad account error for shop', {
-            component: 'bhb-insights',
-            shopId: shop.id,
-            error: adAccountError.message
-          });
+        let campaignData: {
+          campaigns: ShopCampaignPerformance["campaigns"];
+          ad_account_id: string | null;
+          ad_account_name: string | null;
+          error?: string;
+        } = {
+          campaigns: [],
+          ad_account_id: null,
+          ad_account_name: null,
+          error: undefined,
+        };
+
+        // Fetch live data from Facebook if integration exists
+        if (hasFacebookIntegration && integration) {
+          campaignData = await fetchFacebookCampaignData(shop.id, integration);
         }
-
-        // Get campaigns for this shop
-        const { data: campaigns, error: campaignsError } = await supabaseAdmin
-          .from("facebook_campaigns")
-          .select("*")
-          .eq("shop_id", shop.id);
-
-        if (campaignsError) {
-          logger.debug('Campaigns error for shop', {
-            component: 'bhb-insights',
-            shopId: shop.id,
-            error: campaignsError.message
-          });
-        }
-
-        // Calculate campaign metrics
-        const campaignMetrics =
-          campaigns?.map((campaign) => {
-            const spend = Number(campaign.spend) || 0;
-            const purchases = Number(campaign.purchases) || 0;
-            const purchaseValue = Number(campaign.purchase_value) || 0;
-            const clicks = Number(campaign.clicks) || 0;
-
-            const roas = spend > 0 ? purchaseValue / spend : 0;
-            const conversionRate = clicks > 0 ? (purchases / clicks) * 100 : 0;
-
-            return {
-              campaign_id: campaign.id,
-              campaign_name: campaign.campaign_name,
-              spend,
-              purchases,
-              purchase_value: purchaseValue,
-              conversion_rate: conversionRate,
-              roas,
-              performance_tier: calculatePerformanceTier(
-                roas,
-                conversionRate,
-                spend,
-              ),
-            };
-          }) || [];
 
         // Calculate shop totals
-        const totalSpend = campaignMetrics.reduce((sum, c) => sum + c.spend, 0);
-        const totalPurchases = campaignMetrics.reduce(
+        const totalSpend = campaignData.campaigns.reduce(
+          (sum, c) => sum + c.spend,
+          0,
+        );
+        const totalPurchases = campaignData.campaigns.reduce(
           (sum, c) => sum + c.purchases,
           0,
         );
-        const totalPurchaseValue = campaignMetrics.reduce(
+        const totalPurchaseValue = campaignData.campaigns.reduce(
           (sum, c) => sum + c.purchase_value,
           0,
         );
-        const avgRoas =
-          totalSpend > 0 ? totalPurchaseValue / totalSpend : 0;
+        const avgRoas = totalSpend > 0 ? totalPurchaseValue / totalSpend : 0;
         const avgConversionRate =
-          campaignMetrics.length > 0
-            ? campaignMetrics.reduce((sum, c) => sum + c.conversion_rate, 0) /
-              campaignMetrics.length
+          campaignData.campaigns.length > 0
+            ? campaignData.campaigns.reduce(
+                (sum, c) => sum + c.conversion_rate,
+                0,
+              ) / campaignData.campaigns.length
             : 0;
 
         return {
           shop_id: shop.id,
-          shop_domain: (shop as any).display_name || shop.shop_domain,
+          shop_domain:
+            (shop as { display_name?: string }).display_name ||
+            shop.shop_domain,
           shop_is_active: shop.is_active,
-          facebook_connected: !!adAccount,
-          ad_account_id: adAccount?.id || null,
-          ad_account_name: adAccount?.account_name || null,
-          coach_assigned: (shop as any).coach_assigned || null,
-          campaigns: campaignMetrics,
+          facebook_connected: hasFacebookIntegration,
+          ad_account_id: campaignData.ad_account_id,
+          ad_account_name: campaignData.ad_account_name,
+          coach_assigned:
+            (shop as { coach_assigned?: string }).coach_assigned || null,
+          campaigns: campaignData.campaigns,
           total_spend: totalSpend,
           total_purchases: totalPurchases,
           total_purchase_value: totalPurchaseValue,
           avg_roas: avgRoas,
           avg_conversion_rate: avgConversionRate,
+          error: campaignData.error,
         };
       }),
     );
@@ -275,9 +481,15 @@ export async function GET() {
         0,
       ),
       avg_roas:
-        shopsPerformance.filter((s) => s.facebook_connected).length > 0
-          ? shopsPerformance.reduce((sum, s) => sum + s.avg_roas, 0) /
-            shopsPerformance.filter((s) => s.facebook_connected).length
+        shopsPerformance.filter(
+          (s) => s.facebook_connected && s.total_spend > 0,
+        ).length > 0
+          ? shopsPerformance
+              .filter((s) => s.facebook_connected && s.total_spend > 0)
+              .reduce((sum, s) => sum + s.avg_roas, 0) /
+            shopsPerformance.filter(
+              (s) => s.facebook_connected && s.total_spend > 0,
+            ).length
           : 0,
       excellent_campaigns: shopsPerformance.reduce(
         (sum, s) =>
@@ -317,7 +529,9 @@ export async function GET() {
       data_period: "Last 30 days",
     });
   } catch (error) {
-    logger.error("Error in GET /api/bhb/insights:", error as Error, { component: 'insights' });
+    logger.error("Error in GET /api/bhb/insights:", error as Error, {
+      component: "bhb-insights",
+    });
 
     return NextResponse.json(
       {

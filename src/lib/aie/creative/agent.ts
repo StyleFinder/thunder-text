@@ -9,6 +9,10 @@ import {
   AdLengthOption,
 } from "../../../types/aie";
 import { logger } from "@/lib/logger";
+import {
+  getPlatformConstraints,
+  formatConstraintsForPrompt,
+} from "../utils/platformConstraints";
 
 export class CreativeAgent {
   /**
@@ -20,6 +24,13 @@ export class CreativeAgent {
     platform: AiePlatform,
     goal: AieGoal,
     selectedLength: AdLengthOption = "MEDIUM", // Default to MEDIUM if not specified
+    targetAudience?: string, // Optional target audience override
+    imageAnalysis?: {
+      category: string;
+      mood: string[];
+      scene_context: string[];
+      keywords: string[];
+    }, // Optional image analysis
   ): Promise<Partial<AdVariant>[]> {
     // 1. Construct the prompt with rich context
     const systemPrompt = this.buildSystemPrompt(
@@ -27,8 +38,15 @@ export class CreativeAgent {
       goal,
       context.brandVoice,
       selectedLength,
+      targetAudience,
+      imageAnalysis,
     );
-    const userPrompt = this.buildUserPrompt(productInfo, context);
+    const userPrompt = this.buildUserPrompt(
+      productInfo,
+      context,
+      platform,
+      imageAnalysis,
+    );
 
     // 2. Call OpenAI to generate the creative content
     const response = await callChatCompletion(
@@ -56,38 +74,56 @@ export class CreativeAgent {
   }
 
   /**
-   * Get character limits based on selected ad length
-   * NOTE: All lengths have a HARD MAX of 125 characters for ad copy compliance
+   * Get character limits based on selected ad length and platform
+   * Uses platform-specific constraints from platformConstraints.ts
    */
-  private getCharacterLimits(length: AdLengthOption): {
+  private getCharacterLimits(
+    length: AdLengthOption,
+    platform: AiePlatform,
+  ): {
     ideal: number;
     max: number;
     words: string;
     sentences: string;
+    headlineMax: number;
+    descriptionMax: number;
   } {
-    switch (length) {
-      case "SHORT":
-        return {
-          ideal: 80,
-          max: 125,
-          words: "10-15 words",
-          sentences: "1-2 sentences",
-        };
-      case "MEDIUM":
-        return {
-          ideal: 100,
-          max: 125,
-          words: "15-20 words",
-          sentences: "2-3 sentences",
-        };
-      case "LONG":
-        return {
-          ideal: 120,
-          max: 125,
-          words: "18-25 words",
-          sentences: "2-3 sentences",
-        };
-    }
+    const constraints = getPlatformConstraints(platform);
+    const platformMax = constraints.primaryText.max;
+
+    // Calculate ideal length based on ad length mode
+    // Scale relative to platform max (SHORT = 64%, MEDIUM = 80%, LONG = 96%)
+    const lengthMultipliers = {
+      SHORT: 0.64,
+      MEDIUM: 0.8,
+      LONG: 0.96,
+    };
+
+    // eslint-disable-next-line security/detect-object-injection
+    const ideal = Math.round(platformMax * lengthMultipliers[length]);
+
+    const wordCounts = {
+      SHORT: "10-15 words",
+      MEDIUM: "15-20 words",
+      LONG: "18-25 words",
+    };
+
+    const sentenceCounts = {
+      SHORT: "1-2 sentences",
+      MEDIUM: "2-3 sentences",
+      LONG: "2-3 sentences",
+    };
+
+    return {
+      ideal,
+      max: platformMax,
+      // eslint-disable-next-line security/detect-object-injection
+      words: wordCounts[length],
+      // eslint-disable-next-line security/detect-object-injection
+      sentences: sentenceCounts[length],
+      headlineMax: constraints.headline.max,
+      descriptionMax: constraints.description.max,
+    };
   }
 
   private buildSystemPrompt(
@@ -95,6 +131,13 @@ export class CreativeAgent {
     goal: AieGoal,
     brandVoice?: BrandVoiceContext,
     selectedLength: AdLengthOption = "MEDIUM",
+    targetAudience?: string,
+    imageAnalysis?: {
+      category: string;
+      mood: string[];
+      scene_context: string[];
+      keywords: string[];
+    },
   ): string {
     let brandVoiceSection = "";
 
@@ -163,10 +206,14 @@ export class CreativeAgent {
     }
 
     let targetAudienceSection = "";
-    if (
+    // Build target audience section from explicit input OR brand voice
+    const hasExplicitAudience =
+      targetAudience && targetAudience.trim().length > 0;
+    const hasBrandVoiceAudience =
       brandVoice?.idealCustomerDescription ||
-      (brandVoice?.customerPainPoints?.length ?? 0) > 0
-    ) {
+      (brandVoice?.customerPainPoints?.length ?? 0) > 0;
+
+    if (hasExplicitAudience || hasBrandVoiceAudience) {
       const audienceParts: string[] = [];
       audienceParts.push("");
       audienceParts.push(
@@ -176,7 +223,14 @@ export class CreativeAgent {
       audienceParts.push(
         "═══════════════════════════════════════════════════════════════",
       );
-      if (brandVoice?.idealCustomerDescription) {
+
+      // Explicit target audience takes priority
+      if (hasExplicitAudience) {
+        audienceParts.push(`Target Audience: ${targetAudience}`);
+      }
+
+      // Add brand voice audience data if available (supplements explicit audience)
+      if (brandVoice?.idealCustomerDescription && !hasExplicitAudience) {
         audienceParts.push(
           `Ideal Customer: ${brandVoice.idealCustomerDescription}`,
         );
@@ -200,6 +254,42 @@ export class CreativeAgent {
       targetAudienceSection = audienceParts.join("\n");
     }
 
+    // Build image analysis section if available
+    let imageAnalysisSection = "";
+    if (imageAnalysis) {
+      const imageParts: string[] = [];
+      imageParts.push("");
+      imageParts.push(
+        "═══════════════════════════════════════════════════════════════",
+      );
+      imageParts.push("PRODUCT IMAGE ANALYSIS (from AI Vision)");
+      imageParts.push(
+        "═══════════════════════════════════════════════════════════════",
+      );
+      imageParts.push(`Category: ${imageAnalysis.category}`);
+      if (imageAnalysis.mood.length > 0) {
+        imageParts.push(`Mood/Tone: ${imageAnalysis.mood.join(", ")}`);
+      }
+      if (imageAnalysis.scene_context.length > 0) {
+        imageParts.push(
+          `Scene Context: ${imageAnalysis.scene_context.join(", ")}`,
+        );
+      }
+      if (imageAnalysis.keywords.length > 0) {
+        imageParts.push(
+          `Key Themes: ${imageAnalysis.keywords.slice(0, 8).join(", ")}`,
+        );
+      }
+      imageParts.push("");
+      imageParts.push(
+        "⚠️ IMPORTANT: Your ad copy MUST align with the visual mood and context above.",
+      );
+      imageParts.push(
+        "   The copy and image should tell ONE coherent story together.",
+      );
+      imageAnalysisSection = imageParts.join("\n");
+    }
+
     // Build goal-specific CTA guidance
     const ctaGuidance = this.buildCTAGuidance(goal);
 
@@ -209,15 +299,17 @@ export class CreativeAgent {
     // Build mobile-first and visual alignment guidelines
     const mobileFirstGuidelines = this.buildMobileFirstGuidelines();
 
-    // Get character limits for selected ad length
-    const limits = this.getCharacterLimits(selectedLength);
+    // Get character limits for selected ad length AND platform
+    const limits = this.getCharacterLimits(selectedLength, platform);
+    const platformConstraints = getPlatformConstraints(platform);
 
     return `
 You are the Creative Agent for the Ad Intelligence Engine (AIE).
-Your job is to write high-converting ad copy for ${platform} with the goal of ${goal}.
+Your job is to write high-converting ad copy for ${platformConstraints.displayName} with the goal of ${goal}.
 
 ${brandVoiceSection}
 ${targetAudienceSection}
+${imageAnalysisSection}
 
 ═══════════════════════════════════════════════════════════════
 YOUR TASK
@@ -229,22 +321,24 @@ Generate exactly 3 distinct variants:
 
 Selected Ad Length: ${selectedLength}
 
-Constraints for ${platform}:
+${formatConstraintsForPrompt(platform)}
+
+Additional Constraints:
 - Primary Text (Ad Copy):
-  * ⚠️ HARD LIMIT: 125 CHARACTERS MAXIMUM - THIS IS MANDATORY, NO EXCEPTIONS
+  * ⚠️ HARD LIMIT: ${limits.max} CHARACTERS MAXIMUM - THIS IS MANDATORY, NO EXCEPTIONS
   * TARGET LENGTH: ${limits.ideal} characters (${limits.words}, ${limits.sentences})
   * Count every character including spaces, punctuation, and emojis
-  * If your ad copy exceeds 125 characters, you MUST shorten it
+  * If your ad copy exceeds ${limits.max} characters, you MUST shorten it
   * MOBILE-FIRST: Front-load value in first sentence to prevent truncation
   * Each sentence = 1 clear idea
   * ${selectedLength === "SHORT" ? "Keep it punchy and direct - no extra words" : ""}
   * ${selectedLength === "MEDIUM" ? "Balance detail with brevity - tell the story concisely" : ""}
-  * ${selectedLength === "LONG" ? "Maximize impact within the 125 char limit" : ""}
+  * ${selectedLength === "LONG" ? "Maximize impact within the character limit" : ""}
 - Headline:
-  * ⚠️ HARD LIMIT: 40 CHARACTERS MAXIMUM - THIS IS MANDATORY
-  * Target 25-35 characters for best mobile display
+  * ⚠️ HARD LIMIT: ${limits.headlineMax} CHARACTERS MAXIMUM - THIS IS MANDATORY
+  * Target ${Math.round(limits.headlineMax * 0.7)}-${Math.round(limits.headlineMax * 0.9)} characters for best mobile display
   * Shorter is stronger - make every word count
-- Description: 20-30 characters (optional: price, shipping, guarantee)
+- Description: ${limits.descriptionMax > 50 ? "Up to " + limits.descriptionMax : "20-30"} characters (optional: price, shipping, guarantee)
 - Tone: ${brandVoice?.tone || "Authentic, punchy, and direct. No fluff."}
 - Formatting: Return ONLY valid JSON.
 ${brandVoice ? "\nIMPORTANT: All copy MUST match the brand voice guidelines above." : ""}
@@ -416,7 +510,15 @@ Example:
   private buildUserPrompt(
     productInfo: string,
     context: ResearchContext,
+    platform: AiePlatform,
+    imageAnalysis?: {
+      category: string;
+      mood: string[];
+      scene_context: string[];
+      keywords: string[];
+    },
   ): string {
+    const constraints = getPlatformConstraints(platform);
     const bestPracticesList = context.bestPractices
       .map((bp) => `- ${bp.title}: ${bp.description}`)
       .join("\n");
@@ -428,9 +530,15 @@ Example:
       )
       .join("\n");
 
+    // Build image context for the user prompt
+    const imageContext = imageAnalysis
+      ? `\nProduct Visual Context:\n- Category: ${imageAnalysis.category}\n- Mood: ${imageAnalysis.mood.join(", ")}\n- Setting: ${imageAnalysis.scene_context.join(", ")}`
+      : "";
+
     return `
 Product Info:
 ${productInfo}
+${imageContext}
 
 Research Context (Use these insights):
 ${bestPracticesList}
@@ -442,30 +550,30 @@ Output Format (JSON Array):
 [
   {
     "variant_type": "emotional",
-    "headline": "... (MAX 40 CHARACTERS)",
-    "primary_text": "... (MAX 125 CHARACTERS - include compelling copy with CTA at end)",
+    "headline": "... (MAX ${constraints.headline.max} CHARACTERS)",
+    "primary_text": "... (MAX ${constraints.primaryText.max} CHARACTERS - include compelling copy with CTA at end)",
     "call_to_action": "Shop Now", // Strong action verb CTA
-    "description": "..." // OPTIONAL: 20-30 chars for price/shipping/guarantee
+    "description": "..." // OPTIONAL: ${constraints.description.max > 50 ? "Up to " + constraints.description.max : "20-30"} chars for price/shipping/guarantee
   },
   {
     "variant_type": "benefit",
-    "headline": "... (MAX 40 CHARACTERS)",
-    "primary_text": "... (MAX 125 CHARACTERS - include compelling copy with CTA at end)",
+    "headline": "... (MAX ${constraints.headline.max} CHARACTERS)",
+    "primary_text": "... (MAX ${constraints.primaryText.max} CHARACTERS - include compelling copy with CTA at end)",
     "call_to_action": "Get Yours",
     "description": "..."
   },
   {
     "variant_type": "ugc",
-    "headline": "... (MAX 40 CHARACTERS)",
-    "primary_text": "... (MAX 125 CHARACTERS - include compelling copy with CTA at end)",
+    "headline": "... (MAX ${constraints.headline.max} CHARACTERS)",
+    "primary_text": "... (MAX ${constraints.primaryText.max} CHARACTERS - include compelling copy with CTA at end)",
     "call_to_action": "Buy Now",
     "description": "..."
   }
 ]
 
-CRITICAL CHARACTER LIMITS - COUNT CAREFULLY:
-- headline: MAX 40 characters
-- primary_text: MAX 125 characters
+CRITICAL CHARACTER LIMITS FOR ${constraints.displayName.toUpperCase()} - COUNT CAREFULLY:
+- headline: MAX ${constraints.headline.max} characters
+- primary_text: MAX ${constraints.primaryText.max} characters
     `.trim();
   }
 

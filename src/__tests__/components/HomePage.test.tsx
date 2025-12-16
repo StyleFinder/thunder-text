@@ -1,98 +1,166 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import HomePage from '@/app/page'
 import '@testing-library/jest-dom'
 
-// Mock window.open
-const mockWindowOpen = jest.fn()
+// Mock next/navigation
+const mockReplace = jest.fn()
+const mockGet = jest.fn()
 
-beforeAll(() => {
-  Object.defineProperty(window, 'open', { 
-    value: mockWindowOpen,
-    writable: true
-  })
-})
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    replace: mockReplace,
+    push: jest.fn(),
+    prefetch: jest.fn(),
+  }),
+  useSearchParams: () => ({
+    get: mockGet,
+  }),
+}))
 
-describe('HomePage', () => {
+// Mock fetch for API calls
+global.fetch = jest.fn()
+
+describe('HomePage (Root Route Handler)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockGet.mockReturnValue(null) // Default: no shop parameter
   })
 
-  it('should render the Thunder Text title and subtitle', () => {
-    render(<HomePage />)
-    
-    expect(screen.getByText('Thunder Text')).toBeInTheDocument()
-    expect(screen.getByText('AI-Powered Product Description Generator')).toBeInTheDocument()
+  describe('Loading State', () => {
+    it('should render loading state with Thunder Text branding', () => {
+      render(<HomePage />)
+
+      // The loading state should show the loader text
+      expect(screen.getByText('Loading Thunder Text...')).toBeInTheDocument()
+    })
+
+    it('should show loading spinner initially', () => {
+      render(<HomePage />)
+
+      // Check for loading text
+      expect(screen.getByText('Loading Thunder Text...')).toBeInTheDocument()
+    })
   })
 
-  it('should display deployment status message', () => {
-    render(<HomePage />)
-    
-    expect(screen.getByText('Deployment Complete - Initializing Services...')).toBeInTheDocument()
-    expect(screen.getByText(/Thunder Text is now deployed and ready/)).toBeInTheDocument()
+  describe('Routing Logic', () => {
+    it('should redirect to login when no shop parameter is provided', async () => {
+      mockGet.mockReturnValue(null)
+
+      render(<HomePage />)
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith('/auth/login')
+      })
+    })
+
+    it('should redirect to welcome when shop is not found', async () => {
+      mockGet.mockReturnValue('test-shop.myshopify.com')
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+      })
+
+      render(<HomePage />)
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith('/welcome?shop=test-shop.myshopify.com')
+      })
+    })
+
+    it('should redirect to dashboard when onboarding is complete', async () => {
+      mockGet.mockReturnValue('test-shop.myshopify.com')
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            onboarding_completed: true,
+            user_type: 'store',
+          },
+        }),
+      })
+
+      render(<HomePage />)
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith('/dashboard?shop=test-shop.myshopify.com')
+      })
+    })
+
+    it('should redirect to welcome when onboarding is not complete', async () => {
+      mockGet.mockReturnValue('test-shop.myshopify.com')
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            onboarding_completed: false,
+            user_type: 'store',
+          },
+        }),
+      })
+
+      render(<HomePage />)
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith('/welcome?shop=test-shop.myshopify.com')
+      })
+    })
+
+    it('should redirect coach users to coach login', async () => {
+      mockGet.mockReturnValue('coach@example.com')
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            onboarding_completed: true,
+            user_type: 'coach',
+          },
+        }),
+      })
+
+      render(<HomePage />)
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith('/coach/login')
+      })
+    })
   })
 
-  it('should show system status checklist', () => {
-    render(<HomePage />)
-    
-    expect(screen.getByText('✅ System Status')).toBeInTheDocument()
-    expect(screen.getByText('Database: Connected to Supabase')).toBeInTheDocument()
-    expect(screen.getByText('AI Engine: OpenAI GPT-4 Vision Ready')).toBeInTheDocument()
-    expect(screen.getByText('Shopify API: Authentication Configured')).toBeInTheDocument()
-    expect(screen.getByText('Deployment: Live on Render')).toBeInTheDocument()
-  })
+  describe('Error State', () => {
+    it('should show error message when API call fails', async () => {
+      mockGet.mockReturnValue('test-shop.myshopify.com')
+      ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
 
-  it('should show next steps section', () => {
-    render(<HomePage />)
-    
-    expect(screen.getByText('📋 Next Steps')).toBeInTheDocument()
-    expect(screen.getByText('Update Shopify Partner App settings with this URL')).toBeInTheDocument()
-    expect(screen.getByText('Install app in your test store (zunosai-staging-test-store)')).toBeInTheDocument()
-    expect(screen.getByText('Test the end-to-end workflow')).toBeInTheDocument()
-    expect(screen.getByText('Begin generating product descriptions!')).toBeInTheDocument()
-  })
+      render(<HomePage />)
 
-  it('should render action buttons', () => {
-    render(<HomePage />)
-    
-    const configureButton = screen.getByRole('button', { name: 'Configure Shopify App' })
-    const dashboardButton = screen.getByRole('button', { name: 'Go to Dashboard' })
-    
-    expect(configureButton).toBeInTheDocument()
-    expect(dashboardButton).toBeInTheDocument()
-  })
+      await waitFor(() => {
+        expect(screen.getByText('Something Went Wrong')).toBeInTheDocument()
+        expect(screen.getByText('Failed to load. Please try again.')).toBeInTheDocument()
+      })
+    })
 
-  it('should handle configure button click', () => {
-    render(<HomePage />)
-    
-    const configureButton = screen.getByRole('button', { name: 'Configure Shopify App' })
-    fireEvent.click(configureButton)
-    
-    expect(mockWindowOpen).toHaveBeenCalledWith('https://partners.shopify.com', '_blank')
-  })
+    it('should have a retry button in error state', async () => {
+      mockGet.mockReturnValue('test-shop.myshopify.com')
+      ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
 
-  it('should handle dashboard button functionality', () => {
-    // Test that the dashboard button exists and is interactive
-    render(<HomePage />)
-    
-    const dashboardButton = screen.getByRole('button', { name: 'Go to Dashboard' })
-    
-    // Verify button exists and has click handler
-    expect(dashboardButton).toBeInTheDocument()
-    expect(dashboardButton).toHaveAttribute('style', expect.stringContaining('cursor: pointer'))
-  })
+      render(<HomePage />)
 
-  it('should have proper component structure', () => {
-    render(<HomePage />)
-    
-    // Check that buttons are present and accessible
-    const buttons = screen.getAllByRole('button')
-    expect(buttons).toHaveLength(2)
-    
-    // Verify the Thunder Text title is rendered (core functionality test)
-    expect(screen.getByText('Thunder Text')).toBeInTheDocument()
-    
-    // Verify both buttons have expected content
-    expect(screen.getByRole('button', { name: 'Configure Shopify App' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Go to Dashboard' })).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument()
+      })
+    })
+
+    it('should show Thunder Text branding in error state', async () => {
+      mockGet.mockReturnValue('test-shop.myshopify.com')
+      ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
+
+      render(<HomePage />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Thunder Text')).toBeInTheDocument()
+      })
+    })
   })
 })

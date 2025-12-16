@@ -617,8 +617,47 @@ API Call → 401 → Token Exchange Retry → If Fails → Re-OAuth Flow
 
 ---
 
+---
+
+## E2E Test Verification Points
+
+> For each user journey, these are the points where E2E tests MUST verify both UI AND backend state.
+
+### Authentication Tests Required
+
+| Journey             | Test ID  | What to Verify                           | UI Check                       | Backend Check                  |
+| ------------------- | -------- | ---------------------------------------- | ------------------------------ | ------------------------------ |
+| D: Standalone Login | AUTH-001 | New user redirects to `/welcome`         | URL is `/welcome`              | `onboarding_completed = false` |
+| D: Standalone Login | AUTH-002 | Returning user redirects to `/dashboard` | URL contains `/dashboard`      | `onboarding_completed = true`  |
+| D: Standalone Login | AUTH-003 | Invalid credentials show error           | Error message visible          | No session created             |
+| D: Standalone Login | AUTH-004 | Coach email at store login shows error   | "Account not found" error      | No session created             |
+| D: Standalone Login | AUTH-005 | Account lockout after 5 failures         | Lockout message shown          | `failed_login_attempts >= 5`   |
+| Coach Login         | AUTH-006 | Valid coach login works                  | URL is `/bhb`                  | Session has coach role         |
+| C: Signup           | AUTH-007 | New account created                      | Redirect to login with success | Shop record created            |
+
+### Onboarding Tests Required
+
+| Journey         | Test ID     | What to Verify             | UI Check                  | Backend Check                    |
+| --------------- | ----------- | -------------------------- | ------------------------- | -------------------------------- |
+| A/B: Onboarding | ONBOARD-001 | Step 4 completion          | "Go to Dashboard" clicked | `onboarding_completed = true`    |
+| A/B: Onboarding | ONBOARD-002 | Timestamp recorded         | N/A                       | `onboarding_completed_at` is set |
+| A/B: Onboarding | ONBOARD-003 | Dashboard accessible after | Dashboard loads           | Session valid                    |
+
+### Cross-Role Tests Required
+
+| Journey         | Test ID  | What to Verify                   | UI Check             | Backend Check    |
+| --------------- | -------- | -------------------------------- | -------------------- | ---------------- |
+| Role Validation | ROLE-001 | Coach can't use store login      | Error shown          | No store session |
+| Role Validation | ROLE-002 | Store user can't use coach login | Error shown          | No coach session |
+| Role Validation | ROLE-003 | Unauthenticated user redirected  | URL is `/auth/login` | No session       |
+
+**Reference**: See `docs/E2E_TEST_COVERAGE_MATRIX.md` for implementation details.
+
+---
+
 ## Changelog
 
-| Date       | Change                        |
-| ---------- | ----------------------------- |
-| 2025-12-06 | Initial documentation created |
+| Date       | Change                                                     |
+| ---------- | ---------------------------------------------------------- |
+| 2025-12-06 | Initial documentation created                              |
+| 2025-12-13 | Added E2E Test Verification Points section after bug fixes |

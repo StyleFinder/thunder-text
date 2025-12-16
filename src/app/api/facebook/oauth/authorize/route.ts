@@ -53,7 +53,14 @@ export async function GET(request: NextRequest) {
     const { data: shopData, error: shopError } = await lookupShopWithFallback<{
       id: string;
       shop_domain: string;
-    }>(supabaseAdmin, shop, "id, shop_domain", "facebook-oauth");
+      shop_type: string;
+      linked_shopify_domain: string | null;
+    }>(
+      supabaseAdmin,
+      shop,
+      "id, shop_domain, shop_type, linked_shopify_domain",
+      "facebook-oauth",
+    );
 
     if (shopError || !shopData) {
       logger.error(`Shop not found: ${shop}`, shopError as Error, {
@@ -62,17 +69,64 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Shop not found" }, { status: 404 });
     }
 
+    // For standalone users, resolve the MASTER shop ID
+    // Integrations should be stored on the master Shopify shop, not the standalone user
+    let targetShopId = shopData.id;
+    let targetShopDomain = shopData.shop_domain;
+
+    if (shopData.shop_type === "standalone" && shopData.linked_shopify_domain) {
+      // Look up the master shop
+      const { data: masterShop, error: masterError } = await supabaseAdmin
+        .from("shops")
+        .select("id, shop_domain")
+        .eq("shop_domain", shopData.linked_shopify_domain)
+        .eq("shop_type", "shopify")
+        .single();
+
+      if (masterShop && !masterError) {
+        targetShopId = masterShop.id;
+        targetShopDomain = masterShop.shop_domain;
+        logger.info(
+          "[Facebook OAuth] Standalone user - using master shop for integration",
+          {
+            component: "authorize",
+            standaloneEmail: shopData.shop_domain,
+            masterShopDomain: masterShop.shop_domain,
+            masterShopId: masterShop.id,
+          },
+        );
+      } else {
+        logger.error(
+          "[Facebook OAuth] Standalone user has linked_shopify_domain but master shop not found",
+          masterError as Error,
+          {
+            component: "authorize",
+            standaloneEmail: shopData.shop_domain,
+            linkedShopifyDomain: shopData.linked_shopify_domain,
+          },
+        );
+        return NextResponse.json(
+          {
+            error:
+              "Your account is not properly linked to a Shopify store. Please contact support.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     // Generate secure state parameter with Zod validation
     // Includes cryptographic nonce for CSRF protection and timestamp for replay attack prevention
-    // For standalone users, shopData.shop_domain is their email, but we need a .myshopify.com domain
-    // Use the original shop URL param if it's a .myshopify.com domain, otherwise use shopData.shop_domain
-    const shopDomainForState = shop.includes(".myshopify.com")
-      ? shop
-      : shopData.shop_domain;
+    // Use the master shop ID and domain for state
+    const shopDomainForState = targetShopDomain.includes(".myshopify.com")
+      ? targetShopDomain
+      : shop.includes(".myshopify.com")
+        ? shop
+        : targetShopDomain;
 
     const returnTo = searchParams.get("return_to");
     const state = createFacebookOAuthState({
-      shop_id: shopData.id,
+      shop_id: targetShopId, // Use master shop ID for standalone users
       shop_domain: shopDomainForState,
       host: searchParams.get("host"),
       embedded: searchParams.get("embedded"),

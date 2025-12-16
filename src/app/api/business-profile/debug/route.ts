@@ -1,18 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getUserId } from "@/lib/auth/content-center-auth";
 
 /**
  * GET /api/business-profile/debug
  * Debug endpoint to check authentication and database access
+ *
+ * SECURITY: Only available in development mode, requires admin role in production.
+ * This endpoint exposes internal system state and should NEVER be publicly accessible.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  // SECURITY: Block in production unless explicitly allowed for debugging
+  const isProduction = process.env.NODE_ENV === "production";
+  const debugAllowed = process.env.ALLOW_DEBUG_ENDPOINTS === "true";
+
+  if (isProduction && !debugAllowed) {
+    return NextResponse.json(
+      { error: "Debug endpoint disabled in production" },
+      { status: 403 },
+    );
+  }
+
+  // SECURITY: Require admin session authentication
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json(
+      { error: "Authentication required" },
+      { status: 401 },
+    );
+  }
+
+  // Check for admin role
+  const userRole = (session.user as { role?: string }).role;
+  if (userRole !== "admin") {
+    return NextResponse.json(
+      { error: "Admin access required" },
+      { status: 403 },
+    );
+  }
+
   try {
     const authHeader = request.headers.get("authorization");
     const shop = authHeader?.replace("Bearer ", "");
 
     const debugInfo = {
       timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
       authHeader: authHeader ? "present" : "missing",
       shopDomain: shop || "not provided",
       userId: null as string | null,

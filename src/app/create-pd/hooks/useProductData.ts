@@ -8,7 +8,7 @@ import {
   formatSizingData,
   type PrePopulatedProductData,
 } from "@/lib/shopify/product-prepopulation";
-import { type ProductCategory } from "@/lib/prompts";
+import { type ProductCategory } from "@/lib/prompts-types";
 
 interface UseProductDataParams {
   source: string | null;

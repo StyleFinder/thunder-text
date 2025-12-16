@@ -41,14 +41,10 @@ export async function POST(request: NextRequest) {
 
     // If no header, try to decode token
     if (!shopDomain) {
-      // Check if it's a dev token (for development/testing with authenticated=true)
-      if (authToken === "dev-token") {
-        // Dev token - shop domain must be in header
-        // Continue - shop domain will be validated below
-      }
+      // SECURITY: dev-token bypass removed - all authentication must go through proper channels
       // Check if token is the shop domain itself (standalone SaaS authentication)
       // This is used when shop domain is passed as the auth token for non-embedded apps
-      else if (
+      if (
         authToken.includes(".myshopify.com") ||
         authToken.includes("zunosai")
       ) {
@@ -188,8 +184,17 @@ ${productType ? `- Product Type: ${productType}` : ""}
 ${fabricMaterial ? `- Materials: ${fabricMaterial}` : ""}
 ${occasionUse ? `- Occasion/Use: ${occasionUse}` : ""}
 ${targetAudience ? `- Target Audience: ${targetAudience}` : ""}
-${keyFeatures ? `- Key Features: ${keyFeatures}` : ""}
+${keyFeatures ? `- Key Features (MUST INCLUDE): ${keyFeatures}` : ""}
 ${additionalNotes ? `- Additional Notes: ${additionalNotes}` : ""}
+${
+  keyFeatures
+    ? `
+⚠️ CRITICAL REQUIREMENT - KEY FEATURES:
+The merchant has specified these key features that MUST be prominently mentioned in the description:
+"${keyFeatures}"
+You MUST include this information clearly and explicitly in the product description. Do not paraphrase or dilute this messaging - incorporate it prominently in the Key Features section.`
+    : ""
+}
 
 OUTPUT FORMAT - Return a JSON object with these exact fields:
 {
@@ -281,8 +286,17 @@ ${productType ? `- Product Type: ${productType}` : ""}
 ${fabricMaterial ? `- Materials: ${fabricMaterial}` : ""}
 ${occasionUse ? `- Occasion/Use: ${occasionUse}` : ""}
 ${targetAudience ? `- Target Audience: ${targetAudience}` : ""}
-${keyFeatures ? `- Key Features: ${keyFeatures}` : ""}
+${keyFeatures ? `- Key Features (MUST INCLUDE): ${keyFeatures}` : ""}
 ${additionalNotes ? `- Additional Notes: ${additionalNotes}` : ""}
+${
+  keyFeatures
+    ? `
+⚠️ CRITICAL REQUIREMENT - KEY FEATURES:
+The merchant has specified these key features that MUST be prominently mentioned in the description:
+"${keyFeatures}"
+You MUST include this information clearly and explicitly in the product description. Do not paraphrase or dilute this messaging - incorporate it prominently in the Key Features section.`
+    : ""
+}
 
 OUTPUT FORMAT - Return a JSON object with these exact fields:
 {
@@ -298,10 +312,10 @@ OUTPUT FORMAT - Return a JSON object with these exact fields:
 MANDATORY SECTION STRUCTURE FOR DESCRIPTION (General Products):
 Use these EXACT section headers in order:
 1. Opening paragraph (NO HEADER - start directly with compelling content)
-2. <b>Key Features</b>
-3. <b>Usage and Applications</b>
-4. <b>Specifications and Care</b>
-5. <b>Value Proposition</b>
+2. <b>What Makes It Special</b>
+3. <b>How You'll Use It</b>
+4. <b>Details and Care</b>
+5. <b>Why You'll Love It</b>
 
 FORMATTING REQUIREMENTS:
 - The "description" field in your JSON response MUST contain HTML tags
@@ -311,23 +325,23 @@ FORMATTING REQUIREMENTS:
 - Never use **markdown bold** or asterisks for formatting
 - Use <br><br> for line breaks between sections (these HTML tags must be in the JSON string)
 - Do NOT wrap paragraphs in <p> tags or any other HTML tags
-- Include ALL required sections: Key Features, Usage and Applications, Specifications and Care, Value Proposition
+- Include ALL required sections: What Makes It Special, How You'll Use It, Details and Care, Why You'll Love It
 - IMPORTANT: The <b> and <br> tags are part of the description text and must be included in the JSON
 
 EXAMPLE FORMAT:
 Opening paragraph goes here as plain text without any tags.
 
-<b>Key Features</b>
-This section has plain text describing key features and specifications.
+<b>What Makes It Special</b>
+This section has plain text describing key features and what makes the product unique.
 
-<b>Usage and Applications</b>
+<b>How You'll Use It</b>
 More plain text here describing how to use the product.
 
-<b>Specifications and Care</b>
+<b>Details and Care</b>
 Technical details and care instructions in plain text.
 
-<b>Value Proposition</b>
-Closing content in plain text explaining why to purchase.`;
+<b>Why You'll Love It</b>
+Closing content in plain text explaining the benefits of owning this product.`;
     }
 
     const userPrompt = `Analyze these product images and create compelling e-commerce content. Focus on what makes this product unique and valuable to customers.

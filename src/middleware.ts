@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 /**
  * CORS Configuration for ThunderText (Non-Embedded External Shopify App)
@@ -46,8 +47,70 @@ function isAllowedOrigin(origin: string): boolean {
   return false;
 }
 
-export function middleware(request: NextRequest) {
+/**
+ * Protected routes that require authentication
+ * Unauthenticated users will be redirected to /auth/login
+ */
+const PROTECTED_ROUTES = [
+  "/dashboard",
+  "/welcome",
+  "/settings",
+  "/products",
+  "/generate",
+  "/bhb",
+];
+
+/**
+ * Public routes that don't require authentication
+ */
+const PUBLIC_ROUTES = [
+  "/auth/login",
+  "/auth/signup",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+  "/coach/login",
+  "/",
+];
+
+/**
+ * Check if a pathname matches any protected route
+ */
+function isProtectedRoute(pathname: string): boolean {
+  return PROTECTED_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
+
+/**
+ * Check if a pathname is a public route
+ * Note: Currently used for documentation/clarity, may be used for future route logic
+ */
+function _isPublicRoute(pathname: string): boolean {
+  return PUBLIC_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
+
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  // Handle authentication for protected routes
+  if (isProtectedRoute(pathname)) {
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+      // Must match cookie config in auth-options.ts which doesn't use secure prefix
+      cookieName: "next-auth.session-token",
+      secureCookie: false,
+    });
+
+    // If no token, redirect to login
+    if (!token) {
+      const loginUrl = new URL("/auth/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
 
   // Handle CORS for API routes
   if (pathname.startsWith("/api/")) {
@@ -109,7 +172,17 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Middleware only needed for API routes (CORS handling)
+  // Middleware needed for:
+  // 1. API routes (CORS handling)
+  // 2. Protected page routes (authentication)
   // Security headers for pages are applied via next.config.ts
-  matcher: ["/api/:path*"],
+  matcher: [
+    "/api/:path*",
+    "/dashboard/:path*",
+    "/welcome/:path*",
+    "/settings/:path*",
+    "/products/:path*",
+    "/generate/:path*",
+    "/bhb/:path*",
+  ],
 };

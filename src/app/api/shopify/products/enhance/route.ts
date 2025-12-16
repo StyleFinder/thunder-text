@@ -1,57 +1,98 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { logger } from '@/lib/logger'
-import { 
-  fetchProductDataForEnhancement, 
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/auth-options";
+import { logger } from "@/lib/logger";
+import {
+  fetchProductDataForEnhancement,
   validateProductForEnhancement,
   generateEnhancementContext,
-  createEnhancementPreview
-} from '@/lib/shopify/product-enhancement'
+  createEnhancementPreview,
+} from "@/lib/shopify/product-enhancement";
 
-// GET /api/shopify/products/enhance?productId={id}&shop={shop}
-// Fetch comprehensive product data for enhancement
+/**
+ * GET /api/shopify/products/enhance?productId={id}&shop={shop}
+ * Fetch comprehensive product data for enhancement
+ *
+ * SECURITY: Requires session auth AND validates shop ownership.
+ * The shop parameter must match the authenticated user's shop.
+ */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const productId = searchParams.get('productId')
-    const shop = searchParams.get('shop')
+    // SECURITY: Require session authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const productId = searchParams.get("productId");
+    const shop = searchParams.get("shop");
 
     if (!productId || !shop) {
       return NextResponse.json(
-        { success: false, error: 'Missing required parameters: productId and shop' },
-        { status: 400 }
-      )
+        {
+          success: false,
+          error: "Missing required parameters: productId and shop",
+        },
+        { status: 400 },
+      );
     }
 
+    // SECURITY: Validate shop ownership - the shop parameter must match the user's shop
+    const sessionShopDomain = (session.user as { shopDomain?: string })
+      .shopDomain;
+    const normalizedRequestShop = shop.includes(".myshopify.com")
+      ? shop
+      : `${shop}.myshopify.com`;
+    const normalizedSessionShop = sessionShopDomain?.includes(".myshopify.com")
+      ? sessionShopDomain
+      : `${sessionShopDomain}.myshopify.com`;
 
-    // Get session token from Authorization header if provided
-    const authHeader = request.headers.get('authorization')
-    const sessionToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined
+    if (normalizedRequestShop !== normalizedSessionShop) {
+      logger.warn("Shop ownership mismatch in product enhance", {
+        component: "enhance",
+        requestedShop: normalizedRequestShop,
+        sessionShop: normalizedSessionShop,
+      });
+      return NextResponse.json(
+        { success: false, error: "Access denied: Shop mismatch" },
+        { status: 403 },
+      );
+    }
 
     // Fetch comprehensive product data for enhancement
-    const productData = await fetchProductDataForEnhancement(productId, shop, sessionToken)
+    const productData = await fetchProductDataForEnhancement(productId, shop);
 
     if (!productData) {
       return NextResponse.json(
-        { success: false, error: 'Product not found or inaccessible' },
-        { status: 404 }
-      )
+        { success: false, error: "Product not found or inaccessible" },
+        { status: 404 },
+      );
     }
 
     // Validate product is suitable for enhancement
-    const validation = await validateProductForEnhancement(productId, shop, sessionToken)
+    const validation = await validateProductForEnhancement(productId, shop);
 
     if (!validation.isValid) {
-      return NextResponse.json({
-        success: false,
-        error: 'Product not suitable for enhancement',
-        reason: validation.reason
-      }, { status: 422 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Product not suitable for enhancement",
+          reason: validation.reason,
+        },
+        { status: 422 },
+      );
     }
 
     // Generate enhancement context and preview
-    const enhancementContext = generateEnhancementContext(productData)
-    const enhancementPreview = createEnhancementPreview(productData, enhancementContext)
-
+    const enhancementContext = generateEnhancementContext(productData);
+    const enhancementPreview = createEnhancementPreview(
+      productData,
+      enhancementContext,
+    );
 
     return NextResponse.json({
       success: true,
@@ -59,81 +100,129 @@ export async function GET(request: NextRequest) {
         product: productData,
         enhancementContext,
         preview: enhancementPreview,
-        validation
+        validation,
       },
-      message: 'Product data fetched successfully'
-    })
-
+      message: "Product data fetched successfully",
+    });
   } catch (error) {
-    logger.error('❌ Error fetching product data for enhancement:', error as Error, { component: 'enhance' })
+    logger.error(
+      "❌ Error fetching product data for enhancement:",
+      error as Error,
+      { component: "enhance" },
+    );
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch product data',
-        details: error instanceof Error ? error.message : 'Unknown error'
+      {
+        success: false,
+        error: "Failed to fetch product data",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }
 
-// PUT /api/shopify/products/enhance?productId={id}&shop={shop}
-// Update product with enhanced description
+/**
+ * PUT /api/shopify/products/enhance?productId={id}&shop={shop}
+ * Update product with enhanced description
+ *
+ * SECURITY: Requires session auth AND validates shop ownership.
+ */
 export async function PUT(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const productId = searchParams.get('productId')
-    const shop = searchParams.get('shop')
+    // SECURITY: Require session authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const productId = searchParams.get("productId");
+    const shop = searchParams.get("shop");
 
     if (!productId || !shop) {
       return NextResponse.json(
-        { success: false, error: 'Missing required parameters: productId and shop' },
-        { status: 400 }
-      )
+        {
+          success: false,
+          error: "Missing required parameters: productId and shop",
+        },
+        { status: 400 },
+      );
     }
 
-    const body = await request.json()
-    const { 
-      enhancedContent, 
+    // SECURITY: Validate shop ownership - the shop parameter must match the user's shop
+    const sessionShopDomain = (session.user as { shopDomain?: string })
+      .shopDomain;
+    const normalizedRequestShop = shop.includes(".myshopify.com")
+      ? shop
+      : `${shop}.myshopify.com`;
+    const normalizedSessionShop = sessionShopDomain?.includes(".myshopify.com")
+      ? sessionShopDomain
+      : `${sessionShopDomain}.myshopify.com`;
+
+    if (normalizedRequestShop !== normalizedSessionShop) {
+      logger.warn("Shop ownership mismatch in product enhance PUT", {
+        component: "enhance",
+        requestedShop: normalizedRequestShop,
+        sessionShop: normalizedSessionShop,
+      });
+      return NextResponse.json(
+        { success: false, error: "Access denied: Shop mismatch" },
+        { status: 403 },
+      );
+    }
+
+    const body = await request.json();
+    const {
+      enhancedContent,
       preserveOriginal = true,
       updateMetafields = false,
-      updateSeo = true 
-    } = body
+      updateSeo = true,
+    } = body;
 
     if (!enhancedContent || !enhancedContent.description) {
       return NextResponse.json(
-        { success: false, error: 'Missing enhanced content or description in request body' },
-        { status: 400 }
-      )
+        {
+          success: false,
+          error: "Missing enhanced content or description in request body",
+        },
+        { status: 400 },
+      );
     }
 
-
     // First, get current product data for backup if needed
-    let originalData = null
+    let originalData = null;
     if (preserveOriginal) {
-      originalData = await fetchProductDataForEnhancement(productId, shop)
+      originalData = await fetchProductDataForEnhancement(productId, shop);
       if (!originalData) {
         return NextResponse.json(
-          { success: false, error: 'Could not fetch original product data for backup' },
-          { status: 404 }
-        )
+          {
+            success: false,
+            error: "Could not fetch original product data for backup",
+          },
+          { status: 404 },
+        );
       }
     }
 
     // Import the product updater dynamically to avoid circular dependencies
-    const { createShopifyProductUpdater } = await import('@/lib/shopify/product-updater')
-    
+    const { createShopifyProductUpdater } = await import(
+      "@/lib/shopify/product-updater"
+    );
+
     try {
       // Create the Shopify product updater
-      const productUpdater = await createShopifyProductUpdater(shop)
-      
+      const productUpdater = await createShopifyProductUpdater(shop);
+
       // Validate access to the product
-      const hasAccess = await productUpdater.validateProductAccess(productId)
+      const hasAccess = await productUpdater.validateProductAccess(productId);
       if (!hasAccess) {
         return NextResponse.json(
-          { success: false, error: 'No access to the specified product' },
-          { status: 403 }
-        )
+          { success: false, error: "No access to the specified product" },
+          { status: 403 },
+        );
       }
 
       // Perform the actual product update
@@ -147,70 +236,78 @@ export async function PUT(request: NextRequest) {
           updateSeo,
           updateMetafields,
           preserveOriginal,
-          backupToMetafield: true
-        }
-      )
+          backupToMetafield: true,
+        },
+      );
 
       if (!updateResult.success) {
         return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Product update failed',
-            details: updateResult.errors?.join(', ') || 'Unknown error'
+          {
+            success: false,
+            error: "Product update failed",
+            details: updateResult.errors?.join(", ") || "Unknown error",
           },
-          { status: 500 }
-        )
+          { status: 500 },
+        );
       }
-
 
       return NextResponse.json({
         success: true,
         data: {
           ...updateResult,
           enhancement_summary: {
-            description_length_change: enhancedContent.improvements.enhanced_length - enhancedContent.improvements.original_length,
-            seo_improvements: enhancedContent.metaDescription ? ['Added meta description'] : [],
-            content_improvements: enhancedContent.improvements.added_elements
-          }
-        },
-        message: 'Product updated successfully',
-        warnings: updateResult.warnings
-      })
-
-    } catch (error) {
-      logger.error('❌ Error in product update process:', error as Error, { component: 'enhance' })
-      
-      // Handle specific authentication errors
-      if (error instanceof Error && error.message.includes('access token')) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Shopify authentication required',
-            details: 'Please ensure the app is properly installed and authenticated'
+            description_length_change:
+              enhancedContent.improvements.enhanced_length -
+              enhancedContent.improvements.original_length,
+            seo_improvements: enhancedContent.metaDescription
+              ? ["Added meta description"]
+              : [],
+            content_improvements: enhancedContent.improvements.added_elements,
           },
-          { status: 401 }
-        )
+        },
+        message: "Product updated successfully",
+        warnings: updateResult.warnings,
+      });
+    } catch (error) {
+      logger.error("❌ Error in product update process:", error as Error, {
+        component: "enhance",
+      });
+
+      // Handle specific authentication errors
+      if (error instanceof Error && error.message.includes("access token")) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Shopify authentication required",
+            details:
+              "Please ensure the app is properly installed and authenticated",
+          },
+          { status: 401 },
+        );
       }
 
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Product update failed',
-          details: error instanceof Error ? error.message : 'Unknown error'
+        {
+          success: false,
+          error: "Product update failed",
+          details: error instanceof Error ? error.message : "Unknown error",
         },
-        { status: 500 }
-      )
+        { status: 500 },
+      );
     }
-
   } catch (error) {
-    logger.error('❌ Error updating product with enhanced description:', error as Error, { component: 'enhance' })
+    logger.error(
+      "❌ Error updating product with enhanced description:",
+      error as Error,
+      { component: "enhance" },
+    );
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to update product',
-        details: error instanceof Error ? error.message : 'Unknown error'
+      {
+        success: false,
+        error: "Failed to update product",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }

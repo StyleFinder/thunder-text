@@ -12,7 +12,7 @@ import {
 import { ProductDetailsForm } from "@/app/components/shared/ProductDetailsForm";
 import { AdditionalInfoForm } from "@/app/components/shared/AdditionalInfoForm";
 import EnhancedContentComparison from "@/app/components/shared/EnhancedContentComparison";
-import { type ProductCategory } from "@/lib/prompts";
+import { type ProductCategory } from "@/lib/prompts-types";
 import {
   fetchProductDataForEnhancement,
   type EnhancementProductData,
@@ -49,7 +49,6 @@ interface EnhancementOptions {
   generateTitle: boolean;
   enhanceDescription: boolean;
   generateSEO: boolean;
-  createPromo: boolean;
   updateImages: boolean;
 }
 
@@ -91,17 +90,15 @@ export default function UnifiedEnhancePage() {
 
   const [fabricMaterial, setFabricMaterial] = useState("");
   const [occasionUse, setOccasionUse] = useState("");
-  const [targetAudience, setTargetAudience] = useState("");
   const [keyFeatures, setKeyFeatures] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
 
-  // Enhancement options
+  // Enhancement options - all three main options enabled by default
   const [enhancementOptions, setEnhancementOptions] =
     useState<EnhancementOptions>({
-      generateTitle: false,
+      generateTitle: true,
       enhanceDescription: true,
       generateSEO: true,
-      createPromo: false,
       updateImages: false,
     });
 
@@ -192,6 +189,8 @@ export default function UnifiedEnhancePage() {
           }
         }
 
+        // Extract materials from tags
+        let extractedFabric = "";
         if (data.tags) {
           const tags = data.tags;
           const tagsArray: string[] = Array.isArray(tags)
@@ -208,9 +207,13 @@ export default function UnifiedEnhancePage() {
                 tag.toLowerCase().includes("silk"),
             )
             .join(", ");
-          if (materials) setFabricMaterial(materials);
+          if (materials) {
+            extractedFabric = materials;
+            setFabricMaterial(materials);
+          }
         }
 
+        // Extract key features from bullet points
         if (data.originalDescription) {
           const features = data.originalDescription
             .split("\n")
@@ -221,6 +224,104 @@ export default function UnifiedEnhancePage() {
             .map((line) => line.replace(/^[•\-]\s*/, ""))
             .join("\n");
           if (features) setKeyFeatures(features);
+        }
+
+        // Intelligent extraction from description text
+        if (data.originalDescription) {
+          const descText = data.originalDescription.toLowerCase();
+
+          // Extract fabric/material if not already set from tags
+          if (!extractedFabric) {
+            /* eslint-disable security/detect-unsafe-regex -- Patterns are bounded with {1,20} quantifiers and tested */
+            const fabricPatterns = [
+              /(?:made (?:of|from|with)|crafted (?:from|in)|featuring|in) (?:a )?(?:soft |lightweight |premium |luxurious |breathable |cozy |comfortable )?([a-z]{1,20}(?: [a-z]{1,20})? (?:fabric|cotton|polyester|wool|silk|linen|cashmere|velvet|satin|denim|jersey|knit|fleece|chiffon|organza|tweed|corduroy|suede|leather|lace|mesh|rayon|viscose|nylon|spandex|lycra|elastane|modal|bamboo|hemp))/i,
+              /(?:lightweight|soft|premium|luxurious|breathable|cozy|comfortable) ([a-z]{1,20}(?: [a-z]{1,20})? (?:fabric|material|blend))/i,
+              /((?:cotton|polyester|wool|silk|linen|cashmere|velvet|satin|denim|jersey|knit|fleece|chiffon|organza|tweed|corduroy|suede|leather|lace|mesh|rayon|viscose|nylon|spandex|lycra|elastane|modal|bamboo|hemp)(?: blend)?)/i,
+            ];
+            /* eslint-enable security/detect-unsafe-regex */
+
+            for (const pattern of fabricPatterns) {
+              const match = data.originalDescription.match(pattern);
+              if (match && match[1]) {
+                setFabricMaterial(match[1].trim());
+                break;
+              }
+            }
+          }
+
+          // Extract occasion/use cases
+          const occasionKeywords = [
+            "beach",
+            "vacation",
+            "resort",
+            "poolside",
+            "summer",
+            "spring",
+            "casual",
+            "everyday",
+            "daily",
+            "weekend",
+            "relaxed",
+            "evening",
+            "night out",
+            "dinner",
+            "date night",
+            "cocktail",
+            "formal",
+            "office",
+            "work",
+            "professional",
+            "business",
+            "wedding",
+            "party",
+            "celebration",
+            "special occasion",
+            "workout",
+            "gym",
+            "athletic",
+            "sports",
+            "active",
+            "outdoor",
+            "hiking",
+            "travel",
+            "lounging",
+            "cozy",
+          ];
+
+          const foundOccasions: string[] = [];
+          for (const keyword of occasionKeywords) {
+            if (descText.includes(keyword)) {
+              // Capitalize first letter
+              foundOccasions.push(
+                keyword.charAt(0).toUpperCase() + keyword.slice(1),
+              );
+            }
+          }
+
+          // Also look for phrases like "perfect for", "ideal for", "great for"
+          const occasionPhraseMatch = data.originalDescription.match(
+            /(?:perfect|ideal|great|designed|made) for (?:a )?([^.]+?)(?:\.|,|$)/gi,
+          );
+          if (occasionPhraseMatch) {
+            for (const match of occasionPhraseMatch) {
+              const occasion = match
+                .replace(
+                  /(?:perfect|ideal|great|designed|made) for (?:a )?/i,
+                  "",
+                )
+                .replace(/[.,]$/, "")
+                .trim();
+              if (occasion.length > 3 && occasion.length < 50) {
+                foundOccasions.push(occasion);
+              }
+            }
+          }
+
+          if (foundOccasions.length > 0) {
+            // Remove duplicates and limit to 5
+            const uniqueOccasions = [...new Set(foundOccasions)].slice(0, 5);
+            setOccasionUse(uniqueOccasions.join(", "));
+          }
         }
 
         if (data.productType) {
@@ -344,7 +445,6 @@ export default function UnifiedEnhancePage() {
       formData.append("availableSizing", detectedSizing || "Not specified");
       formData.append("fabricMaterial", fabricMaterial);
       formData.append("occasionUse", occasionUse);
-      formData.append("targetAudience", targetAudience);
       formData.append("keyFeatures", keyFeatures);
       formData.append("additionalNotes", additionalNotes);
       formData.append("enhancementOptions", JSON.stringify(enhancementOptions));
@@ -556,7 +656,7 @@ export default function UnifiedEnhancePage() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">
-                    Enhance Product
+                    Enhance an Existing Product Description
                   </h1>
                   {productData && (
                     <p className="text-gray-500 text-sm">{productData.title}</p>
@@ -669,22 +769,19 @@ export default function UnifiedEnhancePage() {
                     const allSelected =
                       enhancementOptions.generateTitle &&
                       enhancementOptions.enhanceDescription &&
-                      enhancementOptions.generateSEO &&
-                      enhancementOptions.createPromo;
+                      enhancementOptions.generateSEO;
 
                     setEnhancementOptions({
                       generateTitle: !allSelected,
                       enhanceDescription: !allSelected,
                       generateSEO: !allSelected,
-                      createPromo: !allSelected,
                       updateImages: false,
                     });
                   }}
                 >
                   {enhancementOptions.generateTitle &&
                   enhancementOptions.enhanceDescription &&
-                  enhancementOptions.generateSEO &&
-                  enhancementOptions.createPromo
+                  enhancementOptions.generateSEO
                     ? "Deselect All"
                     : "Select All"}
                 </Button>
@@ -706,11 +803,6 @@ export default function UnifiedEnhancePage() {
                     id: "generateSEO",
                     label: "Generate SEO metadata",
                     checked: enhancementOptions.generateSEO,
-                  },
-                  {
-                    id: "createPromo",
-                    label: "Create promotional copy",
-                    checked: enhancementOptions.createPromo,
                   },
                 ].map((option) => (
                   <div
@@ -780,13 +872,10 @@ export default function UnifiedEnhancePage() {
                 setFabricMaterial={setFabricMaterial}
                 occasionUse={occasionUse}
                 setOccasionUse={setOccasionUse}
-                targetAudience={targetAudience}
-                setTargetAudience={setTargetAudience}
                 keyFeatures={keyFeatures}
                 setKeyFeatures={setKeyFeatures}
                 additionalNotes={additionalNotes}
                 setAdditionalNotes={setAdditionalNotes}
-                prefilled={!!productData}
               />
             </div>
 
@@ -932,8 +1021,7 @@ export default function UnifiedEnhancePage() {
             )}
             <p className="text-sm text-gray-500">
               Click &quot;View Product&quot; to see the updated product in your
-              Shopify admin, or &quot;Continue Editing&quot; to make more
-              changes.
+              Shopify admin.
             </p>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -945,7 +1033,7 @@ export default function UnifiedEnhancePage() {
                 setUpdateResult(null);
               }}
             >
-              Continue Editing
+              Close
             </Button>
             <Button
               style={{

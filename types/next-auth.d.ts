@@ -6,9 +6,11 @@ declare module 'next-auth' {
     id: string;
     email: string;
     name?: string;
-    role: 'admin' | 'coach' | 'user';
+    role: 'admin' | 'coach' | 'shop';
     shopDomain?: string;
     twoFactorEnabled?: boolean;
+    hasShopifyLinked?: boolean;
+    staffRole?: 'owner' | 'staff';
   }
 
   interface Session {
@@ -16,9 +18,11 @@ declare module 'next-auth' {
       id: string;
       email: string;
       name?: string;
-      role: 'admin' | 'coach' | 'user';
+      role: 'admin' | 'coach' | 'shop';
       shopDomain?: string;
       twoFactorEnabled?: boolean;
+      hasShopifyLinked?: boolean;
+      staffRole?: 'owner' | 'staff';
     };
     accessTokenExpired?: boolean;
   }
@@ -27,9 +31,11 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
-    role: 'admin' | 'coach' | 'user';
+    role: 'admin' | 'coach' | 'shop';
     shopDomain?: string;
     twoFactorEnabled?: boolean;
+    hasShopifyLinked?: boolean;
+    staffRole?: 'owner' | 'staff';
     accessTokenIssuedAt?: number;
     accessTokenExpired?: boolean;
   }

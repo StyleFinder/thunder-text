@@ -1,10 +1,19 @@
 import OpenAI from "openai";
 import { type EnhancementProductData } from "./shopify/product-enhancement";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
 
 // Use the existing OpenAI client
+// SECURITY: No fallback - fail fast if API key is missing
+const getOpenAIApiKey = (): string => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY environment variable is required");
+  }
+  return apiKey;
+};
+
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "placeholder-api-key",
+  apiKey: getOpenAIApiKey(),
 });
 
 export interface EnhancementRequest {
@@ -65,7 +74,6 @@ export class ProductEnhancementGenerator {
     const startTime = Date.now();
 
     try {
-
       // Build enhancement-specific prompt
       const prompt = await this.buildEnhancementPrompt(request);
 
@@ -135,7 +143,11 @@ export class ProductEnhancementGenerator {
 
       return result;
     } catch (error) {
-      logger.error("❌ Error generating enhanced description:", error as Error, { component: 'openai-enhancement' });
+      logger.error(
+        "❌ Error generating enhanced description:",
+        error as Error,
+        { component: "openai-enhancement" },
+      );
       throw new Error(
         `Enhancement generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
@@ -162,7 +174,11 @@ export class ProductEnhancementGenerator {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       customPrompts = await getCombinedPrompt(storeId, category as any);
     } catch (error) {
-      logger.error("Failed to load custom prompts for enhancement:", error as Error, { component: 'openai-enhancement' });
+      logger.error(
+        "Failed to load custom prompts for enhancement:",
+        error as Error,
+        { component: "openai-enhancement" },
+      );
     }
 
     // Use the same detailed template instructions as create workflow

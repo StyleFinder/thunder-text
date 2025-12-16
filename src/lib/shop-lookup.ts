@@ -28,6 +28,9 @@ interface ShopRecord {
  * 2. If shop contains .myshopify.com, try linked_shopify_domain (for standalone users with linked stores)
  * 3. If shop contains @, try email (for standalone users)
  *
+ * Note: For integrations, standalone users INHERIT from their master shop.
+ * The OAuth authorize routes handle resolving the master shop ID for storing integrations.
+ *
  * @param supabase - Supabase admin client
  * @param shop - Shop identifier (domain or email)
  * @param selectFields - Fields to select (default: 'id, shop_domain')

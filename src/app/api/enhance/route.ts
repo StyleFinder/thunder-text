@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/auth-options";
 import {
   createCorsHeaders,
   handleCorsPreflightRequest,
 } from "@/lib/middleware/cors";
 import { logger } from "@/lib/logger";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function OPTIONS(request: NextRequest) {
   return handleCorsPreflightRequest(request);
 }
 
+/**
+ * POST /api/enhance
+ *
+ * Enhance product descriptions using AI
+ *
+ * SECURITY: Uses session-based authentication. Referer/User-Agent headers
+ * are NOT trusted for authentication - they are easily spoofable.
+ * Authentication is done via getServerSession.
+ */
 export async function POST(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request);
 
@@ -24,66 +36,55 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Dynamic imports to avoid loading during build
-    const { aiGenerator } = await import("@/lib/openai");
-
-    // Check for session token in Authorization header
-    const authHeader = request.headers.get("authorization");
-    const sessionToken = authHeader?.startsWith("Bearer ")
-      ? authHeader.substring(7)
-      : undefined;
-
-    console.log("🔐 Enhance API - Auth check:", {
-      hasAuthHeader: !!authHeader,
-      hasSessionToken: !!sessionToken,
-      userAgent: request.headers.get("user-agent"),
-      referer: request.headers.get("referer"),
-    });
-
-    // Check if this is a legitimate request (from Shopify embed or our app domain)
-    const userAgent = request.headers.get("user-agent") || "";
-    const referer = request.headers.get("referer") || "";
-    const isShopifyRequest =
-      userAgent.includes("Shopify") ||
-      referer.includes(".myshopify.com") ||
-      referer.includes("thunder-text");
-    const isZunosaiRequest =
-      referer.includes("zunosai.com") || referer.includes("app.zunosai.com");
-
-    let storeId = null;
-
-    // For development/testing with authenticated=true flag
-    const url = new URL(request.url);
-    const isAuthenticatedDev =
-      url.searchParams.get("authenticated") === "true" ||
-      referer.includes("authenticated=true");
-
-    // Thunder Text uses Shopify OAuth authentication, not session-based auth
-    // Authentication is handled via shop parameter and access token from database
-    // Also allow requests from our production domain (app.zunosai.com) for standalone users
-    if (
-      !isShopifyRequest &&
-      !isZunosaiRequest &&
-      !referer.includes("vercel.app") &&
-      !isAuthenticatedDev
-    ) {
-      logger.error(
-        "❌ Authentication required - not a valid request",
-        undefined,
-        {
-          component: "enhance",
-          referer,
-          isShopifyRequest,
-          isZunosaiRequest,
-        },
-      );
+    // SECURITY: Require session authentication
+    // Referer and User-Agent headers are NOT trusted - they're easily spoofable
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401, headers: corsHeaders },
       );
     }
 
-    storeId = "shopify-embedded-app";
+    // Get shop domain from session (not from headers!)
+    const shopDomain = (session.user as { shopDomain?: string }).shopDomain;
+    if (!shopDomain) {
+      return NextResponse.json(
+        { error: "No shop associated with account" },
+        { status: 403, headers: corsHeaders },
+      );
+    }
+
+    // Verify shop exists and get shop ID from database
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from("shops")
+      .select("id, is_active")
+      .eq("shop_domain", shopDomain)
+      .single();
+
+    if (shopError || !shopData) {
+      logger.error("Shop not found for enhance:", shopError as Error, {
+        component: "enhance",
+        shopDomain,
+      });
+      return NextResponse.json(
+        { error: "Shop not found" },
+        { status: 404, headers: corsHeaders },
+      );
+    }
+
+    if (!shopData.is_active) {
+      return NextResponse.json(
+        { error: "Shop is not active" },
+        { status: 403, headers: corsHeaders },
+      );
+    }
+
+    // Use session-derived shop ID
+    const storeId = shopData.id;
+
+    // Dynamic imports to avoid loading during build
+    const { aiGenerator } = await import("@/lib/openai");
 
     // Parse FormData (since we're using FormData for image uploads)
     const formData = await request.formData();

@@ -243,3 +243,111 @@ function escapeHtml(text: string): string {
   }
   return text.replace(/[&<>"']/g, (char) => map[char])
 }
+
+/**
+ * Send staff invitation email
+ */
+export async function sendStaffInvitationEmail(params: {
+  to: string
+  storeName: string
+  inviterName: string
+  inviteUrl: string
+  expiresInDays: number
+}): Promise<SendEmailResponse> {
+  const { to, storeName, inviterName, inviteUrl, expiresInDays } = params
+
+  const html = generateStaffInvitationEmailHTML({
+    storeName,
+    inviterName,
+    inviteUrl,
+    expiresInDays,
+  })
+
+  return sendEmail({
+    to: [to],
+    subject: `You've been invited to join ${storeName} on Thunder Text`,
+    html,
+  })
+}
+
+/**
+ * Generate HTML email template for staff invitations
+ */
+function generateStaffInvitationEmailHTML(params: {
+  storeName: string
+  inviterName: string
+  inviteUrl: string
+  expiresInDays: number
+}): string {
+  const { storeName, inviterName, inviteUrl, expiresInDays } = params
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're Invited to Thunder Text</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #F6F6F7;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #0066cc 0%, #0099ff 100%); padding: 32px; text-align: center;">
+      <div style="display: inline-flex; align-items: center; gap: 12px;">
+        <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #ffcc00 0%, #ff9900 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+          <span style="font-size: 24px;">⚡</span>
+        </div>
+        <h1 style="margin: 0; color: #FFFFFF; font-size: 28px; font-weight: 700;">
+          Thunder Text
+        </h1>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div style="padding: 40px 32px;">
+      <h2 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: #202223; text-align: center;">
+        You've Been Invited! 🎉
+      </h2>
+
+      <p style="margin: 0 0 24px 0; font-size: 16px; color: #202223; text-align: center; line-height: 1.6;">
+        <strong>${escapeHtml(inviterName)}</strong> has invited you to join
+        <strong>${escapeHtml(storeName)}</strong> on Thunder Text.
+      </p>
+
+      <div style="background-color: #F6F6F7; border-radius: 12px; padding: 24px; margin-bottom: 32px;">
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #202223;">
+          What you'll get access to:
+        </h3>
+        <ul style="margin: 0; padding-left: 20px; color: #202223; font-size: 14px; line-height: 1.8;">
+          <li>AI-powered product description generation</li>
+          <li>High-converting ad copy creation</li>
+          <li>Brand voice customization</li>
+          <li>Social media integrations</li>
+        </ul>
+      </div>
+
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${inviteUrl}" style="display: inline-block; background: linear-gradient(135deg, #0066cc 0%, #0099ff 100%); color: #FFFFFF; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-weight: 600; font-size: 18px; box-shadow: 0 4px 14px rgba(0, 102, 204, 0.3);">
+          Accept Invitation
+        </a>
+      </div>
+
+      <p style="margin: 0; font-size: 14px; color: #6D7175; text-align: center;">
+        This invitation expires in <strong>${expiresInDays} days</strong>.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background-color: #F6F6F7; padding: 24px; text-align: center; border-top: 1px solid #E1E3E5;">
+      <p style="margin: 0 0 8px 0; font-size: 12px; color: #6D7175;">
+        If you didn't expect this invitation, you can safely ignore this email.
+      </p>
+      <p style="margin: 0; font-size: 12px; color: #6D7175;">
+        Questions? Contact us at <a href="mailto:support@thundertext.app" style="color: #0066cc; text-decoration: none;">support@thundertext.app</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `
+}

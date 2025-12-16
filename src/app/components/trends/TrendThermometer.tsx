@@ -18,6 +18,7 @@ interface TrendThermometerProps {
   peakRecencyDays?: number;
   series: Array<{ date: string; value: number }>;
   onViewDetails?: () => void;
+  noData?: boolean;
 }
 
 export function TrendThermometer({
@@ -28,6 +29,7 @@ export function TrendThermometer({
   peakRecencyDays,
   series,
   onViewDetails,
+  noData,
 }: TrendThermometerProps) {
   // Playbook recommendations
   const playbook = getPlaybookForStatus(status);
@@ -38,7 +40,9 @@ export function TrendThermometer({
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-ace-black">{themeName}</h3>
+            <h3 className="text-lg font-semibold text-ace-black">
+              {themeName}
+            </h3>
             <p className="text-sm text-ace-gray-dark">Seasonal Trend</p>
           </div>
           <TooltipProvider>
@@ -55,27 +59,41 @@ export function TrendThermometer({
           </TooltipProvider>
         </div>
 
-        {/* Status Badge */}
-        <TrendStatusBadge status={status} momentumPct={momentumPct} />
+        {noData ? (
+          /* No Data State */
+          <div className="py-4 text-center">
+            <p className="text-sm text-ace-gray-dark">
+              No trend data available yet
+            </p>
+            <p className="text-xs text-ace-gray-dark mt-1">
+              Data will appear once Google Trends syncs
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Status Badge */}
+            <TrendStatusBadge status={status} momentumPct={momentumPct} />
 
-        {/* Sparkline */}
-        <TrendSparkline series={series} height={60} />
+            {/* Sparkline */}
+            <TrendSparkline series={series} height={60} />
 
-        {/* Peak Info */}
-        {lastPeakDate && peakRecencyDays !== undefined && (
-          <p className="text-sm text-ace-gray-dark">
-            Peak: {new Date(lastPeakDate).toLocaleDateString()} (
-            {peakRecencyDays} days ago)
-          </p>
+            {/* Peak Info */}
+            {lastPeakDate && peakRecencyDays !== undefined && (
+              <p className="text-sm text-ace-gray-dark">
+                Peak: {new Date(lastPeakDate).toLocaleDateString()} (
+                {peakRecencyDays} days ago)
+              </p>
+            )}
+
+            {/* Playbook Recommendation */}
+            <div className="bg-ace-blue/5 border border-ace-blue/20 rounded-lg p-3 space-y-1">
+              <p className="text-sm font-semibold text-ace-black">
+                💡 {playbook.title}
+              </p>
+              <p className="text-sm text-ace-gray-dark">{playbook.action}</p>
+            </div>
+          </>
         )}
-
-        {/* Playbook Recommendation */}
-        <div className="bg-ace-blue/5 border border-ace-blue/20 rounded-lg p-3 space-y-1">
-          <p className="text-sm font-semibold text-ace-black">
-            💡 {playbook.title}
-          </p>
-          <p className="text-sm text-ace-gray-dark">{playbook.action}</p>
-        </div>
 
         {/* View Details Link */}
         {onViewDetails && (

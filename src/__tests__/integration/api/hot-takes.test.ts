@@ -4,8 +4,8 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
-import { GET, POST } from '../route';
-import { PATCH } from '../[id]/route';
+import { GET, POST } from '@/app/api/hot-takes/route';
+import { PATCH } from '@/app/api/hot-takes/[id]/route';
 import { NextRequest } from 'next/server';
 
 describe('GET /api/hot-takes', () => {
@@ -131,19 +131,22 @@ describe('POST /api/hot-takes', () => {
 });
 
 describe('PATCH /api/hot-takes/:id', () => {
+  // Use valid UUID format for test IDs
+  const TEST_UUID = '00000000-0000-0000-0000-000000000001';
+
   it('should require coach authentication', async () => {
-    const request = new NextRequest('http://localhost:3050/api/hot-takes/test-id', {
+    const request = new NextRequest(`http://localhost:3050/api/hot-takes/${TEST_UUID}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: false }),
     });
 
-    const response = await PATCH(request, { params: Promise.resolve({ id: 'test-id' }) });
+    const response = await PATCH(request, { params: Promise.resolve({ id: TEST_UUID }) });
     expect(response.status).toBe(401);
   });
 
   it('should allow coaches to deactivate hot takes', async () => {
-    const request = new NextRequest('http://localhost:3050/api/hot-takes/test-id', {
+    const request = new NextRequest(`http://localhost:3050/api/hot-takes/${TEST_UUID}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -152,8 +155,8 @@ describe('PATCH /api/hot-takes/:id', () => {
       body: JSON.stringify({ is_active: false }),
     });
 
-    const response = await PATCH(request, { params: Promise.resolve({ id: 'test-id' }) });
-    // Will be 200 or 404 depending on if test-id exists
+    const response = await PATCH(request, { params: Promise.resolve({ id: TEST_UUID }) });
+    // Will be 200 or 404 depending on if test UUID exists in database
     expect([200, 404]).toContain(response.status);
   });
 });

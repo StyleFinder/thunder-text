@@ -3,8 +3,11 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
 import {
   checkLockoutStatus,
+  checkLockoutStatusFromDatabase,
   recordFailedAttempt,
+  recordFailedAttemptWithPersistence,
   clearFailedAttempts,
+  clearFailedAttemptsWithPersistence,
 } from "@/lib/security/login-protection";
 import {
   isTwoFactorEnabled,
@@ -45,7 +48,14 @@ export const authOptions: NextAuthOptions = {
         }
 
         // SECURITY: Check if account is locked due to failed attempts
-        const lockoutStatus = checkLockoutStatus(credentials.email);
+        // For shop users, check database first to persist across restarts
+        let lockoutStatus = checkLockoutStatus(credentials.email);
+        if (credentials.userType === "shop") {
+          // Shop users have database-backed lockout for persistence
+          lockoutStatus = await checkLockoutStatusFromDatabase(
+            credentials.email,
+          );
+        }
         if (lockoutStatus.isLocked) {
           // Throw error with lockout info (caught by NextAuth error handler)
           throw new Error(
@@ -150,13 +160,12 @@ export const authOptions: NextAuthOptions = {
             name: coach.name,
             role: "coach",
           };
-        } else {
-          // Lookup in shops table (standalone users)
+        } else if (credentials.userType === "shop") {
+          // Shop users authenticate with email/password
           const { data: shop, error } = await supabaseAdmin
             .from("shops")
             .select("*")
-            .eq("email", credentials.email)
-            .eq("shop_type", "standalone")
+            .eq("email", credentials.email.toLowerCase())
             .eq("is_active", true)
             .single();
 
@@ -169,25 +178,38 @@ export const authOptions: NextAuthOptions = {
             shop.password_hash,
           );
           if (!isValid) {
-            // SECURITY: Record failed attempt
-            recordFailedAttempt(credentials.email);
+            // SECURITY: Record failed attempt with database persistence
+            await recordFailedAttemptWithPersistence(credentials.email);
             return null;
           }
 
-          // SECURITY: Clear failed attempts on successful login
-          clearFailedAttempts(credentials.email);
+          // SECURITY: Clear failed attempts on successful login (with persistence)
+          await clearFailedAttemptsWithPersistence(credentials.email);
 
-          // For standalone users, prefer linked_shopify_domain over email for URLs
-          // If they haven't linked a Shopify store yet, use their email as identifier
-          const shopDomainForUrls = shop.linked_shopify_domain || shop.email;
+          // Check if Shopify is connected (has access token and real domain)
+          const hasShopifyLinked = !!(
+            shop.shopify_access_token &&
+            shop.shop_domain &&
+            !shop.shop_domain.startsWith("pending-")
+          );
+
+          logger.info("[Auth] Shop user login successful", {
+            component: "auth",
+            userId: shop.id,
+            hasShopifyLinked,
+          });
 
           return {
             id: shop.id,
             email: shop.email,
-            name: shop.display_name || shop.store_name || shop.shop_domain,
-            role: "user",
-            shopDomain: shopDomainForUrls,
+            name: shop.store_name || shop.display_name || shop.email,
+            role: "shop",
+            shopDomain: hasShopifyLinked ? shop.shop_domain : undefined,
+            hasShopifyLinked,
           };
+        } else {
+          // Unknown user type
+          return null;
         }
       },
     }),
@@ -201,6 +223,8 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.shopDomain = user.shopDomain;
         token.twoFactorEnabled = user.twoFactorEnabled;
+        token.hasShopifyLinked = user.hasShopifyLinked;
+        token.staffRole = user.staffRole;
         // SECURITY: Track when token was issued for expiration checks
         token.accessTokenIssuedAt = Math.floor(Date.now() / 1000);
       }
@@ -233,6 +257,9 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role;
         session.user.shopDomain = token.shopDomain;
         session.user.twoFactorEnabled = token.twoFactorEnabled as boolean;
+        session.user.hasShopifyLinked = token.hasShopifyLinked as boolean;
+        session.user.staffRole =
+          (token.staffRole as "owner" | "staff") || "owner";
         // SECURITY: Expose token status to client for refresh handling
         session.accessTokenExpired =
           (token.accessTokenExpired as boolean) || false;
@@ -242,6 +269,7 @@ export const authOptions: NextAuthOptions = {
   },
 
   pages: {
+    // All users can sign in with credentials, then connect Shopify
     signIn: "/auth/login",
     error: "/auth/error",
   },

@@ -406,6 +406,14 @@ export async function GET(request: NextRequest) {
         email: userInfo.email,
         facebook_page_id: primaryPage?.id || null, // Stored in metadata until schema cache refreshes
         instagram_account_id: instagramAccountId, // Instagram Business Account linked to the Page
+        // Store ALL ad accounts fetched from Facebook (never modified after OAuth)
+        all_ad_accounts: adAccounts.map((acc) => ({
+          id: acc.id,
+          account_id: acc.account_id,
+          name: acc.name,
+          status: acc.account_status,
+        })),
+        // ad_accounts contains user-selected accounts (initially all, can be filtered later)
         ad_accounts: adAccounts.map((acc) => ({
           id: acc.id,
           account_id: acc.account_id,
@@ -490,10 +498,20 @@ export async function GET(request: NextRequest) {
 
     redirectUrl.searchParams.set("authenticated", "true");
     redirectUrl.searchParams.set("facebook_connected", "true");
-    redirectUrl.searchParams.set(
-      "message",
-      "Facebook account connected successfully",
-    );
+
+    // If multiple ad accounts are available, prompt user to select which ones to use
+    if (adAccounts.length > 1) {
+      redirectUrl.searchParams.set("select_ad_accounts", "true");
+      redirectUrl.searchParams.set(
+        "message",
+        "Facebook connected! Please select which ad accounts to use.",
+      );
+    } else {
+      redirectUrl.searchParams.set(
+        "message",
+        "Facebook account connected successfully",
+      );
+    }
 
     return NextResponse.redirect(redirectUrl.toString());
   } catch (error) {

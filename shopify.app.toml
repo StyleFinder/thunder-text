@@ -26,7 +26,7 @@ uri = "/api/webhooks/shop-update"
 
 [[webhooks.subscriptions]]
 compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
-uri = "https://thundertext-dev.ngrok.app/api/webhooks/compliance"
+uri = "/api/webhooks/compliance"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes

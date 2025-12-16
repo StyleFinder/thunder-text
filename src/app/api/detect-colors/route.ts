@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/auth-options";
 import { openai } from "@/lib/openai";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
 
 interface ColorDetectionRequest {
   images: Array<{
@@ -27,8 +29,25 @@ interface ColorVariant {
   userOverride?: string;
 }
 
+/**
+ * POST /api/detect-colors
+ * Detect colors from product images using OpenAI Vision
+ *
+ * SECURITY: Requires session authentication to prevent API abuse.
+ * OpenAI Vision API calls are expensive and must be protected.
+ */
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Require session authentication
+    // This prevents unauthorized API abuse (financial DoS via OpenAI costs)
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+
     const body: ColorDetectionRequest = await request.json();
     const { images } = body;
 
@@ -140,7 +159,9 @@ CRITICAL: Respond with ONLY raw JSON, no code blocks or formatting:
           `✅ Image ${i + 1} detected: ${detectedColor} → ${standardizedColor} (${confidencePercentage}%)`,
         );
       } catch (error) {
-        logger.error(`❌ Error analyzing image ${i + 1}:`, error as Error, { component: 'detect-colors' });
+        logger.error(`❌ Error analyzing image ${i + 1}:`, error as Error, {
+          component: "detect-colors",
+        });
 
         // Add as unknown for failed detection
         colorResults.push({
@@ -167,7 +188,9 @@ CRITICAL: Respond with ONLY raw JSON, no code blocks or formatting:
       detectionResults: colorResults,
     });
   } catch (error) {
-    logger.error("Color detection API error:", error as Error, { component: 'detect-colors' });
+    logger.error("Color detection API error:", error as Error, {
+      component: "detect-colors",
+    });
     return NextResponse.json(
       {
         error: "Failed to detect colors",

@@ -3,71 +3,96 @@ import { logger } from "@/lib/logger";
 
 // Direct PostgreSQL connection - bypasses Supabase PostgREST entirely
 // Only use this when PostgREST has issues (like schema cache problems)
-const connectionString = process.env.DATABASE_URL;
 
-if (!connectionString) {
-  logger.error(
-    "❌ CRITICAL: DATABASE_URL environment variable is not set!",
-    undefined,
-    {
-      availableEnvVars: Object.keys(process.env).filter((key) =>
-        key.includes("DATABASE"),
-      ),
-      nodeEnv: process.env.NODE_ENV,
+// Lazy initialization - pool is created on first use, not at import time
+// This allows tests to load environment variables before the pool is created
+let pool: Pool | null = null;
+let poolInitialized = false;
+
+/**
+ * Get or create the PostgreSQL connection pool (lazy initialization)
+ * Validates DATABASE_URL on first call, not at module import
+ */
+function getPool(): Pool {
+  if (pool && poolInitialized) {
+    return pool;
+  }
+
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    logger.error(
+      "❌ CRITICAL: DATABASE_URL environment variable is not set!",
+      undefined,
+      {
+        availableEnvVars: Object.keys(process.env).filter((key) =>
+          key.includes("DATABASE"),
+        ),
+        nodeEnv: process.env.NODE_ENV,
+        component: "postgres",
+      },
+    );
+    throw new Error(
+      "DATABASE_URL is required for direct PostgreSQL connection",
+    );
+  }
+
+  // Log connection details (keep console.log for bootstrapping)
+  const dbHost = connectionString.split("@")[1]?.split(":")[0];
+  const dbName = connectionString.split("/").pop()?.split("?")[0];
+  // Extract project ID from either:
+  // - Direct: db.PROJECT.supabase.co
+  // - Pooler: postgres.PROJECT:password@aws-X.pooler.supabase.com
+  const directMatch = connectionString.match(/db\.([a-z0-9]+)\.supabase\.co/);
+  const poolerMatch = connectionString.match(/postgres\.([a-z0-9]+):/);
+  const projectId = directMatch?.[1] || poolerMatch?.[1] || "unknown";
+
+  console.log("=".repeat(80));
+  console.log("🔗 PostgreSQL Direct Connection Initialized");
+  console.log("=".repeat(80));
+  console.log("Database Host:", dbHost);
+  console.log("Database Name:", dbName);
+  console.log("Supabase Project ID:", projectId);
+  console.log("Expected Project:", "upkmmwvbspgeanotzknk (Thunder Text)");
+  console.log("=".repeat(80));
+
+  if (projectId !== "upkmmwvbspgeanotzknk") {
+    logger.error(
+      `WRONG DATABASE! Connected to: ${projectId}`,
+      new Error(`Wrong database project: ${projectId}`),
+      { component: "postgres" },
+    );
+    logger.error(`Expected: upkmmwvbspgeanotzknk (Thunder Text)`, undefined, {
       component: "postgres",
-    },
-  );
-  throw new Error("DATABASE_URL is required for direct PostgreSQL connection");
-}
+    });
+    throw new Error(
+      `DATABASE_URL points to wrong project: ${projectId}. Expected: upkmmwvbspgeanotzknk`,
+    );
+  }
 
-// Log connection details IMMEDIATELY (keep console.log for bootstrapping)
-const dbHost = connectionString.split("@")[1]?.split(":")[0];
-const dbName = connectionString.split("/").pop()?.split("?")[0];
-const projectIdMatch = connectionString.match(/db\.([a-z]+)\.supabase\.co/);
-const projectId = projectIdMatch ? projectIdMatch[1] : "unknown";
-
-console.log("=".repeat(80));
-console.log("🔗 PostgreSQL Direct Connection Initialized");
-console.log("=".repeat(80));
-console.log("Database Host:", dbHost);
-console.log("Database Name:", dbName);
-console.log("Supabase Project ID:", projectId);
-console.log("Expected Project:", "upkmmwvbspgeanotzknk (Thunder Text)");
-console.log("=".repeat(80));
-
-if (projectId !== "upkmmwvbspgeanotzknk") {
-  logger.error(
-    `WRONG DATABASE! Connected to: ${projectId}`,
-    new Error(`Wrong database project: ${projectId}`),
-    { component: "postgres" },
-  );
-  logger.error(`Expected: upkmmwvbspgeanotzknk (Thunder Text)`, undefined, {
-    component: "postgres",
+  pool = new Pool({
+    connectionString,
+    // Supabase pooler uses its own certificate chain which requires rejectUnauthorized: false
+    // This is safe because we're connecting over TLS to Supabase's managed infrastructure
+    ssl: { rejectUnauthorized: false },
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
   });
-  throw new Error(
-    `DATABASE_URL points to wrong project: ${projectId}. Expected: upkmmwvbspgeanotzknk`,
-  );
+
+  // Test connection on startup with proper error handling
+  pool
+    .query("SELECT current_database(), current_schema()")
+    .then(() => {
+      console.log("✅ PostgreSQL connection verified");
+    })
+    .catch((err) => {
+      console.error("❌ PostgreSQL connection test failed:", err.message);
+    });
+
+  poolInitialized = true;
+  return pool;
 }
-
-const pool = new Pool({
-  connectionString,
-  // Supabase pooler uses its own certificate chain which requires rejectUnauthorized: false
-  // This is safe because we're connecting over TLS to Supabase's managed infrastructure
-  ssl: { rejectUnauthorized: false },
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
-});
-
-// Test connection on startup with proper error handling
-pool
-  .query("SELECT current_database(), current_schema()")
-  .then(() => {
-    console.log("✅ PostgreSQL connection verified");
-  })
-  .catch((err) => {
-    console.error("❌ PostgreSQL connection test failed:", err.message);
-  });
 
 /**
  * Tenant-aware database client
@@ -97,7 +122,7 @@ export async function getTenantClient(
     );
   }
 
-  const client = await pool.connect();
+  const client = await getPool().connect();
 
   // Wrap the client to add tenant validation
   return {
@@ -176,6 +201,18 @@ export async function queryWithTenant<
   }
 }
 
-// Export the raw pool only for non-tenant operations (system queries, migrations)
+// Export the pool getter for non-tenant operations (system queries, migrations)
 // IMPORTANT: Never use this directly for tenant-scoped data
-export { pool };
+export { getPool as pool };
+
+/**
+ * Close the PostgreSQL connection pool
+ * Call this in test teardown to prevent Jest from hanging
+ */
+export async function closePool(): Promise<void> {
+  if (pool && poolInitialized) {
+    await pool.end();
+    pool = null;
+    poolInitialized = false;
+  }
+}
