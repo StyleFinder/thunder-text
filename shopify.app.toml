@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "613bffa12a51873c2739ae67163a72e2"
-name = "Thunder Text Dev911"
+name = "Thunder Text"
 application_url = "https://app.zunosai.com"
 embedded = false
 handle = "thunder-text-29"

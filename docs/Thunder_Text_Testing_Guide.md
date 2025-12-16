@@ -36,7 +36,7 @@ All secrets are configured in GitHub Environment "Preview":
 
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_SERVICE_KEY`
-- `NEXTAUTH_SECRET`, `OPENAI_API_KEY`, `STRIPE_SECRET_KEY`
+- `NEXTAUTH_SECRET`, `OPENAI_API_KEY`
 - `DATABASE_URL`, `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`
 
 ---
@@ -334,8 +334,6 @@ projects:
 | `POST /api/auth/signup`             | `auth-signup.test.ts`             | 21    | Email validation, password hashing, duplicate handling |
 | `POST /api/auth/login`              | `auth-login.test.ts`              | 6     | Credential validation, session creation                |
 | `POST /api/auth/token`              | `auth-token.test.ts`              | 6     | JWT generation, token validation                       |
-| `GET /api/billing/subscription`     | `billing-subscription.test.ts`    | 7     | Status retrieval, trial detection                      |
-| `POST /api/billing/create-checkout` | `billing-create-checkout.test.ts` | 9     | Stripe session creation, plan validation               |
 | Multi-tenant isolation              | `tenant-isolation.test.ts`        | 12    | Cross-tenant data protection via RLS                   |
 
 #### Tier 2: Core Feature Endpoints
@@ -362,7 +360,7 @@ projects:
 
 - **Total Test Suites**: 18 (all passing)
 - **Total Tests**: 260 passing, 9 todo
-- **Coverage Areas**: Authentication, Authorization, Billing, Profiles, AI Generation, Coaching
+- **Coverage Areas**: Authentication, Authorization, Profiles, AI Generation, Coaching
 
 ### Important Testing Notes
 
@@ -580,10 +578,7 @@ Based on the **Alan Knox Technical Assessment** (December 12, 2025), conducted o
 
 | Issue                                 | Risk     | File                                   | Fix Required                                            |
 | ------------------------------------- | -------- | -------------------------------------- | ------------------------------------------------------- |
-| Usage check grants unlimited on error | CRITICAL | `src/lib/billing/usage.ts:54-61`       | Return `canProceed: false` on DB error                  |
-| Stripe webhook idempotency missing    | CRITICAL | `src/app/api/webhooks/stripe/route.ts` | Check for duplicate `stripe_event_id` before processing |
 | Dev-token bypass in production        | CRITICAL | 4 files (see audit)                    | Remove dev token authentication patterns                |
-| Usage counter race condition          | HIGH     | `src/lib/billing/usage.ts:136-160`     | Use atomic increment instead of GET+UPDATE              |
 
 ### Week 1 Priorities
 
@@ -592,7 +587,6 @@ Based on the **Alan Knox Technical Assessment** (December 12, 2025), conducted o
 | Add `logger.setUser()` to routes       | MEDIUM | Add user context to authenticated route handlers |
 | Complete API route auth audit          | HIGH   | Verify all 151 routes have appropriate auth      |
 | Facebook webhook verification          | HIGH   | Add signature verification to Facebook webhooks  |
-| Verify subscription status enforcement | HIGH   | Ensure expired subscriptions block access        |
 
 ### 30-Day Goals
 
@@ -615,24 +609,7 @@ Based on the **Alan Knox Technical Assessment** (December 12, 2025), conducted o
 ### Code Locations for Critical Fixes
 
 ```typescript
-// 1. Usage check error fallback - src/lib/billing/usage.ts:49-61
-// CURRENT (vulnerable):
-if (error || !shop) {
-  return { canProceed: true, ... }; // ⚠️ Grants access on error
-}
-// FIX: Return canProceed: false on error
-
-// 2. Usage counter race condition - src/lib/billing/usage.ts:136-160
-// CURRENT (race condition):
-const { data: shop } = await supabase.from("shops").select(column)...
-await supabase.from("shops").update({ [column]: currentValue + 1 })...
-// FIX: Use Supabase RPC with atomic increment
-
-// 3. Stripe webhook idempotency - src/app/api/webhooks/stripe/route.ts
-// CURRENT: Logs event but doesn't check for duplicates
-// FIX: Query billing_events for stripe_event_id before processing
-
-// 4. Dev token bypass - check these files:
+// Dev token bypass - check these files:
 // - src/app/api/generate/create/route.ts
 // - src/app/api/facebook/oauth/callback/route.ts
 // - src/app/api/facebook/oauth/disconnect/route.ts

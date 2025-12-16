@@ -53,7 +53,6 @@ function isAllowedOrigin(origin: string): boolean {
  */
 const PROTECTED_ROUTES = [
   "/dashboard",
-  "/welcome",
   "/settings",
   "/products",
   "/generate",
@@ -69,6 +68,8 @@ const PUBLIC_ROUTES = [
   "/auth/forgot-password",
   "/auth/reset-password",
   "/coach/login",
+  "/welcome", // Shopify install flow entry point - must be public
+  "/pricing", // Plan selection page after Shopify OAuth - must be public
   "/",
 ];
 
@@ -93,6 +94,31 @@ function _isPublicRoute(pathname: string): boolean {
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const searchParams = request.nextUrl.searchParams;
+
+  // SHOPIFY HOSTED INSTALL FLOW DETECTION
+  // When Shopify redirects after install via hosted OAuth (for non-embedded apps),
+  // it sends hmac, shop, timestamp params to application_url (root /)
+  // We need to redirect to /api/auth/shopify to initiate proper OAuth flow
+  if (pathname === "/") {
+    const shop = searchParams.get("shop");
+    const hmac = searchParams.get("hmac");
+    const timestamp = searchParams.get("timestamp");
+
+    if (shop && hmac && timestamp) {
+      console.log("[Middleware] Detected Shopify hosted install redirect");
+      console.log("[Middleware] Shop:", shop, "Has HMAC:", !!hmac, "Has timestamp:", !!timestamp);
+
+      // Normalize shop domain
+      const normalizedShop = shop.includes(".myshopify.com") ? shop : `${shop}.myshopify.com`;
+
+      // Redirect to OAuth initiation endpoint
+      const oauthUrl = new URL("/api/auth/shopify", request.url);
+      oauthUrl.searchParams.set("shop", normalizedShop);
+
+      return NextResponse.redirect(oauthUrl);
+    }
+  }
 
   // Handle authentication for protected routes
   if (isProtectedRoute(pathname)) {
@@ -173,13 +199,15 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   // Middleware needed for:
-  // 1. API routes (CORS handling)
-  // 2. Protected page routes (authentication)
+  // 1. Root path (Shopify hosted install redirect detection)
+  // 2. API routes (CORS handling)
+  // 3. Protected page routes (authentication)
   // Security headers for pages are applied via next.config.ts
+  // Note: /welcome is public (for Shopify install flow) - not included here
   matcher: [
+    "/",
     "/api/:path*",
     "/dashboard/:path*",
-    "/welcome/:path*",
     "/settings/:path*",
     "/products/:path*",
     "/generate/:path*",

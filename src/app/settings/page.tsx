@@ -26,12 +26,12 @@ import {
   Check,
   Eye,
   Calendar,
-  Clock
+  Clock,
+  CreditCard
 } from 'lucide-react'
 import { useNavigation } from '../hooks/useNavigation'
 import ShopSizes from '@/components/ShopSizes'
 import FacebookSettingsCard from '@/components/facebook/FacebookSettingsCard'
-import { SubscriptionCard } from '@/components/billing/SubscriptionCard'
 import { useToast } from '@/hooks/use-toast'
 import { logger } from '@/lib/logger'
 
@@ -482,6 +482,33 @@ function SettingsContent() {
             </div>
           </div>
 
+          {/* Billing & Plan */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center gap-2 mb-1">
+                <CreditCard className="w-5 h-5" style={{ color: '#0066cc' }} />
+                <h3 className="text-lg font-semibold text-gray-900">Billing & Plan</h3>
+              </div>
+              <p className="text-sm text-gray-500">
+                Manage your subscription, view billing details, and upgrade your plan
+              </p>
+            </div>
+            <div className="p-6 flex flex-col gap-4">
+              <Link href={`/settings/billing?shop=${shop}`}>
+                <Button
+                  className="w-full h-11 text-base font-medium"
+                  style={{
+                    background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
+                    border: 'none'
+                  }}
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Manage Billing & Plan
+                </Button>
+              </Link>
+            </div>
+          </div>
+
           {/* Prompts Management */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="p-6 border-b border-gray-200">
@@ -526,11 +553,6 @@ function SettingsContent() {
               </div>
             </div>
           </div>
-
-          {/* Subscription & Billing */}
-          {shopId && shop && (
-            <SubscriptionCard shopId={shopId} shopDomain={shop} />
-          )}
 
           {/* AI Discovery - llms.txt */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm col-span-1 lg:col-span-2">

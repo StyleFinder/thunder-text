@@ -525,7 +525,9 @@ export const API_KEY_CONFIG = {
 export function getEnvironment(): 'development' | 'staging' | 'production' {
   const env = process.env.NODE_ENV;
   if (env === 'production') {
-    const isStaging = process.env.VERCEL_ENV === 'preview';
+    // Check for staging indicators (Render preview environments)
+    const isStaging = process.env.RENDER_SERVICE_TYPE === 'preview' ||
+                      process.env.IS_PREVIEW === 'true';
     return isStaging ? 'staging' : 'production';
   }
   return 'development';

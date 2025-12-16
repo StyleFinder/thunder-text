@@ -588,39 +588,10 @@ export async function GET(req: NextRequest) {
       shopId = newShop.id;
     }
 
-    // For new installations (both fresh and pending shop merges), set up subscription and prompts
+    // For new installations (both fresh and pending shop merges), initialize prompts only
+    // NOTE: Trial/subscription is NOT auto-created here anymore.
+    // Users will be redirected to /pricing page to choose their plan (free trial, starter, or pro)
     if (isNewInstallation) {
-      // Grant Default Trial Subscription (14 Days) for new installations
-      const trialEndDate = new Date();
-      trialEndDate.setDate(trialEndDate.getDate() + 14);
-
-      const { error: subError } = await supabaseAdmin
-        .from("subscriptions")
-        .insert({
-          shop_id: shopId,
-          product: "bundle_all", // Grant access to everything during trial
-          status: "trialing",
-          current_period_start: new Date().toISOString(),
-          current_period_end: trialEndDate.toISOString(),
-        });
-
-      if (subError) {
-        logger.error(
-          "[Shopify Callback] Failed to create trial subscription:",
-          subError as Error,
-          {
-            component: "callback",
-            shop: fullShopDomain,
-          },
-        );
-        // Don't fail - user just won't have trial access
-      } else {
-        logger.info("[Shopify Callback] Granted 14-day trial subscription", {
-          component: "callback",
-          shop: fullShopDomain,
-        });
-      }
-
       // Initialize default prompts for new installations
       try {
         const { initializeDefaultPrompts } = await import("@/lib/prompts");
@@ -642,10 +613,40 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Register webhooks (for both new and re-authenticated shops)
+    // This ensures webhooks are always properly configured
+    try {
+      const { registerWebhooks } = await import(
+        "@/lib/shopify/webhook-registration"
+      );
+      const webhookResult = await registerWebhooks(fullShopDomain, access_token);
+      if (webhookResult.success) {
+        logger.info("[Shopify Callback] Webhooks registered successfully", {
+          component: "callback",
+          shop: fullShopDomain,
+        });
+      } else {
+        logger.warn("[Shopify Callback] Some webhooks failed to register", {
+          component: "callback",
+          shop: fullShopDomain,
+          errors: webhookResult.errors,
+        });
+      }
+    } catch (webhookError) {
+      logger.error(
+        "[Shopify Callback] Failed to register webhooks:",
+        webhookError as Error,
+        {
+          component: "callback",
+          shop: fullShopDomain,
+        },
+      );
+      // Don't fail - webhooks can be registered later
+    }
+
     // Determine redirect destination based on flow
     // - Existing shops (re-auth) → dashboard
-    // - New installation with store info filled → welcome step 3 (social/Add platforms)
-    // - New installation without store info → welcome step 1 (start from beginning)
+    // - New installation → /pricing page to select plan (free trial, starter, or pro)
     let redirectUrl: string;
 
     // DIAGNOSTIC: Log decision factors
@@ -661,12 +662,10 @@ export async function GET(req: NextRequest) {
     if (!isNewInstallation) {
       // Re-authentication of existing shop
       redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?shop=${fullShopDomain}&authenticated=true`;
-    } else if (hasCompletedStoreInfo) {
-      // User filled in store info during welcome, now connected Shopify → continue to step 3 (Add platforms)
-      redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/welcome?step=social&shop=${fullShopDomain}`;
     } else {
-      // Fresh installation without prior store info → start welcome flow from beginning
-      redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/welcome?shop=${fullShopDomain}`;
+      // New installation → redirect to pricing page to select plan
+      // User will choose: free trial, starter, or pro plan
+      redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/pricing?shop=${fullShopDomain}`;
     }
 
     // DIAGNOSTIC: Log final redirect decision
@@ -676,14 +675,12 @@ export async function GET(req: NextRequest) {
       redirectUrl,
       redirectDestination: redirectUrl.includes("/dashboard")
         ? "DASHBOARD"
-        : redirectUrl.includes("step=social")
-          ? "WELCOME_STEP3_SOCIAL"
-          : "WELCOME_STEP1",
+        : redirectUrl.includes("/pricing")
+          ? "PRICING_PAGE"
+          : "UNKNOWN",
       reason: !isNewInstallation
         ? "Existing shop re-auth"
-        : hasCompletedStoreInfo
-          ? "New install with store info completed"
-          : "New install without store info",
+        : "New install - select plan",
     });
 
     // Set session cookie and redirect

@@ -5,7 +5,6 @@ import { aieEngine } from "@/lib/aie/engine";
 import { AiePlatform, AieGoal, AdLengthMode } from "@/types/aie";
 import { logger } from "@/lib/logger";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { checkUsageLimit, incrementUsage } from "@/lib/billing/usage";
 
 /**
  * POST /api/aie/generate
@@ -59,28 +58,6 @@ export async function POST(req: NextRequest) {
 
     // Use session-derived shop ID
     const shopId = shopData.id;
-
-    // SECURITY: Check usage limits and subscription status before generating
-    // This blocks expired, canceled, past_due, and unpaid subscriptions
-    const usageCheck = await checkUsageLimit(shopId, "ad");
-    if (!usageCheck.canProceed) {
-      logger.warn("AIE generate blocked due to usage/subscription limits", {
-        component: "aie-generate",
-        shopId,
-        used: usageCheck.used,
-        limit: usageCheck.limit,
-        upgradeRequired: usageCheck.upgradeRequired,
-      });
-      return NextResponse.json(
-        {
-          error: "Usage limit reached or subscription inactive",
-          upgradeRequired: usageCheck.upgradeRequired,
-          used: usageCheck.used,
-          limit: usageCheck.limit,
-        },
-        { status: 429 },
-      );
-    }
 
     const body = await req.json();
     const {
@@ -190,9 +167,6 @@ export async function POST(req: NextRequest) {
         generationReasoning: v.generation_reasoning,
       }),
     );
-
-    // SECURITY: Increment usage after successful generation
-    await incrementUsage(shopId, "ad");
 
     return NextResponse.json({
       success: true,

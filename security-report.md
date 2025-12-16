@@ -434,49 +434,7 @@ const systemPrompt = await getSystemPrompt(storeId);
 
 ---
 
-### HIGH-02: Billing Endpoints Authentication
-
-**Routes**:
-
-- `/api/billing/create-checkout` (POST)
-- `/api/billing/portal` (POST)
-- `/api/billing/subscription` (GET)
-
-**Severity**: 🟠 HIGH
-
-**Issue**:
-
-- No authentication middleware visible
-- Trusts `shopId` from request body/query
-- Could allow unauthorized billing operations
-
-**Current Code**:
-
-```typescript
-export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { plan, shopId, shopDomain } = body; // User-controlled
-
-  // No auth check before processing billing
-  if (!plan || !shopId) {
-    return NextResponse.json(
-      { error: "Missing required fields" },
-      { status: 400 },
-    );
-  }
-}
-```
-
-**Remediation**:
-
-- [ ] Add authentication to verify user owns shopId
-- [ ] Get shopId from authenticated session, not request body
-- [ ] Add additional verification for payment operations
-- [ ] Log all billing operations for audit trail
-
----
-
-### HIGH-03: AIE Generate Endpoint (No Visible Auth)
+### HIGH-02: AIE Generate Endpoint (No Visible Auth)
 
 **Route**: `/api/aie/generate`
 **Method**: POST
@@ -496,7 +454,7 @@ export async function POST(request: NextRequest) {
 
 ---
 
-### HIGH-04: AIE Save Endpoint (No Auth)
+### HIGH-03: AIE Save Endpoint (No Auth)
 
 **Route**: `/api/aie/save`
 **Method**: POST
@@ -528,7 +486,7 @@ export async function POST(req: NextRequest) {
 
 ---
 
-### HIGH-05: Content Center Routes (Good Auth, But Verify)
+### HIGH-04: Content Center Routes (Good Auth, But Verify)
 
 **Routes**: Multiple under `/api/content-center/*`
 **Severity**: ✅ GOOD (Verify Implementation)
@@ -625,7 +583,6 @@ if (userRole !== "admin" && userRole !== "coach") {
 **Routes**:
 
 - `/api/webhooks/app-uninstalled`
-- `/api/webhooks/stripe`
 - `/api/webhooks/customers/*`
 - `/api/webhooks/shop/*`
 
@@ -730,7 +687,6 @@ if (!validation.valid) {
 | ----------------------------- | ----------------- | --------------------- |
 | `/api/ads-library` (GET)      | Cookie-only       | Verify session        |
 | `/api/bhb/insights`           | Role type casting | Strengthen validation |
-| `/api/billing/*`              | No visible auth   | Add auth check        |
 | `/api/business-profile/debug` | Debug endpoint    | Remove/protect        |
 | `/api/detect-category`        | No auth visible   | Add auth              |
 | `/api/detect-colors`          | No auth visible   | Add auth              |
@@ -756,7 +712,6 @@ if (!validation.valid) {
 **High Priority**:
 
 - [ ] Add auth to `/api/aie/generate` and `/api/aie/save`
-- [ ] Verify `/api/billing/*` has proper authentication
 - [ ] Fix `/api/categories/*` to validate shop ownership
 - [ ] Add rate limiting to AI generation endpoints
 

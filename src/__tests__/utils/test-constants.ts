@@ -78,10 +78,6 @@ export const API_URLS = {
   CONTENT_SAMPLES: 'http://localhost:3050/api/content-center/samples',
   HOT_TAKES: 'http://localhost:3050/api/content-center/hot-takes',
 
-  // Billing endpoints (Tier 1 - Critical)
-  BILLING_SUBSCRIPTION: 'http://localhost:3050/api/billing/subscription',
-  BILLING_CREATE_CHECKOUT: 'http://localhost:3050/api/billing/create-checkout',
-
   // Onboarding endpoints (Tier 2 - Core)
   ONBOARDING_STATUS: 'http://localhost:3050/api/onboarding/status',
 

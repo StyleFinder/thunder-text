@@ -55,6 +55,17 @@ interface StoreProfile {
   yearsInBusiness: string;
 }
 
+// Check if we're in development mode (localhost or ngrok)
+const isDevelopment = () => {
+  if (typeof window === "undefined") return false;
+  const hostname = window.location.hostname;
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.includes("ngrok")
+  );
+};
+
 // Animated background gradient mesh
 function GradientMesh() {
   return (
@@ -354,6 +365,8 @@ export default function WelcomePage() {
     yearsInBusiness: "",
   });
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  // Dev mode: shop domain input for traditional OAuth flow
+  const [devShopDomain, setDevShopDomain] = useState("zunosai-staging-test-store");
 
   const steps: { id: OnboardingStep; label: string }[] = [
     { id: "welcome", label: "Welcome" },
@@ -1038,24 +1051,22 @@ export default function WelcomePage() {
                     </div>
 
                     <div className="space-y-6">
-                      {/* Install from Shopify App Store - Required by Shopify Requirement 2.3.1 */}
+                      {/* Shopify Hosted Install Flow - Complies with Shopify Requirement 2.3.1 */}
+                      {/* No manual myshopify.com URL entry - installation must come from Shopify surfaces */}
                       <div className="p-6 rounded-xl bg-gradient-to-br from-[#96bf48]/10 to-[#96bf48]/5 border border-[#96bf48]/20">
                         <p className="text-gray-700 mb-4">
                           To connect your Shopify store, install Thunder Text
-                          directly from the Shopify App Store. This ensures a
-                          secure connection to your store.
+                          directly from Shopify. This ensures a secure connection
+                          to your store.
                         </p>
                         <Button
                           className="w-full h-12 text-base font-semibold bg-[#008060] hover:bg-[#006e52]"
                           onClick={() => {
                             // Use Shopify's hosted OAuth install flow
                             // This complies with requirement 2.3.1 - no manual myshopify.com URL entry
-                            // Uses the production app client_id from shopify.app.toml
-                            // IMPORTANT: Explicitly set redirect_uri to ensure callback goes to correct URL
-                            const redirectUri = encodeURIComponent(
-                              `${window.location.origin}/api/auth/shopify/callback`,
-                            );
-                            window.location.href = `https://admin.shopify.com/oauth/install?client_id=613bffa12a51873c2739ae67163a72e2&redirect_uri=${redirectUri}`;
+                            // Uses environment-based client_id (dev or prod)
+                            const clientId = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || "613bffa12a51873c2739ae67163a72e2";
+                            window.location.href = `https://admin.shopify.com/oauth/install?client_id=${clientId}`;
                           }}
                         >
                           <img
@@ -1063,7 +1074,7 @@ export default function WelcomePage() {
                             alt=""
                             className="w-5 h-5 mr-2"
                           />
-                          Install from Shopify App Store
+                          Install from Shopify
                           <ExternalLink className="w-4 h-4 ml-2" />
                         </Button>
                       </div>

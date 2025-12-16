@@ -5,7 +5,6 @@ import {
 } from "@/lib/middleware/cors";
 import { logger } from "@/lib/logger";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { checkUsageLimit, incrementUsage } from "@/lib/billing/usage";
 
 export async function OPTIONS(request: NextRequest) {
   return handleCorsPreflightRequest(request);
@@ -93,23 +92,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // SECURITY: Check usage limits before generating
-    const usageCheck = await checkUsageLimit(
-      shopData.id,
-      "product_description",
-    );
-    if (!usageCheck.canProceed) {
-      return NextResponse.json(
-        {
-          error: "Usage limit reached",
-          upgradeRequired: usageCheck.upgradeRequired,
-          used: usageCheck.used,
-          limit: usageCheck.limit,
-        },
-        { status: 429, headers: corsHeaders },
-      );
-    }
-
     // Dynamic imports to avoid loading during build
     const { aiGenerator } = await import("@/lib/openai");
 
@@ -123,9 +105,6 @@ export async function POST(request: NextRequest) {
       keywords,
       storeId: shopData.id,
     });
-
-    // SECURITY: Increment usage after successful generation
-    await incrementUsage(shopData.id, "product_description");
 
     return NextResponse.json(
       {

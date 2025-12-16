@@ -1,103 +1,66 @@
 # Thunder Text Deployment Instructions
 
-## URGENT: Shopify Token Setup (Required for Product Enhancement)
+## Platform: Render
 
-### Setting Up Base64 Encoded Token on Vercel
+Thunder Text is deployed on Render at https://thunder-text.onrender.com
 
-Due to GitHub's secret detection, we're using base64 encoding as a temporary workaround.
+## Shopify Apps
 
-1. **Encode Your Token**:
-   ```bash
-   echo -n "YOUR_SHOPIFY_ACCESS_TOKEN" | base64
-   ```
-   This will output a base64 encoded string to use in the next step.
+### Production App: Thunder Text
+- **API Key**: `613bffa12a51873c2739ae67163a72e2`
+- **Handle**: `thunder-text-29`
+- **Dashboard URL**: https://partners.shopify.com (Thunder Text)
 
-2. **Add to Vercel Dashboard**:
-   - Go to: https://vercel.com/stylefinder/thunder-text/settings/environment-variables
+### Development App: Thunder Text Dev
+- **API Key**: `b5651b35edf4f4c2222243626a5f721a`
+- **Handle**: `thunder-text-dev-4`
+- **Dashboard URL**: https://partners.shopify.com (Thunder Text Dev)
 
-   - Add Token Variable:
-     - Name: `NEXT_PUBLIC_SHOPIFY_TOKEN_B64`
-     - Value: [The base64 encoded string from step 1]
-     - Environment: All (Production, Preview, Development)
+## Environment Variables
 
-   - Add API Key Variable:
-     - Name: `NEXT_PUBLIC_SHOPIFY_API_KEY`
-     - Value: `fa85f3902882734b800968440c27447d`
-     - Environment: All (Production, Preview, Development)
+All environment variables are configured in Render Dashboard:
+- `NODE_ENV=production`
+- `SHOPIFY_API_KEY` - Production Shopify API key
+- `SHOPIFY_API_SECRET` - Production Shopify API secret
+- `SHOPIFY_APP_HANDLE=thunder-text-29`
+- `NEXT_PUBLIC_SHOPIFY_API_KEY` - Same as SHOPIFY_API_KEY
+- `NEXT_PUBLIC_APP_URL=https://thunder-text.onrender.com`
+- `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
+- `OPENAI_API_KEY`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL=https://thunder-text.onrender.com`
 
-   - Click "Save" after adding both
+## Deployment
 
-3. **Redeploy**: Push changes to trigger deployment
+### GitHub Integration (Recommended)
+1. Push changes to the `main` branch
+2. Render automatically deploys from GitHub
 
-## Current Status ✅
-- ✅ **Database**: Supabase migration completed successfully
-- ✅ **Environment Variables**: All configured in Vercel
-- ✅ **Core APIs**: Tested and working with proper token
-- ✅ **Code**: Ready for deployment
-
-## Option 1: GitHub Integration (Recommended)
-
-### 1. Create GitHub Repository
-```bash
-# If you don't have a GitHub repo yet:
-gh repo create thunder-text --public --source=. --remote=origin --push
-```
-
-### 2. Update Render Service
-- Go to your Render service: https://dashboard.render.com/web/srv-d2s9mi24d50c73dkctpg
-- Update "Repository" to connect to your new GitHub repo
-- Set branch to `main`
-- Deploy will trigger automatically
-
-## Option 2: Manual Deploy (If no GitHub)
-
-### 1. Create Deployment Package
+### Manual Deploy
 ```bash
 # Create a clean build
 npm run build
 
-# Package for deployment
-tar -czf thunder-text-deploy.tar.gz \
-  package.json package-lock.json \
-  src/ public/ docs/ supabase/ \
-  next.config.js render.yaml \
-  .env.example
+# Render uses render.yaml for configuration
+# Push to GitHub to trigger deployment
+git push origin main
 ```
-
-### 2. Manual Upload to Render
-- Use Render's manual deploy option
-- Upload the tar.gz file
-
-## Option 3: Direct GitHub Push (If repo exists)
-
-```bash
-# Add your existing GitHub remote
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-git push -u origin main
-```
-
-## Environment Variables ✅
-All already configured in Render:
-- `NODE_ENV=production`
-- `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`
-- `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
-- `OPENAI_API_KEY`
-- `NEXTAUTH_SECRET`
-
-## Expected Deployment Result
-- ✅ Build should complete successfully
-- ✅ API endpoints will be available
-- ⚠️ UI may have React compatibility issues initially
-- ✅ Core functionality (APIs, database) will work
 
 ## Post-Deployment Testing
 1. Health check: `https://thunder-text.onrender.com/api/health`
-2. Database connection: Confirmed working
-3. OpenAI integration: Confirmed working
+2. Database connection: Verified via Supabase
+3. Shopify OAuth: Test with development store
 
-## Known Issues
-- UI components need React version compatibility fixes
-- These can be resolved after successful deployment
-- Core API functionality is fully operational
+## Shopify Billing Setup (Managed Pricing)
 
-Your Thunder Text application is ready for deployment! 🚀
+1. Go to Shopify Partners Dashboard
+2. Select the app (Production: Thunder Text, Dev: Thunder Text Dev)
+3. Navigate to **App setup** → **Pricing**
+4. Enable **Managed Pricing**
+5. Create pricing plans with trial periods
+
+## Current Status
+- Database: Supabase (upkmmwvbspgeanotzknk)
+- Environment Variables: Configured in Render
+- Core APIs: Working
+- Shopify OAuth: Token Exchange enabled

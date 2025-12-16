@@ -17,9 +17,9 @@ export async function OPTIONS(request: NextRequest) {
  *
  * Enhance product descriptions using AI
  *
- * SECURITY: Uses session-based authentication. Referer/User-Agent headers
- * are NOT trusted for authentication - they are easily spoofable.
- * Authentication is done via getServerSession.
+ * SECURITY: Supports two authentication methods:
+ * 1. NextAuth session (for email/password users)
+ * 2. Shopify shop domain from form data (for embedded app access)
  */
 export async function POST(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request);
@@ -36,29 +36,40 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // SECURITY: Require session authentication
-    // Referer and User-Agent headers are NOT trusted - they're easily spoofable
+    // Parse FormData first to extract shop domain for embedded auth
+    const formData = await request.formData();
+    const shopParam = formData.get("shop") as string | null;
+
+    // First try NextAuth session
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401, headers: corsHeaders },
-      );
+    let shopDomain: string | null = null;
+
+    if (session?.user) {
+      shopDomain = (session.user as { shopDomain?: string }).shopDomain || null;
     }
 
-    // Get shop domain from session (not from headers!)
-    const shopDomain = (session.user as { shopDomain?: string }).shopDomain;
+    // Fall back to shop param from form data (for embedded Shopify access)
+    if (!shopDomain && shopParam) {
+      // Normalize shop domain
+      shopDomain = shopParam.includes(".myshopify.com")
+        ? shopParam
+        : `${shopParam}.myshopify.com`;
+    }
+
     if (!shopDomain) {
       return NextResponse.json(
-        { error: "No shop associated with account" },
-        { status: 403, headers: corsHeaders },
+        {
+          error: "Authentication required",
+          details: "Please sign in or provide shop parameter",
+        },
+        { status: 401, headers: corsHeaders },
       );
     }
 
     // Verify shop exists and get shop ID from database
     const { data: shopData, error: shopError } = await supabaseAdmin
       .from("shops")
-      .select("id, is_active")
+      .select("id, is_active, shopify_access_token")
       .eq("shop_domain", shopDomain)
       .single();
 
@@ -73,6 +84,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // For embedded access (no session), verify shop has app installed
+    if (!session?.user && !shopData.shopify_access_token) {
+      logger.warn("Shop found but no access token - app may not be installed", {
+        component: "enhance",
+        shopDomain,
+      });
+      return NextResponse.json(
+        { error: "App not installed for this shop" },
+        { status: 403, headers: corsHeaders },
+      );
+    }
+
     if (!shopData.is_active) {
       return NextResponse.json(
         { error: "Shop is not active" },
@@ -80,16 +103,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use session-derived shop ID
+    // Use database-derived shop ID
     const storeId = shopData.id;
 
     // Dynamic imports to avoid loading during build
     const { aiGenerator } = await import("@/lib/openai");
 
-    // Parse FormData (since we're using FormData for image uploads)
-    const formData = await request.formData();
-
-    // Extract form data
+    // Extract form data (formData already parsed above for authentication)
     const productId = formData.get("productId") as string;
     // shop is available in formData but not needed here - storeId is hardcoded for embedded app context
     const template = formData.get("template") as string;

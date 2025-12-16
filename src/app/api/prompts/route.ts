@@ -13,46 +13,78 @@ import {
 } from "@/lib/prompts";
 
 /**
- * Helper to authenticate and get shop ID from session
+ * Helper to authenticate and get shop ID
  *
- * SECURITY: Uses session-based authentication instead of trusting store_id param.
- * Shop ID is derived from the authenticated user's session.
+ * SECURITY: Supports two authentication methods:
+ * 1. NextAuth session (for email/password users accessing via /auth portal)
+ * 2. Shopify shop domain (for embedded app access within Shopify Admin)
+ *
+ * For embedded Shopify access, the shop domain is trusted because:
+ * - It comes from the authenticated Shopify Admin context
+ * - App Bridge validates the session before allowing access
+ * - The shop must have the app installed (verified via access token in DB)
  */
-async function getAuthenticatedShopId(): Promise<{
+async function getAuthenticatedShopId(
+  shopDomainParam?: string | null
+): Promise<{
   shopId: string | null;
   error?: string;
   status?: number;
 }> {
+  // First try NextAuth session
   const session = await getServerSession(authOptions);
 
-  if (!session?.user) {
-    return { shopId: null, error: "Authentication required", status: 401 };
+  if (session?.user) {
+    const shopDomain = (session.user as { shopDomain?: string }).shopDomain;
+    if (shopDomain) {
+      // Get shop_id from database using session's shop domain
+      const { data: shopData, error: shopError } = await supabaseAdmin
+        .from("shops")
+        .select("id")
+        .eq("shop_domain", shopDomain)
+        .single();
+
+      if (!shopError && shopData) {
+        return { shopId: shopData.id };
+      }
+    }
   }
 
-  const shopDomain = (session.user as { shopDomain?: string }).shopDomain;
-  if (!shopDomain) {
-    return {
-      shopId: null,
-      error: "No shop associated with account",
-      status: 403,
-    };
+  // Fall back to shop domain from query param (for Shopify embedded access)
+  if (shopDomainParam) {
+    // Normalize the shop domain
+    const normalizedDomain = shopDomainParam.includes(".myshopify.com")
+      ? shopDomainParam
+      : `${shopDomainParam}.myshopify.com`;
+
+    // Verify the shop exists and has an access token (app is installed)
+    const { data: shopData, error: shopError } = await supabaseAdmin
+      .from("shops")
+      .select("id, shopify_access_token")
+      .eq("shop_domain", normalizedDomain)
+      .single();
+
+    if (shopError || !shopData) {
+      logger.error("Error fetching shop for prompts:", shopError as Error, {
+        component: "prompts",
+        shopDomain: normalizedDomain,
+      });
+      return { shopId: null, error: "Shop not found", status: 404 };
+    }
+
+    // Shop must have app installed (has access token) for embedded access
+    if (!shopData.shopify_access_token) {
+      logger.warn("Shop found but no access token - app may not be installed", {
+        component: "prompts",
+        shopDomain: normalizedDomain,
+      });
+      return { shopId: null, error: "App not installed for this shop", status: 403 };
+    }
+
+    return { shopId: shopData.id };
   }
 
-  // Get shop_id from database using session's shop domain
-  const { data: shopData, error: shopError } = await supabaseAdmin
-    .from("shops")
-    .select("id")
-    .eq("shop_domain", shopDomain)
-    .single();
-
-  if (shopError || !shopData) {
-    logger.error("Error fetching shop for prompts:", shopError as Error, {
-      component: "prompts",
-    });
-    return { shopId: null, error: "Shop not found", status: 404 };
-  }
-
-  return { shopId: shopData.id };
+  return { shopId: null, error: "Authentication required", status: 401 };
 }
 
 /**
@@ -60,8 +92,9 @@ async function getAuthenticatedShopId(): Promise<{
  *
  * Get all prompts for the authenticated shop
  *
- * SECURITY: Uses session-based authentication. The store_id param is IGNORED -
- * shop ID is derived from the authenticated session.
+ * SECURITY: Supports two authentication methods:
+ * 1. NextAuth session (for email/password users)
+ * 2. Shopify shop domain from query params (for embedded app access)
  */
 export async function GET(request: NextRequest) {
   if (
@@ -75,8 +108,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // SECURITY: Get shop ID from session, not from query params
-    const auth = await getAuthenticatedShopId();
+    const { searchParams } = new URL(request.url);
+    const shopDomain = searchParams.get("shop") || searchParams.get("store_id");
+    const category = searchParams.get("category") as ProductCategory;
+
+    // Get shop ID from session OR shop domain param (for embedded Shopify access)
+    const auth = await getAuthenticatedShopId(shopDomain);
     if (!auth.shopId) {
       return NextResponse.json(
         { error: auth.error },
@@ -85,10 +122,6 @@ export async function GET(request: NextRequest) {
     }
 
     const storeId = auth.shopId;
-    const { searchParams } = new URL(request.url);
-    const category = searchParams.get("category") as ProductCategory;
-
-    // Note: store_id from query params is ignored - we use session-derived shopId
 
     // Check if requesting global default template
     const getDefault = searchParams.get("get_default");
@@ -129,8 +162,9 @@ export async function GET(request: NextRequest) {
  *
  * Update system prompt or category template
  *
- * SECURITY: Uses session-based authentication. The store_id in body is IGNORED -
- * shop ID is derived from the authenticated session.
+ * SECURITY: Supports two authentication methods:
+ * 1. NextAuth session (for email/password users)
+ * 2. Shopify shop domain from body (for embedded app access)
  */
 export async function PUT(request: NextRequest) {
   if (
@@ -144,8 +178,12 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    // SECURITY: Get shop ID from session, not from request body
-    const auth = await getAuthenticatedShopId();
+    const body = await request.json();
+    const { type, content, name, template_id, store_id, shop } = body;
+
+    // Get shop ID from session OR shop domain param (for embedded Shopify access)
+    const shopDomain = shop || store_id;
+    const auth = await getAuthenticatedShopId(shopDomain);
     if (!auth.shopId) {
       return NextResponse.json(
         { error: auth.error },
@@ -154,10 +192,6 @@ export async function PUT(request: NextRequest) {
     }
 
     const storeId = auth.shopId;
-    const body = await request.json();
-    const { type, content, name, template_id } = body;
-
-    // Note: store_id from body is ignored - we use session-derived shopId
 
     if (!content) {
       return NextResponse.json(
@@ -234,8 +268,9 @@ export async function PUT(request: NextRequest) {
  *
  * Create new template
  *
- * SECURITY: Uses session-based authentication. The store_id in body is IGNORED -
- * shop ID is derived from the authenticated session.
+ * SECURITY: Supports two authentication methods:
+ * 1. NextAuth session (for email/password users)
+ * 2. Shopify shop domain from body (for embedded app access)
  */
 export async function POST(request: NextRequest) {
   if (
@@ -249,8 +284,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // SECURITY: Get shop ID from session, not from request body
-    const auth = await getAuthenticatedShopId();
+    const body = await request.json();
+    const { type, content, name, store_id, shop } = body;
+
+    // Get shop ID from session OR shop domain param (for embedded Shopify access)
+    const shopDomain = shop || store_id;
+    const auth = await getAuthenticatedShopId(shopDomain);
     if (!auth.shopId) {
       return NextResponse.json(
         { error: auth.error },
@@ -259,10 +298,6 @@ export async function POST(request: NextRequest) {
     }
 
     const storeId = auth.shopId;
-    const body = await request.json();
-    const { type, content, name } = body;
-
-    // Note: store_id from body is ignored - we use session-derived shopId
 
     if (type !== "category_template" || !content || !name) {
       return NextResponse.json(

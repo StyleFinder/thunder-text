@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guardDebugRoute } from '../_middleware-guard'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const guardResponse = guardDebugRoute('/api/debug/test-token-exchange');
   if (guardResponse) return guardResponse;
   // This endpoint will test Token Exchange with a mock session token
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       hasApiSecret: !!process.env.SHOPIFY_API_SECRET,
       apiSecretLength: process.env.SHOPIFY_API_SECRET?.length || 0,
       nodeEnv: process.env.NODE_ENV,
-      vercel: !!process.env.VERCEL,
+      render: process.env.RENDER === 'true',
     },
     tokenExchangeUrl: 'https://zunosai-staging-test-store.myshopify.com/admin/oauth/access_token',
     expectedPayload: {
@@ -50,9 +50,9 @@ export async function GET(request: NextRequest) {
     testResults.possibleIssues.push(`⚠️ API Secret length is ${secretLength}, typically 64 characters`)
   }
 
-  // Check if the API key matches what we see in the HTML
-  if (apiKey && apiKey !== 'fa85f3902882734b800968440c27447d') {
-    testResults.possibleIssues.push('⚠️ API Key in environment does not match the one in HTML meta tag')
+  // Check if the API key looks valid (should be 32 hex chars)
+  if (apiKey && !/^[a-f0-9]{32}$/i.test(apiKey)) {
+    testResults.possibleIssues.push('⚠️ API Key format may be invalid (expected 32 hex characters)')
   }
 
   if (testResults.possibleIssues.length === 0) {
