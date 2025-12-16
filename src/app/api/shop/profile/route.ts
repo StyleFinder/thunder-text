@@ -105,22 +105,19 @@ export async function GET(req: NextRequest) {
     }
 
     // SECURITY: Double-check ownership when using userId lookup
+    // For pending shops, verify session user's ID matches the userId
     if (userId && shopData) {
-      const normalizedShopDomain = shopData.shop_domain;
-      const normalizedSessionShop = sessionShopDomain?.includes(
-        ".myshopify.com",
-      )
-        ? sessionShopDomain
-        : `${sessionShopDomain}.myshopify.com`;
+      const sessionUserId = (session.user as { id?: string }).id;
 
-      if (normalizedShopDomain !== normalizedSessionShop) {
-        logger.warn("[Shop Profile] userId lookup shop ownership mismatch", {
+      // The session user's ID must match the userId being looked up
+      if (sessionUserId !== userId) {
+        logger.warn("[Shop Profile] userId lookup ownership mismatch", {
           component: "shop-profile",
-          fetchedShop: normalizedShopDomain,
-          sessionShop: normalizedSessionShop,
+          targetUserId: userId,
+          sessionUserId: sessionUserId,
         });
         return NextResponse.json(
-          { error: "Access denied: Shop mismatch" },
+          { error: "Access denied: User ID mismatch" },
           { status: 403 },
         );
       }
@@ -196,33 +193,45 @@ export async function PUT(req: NextRequest) {
 
     const supabaseAdmin = await getSupabaseAdmin();
 
-    // SECURITY: When using userId, first verify ownership before updating
+    // SECURITY: When using userId, verify the session user owns this record
     if (userId && !shop) {
+      const sessionUserId = (session.user as { id?: string }).id;
+
+      // For userId-based updates, the session user's ID must match the target userId
+      // This is the primary authorization check for pending shops (before Shopify linking)
+      if (sessionUserId !== userId) {
+        logger.warn("[Shop Profile] userId update ownership mismatch", {
+          component: "shop-profile",
+          targetUserId: userId,
+          sessionUserId: sessionUserId,
+        });
+        return NextResponse.json(
+          { error: "Access denied: User ID mismatch" },
+          { status: 403 },
+        );
+      }
+
+      // Verify the shop record exists
       const { data: existingShop } = await supabaseAdmin
         .from("shops")
         .select("shop_domain")
         .eq("id", userId)
         .single();
 
-      if (existingShop) {
-        const normalizedSessionShop = sessionShopDomain?.includes(
-          ".myshopify.com",
-        )
-          ? sessionShopDomain
-          : `${sessionShopDomain}.myshopify.com`;
-
-        if (existingShop.shop_domain !== normalizedSessionShop) {
-          logger.warn("[Shop Profile] userId update shop ownership mismatch", {
-            component: "shop-profile",
-            targetShop: existingShop.shop_domain,
-            sessionShop: normalizedSessionShop,
-          });
-          return NextResponse.json(
-            { error: "Access denied: Shop mismatch" },
-            { status: 403 },
-          );
-        }
+      if (!existingShop) {
+        logger.warn("[Shop Profile] Shop not found for userId", {
+          component: "shop-profile",
+          userId,
+        });
+        return NextResponse.json({ error: "Shop not found" }, { status: 404 });
       }
+
+      logger.info("[Shop Profile] Authorized userId-based update", {
+        component: "shop-profile",
+        userId,
+        shopDomain: existingShop.shop_domain,
+        isPendingShop: existingShop.shop_domain?.startsWith("pending-"),
+      });
     }
 
     // Build the update object with only provided fields
