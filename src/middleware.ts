@@ -99,8 +99,9 @@ export async function middleware(request: NextRequest) {
     const token = await getToken({
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
-      // Must match cookie name in auth-options.ts
+      // Must match cookie config in auth-options.ts which doesn't use secure prefix
       cookieName: "next-auth.session-token",
+      secureCookie: false,
     });
 
     // If no token, redirect to login
