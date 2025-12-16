@@ -290,15 +290,14 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Strategy 3: Last resort - find the most recent pending shop created in last 30 minutes
+      // Strategy 3: Find most recent pending shop created in last 30 minutes
       // This handles cases where session cookies aren't preserved across OAuth redirect
       if (!pendingShop) {
         const thirtyMinutesAgo = new Date(
           Date.now() - 30 * 60 * 1000,
         ).toISOString();
 
-        // Use maybeSingle() instead of single() to avoid errors when no results found
-        const { data: recentPending, error: recentError } = await supabaseAdmin
+        const { data: recentPending } = await supabaseAdmin
           .from("shops")
           .select(
             "id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals, created_at, shop_domain",
@@ -312,7 +311,7 @@ export async function GET(req: NextRequest) {
         if (recentPending) {
           pendingShop = recentPending;
           logger.info(
-            "[Shopify Callback] Found pending shop by recent timestamp (fallback)",
+            "[Shopify Callback] Found pending shop by recent timestamp (Strategy 3)",
             {
               component: "callback",
               pendingShopId: recentPending.id,
@@ -323,15 +322,47 @@ export async function GET(req: NextRequest) {
               shop: fullShopDomain,
             },
           );
+        }
+      }
+
+      // Strategy 4: Find ANY pending shop that has store_name AND owner_name filled in
+      // This catches users who took longer than 30 min to complete Shopify OAuth
+      // We prioritize shops with completed store info since those users clearly started onboarding
+      if (!pendingShop) {
+        const { data: completedPending } = await supabaseAdmin
+          .from("shops")
+          .select(
+            "id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals, created_at, shop_domain",
+          )
+          .like("shop_domain", "pending-%")
+          .not("store_name", "is", null)
+          .not("owner_name", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (completedPending) {
+          pendingShop = completedPending;
+          logger.info(
+            "[Shopify Callback] Found pending shop with completed store info (Strategy 4)",
+            {
+              component: "callback",
+              pendingShopId: completedPending.id,
+              pendingEmail: completedPending.email,
+              pendingShopDomain: completedPending.shop_domain,
+              pendingStoreName: completedPending.store_name,
+              pendingOwnerName: completedPending.owner_name,
+              createdAt: completedPending.created_at,
+              shop: fullShopDomain,
+            },
+          );
         } else {
           logger.warn(
-            "[Shopify Callback] Strategy 3 FAILED - no recent pending shops found",
+            "[Shopify Callback] All strategies FAILED - no pending shops found",
             {
               component: "callback",
               shop: fullShopDomain,
-              thirtyMinutesAgo,
-              error: recentError?.message,
-              hint: "Check if pending shop was already merged or deleted, or if it was created more than 30 minutes ago",
+              hint: "No pending shop exists with store_name and owner_name filled in",
             },
           );
         }
@@ -353,7 +384,9 @@ export async function GET(req: NextRequest) {
               ? "Strategy1-userId"
               : userEmail && pendingShop.email === userEmail?.toLowerCase()
                 ? "Strategy2-email"
-                : "Strategy3-recentTimestamp"
+                : pendingShop.store_name && pendingShop.owner_name
+                  ? "Strategy4-completedStoreInfo"
+                  : "Strategy3-recentTimestamp"
             : "NONE_FOUND",
         },
       );
