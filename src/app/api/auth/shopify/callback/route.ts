@@ -200,12 +200,24 @@ export async function GET(req: NextRequest) {
     const userId = session?.user?.id;
     const userEmail = session?.user?.email;
 
-    logger.info("[Shopify Callback] Session state", {
+    // DIAGNOSTIC: Log detailed session state for debugging
+    logger.info("[Shopify Callback] Session state (DIAGNOSTIC)", {
       component: "callback",
       shop: fullShopDomain,
       hasSession: !!session,
       hasUserId: !!userId,
       hasUserEmail: !!userEmail,
+      userId: userId || "NONE",
+      userEmail: userEmail || "NONE",
+      sessionUser: session?.user
+        ? {
+            id: session.user.id,
+            email: session.user.email,
+            shopDomain: (session.user as { shopDomain?: string }).shopDomain,
+            hasShopifyLinked: (session.user as { hasShopifyLinked?: boolean })
+              .hasShopifyLinked,
+          }
+        : "NO SESSION",
     });
 
     // Check if shop already exists by Shopify domain
@@ -275,7 +287,7 @@ export async function GET(req: NextRequest) {
         const thirtyMinutesAgo = new Date(
           Date.now() - 30 * 60 * 1000,
         ).toISOString();
-        const { data: recentPending } = await supabaseAdmin
+        const { data: recentPending, error: recentError } = await supabaseAdmin
           .from("shops")
           .select(
             "id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals, created_at",
@@ -298,8 +310,39 @@ export async function GET(req: NextRequest) {
               shop: fullShopDomain,
             },
           );
+        } else {
+          logger.warn(
+            "[Shopify Callback] Strategy 3 FAILED - no recent pending shops found",
+            {
+              component: "callback",
+              shop: fullShopDomain,
+              thirtyMinutesAgo,
+              error: recentError?.message,
+            },
+          );
         }
       }
+
+      // DIAGNOSTIC: Log final pending shop state
+      logger.info(
+        "[Shopify Callback] Pending shop lookup RESULT (DIAGNOSTIC)",
+        {
+          component: "callback",
+          shop: fullShopDomain,
+          foundPendingShop: !!pendingShop,
+          pendingShopId: pendingShop?.id || "NONE",
+          pendingShopEmail: pendingShop?.email || "NONE",
+          pendingShopStoreName: pendingShop?.store_name || "NULL",
+          pendingShopOwnerName: pendingShop?.owner_name || "NULL",
+          strategyUsed: pendingShop
+            ? userId && pendingShop.id === userId
+              ? "Strategy1-userId"
+              : userEmail && pendingShop.email === userEmail?.toLowerCase()
+                ? "Strategy2-email"
+                : "Strategy3-recentTimestamp"
+            : "NONE_FOUND",
+        },
+      );
     }
 
     let shopId: string;
@@ -455,6 +498,16 @@ export async function GET(req: NextRequest) {
     // - New installation without store info → welcome step 1 (start from beginning)
     let redirectUrl: string;
 
+    // DIAGNOSTIC: Log decision factors
+    logger.info("[Shopify Callback] Redirect decision factors (DIAGNOSTIC)", {
+      component: "callback",
+      shop: fullShopDomain,
+      isNewInstallation,
+      hasCompletedStoreInfo,
+      existingShopFound: !!existingShop,
+      pendingShopFound: !!pendingShop,
+    });
+
     if (!isNewInstallation) {
       // Re-authentication of existing shop
       redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?shop=${fullShopDomain}&authenticated=true`;
@@ -465,6 +518,23 @@ export async function GET(req: NextRequest) {
       // Fresh installation without prior store info → start welcome flow from beginning
       redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/welcome?shop=${fullShopDomain}`;
     }
+
+    // DIAGNOSTIC: Log final redirect decision
+    logger.info("[Shopify Callback] FINAL REDIRECT (DIAGNOSTIC)", {
+      component: "callback",
+      shop: fullShopDomain,
+      redirectUrl,
+      redirectDestination: redirectUrl.includes("/dashboard")
+        ? "DASHBOARD"
+        : redirectUrl.includes("step=social")
+          ? "WELCOME_STEP3_SOCIAL"
+          : "WELCOME_STEP1",
+      reason: !isNewInstallation
+        ? "Existing shop re-auth"
+        : hasCompletedStoreInfo
+          ? "New install with store info completed"
+          : "New install without store info",
+    });
 
     // Set session cookie and redirect
     const response = NextResponse.redirect(redirectUrl);
