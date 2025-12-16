@@ -174,7 +174,9 @@ export async function GET(req: NextRequest) {
     if (userId && !existingShop) {
       const { data: pendingRecord } = await supabaseAdmin
         .from("shops")
-        .select("id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals")
+        .select(
+          "id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals",
+        )
         .eq("id", userId)
         .like("shop_domain", "pending-%")
         .single();
@@ -192,6 +194,7 @@ export async function GET(req: NextRequest) {
 
     let shopId: string;
     let isNewInstallation = false;
+    let hasCompletedStoreInfo = false;
 
     if (existingShop) {
       shopId = existingShop.id;
@@ -218,6 +221,12 @@ export async function GET(req: NextRequest) {
       shopId = pendingShop.id;
       isNewInstallation = true;
 
+      // Check if user already filled in store info during welcome flow
+      // If store_name exists, they've completed the store info step
+      hasCompletedStoreInfo = !!(
+        pendingShop.store_name && pendingShop.owner_name
+      );
+
       await supabaseAdmin
         .from("shops")
         .update({
@@ -235,6 +244,7 @@ export async function GET(req: NextRequest) {
         component: "callback",
         shop: fullShopDomain,
         pendingShopId: shopId,
+        hasCompletedStoreInfo,
         preservedData: {
           email: pendingShop.email,
           store_name: pendingShop.store_name,
@@ -330,10 +340,21 @@ export async function GET(req: NextRequest) {
     }
 
     // Determine redirect destination based on flow
-    // New installations go to welcome flow, existing shops go to dashboard
-    const redirectUrl = isNewInstallation
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/welcome?step=social&shop=${fullShopDomain}`
-      : `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?shop=${fullShopDomain}&authenticated=true`;
+    // - Existing shops (re-auth) → dashboard
+    // - New installation with store info already filled → dashboard
+    // - New installation without store info → welcome flow
+    let redirectUrl: string;
+
+    if (!isNewInstallation) {
+      // Re-authentication of existing shop
+      redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?shop=${fullShopDomain}&authenticated=true`;
+    } else if (hasCompletedStoreInfo) {
+      // User already filled in store info during welcome, now connected Shopify → go to dashboard
+      redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?shop=${fullShopDomain}&authenticated=true`;
+    } else {
+      // Fresh installation without prior store info → welcome flow
+      redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/welcome?step=social&shop=${fullShopDomain}`;
+    }
 
     // Set session cookie and redirect
     const response = NextResponse.redirect(redirectUrl);
@@ -349,7 +370,8 @@ export async function GET(req: NextRequest) {
       component: "callback",
       shop: fullShopDomain,
       isNewInstallation,
-      redirectTo: isNewInstallation ? "welcome" : "dashboard",
+      hasCompletedStoreInfo,
+      redirectTo: redirectUrl.includes("/dashboard") ? "dashboard" : "welcome",
     });
 
     return response;
