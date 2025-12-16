@@ -162,11 +162,13 @@ export const authOptions: NextAuthOptions = {
           };
         } else if (credentials.userType === "shop") {
           // Shop users authenticate with email/password
+          // Note: We don't filter by is_active here - users should be able to log in
+          // even if their Shopify app was uninstalled. The dashboard will redirect
+          // them to the disconnected page where they can reconnect.
           const { data: shop, error } = await supabaseAdmin
             .from("shops")
             .select("*")
             .eq("email", credentials.email.toLowerCase())
-            .eq("is_active", true)
             .single();
 
           if (error || !shop || !shop.password_hash) {
