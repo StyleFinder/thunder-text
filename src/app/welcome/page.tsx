@@ -1051,8 +1051,11 @@ export default function WelcomePage() {
                             // Use Shopify's hosted OAuth install flow
                             // This complies with requirement 2.3.1 - no manual myshopify.com URL entry
                             // Uses the production app client_id from shopify.app.toml
-                            window.location.href =
-                              "https://admin.shopify.com/oauth/install?client_id=613bffa12a51873c2739ae67163a72e2";
+                            // IMPORTANT: Explicitly set redirect_uri to ensure callback goes to correct URL
+                            const redirectUri = encodeURIComponent(
+                              `${window.location.origin}/api/auth/shopify/callback`,
+                            );
+                            window.location.href = `https://admin.shopify.com/oauth/install?client_id=613bffa12a51873c2739ae67163a72e2&redirect_uri=${redirectUri}`;
                           }}
                         >
                           <img

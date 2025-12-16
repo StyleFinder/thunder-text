@@ -232,7 +232,11 @@ export default function ConnectionsPage() {
     if (provider === "shopify") {
       if (SHOPIFY_API_KEY) {
         // Use Shopify's hosted OAuth install flow - they handle store selection
-        window.location.href = `https://admin.shopify.com/oauth/install?client_id=${SHOPIFY_API_KEY}`;
+        // IMPORTANT: Explicitly set redirect_uri to ensure callback goes to correct URL
+        const redirectUri = encodeURIComponent(
+          `${window.location.origin}/api/auth/shopify/callback`,
+        );
+        window.location.href = `https://admin.shopify.com/oauth/install?client_id=${SHOPIFY_API_KEY}&redirect_uri=${redirectUri}`;
       } else {
         alert("Shopify configuration error. Please contact support.");
       }
