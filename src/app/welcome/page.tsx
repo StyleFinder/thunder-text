@@ -330,7 +330,7 @@ function CelebrationParticles() {
 export default function WelcomePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>("welcome");
   const [selectedPlatform, setSelectedPlatform] = useState<
     "shopify" | "lightspeed" | "commentsold" | null
@@ -488,16 +488,35 @@ export default function WelcomePage() {
     fetchUserProfile();
   }, [searchParams, session]);
 
-  const saveStoreProfile = async () => {
+  const saveStoreProfile = async (): Promise<boolean> => {
     const shop = searchParams.get("shop");
     const userId = session?.user?.id;
 
+    // CRITICAL: Log the save attempt for debugging
+    logger.info("[Welcome] saveStoreProfile called", {
+      component: "welcome",
+      hasShop: !!shop,
+      hasUserId: !!userId,
+      userId: userId || "NONE",
+      sessionStatus,
+      storeName: storeProfile.storeName,
+      ownerName: storeProfile.ownerName,
+    });
+
     // Need either shop or userId to save
     if (!shop && !userId) {
-      logger.warn("No shop or userId available to save profile", {
-        component: "welcome",
-      });
-      return true; // Continue even without identifiers
+      logger.error(
+        "[Welcome] CRITICAL: No shop or userId available to save profile",
+        undefined,
+        {
+          component: "welcome",
+          sessionStatus,
+          sessionUser: session?.user ? "exists" : "missing",
+        },
+      );
+      // DON'T silently continue - show error to user
+      alert("Unable to save your profile. Please try logging in again.");
+      return false;
     }
 
     setIsSavingProfile(true);
@@ -521,16 +540,30 @@ export default function WelcomePage() {
       });
 
       if (!response.ok) {
-        logger.error("Failed to save store profile", undefined, {
+        const errorData = await response.json().catch(() => ({}));
+        logger.error("[Welcome] Failed to save store profile", undefined, {
           component: "welcome",
+          status: response.status,
+          error: errorData.error,
+          shop,
+          userId,
         });
+        alert("Failed to save your profile. Please try again.");
+        return false;
       }
+
+      logger.info("[Welcome] Store profile saved successfully", {
+        component: "welcome",
+        shop,
+        userId,
+      });
       return true;
     } catch (error) {
-      logger.error("Error saving store profile:", error as Error, {
+      logger.error("[Welcome] Error saving store profile:", error as Error, {
         component: "welcome",
       });
-      return true; // Continue even if save fails
+      alert("An error occurred while saving your profile. Please try again.");
+      return false;
     } finally {
       setIsSavingProfile(false);
     }
@@ -907,14 +940,23 @@ export default function WelcomePage() {
                   disabled={
                     isSavingProfile ||
                     !storeProfile.storeName ||
-                    !storeProfile.ownerName
+                    !storeProfile.ownerName ||
+                    sessionStatus === "loading"
                   }
                   onClick={async () => {
-                    await saveStoreProfile();
-                    transitionTo("shopify");
+                    const saved = await saveStoreProfile();
+                    if (saved) {
+                      transitionTo("shopify");
+                    }
+                    // If save failed, error was already shown to user
                   }}
                 >
-                  {isSavingProfile ? (
+                  {sessionStatus === "loading" ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                      Loading...
+                    </>
+                  ) : isSavingProfile ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
                       Saving...
