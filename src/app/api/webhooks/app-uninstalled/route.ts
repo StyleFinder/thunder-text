@@ -82,8 +82,7 @@ export async function POST(request: NextRequest) {
       const { error: tokenError } = await supabaseAdmin
         .from("shops")
         .update({
-          access_token: null,
-          scope: null,
+          shopify_access_token: null,
         })
         .eq("shop_domain", shopDomain);
 
@@ -92,6 +91,11 @@ export async function POST(request: NextRequest) {
           component: "app-uninstalled",
         });
       }
+
+      logger.info("Shop marked as inactive and tokens cleared", {
+        component: "app-uninstalled",
+        shopDomain,
+      });
     }
 
     // Log webhook processing
