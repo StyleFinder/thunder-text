@@ -355,9 +355,6 @@ export default function WelcomePage() {
   });
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  // Shopify API key for OAuth install link
-  const SHOPIFY_API_KEY = process.env.NEXT_PUBLIC_SHOPIFY_API_KEY;
-
   const steps: { id: OnboardingStep; label: string }[] = [
     { id: "welcome", label: "Welcome" },
     { id: "shopify", label: "Connect Store" },
@@ -1011,12 +1008,9 @@ export default function WelcomePage() {
                           onClick={() => {
                             // Use Shopify's hosted OAuth install flow
                             // This complies with requirement 2.3.1 - no manual myshopify.com URL entry
-                            if (SHOPIFY_API_KEY) {
-                              window.location.href = `https://admin.shopify.com/oauth/install?client_id=${SHOPIFY_API_KEY}`;
-                            } else {
-                              // Fallback to hardcoded client_id if env var not available
-                              window.location.href = `https://admin.shopify.com/oauth/install?client_id=613bffa12a51873c2739ae67163a72e2`;
-                            }
+                            // Uses the production app client_id from shopify.app.toml
+                            window.location.href =
+                              "https://admin.shopify.com/oauth/install?client_id=613bffa12a51873c2739ae67163a72e2";
                           }}
                         >
                           <img
