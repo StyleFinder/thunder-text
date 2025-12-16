@@ -223,11 +223,16 @@ export async function GET(req: NextRequest) {
     // Check if shop already exists by Shopify domain
     const { data: existingShop } = await supabaseAdmin
       .from("shops")
-      .select("id")
+      .select("id, email, store_name, owner_name")
       .eq("shop_domain", fullShopDomain)
       .single();
 
-    // Also check for a pending shop record for this user (created during email/password signup)
+    // ALWAYS check for a pending shop record for this user (created during email/password signup)
+    // This is checked REGARDLESS of whether existingShop exists, because:
+    // - User may have signed up with email/password, filled in store info
+    // - Then connected a Shopify store that was previously installed (creating a separate record)
+    // - We need to merge the pending shop data into the existing shop
+    //
     // Pending shop domains follow the pattern: pending-{timestamp}.{any-domain}
     //
     // IMPORTANT: Session may not be preserved across Shopify OAuth redirect (different domain).
@@ -236,7 +241,7 @@ export async function GET(req: NextRequest) {
     // 2. By email (fallback if userId not available but email is)
     // 3. Most recent pending shop created in last 30 min (last resort fallback)
     let pendingShop = null;
-    if (!existingShop) {
+    {
       // Strategy 1: Try to find by userId
       if (userId) {
         const { data: pendingRecord } = await supabaseAdmin
@@ -349,7 +354,88 @@ export async function GET(req: NextRequest) {
     let isNewInstallation = false;
     let hasCompletedStoreInfo = false;
 
-    if (existingShop) {
+    if (existingShop && pendingShop) {
+      // CASE 1: Both existing Shopify shop AND pending signup exist
+      // Merge the pending shop data into the existing shop, then delete the pending record
+      shopId = existingShop.id;
+
+      // Check if user filled in store info during welcome flow
+      hasCompletedStoreInfo = !!(
+        pendingShop.store_name && pendingShop.owner_name
+      );
+
+      // Merge pending shop data into existing shop
+      // Only update fields that are missing in the existing shop
+      const mergeData: Record<string, unknown> = {
+        shopify_access_token: access_token,
+        shopify_scope: scope || "",
+        shop_type: "shopify",
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Transfer data from pending shop if existing shop doesn't have it
+      if (!existingShop.email && pendingShop.email) {
+        mergeData.email = pendingShop.email;
+      }
+      if (!existingShop.store_name && pendingShop.store_name) {
+        mergeData.store_name = pendingShop.store_name;
+        mergeData.display_name = pendingShop.store_name;
+      }
+      if (!existingShop.owner_name && pendingShop.owner_name) {
+        mergeData.owner_name = pendingShop.owner_name;
+      }
+
+      // Copy additional profile fields from pending shop
+      if (pendingShop.owner_phone)
+        mergeData.owner_phone = pendingShop.owner_phone;
+      if (pendingShop.city) mergeData.city = pendingShop.city;
+      if (pendingShop.state) mergeData.state = pendingShop.state;
+      if (pendingShop.store_type) mergeData.store_type = pendingShop.store_type;
+      if (pendingShop.years_in_business)
+        mergeData.years_in_business = pendingShop.years_in_business;
+      if (pendingShop.industry_niche)
+        mergeData.industry_niche = pendingShop.industry_niche;
+      if (pendingShop.advertising_goals)
+        mergeData.advertising_goals = pendingShop.advertising_goals;
+
+      // Also transfer password_hash so user can still log in with email/password
+      // We need to fetch this separately since it wasn't in our select
+      const { data: pendingWithPassword } = await supabaseAdmin
+        .from("shops")
+        .select("password_hash")
+        .eq("id", pendingShop.id)
+        .single();
+
+      if (pendingWithPassword?.password_hash) {
+        mergeData.password_hash = pendingWithPassword.password_hash;
+      }
+
+      await supabaseAdmin.from("shops").update(mergeData).eq("id", shopId);
+
+      // Delete the pending shop record to avoid duplicates
+      await supabaseAdmin.from("shops").delete().eq("id", pendingShop.id);
+
+      logger.info(
+        "[Shopify Callback] Merged pending shop INTO existing Shopify shop",
+        {
+          component: "callback",
+          shop: fullShopDomain,
+          existingShopId: existingShop.id,
+          deletedPendingShopId: pendingShop.id,
+          hasCompletedStoreInfo,
+          mergedData: {
+            email: mergeData.email || "(kept existing)",
+            store_name: mergeData.store_name || "(kept existing)",
+            owner_name: mergeData.owner_name || "(kept existing)",
+          },
+        },
+      );
+
+      // Treat as new installation if the existing shop didn't have complete profile
+      isNewInstallation = !existingShop.store_name || !existingShop.owner_name;
+    } else if (existingShop) {
+      // CASE 2: Only existing Shopify shop (re-authentication, no pending signup)
       shopId = existingShop.id;
 
       // Update existing shop with new tokens
@@ -364,7 +450,7 @@ export async function GET(req: NextRequest) {
         })
         .eq("id", shopId);
 
-      logger.info("[Shopify Callback] Updated existing shop", {
+      logger.info("[Shopify Callback] Updated existing shop (re-auth)", {
         component: "callback",
         shop: fullShopDomain,
       });
