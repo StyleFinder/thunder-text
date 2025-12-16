@@ -63,20 +63,42 @@ export default function LoginPage() {
         return;
       }
 
-      // Check onboarding status to determine redirect destination
+      // Check onboarding and shop connection status to determine redirect destination
       try {
+        // First check onboarding status
         const statusResponse = await fetch("/api/onboarding/status");
         const statusData = await statusResponse.json();
 
         if (statusResponse.ok && statusData.success && statusData.data) {
           const { onboarding_completed, shop_domain } = statusData.data;
 
-          if (onboarding_completed) {
-            // Established user with completed onboarding - go to dashboard
-            router.push(`/dashboard?shop=${shop_domain}`);
-          } else {
+          if (!onboarding_completed) {
             // New user - go to welcome/onboarding
             router.push("/welcome");
+            return;
+          }
+
+          // Onboarding is complete - now check if Shopify is still connected
+          const shopStatusResponse = await fetch("/api/shop/status");
+          const shopStatusData = await shopStatusResponse.json();
+
+          if (
+            shopStatusResponse.ok &&
+            shopStatusData.success &&
+            shopStatusData.data
+          ) {
+            const { isConnected } = shopStatusData.data;
+
+            if (isConnected) {
+              // Shop is connected - go to dashboard
+              router.push(`/dashboard?shop=${shop_domain}`);
+            } else {
+              // Shop is disconnected (app was uninstalled) - show reconnect page
+              router.push(`/shopify-disconnected?shop=${shop_domain}`);
+            }
+          } else {
+            // Couldn't check shop status - go to dashboard and let it handle it
+            router.push(`/dashboard?shop=${shop_domain}`);
           }
         } else {
           // Account not found in shops table - show error
