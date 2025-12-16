@@ -160,6 +160,15 @@ export async function GET(req: NextRequest) {
     // Get the current user session (if logged in via email/password signup)
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
+    const userEmail = session?.user?.email;
+
+    logger.info("[Shopify Callback] Session state", {
+      component: "callback",
+      shop: fullShopDomain,
+      hasSession: !!session,
+      hasUserId: !!userId,
+      hasUserEmail: !!userEmail,
+    });
 
     // Check if shop already exists by Shopify domain
     const { data: existingShop } = await supabaseAdmin
@@ -170,25 +179,88 @@ export async function GET(req: NextRequest) {
 
     // Also check for a pending shop record for this user (created during email/password signup)
     // Pending shop domains follow the pattern: pending-{timestamp}.{any-domain}
+    //
+    // IMPORTANT: Session may not be preserved across Shopify OAuth redirect (different domain).
+    // We use multiple fallback strategies to find the pending shop:
+    // 1. By userId (if session is preserved)
+    // 2. By email (fallback if userId not available but email is)
+    // 3. Most recent pending shop created in last 30 min (last resort fallback)
     let pendingShop = null;
-    if (userId && !existingShop) {
-      const { data: pendingRecord } = await supabaseAdmin
-        .from("shops")
-        .select(
-          "id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals",
-        )
-        .eq("id", userId)
-        .like("shop_domain", "pending-%")
-        .single();
+    if (!existingShop) {
+      // Strategy 1: Try to find by userId
+      if (userId) {
+        const { data: pendingRecord } = await supabaseAdmin
+          .from("shops")
+          .select(
+            "id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals",
+          )
+          .eq("id", userId)
+          .like("shop_domain", "pending-%")
+          .single();
 
-      if (pendingRecord) {
-        pendingShop = pendingRecord;
-        logger.info("[Shopify Callback] Found pending shop record for user", {
-          component: "callback",
-          userId,
-          pendingShopId: pendingRecord.id,
-          shop: fullShopDomain,
-        });
+        if (pendingRecord) {
+          pendingShop = pendingRecord;
+          logger.info("[Shopify Callback] Found pending shop by userId", {
+            component: "callback",
+            userId,
+            pendingShopId: pendingRecord.id,
+            shop: fullShopDomain,
+          });
+        }
+      }
+
+      // Strategy 2: Try to find by email (fallback if session userId not available)
+      if (!pendingShop && userEmail) {
+        const { data: pendingByEmail } = await supabaseAdmin
+          .from("shops")
+          .select(
+            "id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals",
+          )
+          .eq("email", userEmail.toLowerCase())
+          .like("shop_domain", "pending-%")
+          .single();
+
+        if (pendingByEmail) {
+          pendingShop = pendingByEmail;
+          logger.info("[Shopify Callback] Found pending shop by email", {
+            component: "callback",
+            email: userEmail,
+            pendingShopId: pendingByEmail.id,
+            shop: fullShopDomain,
+          });
+        }
+      }
+
+      // Strategy 3: Last resort - find the most recent pending shop created in last 30 minutes
+      // This handles cases where session cookies aren't preserved across OAuth redirect
+      if (!pendingShop) {
+        const thirtyMinutesAgo = new Date(
+          Date.now() - 30 * 60 * 1000,
+        ).toISOString();
+        const { data: recentPending } = await supabaseAdmin
+          .from("shops")
+          .select(
+            "id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals, created_at",
+          )
+          .like("shop_domain", "pending-%")
+          .gte("created_at", thirtyMinutesAgo)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (recentPending) {
+          pendingShop = recentPending;
+          logger.info(
+            "[Shopify Callback] Found pending shop by recent timestamp (fallback)",
+            {
+              component: "callback",
+              pendingShopId: recentPending.id,
+              pendingEmail: recentPending.email,
+              createdAt: recentPending.created_at,
+              shop: fullShopDomain,
+            },
+          );
+        }
       }
     }
 
@@ -341,19 +413,19 @@ export async function GET(req: NextRequest) {
 
     // Determine redirect destination based on flow
     // - Existing shops (re-auth) → dashboard
-    // - New installation with store info already filled → dashboard
-    // - New installation without store info → welcome flow
+    // - New installation with store info filled → welcome step 3 (social/Add platforms)
+    // - New installation without store info → welcome step 1 (start from beginning)
     let redirectUrl: string;
 
     if (!isNewInstallation) {
       // Re-authentication of existing shop
       redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?shop=${fullShopDomain}&authenticated=true`;
     } else if (hasCompletedStoreInfo) {
-      // User already filled in store info during welcome, now connected Shopify → go to dashboard
-      redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?shop=${fullShopDomain}&authenticated=true`;
-    } else {
-      // Fresh installation without prior store info → welcome flow
+      // User filled in store info during welcome, now connected Shopify → continue to step 3 (Add platforms)
       redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/welcome?step=social&shop=${fullShopDomain}`;
+    } else {
+      // Fresh installation without prior store info → start welcome flow from beginning
+      redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/welcome?shop=${fullShopDomain}`;
     }
 
     // Set session cookie and redirect
