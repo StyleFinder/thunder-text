@@ -56,50 +56,16 @@ export async function GET(req: NextRequest) {
       clearStoredOAuthState,
     } = await import("@/lib/security/oauth-validation");
 
-    // SECURITY: Verify stored state to prevent replay attacks
-    logger.info("[Shopify Callback] Verifying OAuth state", {
+    logger.info("[Shopify Callback] Processing OAuth callback", {
       component: "callback",
       shop,
+      hasHmac: !!hmac,
       statePrefix: state.substring(0, 20),
     });
 
-    const stateMatchesStored = await verifyStoredOAuthState(state, "shopify");
-    if (!stateMatchesStored) {
-      logger.error(
-        "[Shopify Callback] State replay attack detected - state does not match stored value",
-        undefined,
-        {
-          component: "callback",
-          shop,
-          hint: "Cookie may not have been set or was cleared.",
-        },
-      );
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=invalid_state`,
-      );
-    }
-
-    // SECURITY: Clear the stored state immediately (single-use)
-    await clearStoredOAuthState("shopify");
-
-    // Validate state parameter format and contents (CSRF protection)
-    try {
-      validateShopifyOAuthState(state, shop);
-    } catch (error) {
-      logger.error(
-        "[Shopify Callback] State validation failed",
-        error as Error,
-        {
-          component: "callback",
-          shop,
-        },
-      );
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=invalid_state`,
-      );
-    }
-
-    // Verify HMAC if present (Shopify security check)
+    // SECURITY: Verify HMAC FIRST - this proves request came from Shopify
+    // This is REQUIRED for Shopify's hosted OAuth flow which bypasses our state cookie
+    let hmacValid = false;
     if (hmac) {
       const params = new URLSearchParams(searchParams);
       params.delete("hmac");
@@ -111,7 +77,13 @@ export async function GET(req: NextRequest) {
         .update(message)
         .digest("hex");
 
-      if (generatedHash !== hmac) {
+      if (generatedHash === hmac) {
+        hmacValid = true;
+        logger.info("[Shopify Callback] HMAC verification passed", {
+          component: "callback",
+          shop,
+        });
+      } else {
         logger.error("[Shopify Callback] HMAC verification failed", undefined, {
           component: "callback",
           shop,
@@ -120,6 +92,72 @@ export async function GET(req: NextRequest) {
           `${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=invalid_hmac`,
         );
       }
+    }
+
+    // Check if we have a stored state cookie (from our /api/auth/shopify flow)
+    const stateMatchesStored = await verifyStoredOAuthState(state, "shopify");
+
+    // SECURITY FLOW DETERMINATION:
+    // 1. If state cookie exists and matches → our custom OAuth flow (full validation)
+    // 2. If no state cookie BUT HMAC is valid → Shopify hosted OAuth flow (trust Shopify)
+    // 3. If neither → reject the request
+
+    if (stateMatchesStored) {
+      // OUR CUSTOM OAUTH FLOW: Full state validation
+      logger.info(
+        "[Shopify Callback] Using custom OAuth flow with state cookie",
+        {
+          component: "callback",
+          shop,
+        },
+      );
+
+      // Clear the stored state immediately (single-use)
+      await clearStoredOAuthState("shopify");
+
+      // Validate state parameter format and contents (CSRF protection)
+      try {
+        validateShopifyOAuthState(state, shop);
+      } catch (error) {
+        logger.error(
+          "[Shopify Callback] State validation failed",
+          error as Error,
+          {
+            component: "callback",
+            shop,
+          },
+        );
+        return NextResponse.redirect(
+          `${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=invalid_state`,
+        );
+      }
+    } else if (hmacValid) {
+      // SHOPIFY HOSTED OAUTH FLOW: Trust HMAC verification
+      // When users install via Shopify App Store or hosted OAuth URL, they don't go
+      // through our /api/auth/shopify route, so no state cookie is set.
+      // Shopify's HMAC verification proves this request came from Shopify.
+      logger.info(
+        "[Shopify Callback] Using Shopify hosted OAuth flow (HMAC verified, no state cookie)",
+        {
+          component: "callback",
+          shop,
+          note: "User likely installed via Shopify App Store or direct hosted OAuth URL",
+        },
+      );
+    } else {
+      // INVALID: No state cookie AND no valid HMAC
+      logger.error(
+        "[Shopify Callback] Security validation failed - no state cookie and no valid HMAC",
+        undefined,
+        {
+          component: "callback",
+          shop,
+          hint: "Request may be a replay attack or from unknown source",
+        },
+      );
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=invalid_state`,
+      );
     }
 
     // Exchange code for access token
