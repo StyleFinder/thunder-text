@@ -413,6 +413,7 @@ export async function GET(req: NextRequest) {
         shopify_scope: scope || "",
         shop_type: "shopify",
         is_active: true,
+        uninstalled_at: null, // Clear uninstall flag on reinstall
         updated_at: new Date().toISOString(),
       };
 
@@ -501,6 +502,7 @@ export async function GET(req: NextRequest) {
       }
 
       // Update existing shop with new tokens
+      // Clear uninstalled_at in case this is a reinstall after uninstall
       await supabaseAdmin
         .from("shops")
         .update({
@@ -508,6 +510,7 @@ export async function GET(req: NextRequest) {
           shopify_scope: scope || "",
           shop_type: "shopify",
           is_active: true,
+          uninstalled_at: null, // Clear uninstall flag on reinstall
           updated_at: new Date().toISOString(),
         })
         .eq("id", shopId);
@@ -619,7 +622,10 @@ export async function GET(req: NextRequest) {
       const { registerWebhooks } = await import(
         "@/lib/shopify/webhook-registration"
       );
-      const webhookResult = await registerWebhooks(fullShopDomain, access_token);
+      const webhookResult = await registerWebhooks(
+        fullShopDomain,
+        access_token,
+      );
       if (webhookResult.success) {
         logger.info("[Shopify Callback] Webhooks registered successfully", {
           component: "callback",

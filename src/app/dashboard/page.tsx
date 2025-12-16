@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useNavigation } from "../hooks/useNavigation";
+import { useShopStatus } from "@/hooks/useShopStatus";
 import {
   Loader2,
   Sparkles,
@@ -117,7 +118,12 @@ const FREE_PLAN_LIMITS = {
 };
 
 // Free Plan Usage Card Component - Shows free plan limits with upgrade prompt
-function PlanUsageCard({ shop }: { shop: string; subscription: SubscriptionInfo | null }) {
+function PlanUsageCard({
+  shop,
+}: {
+  shop: string;
+  subscription: SubscriptionInfo | null;
+}) {
   // For now, hardcoded usage - in production this would come from API
   const productDescUsed = 3;
   const adDescUsed = 2;
@@ -127,10 +133,14 @@ function PlanUsageCard({ shop }: { shop: string; subscription: SubscriptionInfo 
   const adPercent = Math.round((adDescUsed / adDescTotal) * 100);
 
   return (
-    <div className="rounded-xl overflow-hidden shadow-lg" style={{
-      background: "linear-gradient(135deg, #e0f2fe 0%, #7dd3fc 50%, #0ea5e9 100%)",
-      border: "2px solid #0ea5e9"
-    }}>
+    <div
+      className="rounded-xl overflow-hidden shadow-lg"
+      style={{
+        background:
+          "linear-gradient(135deg, #e0f2fe 0%, #7dd3fc 50%, #0ea5e9 100%)",
+        border: "2px solid #0ea5e9",
+      }}
+    >
       <div className="p-5 bg-white/90 backdrop-blur-sm">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -150,17 +160,22 @@ function PlanUsageCard({ shop }: { shop: string; subscription: SubscriptionInfo 
         {/* Product Descriptions Usage */}
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm font-medium text-sky-900">Product Descriptions</span>
-            <span className="text-sm font-bold text-sky-800">{productDescUsed} / {productDescTotal}</span>
+            <span className="text-sm font-medium text-sky-900">
+              Product Descriptions
+            </span>
+            <span className="text-sm font-bold text-sky-800">
+              {productDescUsed} / {productDescTotal}
+            </span>
           </div>
           <div className="w-full h-2.5 bg-sky-200 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
                 width: `${productPercent}%`,
-                background: productPercent > 80
-                  ? "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)"
-                  : "linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%)"
+                background:
+                  productPercent > 80
+                    ? "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)"
+                    : "linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%)",
               }}
             />
           </div>
@@ -169,17 +184,22 @@ function PlanUsageCard({ shop }: { shop: string; subscription: SubscriptionInfo 
         {/* Ad Descriptions Usage */}
         <div className="mb-4">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm font-medium text-sky-900">Ad Descriptions</span>
-            <span className="text-sm font-bold text-sky-800">{adDescUsed} / {adDescTotal}</span>
+            <span className="text-sm font-medium text-sky-900">
+              Ad Descriptions
+            </span>
+            <span className="text-sm font-bold text-sky-800">
+              {adDescUsed} / {adDescTotal}
+            </span>
           </div>
           <div className="w-full h-2.5 bg-sky-200 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
                 width: `${adPercent}%`,
-                background: adPercent > 80
-                  ? "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)"
-                  : "linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%)"
+                background:
+                  adPercent > 80
+                    ? "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)"
+                    : "linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%)",
               }}
             />
           </div>
@@ -189,8 +209,12 @@ function PlanUsageCard({ shop }: { shop: string; subscription: SubscriptionInfo 
         <div className="p-4 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <p className="text-white font-medium text-sm">Upgrade for unlimited power</p>
-              <p className="text-amber-100 text-xs mt-0.5">Get 5,000+ credits/month + 14-day free trial</p>
+              <p className="text-white font-medium text-sm">
+                Upgrade for unlimited power
+              </p>
+              <p className="text-amber-100 text-xs mt-0.5">
+                Get 5,000+ credits/month + 14-day free trial
+              </p>
             </div>
             <Link href={`/settings/billing?shop=${shop}`}>
               <Button
@@ -210,7 +234,13 @@ function PlanUsageCard({ shop }: { shop: string; subscription: SubscriptionInfo 
 }
 
 // Active Plan Card - Shows for paid plan users (Starter/Pro)
-function ActivePlanCard({ shop, subscription }: { shop: string; subscription: SubscriptionInfo }) {
+function ActivePlanCard({
+  shop,
+  subscription,
+}: {
+  shop: string;
+  subscription: SubscriptionInfo;
+}) {
   const planName = subscription.plan === "pro" ? "Pro" : "Starter";
   const isPro = subscription.plan === "pro";
   const creditsTotal = PLAN_CREDITS[subscription.plan] || 5000;
@@ -228,20 +258,25 @@ function ActivePlanCard({ shop, subscription }: { shop: string; subscription: Su
   };
 
   return (
-    <div className="rounded-xl overflow-hidden shadow-lg" style={{
-      background: isPro
-        ? "linear-gradient(135deg, #fef3c7 0%, #fcd34d 50%, #f59e0b 100%)"
-        : "linear-gradient(135deg, #dbeafe 0%, #93c5fd 50%, #3b82f6 100%)",
-      border: isPro ? "2px solid #f59e0b" : "2px solid #3b82f6"
-    }}>
+    <div
+      className="rounded-xl overflow-hidden shadow-lg"
+      style={{
+        background: isPro
+          ? "linear-gradient(135deg, #fef3c7 0%, #fcd34d 50%, #f59e0b 100%)"
+          : "linear-gradient(135deg, #dbeafe 0%, #93c5fd 50%, #3b82f6 100%)",
+        border: isPro ? "2px solid #f59e0b" : "2px solid #3b82f6",
+      }}
+    >
       <div className="p-5 bg-white/90 backdrop-blur-sm">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-              isPro
-                ? "bg-gradient-to-br from-amber-400 to-amber-600"
-                : "bg-gradient-to-br from-blue-400 to-blue-600"
-            }`}>
+            <div
+              className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                isPro
+                  ? "bg-gradient-to-br from-amber-400 to-amber-600"
+                  : "bg-gradient-to-br from-blue-400 to-blue-600"
+              }`}
+            >
               {isPro ? (
                 <Crown className="w-5 h-5 text-white" />
               ) : (
@@ -249,19 +284,28 @@ function ActivePlanCard({ shop, subscription }: { shop: string; subscription: Su
               )}
             </div>
             <div>
-              <h3 className={`font-semibold ${isPro ? "text-amber-900" : "text-blue-900"}`}>
+              <h3
+                className={`font-semibold ${isPro ? "text-amber-900" : "text-blue-900"}`}
+              >
                 {planName} Plan
               </h3>
-              <p className={`text-xs ${isPro ? "text-amber-700" : "text-blue-700"}`}>
-                {subscription.price?.interval === "annual" ? "Annual" : "Monthly"} billing
+              <p
+                className={`text-xs ${isPro ? "text-amber-700" : "text-blue-700"}`}
+              >
+                {subscription.price?.interval === "annual"
+                  ? "Annual"
+                  : "Monthly"}{" "}
+                billing
               </p>
             </div>
           </div>
-          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-            isPro
-              ? "bg-amber-100 text-amber-800 border border-amber-300"
-              : "bg-blue-100 text-blue-800 border border-blue-300"
-          }`}>
+          <span
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+              isPro
+                ? "bg-amber-100 text-amber-800 border border-amber-300"
+                : "bg-blue-100 text-blue-800 border border-blue-300"
+            }`}
+          >
             <CheckCircle className="w-3 h-3" />
             Active
           </span>
@@ -270,32 +314,43 @@ function ActivePlanCard({ shop, subscription }: { shop: string; subscription: Su
         {/* Usage Progress Bar */}
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
-            <span className={`text-sm font-medium ${isPro ? "text-amber-900" : "text-blue-900"}`}>
+            <span
+              className={`text-sm font-medium ${isPro ? "text-amber-900" : "text-blue-900"}`}
+            >
               Credits Used
             </span>
-            <span className={`text-sm font-bold ${isPro ? "text-amber-800" : "text-blue-800"}`}>
+            <span
+              className={`text-sm font-bold ${isPro ? "text-amber-800" : "text-blue-800"}`}
+            >
               {creditsUsed.toLocaleString()} / {creditsTotal.toLocaleString()}
             </span>
           </div>
-          <div className={`w-full h-3 rounded-full overflow-hidden ${isPro ? "bg-amber-200" : "bg-blue-200"}`}>
+          <div
+            className={`w-full h-3 rounded-full overflow-hidden ${isPro ? "bg-amber-200" : "bg-blue-200"}`}
+          >
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
                 width: `${percentUsed}%`,
-                background: percentUsed > 80
-                  ? "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)"
-                  : isPro
-                    ? "linear-gradient(90deg, #f59e0b 0%, #d97706 100%)"
-                    : "linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)"
+                background:
+                  percentUsed > 80
+                    ? "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)"
+                    : isPro
+                      ? "linear-gradient(90deg, #f59e0b 0%, #d97706 100%)"
+                      : "linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)",
               }}
             />
           </div>
           <div className="flex items-center justify-between mt-1">
-            <p className={`text-xs ${isPro ? "text-amber-700" : "text-blue-700"}`}>
+            <p
+              className={`text-xs ${isPro ? "text-amber-700" : "text-blue-700"}`}
+            >
               {percentUsed}% used this month
             </p>
             {subscription.currentPeriodEnd && (
-              <p className={`text-xs ${isPro ? "text-amber-700" : "text-blue-700"}`}>
+              <p
+                className={`text-xs ${isPro ? "text-amber-700" : "text-blue-700"}`}
+              >
                 Renews {formatDate(subscription.currentPeriodEnd)}
               </p>
             )}
@@ -303,16 +358,24 @@ function ActivePlanCard({ shop, subscription }: { shop: string; subscription: Su
         </div>
 
         {/* Manage Plan Link */}
-        <div className={`p-3 rounded-lg ${isPro ? "bg-amber-50" : "bg-blue-50"}`}>
+        <div
+          className={`p-3 rounded-lg ${isPro ? "bg-amber-50" : "bg-blue-50"}`}
+        >
           <div className="flex items-center justify-between">
-            <p className={`text-sm ${isPro ? "text-amber-800" : "text-blue-800"}`}>
+            <p
+              className={`text-sm ${isPro ? "text-amber-800" : "text-blue-800"}`}
+            >
               {(creditsTotal - creditsUsed).toLocaleString()} credits remaining
             </p>
             <Link href={`/settings/billing?shop=${shop}`}>
               <Button
                 size="sm"
                 variant="ghost"
-                className={isPro ? "text-amber-700 hover:text-amber-900 hover:bg-amber-100" : "text-blue-700 hover:text-blue-900 hover:bg-blue-100"}
+                className={
+                  isPro
+                    ? "text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                    : "text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+                }
               >
                 Manage Plan
                 <ArrowRight className="w-3 h-3 ml-1" />
@@ -396,13 +459,22 @@ function DashboardContent() {
   const { navigateTo } = useNavigation();
   const { data: session, status } = useSession();
   const [_shopId, setShopId] = useState<string | null>(null);
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(
+    null,
+  );
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
 
   // Get shop from URL params first, then fallback to session
   const shopFromUrl = searchParams?.get("shop");
   const shopFromSession = session?.user?.shopDomain;
   const shop = shopFromUrl || shopFromSession;
+
+  // Check if shop is still connected to Shopify
+  // This will redirect to /shopify-disconnected if the app was uninstalled
+  useShopStatus({
+    shop: shop || undefined,
+    redirectOnDisconnect: !!shop, // Only redirect if we have a shop to check
+  });
 
   const storeName = shop
     ? decodeURIComponent(shop).replace(".myshopify.com", "")
@@ -424,7 +496,9 @@ function DashboardContent() {
       }
 
       try {
-        const response = await fetch(`/api/billing/status?shop=${encodeURIComponent(shop)}`);
+        const response = await fetch(
+          `/api/billing/status?shop=${encodeURIComponent(shop)}`,
+        );
         const data = await response.json();
 
         if (data.success && data.subscription) {
@@ -441,7 +515,8 @@ function DashboardContent() {
   }, [shop]);
 
   // Determine if user is on a paid plan
-  const isPaidPlan = subscription?.plan === "starter" || subscription?.plan === "pro";
+  const isPaidPlan =
+    subscription?.plan === "starter" || subscription?.plan === "pro";
   const isActivePaid = isPaidPlan && subscription?.status === "active";
 
   // Show loading while session is being fetched
