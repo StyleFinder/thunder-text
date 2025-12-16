@@ -247,11 +247,11 @@ export async function GET(req: NextRequest) {
         const { data: pendingRecord } = await supabaseAdmin
           .from("shops")
           .select(
-            "id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals",
+            "id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals, shop_domain",
           )
           .eq("id", userId)
           .like("shop_domain", "pending-%")
-          .single();
+          .maybeSingle();
 
         if (pendingRecord) {
           pendingShop = pendingRecord;
@@ -259,6 +259,8 @@ export async function GET(req: NextRequest) {
             component: "callback",
             userId,
             pendingShopId: pendingRecord.id,
+            pendingShopDomain: pendingRecord.shop_domain,
+            pendingStoreName: pendingRecord.store_name,
             shop: fullShopDomain,
           });
         }
@@ -269,11 +271,11 @@ export async function GET(req: NextRequest) {
         const { data: pendingByEmail } = await supabaseAdmin
           .from("shops")
           .select(
-            "id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals",
+            "id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals, shop_domain",
           )
           .eq("email", userEmail.toLowerCase())
           .like("shop_domain", "pending-%")
-          .single();
+          .maybeSingle();
 
         if (pendingByEmail) {
           pendingShop = pendingByEmail;
@@ -281,6 +283,8 @@ export async function GET(req: NextRequest) {
             component: "callback",
             email: userEmail,
             pendingShopId: pendingByEmail.id,
+            pendingShopDomain: pendingByEmail.shop_domain,
+            pendingStoreName: pendingByEmail.store_name,
             shop: fullShopDomain,
           });
         }
@@ -292,16 +296,18 @@ export async function GET(req: NextRequest) {
         const thirtyMinutesAgo = new Date(
           Date.now() - 30 * 60 * 1000,
         ).toISOString();
+
+        // Use maybeSingle() instead of single() to avoid errors when no results found
         const { data: recentPending, error: recentError } = await supabaseAdmin
           .from("shops")
           .select(
-            "id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals, created_at",
+            "id, email, store_name, owner_name, owner_phone, city, state, store_type, years_in_business, industry_niche, advertising_goals, created_at, shop_domain",
           )
           .like("shop_domain", "pending-%")
           .gte("created_at", thirtyMinutesAgo)
           .order("created_at", { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (recentPending) {
           pendingShop = recentPending;
@@ -311,6 +317,8 @@ export async function GET(req: NextRequest) {
               component: "callback",
               pendingShopId: recentPending.id,
               pendingEmail: recentPending.email,
+              pendingShopDomain: recentPending.shop_domain,
+              pendingStoreName: recentPending.store_name,
               createdAt: recentPending.created_at,
               shop: fullShopDomain,
             },
@@ -323,6 +331,7 @@ export async function GET(req: NextRequest) {
               shop: fullShopDomain,
               thirtyMinutesAgo,
               error: recentError?.message,
+              hint: "Check if pending shop was already merged or deleted, or if it was created more than 30 minutes ago",
             },
           );
         }
@@ -435,8 +444,28 @@ export async function GET(req: NextRequest) {
       // Treat as new installation if the existing shop didn't have complete profile
       isNewInstallation = !existingShop.store_name || !existingShop.owner_name;
     } else if (existingShop) {
-      // CASE 2: Only existing Shopify shop (re-authentication, no pending signup)
+      // CASE 2: Only existing Shopify shop (re-authentication OR fresh install on previously used shop)
       shopId = existingShop.id;
+
+      // Check if this is truly a re-auth (shop has complete info) or a fresh install (shop lacks info)
+      // The shop might exist from a previous uninstall/reinstall cycle without complete setup
+      const existingHasCompleteInfo = !!(
+        existingShop.store_name && existingShop.owner_name
+      );
+
+      // If shop doesn't have complete info, treat as new installation
+      if (!existingHasCompleteInfo) {
+        isNewInstallation = true;
+        logger.info(
+          "[Shopify Callback] Existing shop lacks complete profile - treating as new installation",
+          {
+            component: "callback",
+            shop: fullShopDomain,
+            existingStoreName: existingShop.store_name || "NULL",
+            existingOwnerName: existingShop.owner_name || "NULL",
+          },
+        );
+      }
 
       // Update existing shop with new tokens
       await supabaseAdmin
@@ -450,9 +479,11 @@ export async function GET(req: NextRequest) {
         })
         .eq("id", shopId);
 
-      logger.info("[Shopify Callback] Updated existing shop (re-auth)", {
+      logger.info("[Shopify Callback] Updated existing shop", {
         component: "callback",
         shop: fullShopDomain,
+        isNewInstallation,
+        hasCompleteInfo: existingHasCompleteInfo,
       });
     } else if (pendingShop) {
       // User signed up via email/password and now connecting Shopify
