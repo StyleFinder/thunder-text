@@ -454,6 +454,15 @@ function FeatureTile({
   );
 }
 
+// Stats interface
+interface DashboardStats {
+  productsGenerated: number;
+  adsCreated: number;
+  timeSavedMinutes: number;
+  timeSavedDisplay: string;
+  estimatedSavings: number;
+}
+
 function DashboardContent() {
   const searchParams = useSearchParams();
   const { navigateTo } = useNavigation();
@@ -463,6 +472,14 @@ function DashboardContent() {
     null,
   );
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats>({
+    productsGenerated: 0,
+    adsCreated: 0,
+    timeSavedMinutes: 0,
+    timeSavedDisplay: "0 min",
+    estimatedSavings: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
 
   // Get shop from URL params first, then fallback to session
   const shopFromUrl = searchParams?.get("shop");
@@ -512,6 +529,39 @@ function DashboardContent() {
     };
 
     fetchSubscription();
+  }, [shop]);
+
+  // Fetch dashboard stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!shop) {
+        setStatsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `/api/shop/stats?shop=${encodeURIComponent(shop)}`,
+        );
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          setStats({
+            productsGenerated: data.data.productsGenerated || 0,
+            adsCreated: data.data.adsCreated || 0,
+            timeSavedMinutes: data.data.timeSavedMinutes || 0,
+            timeSavedDisplay: data.data.timeSavedDisplay || "0 min",
+            estimatedSavings: data.data.estimatedSavings || 0,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchStats();
   }, [shop]);
 
   // Determine if user is on a paid plan
@@ -619,28 +669,32 @@ function DashboardContent() {
           <StatCard
             icon={FileText}
             label="Products Generated"
-            value="0"
+            value={statsLoading ? "..." : stats.productsGenerated.toString()}
             subtext="this month"
             color="blue"
           />
           <StatCard
             icon={Clock}
             label="Time Saved"
-            value="0 min"
+            value={statsLoading ? "..." : stats.timeSavedDisplay}
             subtext="vs. manual writing"
             color="green"
           />
           <StatCard
             icon={DollarSign}
             label="Estimated Savings"
-            value="$0"
+            value={
+              statsLoading
+                ? "..."
+                : `$${stats.estimatedSavings.toLocaleString()}`
+            }
             subtext="Based on avg. copywriter rate"
             color="amber"
           />
           <StatCard
             icon={TrendingUp}
             label="Ads Created"
-            value="0"
+            value={statsLoading ? "..." : stats.adsCreated.toString()}
             subtext="this month"
             color="purple"
           />

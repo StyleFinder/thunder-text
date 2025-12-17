@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
 import { getCombinedPrompt, type ProductCategory } from "@/lib/prompts";
 import { logger } from "@/lib/logger";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 interface CreateProductRequest {
   images: string[]; // base64 encoded images
@@ -435,11 +436,59 @@ ${additionalNotes ? `Special Instructions: ${additionalNotes}` : ""}`;
       completion: completion.usage?.completion_tokens || 0,
     };
 
-    // TODO: Track usage in database
+    // Track usage in database - save the generated content
+    try {
+      // First, get the shop ID from shop domain
+      const { data: shop } = await supabaseAdmin
+        .from("shops")
+        .select("id")
+        .eq("shop_domain", shopDomain)
+        .single();
+
+      if (shop?.id) {
+        // Save to generated_content table for stats tracking
+        await supabaseAdmin.from("generated_content").insert({
+          store_id: shop.id,
+          content_type: "product_description",
+          topic: parsedContent.title || category,
+          generated_text: parsedContent.description || "",
+          word_count: (parsedContent.description || "").split(/\s+/).length,
+          generation_params: {
+            category,
+            template,
+            sizing,
+            fabricMaterial,
+            occasionUse,
+            targetAudience,
+            keyFeatures,
+          },
+          generation_metadata: {
+            model: "gpt-4o",
+            tokens_used: tokenUsage.total,
+            prompt_tokens: tokenUsage.prompt,
+            completion_tokens: tokenUsage.completion,
+          },
+          is_saved: false,
+        });
+
+        logger.info("[Generate Create] Tracked content generation", {
+          component: "create",
+          shopId: shop.id,
+          contentType: "product_description",
+        });
+      }
+    } catch (trackingError) {
+      // Don't fail the request if tracking fails
+      logger.warn("[Generate Create] Failed to track usage", {
+        component: "create",
+        error: (trackingError as Error).message,
+      });
+    }
+
     const usage = {
-      current: 0, // Would fetch from database
+      current: 0, // Future: fetch from database
       limit: 25,
-      remaining: 25, // Would calculate from database
+      remaining: 25, // Future: calculate from database
     };
 
     return NextResponse.json({
