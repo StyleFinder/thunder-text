@@ -1,8 +1,14 @@
 /**
  * Content Center Authentication Utilities
  *
- * Provides authentication and authorization helpers for Content Center API routes.
- * Uses Supabase JWT tokens for user authentication.
+ * SECURITY HARDENED:
+ * - Replaced shop-as-token pattern with proper Shopify session token validation
+ * - Session tokens are JWT signed by Shopify and verified cryptographically
+ * - Supports API key authentication for server-to-server calls
+ *
+ * Authentication methods (in priority order):
+ * 1. Shopify Session Token (JWT in Authorization header) - for embedded app requests
+ * 2. API Key (X-API-Key header) - for server-to-server calls
  */
 
 import { NextRequest } from "next/server";
@@ -14,6 +20,7 @@ import {
   hasScope,
   ApiKeyScope,
 } from "@/lib/security/api-keys";
+import { createHmac, timingSafeEqual } from "crypto";
 
 /**
  * Authentication result
@@ -21,7 +28,9 @@ import {
 export interface AuthResult {
   authenticated: boolean;
   userId?: string;
+  shopDomain?: string;
   error?: string;
+  authMethod?: "session_token" | "api_key";
 }
 
 /**
@@ -49,8 +58,170 @@ export function extractBearerToken(authHeader: string | null): string | null {
 }
 
 /**
- * Extract and verify shop domain from request
- * For Shopify apps, we use the shop domain as authentication
+ * Shopify Session Token JWT Payload
+ */
+interface ShopifySessionTokenPayload {
+  iss: string; // Issuer: https://{shop}.myshopify.com/admin
+  dest: string; // Destination: https://{shop}.myshopify.com
+  aud: string; // Audience: App's client ID
+  sub: string; // Subject: User ID
+  exp: number; // Expiration timestamp
+  nbf: number; // Not before timestamp
+  iat: number; // Issued at timestamp
+  jti: string; // JWT ID (unique identifier)
+  sid: string; // Session ID
+}
+
+/**
+ * Parse a JWT without verification (for extracting claims)
+ */
+function parseJWT(token: string): ShopifySessionTokenPayload | null {
+  try {
+    const [, payload] = token.split(".");
+    if (!payload) return null;
+    return JSON.parse(Buffer.from(payload, "base64").toString()) as ShopifySessionTokenPayload;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extract shop domain from JWT dest claim
+ * SECURITY [R-A2041]: Uses URL API for safe hostname extraction
+ */
+function extractShopFromJWT(payload: ShopifySessionTokenPayload): string | null {
+  try {
+    const url = new URL(payload.dest);
+    return url.hostname;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Verify Shopify session token signature using HMAC-SHA256
+ * SECURITY: Uses timing-safe comparison to prevent timing attacks
+ */
+function verifySessionTokenSignature(token: string): boolean {
+  const clientSecret = process.env.SHOPIFY_API_SECRET;
+
+  if (!clientSecret) {
+    logger.error("SHOPIFY_API_SECRET not configured", undefined, {
+      component: "content-center-auth",
+    });
+    return false;
+  }
+
+  try {
+    const [header, payload, signature] = token.split(".");
+
+    if (!header || !payload || !signature) {
+      return false;
+    }
+
+    // Create the signing input (header.payload)
+    const signingInput = `${header}.${payload}`;
+
+    // Create HMAC-SHA256 signature
+    const hmac = createHmac("sha256", clientSecret);
+    hmac.update(signingInput);
+    const expectedSignature = hmac.digest("base64url");
+
+    // Timing-safe comparison
+    try {
+      const expectedBuffer = Buffer.from(expectedSignature, "utf8");
+      const receivedBuffer = Buffer.from(signature, "utf8");
+
+      if (expectedBuffer.length !== receivedBuffer.length) {
+        return false;
+      }
+
+      return timingSafeEqual(expectedBuffer, receivedBuffer);
+    } catch {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validate a Shopify session token
+ * Returns shop domain if valid, null if invalid
+ */
+function validateShopifySessionToken(token: string): string | null {
+  // Parse the JWT
+  const payload = parseJWT(token);
+  if (!payload) {
+    logger.debug("Failed to parse session token JWT", {
+      component: "content-center-auth",
+    });
+    return null;
+  }
+
+  // Verify required fields
+  if (!payload.iss || !payload.dest || !payload.aud || !payload.exp) {
+    logger.debug("Session token missing required fields", {
+      component: "content-center-auth",
+    });
+    return null;
+  }
+
+  // Verify the audience matches our app's client ID
+  const expectedClientId =
+    process.env.NEXT_PUBLIC_SHOPIFY_API_KEY || process.env.SHOPIFY_API_KEY;
+  if (expectedClientId && payload.aud !== expectedClientId) {
+    logger.debug("Session token audience mismatch", {
+      component: "content-center-auth",
+      expected: expectedClientId,
+      received: payload.aud,
+    });
+    return null;
+  }
+
+  // Check not before
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.nbf && payload.nbf > now) {
+    logger.debug("Session token not yet valid", {
+      component: "content-center-auth",
+    });
+    return null;
+  }
+
+  // Check expiration
+  if (payload.exp < now) {
+    logger.debug("Session token expired", {
+      component: "content-center-auth",
+    });
+    return null;
+  }
+
+  // Verify signature
+  if (!verifySessionTokenSignature(token)) {
+    logger.warn("Session token signature verification failed", {
+      component: "content-center-auth",
+    });
+    return null;
+  }
+
+  // Extract shop from dest claim
+  const shop = extractShopFromJWT(payload);
+  if (!shop) {
+    logger.debug("Could not extract shop from session token", {
+      component: "content-center-auth",
+    });
+    return null;
+  }
+
+  return shop;
+}
+
+/**
+ * Authenticate request using Shopify session token or API key
+ *
+ * Priority:
+ * 1. Shopify Session Token in Authorization header (for embedded app)
+ * 2. API Key in X-API-Key header (for server-to-server)
  *
  * @param request - Next.js request object
  * @returns Authentication result with shop domain as user ID if successful
@@ -59,69 +230,104 @@ export async function authenticateRequest(
   request: NextRequest,
 ): Promise<AuthResult> {
   try {
-    // Try to get shop from various sources
-    let shop: string | null = null;
-
-    // 1. Check Authorization header (for API calls from frontend)
-    // SECURITY [R-A2041]: Use safe Bearer token extraction helper
+    // 1. Try Shopify Session Token (Authorization: Bearer <jwt>)
     const authHeader = request.headers.get("authorization");
     const bearerToken = extractBearerToken(authHeader);
+
     if (bearerToken) {
-      shop = bearerToken;
-    }
+      // Check if it looks like a JWT (three parts separated by dots)
+      if (bearerToken.split(".").length === 3) {
+        const shopDomain = validateShopifySessionToken(bearerToken);
 
-    // 2. Check X-Shopify-Shop-Domain header
-    if (!shop) {
-      shop = request.headers.get("x-shopify-shop-domain");
-    }
+        if (shopDomain) {
+          // Verify shop exists in database
+          const { data: shopData, error } = await supabaseAdmin
+            .from("shops")
+            .select("id, shop_domain")
+            .eq("shop_domain", shopDomain)
+            .eq("is_active", true)
+            .single();
 
-    // 3. Check query parameter
-    if (!shop) {
-      const url = new URL(request.url);
-      shop = url.searchParams.get("shop");
-    }
+          if (error || !shopData) {
+            logger.warn("Shop not found or inactive", {
+              component: "content-center-auth",
+              shopDomain,
+            });
+            return {
+              authenticated: false,
+              error: "Shop not found. Please install the app first.",
+            };
+          }
 
-    if (!shop) {
+          // Set user context for error tracking
+          logger.setUser(shopData.id, {
+            shop: shopData.shop_domain,
+          });
+
+          return {
+            authenticated: true,
+            userId: shopData.id,
+            shopDomain: shopData.shop_domain,
+            authMethod: "session_token",
+          };
+        }
+      }
+
+      // Not a valid JWT - don't accept raw shop domains
+      logger.warn("Invalid authorization token format", {
+        component: "content-center-auth",
+      });
       return {
         authenticated: false,
-        error:
-          "Missing shop domain. Please provide shop via Authorization header, X-Shopify-Shop-Domain header, or shop query parameter.",
+        error: "Invalid authorization token. Expected Shopify session token (JWT).",
       };
     }
 
-    // Ensure shop has .myshopify.com suffix
-    if (!shop.includes(".myshopify.com")) {
-      shop = `${shop}.myshopify.com`;
-    }
-
-    // Verify shop exists in database
-    const { data: shopData, error } = await supabaseAdmin
-      .from("shops")
-      .select("id, shop_domain")
-      .eq("shop_domain", shop)
-      .single();
-
-    if (error || !shopData) {
-      logger.error(
-        "Shop not found in database",
-        error || new Error(`Shop not found: ${shop}`),
-        { component: "content-center-auth" },
-      );
+    // 2. Try API Key authentication (X-API-Key header)
+    const apiKeyResult = await validateApiKeyWithDetails(request);
+    if (apiKeyResult.authenticated && apiKeyResult.shopId) {
       return {
-        authenticated: false,
-        error: "Shop not found. Please install the app first.",
+        authenticated: true,
+        userId: apiKeyResult.shopId,
+        authMethod: "api_key",
       };
     }
 
-    // Successfully authenticated - use shop_id as userId
-    // SECURITY: Set user context for Sentry error tracking
-    logger.setUser(shopData.id, {
-      shop: shopData.shop_domain,
-    });
+    // 3. Check X-Shopify-Shop-Domain header (for embedded app iframe context)
+    // This is only valid when combined with session token validation done by middleware
+    const shopHeader = request.headers.get("x-shopify-shop-domain");
+    const sessionTokenHeader = request.headers.get("x-shopify-session-token");
+
+    if (shopHeader && sessionTokenHeader) {
+      const shopDomain = validateShopifySessionToken(sessionTokenHeader);
+      if (shopDomain && shopDomain === shopHeader) {
+        // Verify shop exists in database
+        const { data: shopData, error } = await supabaseAdmin
+          .from("shops")
+          .select("id, shop_domain")
+          .eq("shop_domain", shopDomain)
+          .eq("is_active", true)
+          .single();
+
+        if (!error && shopData) {
+          logger.setUser(shopData.id, {
+            shop: shopData.shop_domain,
+          });
+
+          return {
+            authenticated: true,
+            userId: shopData.id,
+            shopDomain: shopData.shop_domain,
+            authMethod: "session_token",
+          };
+        }
+      }
+    }
 
     return {
-      authenticated: true,
-      userId: shopData.id,
+      authenticated: false,
+      error:
+        "Authentication required. Provide Authorization header with Shopify session token or X-API-Key header.",
     };
   } catch (error) {
     logger.error("Authentication error:", error as Error, {

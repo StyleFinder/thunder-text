@@ -55,7 +55,7 @@ export class CreativeAgent {
         { role: "user", content: userPrompt },
       ],
       {
-        model: "gpt-4o", // Use high-quality model for creative work
+        model: "gpt-4o-mini", // Cost-effective model for text generation
         temperature: 0.8, // Higher temperature for creativity
         maxTokens: 2000,
       },

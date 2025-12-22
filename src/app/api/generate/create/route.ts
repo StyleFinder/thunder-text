@@ -3,6 +3,7 @@ import { openai } from "@/lib/openai";
 import { getCombinedPrompt, type ProductCategory } from "@/lib/prompts";
 import { logger } from "@/lib/logger";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { canGenerateProductDescriptionByDomain } from "@/lib/usage/limits";
 
 interface CreateProductRequest {
   images: string[]; // base64 encoded images
@@ -101,6 +102,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: "Shop domain required" },
         { status: 401 },
+      );
+    }
+
+    // Check usage limits before processing
+    const usageCheck = await canGenerateProductDescriptionByDomain(shopDomain);
+    if (!usageCheck.allowed) {
+      logger.info("[Generate Create] Usage limit reached", {
+        component: "create",
+        shopDomain,
+        plan: usageCheck.plan,
+        used: usageCheck.used,
+        limit: usageCheck.limit,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: usageCheck.error || "Monthly usage limit reached",
+          usage: {
+            current: usageCheck.used,
+            limit: usageCheck.limit,
+            remaining: usageCheck.remaining,
+            plan: usageCheck.plan,
+          },
+        },
+        { status: 403 },
       );
     }
 
@@ -485,10 +511,12 @@ ${additionalNotes ? `Special Instructions: ${additionalNotes}` : ""}`;
       });
     }
 
+    // Use real usage data from the check (account for the generation we just made)
     const usage = {
-      current: 0, // Future: fetch from database
-      limit: 25,
-      remaining: 25, // Future: calculate from database
+      current: usageCheck.used + 1,
+      limit: usageCheck.limit,
+      remaining: Math.max(0, usageCheck.remaining - 1),
+      plan: usageCheck.plan,
     };
 
     return NextResponse.json({

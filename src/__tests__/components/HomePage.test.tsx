@@ -4,7 +4,12 @@ import '@testing-library/jest-dom'
 
 // Mock next/navigation
 const mockReplace = jest.fn()
-const mockGet = jest.fn()
+
+let mockedSearchParams: Record<string, string | null> = {}
+
+const setSearchParams = (params: Record<string, string | null>) => {
+  mockedSearchParams = params
+}
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -13,7 +18,7 @@ jest.mock('next/navigation', () => ({
     prefetch: jest.fn(),
   }),
   useSearchParams: () => ({
-    get: mockGet,
+    get: (key: string) => mockedSearchParams[key] ?? null,
   }),
 }))
 
@@ -23,7 +28,8 @@ global.fetch = jest.fn()
 describe('HomePage (Root Route Handler)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockGet.mockReturnValue(null) // Default: no shop parameter
+    setSearchParams({})
+    ;(global.fetch as jest.Mock).mockReset()
   })
 
   describe('Loading State', () => {
@@ -44,7 +50,7 @@ describe('HomePage (Root Route Handler)', () => {
 
   describe('Routing Logic', () => {
     it('should redirect to login when no shop parameter is provided', async () => {
-      mockGet.mockReturnValue(null)
+      setSearchParams({})
 
       render(<HomePage />)
 
@@ -54,7 +60,7 @@ describe('HomePage (Root Route Handler)', () => {
     })
 
     it('should redirect to welcome when shop is not found', async () => {
-      mockGet.mockReturnValue('test-shop.myshopify.com')
+      setSearchParams({ shop: 'test-shop.myshopify.com' })
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 404,
@@ -68,7 +74,7 @@ describe('HomePage (Root Route Handler)', () => {
     })
 
     it('should redirect to dashboard when onboarding is complete', async () => {
-      mockGet.mockReturnValue('test-shop.myshopify.com')
+      setSearchParams({ shop: 'test-shop.myshopify.com' })
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -88,7 +94,7 @@ describe('HomePage (Root Route Handler)', () => {
     })
 
     it('should redirect to welcome when onboarding is not complete', async () => {
-      mockGet.mockReturnValue('test-shop.myshopify.com')
+      setSearchParams({ shop: 'test-shop.myshopify.com' })
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -108,7 +114,7 @@ describe('HomePage (Root Route Handler)', () => {
     })
 
     it('should redirect coach users to coach login', async () => {
-      mockGet.mockReturnValue('coach@example.com')
+      setSearchParams({ shop: 'coach@example.com' })
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -130,7 +136,7 @@ describe('HomePage (Root Route Handler)', () => {
 
   describe('Error State', () => {
     it('should show error message when API call fails', async () => {
-      mockGet.mockReturnValue('test-shop.myshopify.com')
+      setSearchParams({ shop: 'test-shop.myshopify.com' })
       ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
 
       render(<HomePage />)
@@ -142,7 +148,7 @@ describe('HomePage (Root Route Handler)', () => {
     })
 
     it('should have a retry button in error state', async () => {
-      mockGet.mockReturnValue('test-shop.myshopify.com')
+      setSearchParams({ shop: 'test-shop.myshopify.com' })
       ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
 
       render(<HomePage />)
@@ -153,7 +159,7 @@ describe('HomePage (Root Route Handler)', () => {
     })
 
     it('should show Thunder Text branding in error state', async () => {
-      mockGet.mockReturnValue('test-shop.myshopify.com')
+      setSearchParams({ shop: 'test-shop.myshopify.com' })
       ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
 
       render(<HomePage />)

@@ -120,17 +120,19 @@ const FREE_PLAN_LIMITS = {
 // Free Plan Usage Card Component - Shows free plan limits with upgrade prompt
 function PlanUsageCard({
   shop,
+  usage,
 }: {
   shop: string;
   subscription: SubscriptionInfo | null;
+  usage?: UsageStats;
 }) {
-  // For now, hardcoded usage - in production this would come from API
-  const productDescUsed = 3;
-  const adDescUsed = 2;
-  const productDescTotal = FREE_PLAN_LIMITS.productDescriptions;
-  const adDescTotal = FREE_PLAN_LIMITS.adDescriptions;
-  const productPercent = Math.round((productDescUsed / productDescTotal) * 100);
-  const adPercent = Math.round((adDescUsed / adDescTotal) * 100);
+  // Use real usage data from API, fallback to zeros if not available
+  const productDescUsed = usage?.productDescriptions.used ?? 0;
+  const adDescUsed = usage?.ads.used ?? 0;
+  const productDescTotal = usage?.productDescriptions.limit ?? FREE_PLAN_LIMITS.productDescriptions;
+  const adDescTotal = usage?.ads.limit ?? FREE_PLAN_LIMITS.adDescriptions;
+  const productPercent = usage?.productDescriptions.percentUsed ?? 0;
+  const adPercent = usage?.ads.percentUsed ?? 0;
 
   return (
     <div
@@ -237,16 +239,23 @@ function PlanUsageCard({
 function ActivePlanCard({
   shop,
   subscription,
+  usage,
 }: {
   shop: string;
   subscription: SubscriptionInfo;
+  usage?: UsageStats;
 }) {
   const planName = subscription.plan === "pro" ? "Pro" : "Starter";
   const isPro = subscription.plan === "pro";
-  const creditsTotal = PLAN_CREDITS[subscription.plan] || 5000;
-  // For now, hardcoded usage - in production this would come from API
-  const creditsUsed = 847;
-  const percentUsed = Math.round((creditsUsed / creditsTotal) * 100);
+
+  // Use real usage data - show product descriptions usage for paid plans
+  const productUsed = usage?.productDescriptions.used ?? 0;
+  const productLimit = usage?.productDescriptions.limit ?? (isPro ? 5000 : 2000);
+  const adsUsed = usage?.ads.used ?? 0;
+  const adsLimit = usage?.ads.limit ?? (isPro ? 1000 : 300);
+  const productPercent = usage?.productDescriptions.percentUsed ?? 0;
+  const adsPercent = usage?.ads.percentUsed ?? 0;
+  const maxPercent = Math.max(productPercent, adsPercent);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "N/A";
@@ -311,29 +320,29 @@ function ActivePlanCard({
           </span>
         </div>
 
-        {/* Usage Progress Bar */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
+        {/* Product Descriptions Usage */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1">
             <span
               className={`text-sm font-medium ${isPro ? "text-amber-900" : "text-blue-900"}`}
             >
-              Credits Used
+              Product Descriptions
             </span>
             <span
               className={`text-sm font-bold ${isPro ? "text-amber-800" : "text-blue-800"}`}
             >
-              {creditsUsed.toLocaleString()} / {creditsTotal.toLocaleString()}
+              {productUsed.toLocaleString()} / {productLimit.toLocaleString()}
             </span>
           </div>
           <div
-            className={`w-full h-3 rounded-full overflow-hidden ${isPro ? "bg-amber-200" : "bg-blue-200"}`}
+            className={`w-full h-2.5 rounded-full overflow-hidden ${isPro ? "bg-amber-200" : "bg-blue-200"}`}
           >
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
-                width: `${percentUsed}%`,
+                width: `${Math.min(productPercent, 100)}%`,
                 background:
-                  percentUsed > 80
+                  productPercent > 80
                     ? "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)"
                     : isPro
                       ? "linear-gradient(90deg, #f59e0b 0%, #d97706 100%)"
@@ -341,11 +350,43 @@ function ActivePlanCard({
               }}
             />
           </div>
-          <div className="flex items-center justify-between mt-1">
+        </div>
+
+        {/* Ads Usage */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1">
+            <span
+              className={`text-sm font-medium ${isPro ? "text-amber-900" : "text-blue-900"}`}
+            >
+              Ads
+            </span>
+            <span
+              className={`text-sm font-bold ${isPro ? "text-amber-800" : "text-blue-800"}`}
+            >
+              {adsUsed.toLocaleString()} / {adsLimit.toLocaleString()}
+            </span>
+          </div>
+          <div
+            className={`w-full h-2.5 rounded-full overflow-hidden ${isPro ? "bg-amber-200" : "bg-blue-200"}`}
+          >
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min(adsPercent, 100)}%`,
+                background:
+                  adsPercent > 80
+                    ? "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)"
+                    : isPro
+                      ? "linear-gradient(90deg, #f59e0b 0%, #d97706 100%)"
+                      : "linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)",
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between mt-2">
             <p
               className={`text-xs ${isPro ? "text-amber-700" : "text-blue-700"}`}
             >
-              {percentUsed}% used this month
+              {maxPercent}% used this month
             </p>
             {subscription.currentPeriodEnd && (
               <p
@@ -357,6 +398,31 @@ function ActivePlanCard({
           </div>
         </div>
 
+        {/* Upgrade CTA for Starter plan at 90%+ */}
+        {!isPro && maxPercent >= 90 && (
+          <div className="p-4 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg mb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-white font-medium text-sm">
+                  {maxPercent >= 100 ? "You've reached your limit!" : "Running low on usage!"}
+                </p>
+                <p className="text-amber-100 text-xs mt-0.5">
+                  Upgrade to Pro for 5,000 products & 1,000 ads/month
+                </p>
+              </div>
+              <Link href={`/settings/billing?shop=${shop}`}>
+                <Button
+                  size="sm"
+                  className="bg-white hover:bg-gray-100 text-amber-600 font-medium shadow-md"
+                >
+                  <Crown className="w-4 h-4 mr-1" />
+                  Upgrade
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Manage Plan Link */}
         <div
           className={`p-3 rounded-lg ${isPro ? "bg-amber-50" : "bg-blue-50"}`}
@@ -365,7 +431,7 @@ function ActivePlanCard({
             <p
               className={`text-sm ${isPro ? "text-amber-800" : "text-blue-800"}`}
             >
-              {(creditsTotal - creditsUsed).toLocaleString()} credits remaining
+              {usage?.productDescriptions.remaining.toLocaleString() ?? 0} products remaining
             </p>
             <Link href={`/settings/billing?shop=${shop}`}>
               <Button
@@ -454,6 +520,114 @@ function FeatureTile({
   );
 }
 
+// Upgrade Banner Component - Shows when usage is at 90%+ for free/starter plans
+function UsageLimitBanner({
+  shop,
+  usage,
+  currentPlan,
+}: {
+  shop: string;
+  usage: UsageStats;
+  currentPlan: string;
+}) {
+  const productPercent = usage.productDescriptions.percentUsed;
+  const adPercent = usage.ads.percentUsed;
+  const maxPercent = Math.max(productPercent, adPercent);
+
+  // Only show banner if usage is at 90%+ and not on Pro plan
+  if (maxPercent < 90 || currentPlan === "pro") {
+    return null;
+  }
+
+  const isAtLimit = maxPercent >= 100;
+  const limitType =
+    productPercent >= adPercent ? "product descriptions" : "ads";
+  const nextPlan = currentPlan === "free" ? "Starter" : "Pro";
+  const nextPlanLimit =
+    currentPlan === "free"
+      ? productPercent >= adPercent
+        ? "2,000"
+        : "300"
+      : productPercent >= adPercent
+        ? "5,000"
+        : "1,000";
+
+  return (
+    <div
+      className={`rounded-xl p-4 mb-6 border-2 ${
+        isAtLimit
+          ? "bg-gradient-to-r from-red-50 to-orange-50 border-red-300"
+          : "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-300"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div
+            className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              isAtLimit ? "bg-red-100" : "bg-amber-100"
+            }`}
+          >
+            {isAtLimit ? (
+              <TrendingUp
+                className={`w-5 h-5 ${isAtLimit ? "text-red-600" : "text-amber-600"}`}
+              />
+            ) : (
+              <Zap
+                className={`w-5 h-5 ${isAtLimit ? "text-red-600" : "text-amber-600"}`}
+              />
+            )}
+          </div>
+          <div>
+            <p
+              className={`font-semibold ${isAtLimit ? "text-red-800" : "text-amber-800"}`}
+            >
+              {isAtLimit
+                ? `You've reached your ${limitType} limit!`
+                : `You're at ${maxPercent}% of your ${limitType} limit`}
+            </p>
+            <p
+              className={`text-sm ${isAtLimit ? "text-red-600" : "text-amber-600"}`}
+            >
+              Upgrade to {nextPlan} for {nextPlanLimit} {limitType}/month
+            </p>
+          </div>
+        </div>
+        <Link href={`/settings/billing?shop=${shop}`}>
+          <Button
+            className={`${
+              isAtLimit
+                ? "bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600"
+                : "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600"
+            } text-white font-medium shadow-md`}
+          >
+            <Crown className="w-4 h-4 mr-2" />
+            Upgrade Now
+          </Button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// Usage stats interface (from API)
+interface UsageStats {
+  productDescriptions: {
+    used: number;
+    limit: number;
+    remaining: number;
+    percentUsed: number;
+  };
+  ads: {
+    used: number;
+    limit: number;
+    remaining: number;
+    percentUsed: number;
+  };
+  plan: string;
+  periodStart: string;
+  periodEnd: string;
+}
+
 // Stats interface
 interface DashboardStats {
   productsGenerated: number;
@@ -461,6 +635,7 @@ interface DashboardStats {
   timeSavedMinutes: number;
   timeSavedDisplay: string;
   estimatedSavings: number;
+  usage?: UsageStats;
 }
 
 function DashboardContent() {
@@ -552,6 +727,7 @@ function DashboardContent() {
             timeSavedMinutes: data.data.timeSavedMinutes || 0,
             timeSavedDisplay: data.data.timeSavedDisplay || "0 min",
             estimatedSavings: data.data.estimatedSavings || 0,
+            usage: data.data.usage || undefined,
           });
         }
       } catch (error) {
@@ -700,6 +876,15 @@ function DashboardContent() {
           />
         </div>
 
+        {/* Usage Limit Warning Banner - Shows at 90%+ usage */}
+        {!statsLoading && stats.usage && (
+          <UsageLimitBanner
+            shop={shop}
+            usage={stats.usage}
+            currentPlan={stats.usage.plan}
+          />
+        )}
+
         {/* Hot Takes - Full Width */}
         <div className="mb-8">
           <HotTakesCard />
@@ -740,9 +925,9 @@ function DashboardContent() {
         {!subscriptionLoading && (
           <div className="mt-8">
             {isActivePaid && subscription ? (
-              <ActivePlanCard shop={shop} subscription={subscription} />
+              <ActivePlanCard shop={shop} subscription={subscription} usage={stats.usage} />
             ) : (
-              <PlanUsageCard shop={shop} subscription={subscription} />
+              <PlanUsageCard shop={shop} subscription={subscription} usage={stats.usage} />
             )}
           </div>
         )}

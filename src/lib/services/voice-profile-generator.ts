@@ -67,7 +67,7 @@ export async function generateVoiceProfile(
   const profileText = await callChatCompletion(
     messages,
     {
-      model: 'gpt-4o',  // Use GPT-4 for better analysis
+      model: 'gpt-4o-mini',  // Cost-effective for text analysis
       temperature: 0.3,  // Lower temperature for more consistent analysis
       maxTokens: 2500,   // Enough for detailed profile
       topP: 0.9
@@ -220,7 +220,7 @@ Maintain the same structure and format as the existing profile. Be specific and 
   const profileText = await callChatCompletion(
     messages,
     {
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini', // Cost-effective for text analysis
       temperature: 0.3,
       maxTokens: 2500
     }

@@ -268,7 +268,7 @@ Generate a comprehensive market research analysis document.
       },
     ],
     {
-      model: "gpt-4o",
+      model: "gpt-4o-mini", // Cost-effective for text analysis
       temperature: 0.4,
       maxTokens: 4000,
     },
@@ -352,7 +352,7 @@ Generate a comprehensive Ideal Customer Avatar document.
       },
     ],
     {
-      model: "gpt-4o",
+      model: "gpt-4o-mini", // Cost-effective for text analysis
       temperature: 0.4,
       maxTokens: 4000,
     },
@@ -426,7 +426,7 @@ Generate comprehensive pain point and content strategy analysis.
       },
     ],
     {
-      model: "gpt-4o",
+      model: "gpt-4o-mini", // Cost-effective for text analysis
       temperature: 0.4,
       maxTokens: 4000,
     },
@@ -512,7 +512,7 @@ Generate comprehensive Brand Mission, Vision & Values document.
       },
     ],
     {
-      model: "gpt-4o",
+      model: "gpt-4o-mini", // Cost-effective for text analysis
       temperature: 0.4,
       maxTokens: 3500,
     },
@@ -581,7 +581,7 @@ Generate comprehensive Brand Positioning Statement document.
       },
     ],
     {
-      model: "gpt-4o",
+      model: "gpt-4o-mini", // Cost-effective for text analysis
       temperature: 0.4,
       maxTokens: 3000,
     },
@@ -683,7 +683,7 @@ Generate comprehensive AI Engine Custom Instructions.
       },
     ],
     {
-      model: "gpt-4o",
+      model: "gpt-4o-mini", // Cost-effective for text analysis
       temperature: 0.3,
       maxTokens: 3500,
     },
@@ -739,7 +739,7 @@ Write in a professional, compelling tone that would be suitable for investors or
       },
     ],
     {
-      model: "gpt-4o",
+      model: "gpt-4o-mini", // Cost-effective for text analysis
       temperature: 0.4,
       maxTokens: 800,
     },

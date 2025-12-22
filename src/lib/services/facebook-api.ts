@@ -2,12 +2,17 @@
  * Facebook Marketing API Service
  *
  * Handles all interactions with Facebook Marketing API v21.0
- * Includes token management, refresh logic, and error handling
+ * Includes token management, refresh logic, error handling, and circuit breaker
  */
 
 import { createClient } from "@supabase/supabase-js";
 import { decryptToken, encryptToken } from "./encryption";
 import { logger } from "@/lib/logger";
+import {
+  withCircuitBreaker,
+  CircuitBreakerOpenError,
+  getCircuitStatus,
+} from "@/lib/resilience/circuit-breaker";
 
 // Types
 export interface FacebookIntegration {
@@ -95,6 +100,43 @@ export class FacebookAPIError extends Error {
     super(message);
     this.name = "FacebookAPIError";
   }
+}
+
+/**
+ * Custom error for circuit breaker open state
+ */
+export class FacebookCircuitOpenError extends Error {
+  retryAfterMs: number;
+
+  constructor(message: string, retryAfterMs: number) {
+    super(message);
+    this.name = "FacebookCircuitOpenError";
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+/**
+ * Check if error should bypass circuit breaker
+ * Auth/token errors and user-specific issues shouldn't trip the circuit
+ */
+function isNonCircuitBreakerError(error: Error): boolean {
+  if (!(error instanceof FacebookAPIError)) return false;
+
+  // Token/auth errors are user-specific, not service-wide
+  if (
+    error.errorCode === "190" ||
+    error.errorType === "OAuthException" ||
+    error.message.toLowerCase().includes("token")
+  ) {
+    return true;
+  }
+
+  // Permission errors are user-specific
+  if (error.errorCode === "10" || error.errorCode === "200") {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -227,9 +269,9 @@ async function getAccessToken(shopId: string): Promise<string> {
 }
 
 /**
- * Make authenticated request to Facebook API
+ * Make authenticated request to Facebook API (internal, bypasses circuit breaker)
  */
-async function makeRequest<T>(
+async function executeRequest<T>(
   shopId: string,
   endpoint: string,
   options: RequestInit = {},
@@ -259,6 +301,40 @@ async function makeRequest<T>(
   }
 
   return data as T;
+}
+
+/**
+ * Make authenticated request to Facebook API with circuit breaker protection
+ */
+async function makeRequest<T>(
+  shopId: string,
+  endpoint: string,
+  options: RequestInit = {},
+): Promise<T> {
+  return withCircuitBreaker(
+    "facebook",
+    async () => {
+      return executeRequest<T>(shopId, endpoint, options);
+    },
+    {
+      isNonRetryableError: isNonCircuitBreakerError,
+    },
+  ).catch((error) => {
+    if (error instanceof CircuitBreakerOpenError) {
+      const status = getCircuitStatus("facebook");
+      logger.warn(`Facebook circuit breaker OPEN - ${status.failureCount} failures`, {
+        component: "facebook-api",
+        shopId,
+      });
+      throw new FacebookCircuitOpenError(
+        `Facebook API temporarily unavailable (circuit breaker open). ` +
+          `${status.failureCount} failures in last ${Math.floor(status.config.failureWindowMs / 1000)}s. ` +
+          `Retry after ${Math.ceil(error.retryAfterMs / 1000)}s.`,
+        error.retryAfterMs,
+      );
+    }
+    throw error;
+  });
 }
 
 /**

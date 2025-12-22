@@ -247,14 +247,14 @@ export function estimateCost(contentType: ContentType, wordCount: number): numbe
   const promptTokens = 1500 // Voice profile + instructions
   const completionTokens = wordCount * 1.3 // Words to tokens ratio
 
-  // GPT-4 pricing (approximate)
-  const inputCostPer1kTokens = 0.03
-  const outputCostPer1kTokens = 0.06
+  // GPT-4o-mini pricing (as of 2024): $0.15/1M input, $0.60/1M output
+  const inputCostPer1kTokens = 0.00015  // $0.15 per 1M = $0.00015 per 1K
+  const outputCostPer1kTokens = 0.0006  // $0.60 per 1M = $0.0006 per 1K
 
   const inputCost = (promptTokens / 1000) * inputCostPer1kTokens
   const outputCost = (completionTokens / 1000) * outputCostPer1kTokens
 
-  return Math.round((inputCost + outputCost) * 100) / 100 // Round to 2 decimals
+  return Math.round((inputCost + outputCost) * 10000) / 10000 // Round to 4 decimals for accuracy
 }
 
 /**

@@ -78,7 +78,7 @@ Output Format (JSON Array):
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
         ], {
-            model: 'gpt-4o',
+            model: 'gpt-4o-mini', // Cost-effective for text analysis
             temperature: 0.2 // Low temperature for consistent, objective grading
         });
 

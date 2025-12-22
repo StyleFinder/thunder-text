@@ -5,6 +5,7 @@ import { aieEngine } from "@/lib/aie/engine";
 import { AiePlatform, AieGoal, AdLengthMode } from "@/types/aie";
 import { logger } from "@/lib/logger";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { canGenerateAdByDomain } from "@/lib/usage/limits";
 
 /**
  * POST /api/aie/generate
@@ -52,6 +53,30 @@ export async function POST(req: NextRequest) {
     if (!shopData.is_active) {
       return NextResponse.json(
         { error: "Shop is not active" },
+        { status: 403 },
+      );
+    }
+
+    // Check usage limits before generating
+    const usageCheck = await canGenerateAdByDomain(shopDomain);
+    if (!usageCheck.allowed) {
+      logger.info("[AIE Generate] Usage limit reached", {
+        component: "aie-generate",
+        shopDomain,
+        plan: usageCheck.plan,
+        used: usageCheck.used,
+        limit: usageCheck.limit,
+      });
+      return NextResponse.json(
+        {
+          error: usageCheck.error || "Monthly ad limit reached",
+          usage: {
+            current: usageCheck.used,
+            limit: usageCheck.limit,
+            remaining: usageCheck.remaining,
+            plan: usageCheck.plan,
+          },
+        },
         { status: 403 },
       );
     }

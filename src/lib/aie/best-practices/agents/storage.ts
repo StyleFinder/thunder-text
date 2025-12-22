@@ -160,7 +160,7 @@ export class StorageAgent {
       },
 
       analysis_metadata: {
-        model: process.env.OPENAI_MODEL_ANALYSIS || 'gpt-4o',
+        model: process.env.OPENAI_MODEL_ANALYSIS || 'gpt-4o-mini',
         temperature: 0.3,
         timestamp: new Date().toISOString(),
       },

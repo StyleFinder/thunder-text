@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
+import { getUsageStats } from "@/lib/usage/limits";
 
 /**
  * GET /api/shop/stats
@@ -162,6 +163,9 @@ export async function GET(request: NextRequest) {
       .select("*", { count: "exact", head: true })
       .eq("shop_id", shopId);
 
+    // Get usage limits info
+    const usageStats = await getUsageStats(shopId);
+
     logger.info("[Shop Stats] Stats retrieved", {
       component: "shop-stats",
       shopId,
@@ -169,6 +173,7 @@ export async function GET(request: NextRequest) {
       adsCreated,
       timeSavedMinutes,
       estimatedSavings,
+      plan: usageStats.plan,
     });
 
     return NextResponse.json({
@@ -194,6 +199,8 @@ export async function GET(request: NextRequest) {
             year: "numeric",
           }),
         },
+        // Usage limits
+        usage: usageStats,
       },
     });
   } catch (error) {

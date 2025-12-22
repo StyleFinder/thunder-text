@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
 import { lookupShopWithFallback } from "@/lib/shop-lookup";
+import { canGenerateAdByDomain } from "@/lib/usage/limits";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,6 +39,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: "Shop not found" },
         { status: 404 },
+      );
+    }
+
+    // Check usage limits before generating
+    const usageCheck = await canGenerateAdByDomain(shop);
+    if (!usageCheck.allowed) {
+      logger.info("[Facebook Generate] Usage limit reached", {
+        component: "facebook-generate-ad-content",
+        shop,
+        plan: usageCheck.plan,
+        used: usageCheck.used,
+        limit: usageCheck.limit,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: usageCheck.error || "Monthly ad limit reached",
+          usage: {
+            current: usageCheck.used,
+            limit: usageCheck.limit,
+            remaining: usageCheck.remaining,
+            plan: usageCheck.plan,
+          },
+        },
+        { status: 403 },
       );
     }
 

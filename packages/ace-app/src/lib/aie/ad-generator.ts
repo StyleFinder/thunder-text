@@ -11,6 +11,8 @@ import type {
   AIERAGContext,
   AIEAdVariantDraft,
   AIEBrandVoice,
+  AIEHookType,
+  AIETone,
 } from './types';
 import { AIEGenerationError } from './types';
 import {
@@ -99,9 +101,9 @@ async function generateSingleVariant(params: {
   // Build the prompt with RAG context
   const prompt = buildGenerationPrompt(params);
 
-  // Call GPT-4 for ad generation
+  // Call GPT-4o-mini for ad generation (text-only, cost-effective)
   const response = await aieOpenAI.chat.completions.create({
-    model: 'gpt-4o',
+    model: 'gpt-4o-mini',
     messages: [
       {
         role: 'system',
@@ -151,8 +153,8 @@ Generate ads in JSON format with clear structure.`,
     description: generated.description,
     cta: generated.cta,
     cta_rationale: generated.cta_rationale,
-    hook_technique: params.hookTechnique as any,
-    tone: params.tone as any,
+    hook_technique: params.hookTechnique as AIEHookType,
+    tone: params.tone as AIETone,
     predicted_score: 0, // Will be calculated
     score_breakdown: {
       brand_fit: 0,

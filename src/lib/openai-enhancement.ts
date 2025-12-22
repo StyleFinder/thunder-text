@@ -79,7 +79,7 @@ export class ProductEnhancementGenerator {
 
       // Call OpenAI API
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o", // Use GPT-4 Omni for better results
+        model: "gpt-4o-mini", // Cost-effective for text enhancement
         messages: [
           {
             role: "system",

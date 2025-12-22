@@ -274,12 +274,19 @@ CRITICAL: The "description" field must strictly follow the custom prompt guideli
     return this.storeUsage.get(storeId) || 0;
   }
 
-  // Cost calculation based on GPT-4 Vision pricing
-  calculateCost(tokens: number): number {
-    // GPT-4 Vision pricing (approximate)
-    const costPerToken = 0.00003; // $0.03 per 1K tokens
+  // Cost calculation based on GPT-4o-mini pricing (as of 2024)
+  calculateCost(tokens: number, isOutput: boolean = false): number {
+    // GPT-4o-mini pricing: $0.15/1M input, $0.60/1M output
+    const costPerToken = isOutput ? 0.0000006 : 0.00000015; // $0.60 or $0.15 per 1M tokens
     const result = tokens * costPerToken;
-    return parseFloat(result.toFixed(6));
+    return parseFloat(result.toFixed(8));
+  }
+
+  // Calculate combined cost for input and output tokens
+  calculateTotalCost(inputTokens: number, outputTokens: number): number {
+    const inputCost = this.calculateCost(inputTokens, false);
+    const outputCost = this.calculateCost(outputTokens, true);
+    return parseFloat((inputCost + outputCost).toFixed(8));
   }
 
   // Enhanced product description for existing products

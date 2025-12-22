@@ -89,7 +89,7 @@ export async function generateContent(
       }
     ],
     {
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini', // Cost-effective for text generation
       temperature,
       maxTokens,
       topP: 0.95,

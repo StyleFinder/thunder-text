@@ -1,12 +1,29 @@
+/**
+ * Shop Sizes API
+ *
+ * SECURITY: Requires authentication via Shopify session token or API key
+ * All operations verify the authenticated shop matches the requested shop
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createCorsHeaders, handleCorsPreflightRequest } from '@/lib/middleware/cors';
 import { logger } from '@/lib/logger';
+import { authenticateRequest } from '@/lib/auth/content-center-auth';
 
 export async function GET(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request);
 
   try {
+    // SECURITY: Authenticate request first
+    const authResult = await authenticateRequest(request);
+    if (!authResult.authenticated || !authResult.userId) {
+      return NextResponse.json(
+        { error: authResult.error || 'Authentication required' },
+        { status: 401, headers: corsHeaders }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const shop = searchParams.get('shop');
 
@@ -32,9 +49,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // SECURITY: Verify authenticated user matches requested shop
+    if (shopData.id !== authResult.userId) {
+      logger.warn('Shop access denied - user/shop mismatch', {
+        component: 'shop-sizes-api',
+        authenticatedUserId: authResult.userId,
+        requestedShopId: shopData.id,
+      });
+      return NextResponse.json(
+        { error: 'Access denied' },
+        { status: 403, headers: corsHeaders }
+      );
+    }
+
     // Get shop sizes for this shop (both custom and default)
-    // Note: PostgREST cache was reloaded with NOTIFY pgrst, 'reload schema'
-    // Strategy: Fetch all, then filter to show custom overrides instead of templates
     const { data: allSizes, error: sizesError } = await supabaseAdmin
       .from('shop_sizes')
       .select(`
@@ -116,6 +144,15 @@ export async function POST(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request);
 
   try {
+    // SECURITY: Authenticate request first
+    const authResult = await authenticateRequest(request);
+    if (!authResult.authenticated || !authResult.userId) {
+      return NextResponse.json(
+        { error: authResult.error || 'Authentication required' },
+        { status: 401, headers: corsHeaders }
+      );
+    }
+
     const body = await request.json();
     const { shop, name, sizes, is_default } = body;
 
@@ -137,6 +174,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Shop not found' },
         { status: 404, headers: corsHeaders }
+      );
+    }
+
+    // SECURITY: Verify authenticated user matches requested shop
+    if (shopData.id !== authResult.userId) {
+      logger.warn('Shop access denied - user/shop mismatch', {
+        component: 'shop-sizes-api',
+        operation: 'POST',
+        authenticatedUserId: authResult.userId,
+        requestedShopId: shopData.id,
+      });
+      return NextResponse.json(
+        { error: 'Access denied' },
+        { status: 403, headers: corsHeaders }
       );
     }
 
@@ -180,8 +231,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('Shop sizes create API error', error as Error, {
       component: 'shop-sizes-api',
-      operation: 'POST',
-      shop: (request as any).body?.shop
+      operation: 'POST'
     });
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -194,6 +244,15 @@ export async function PUT(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request);
 
   try {
+    // SECURITY: Authenticate request first
+    const authResult = await authenticateRequest(request);
+    if (!authResult.authenticated || !authResult.userId) {
+      return NextResponse.json(
+        { error: authResult.error || 'Authentication required' },
+        { status: 401, headers: corsHeaders }
+      );
+    }
+
     const body = await request.json();
     const { shop, id, name, sizes, is_default } = body;
 
@@ -215,6 +274,20 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         { error: 'Shop not found' },
         { status: 404, headers: corsHeaders }
+      );
+    }
+
+    // SECURITY: Verify authenticated user matches requested shop
+    if (shopData.id !== authResult.userId) {
+      logger.warn('Shop access denied - user/shop mismatch', {
+        component: 'shop-sizes-api',
+        operation: 'PUT',
+        authenticatedUserId: authResult.userId,
+        requestedShopId: shopData.id,
+      });
+      return NextResponse.json(
+        { error: 'Access denied' },
+        { status: 403, headers: corsHeaders }
       );
     }
 
@@ -281,6 +354,15 @@ export async function DELETE(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request);
 
   try {
+    // SECURITY: Authenticate request first
+    const authResult = await authenticateRequest(request);
+    if (!authResult.authenticated || !authResult.userId) {
+      return NextResponse.json(
+        { error: authResult.error || 'Authentication required' },
+        { status: 401, headers: corsHeaders }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const shop = searchParams.get('shop');
     const id = searchParams.get('id');
@@ -303,6 +385,20 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { error: 'Shop not found' },
         { status: 404, headers: corsHeaders }
+      );
+    }
+
+    // SECURITY: Verify authenticated user matches requested shop
+    if (shopData.id !== authResult.userId) {
+      logger.warn('Shop access denied - user/shop mismatch', {
+        component: 'shop-sizes-api',
+        operation: 'DELETE',
+        authenticatedUserId: authResult.userId,
+        requestedShopId: shopData.id,
+      });
+      return NextResponse.json(
+        { error: 'Access denied' },
+        { status: 403, headers: corsHeaders }
       );
     }
 

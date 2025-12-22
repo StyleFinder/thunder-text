@@ -475,39 +475,27 @@ export async function verifyStoredOAuthState(
 
   const storedHash = cookieStore.get(cookieName)?.value;
 
-  // Log all cookies for debugging
-  const allCookies = cookieStore.getAll();
-  const oauthCookies = allCookies.filter((c) =>
-    c.name.startsWith(OAUTH_STATE_COOKIE_PREFIX),
-  );
-
-  console.log("[OAuth State Verify] Cookie check:", {
-    lookingFor: cookieName,
-    foundStoredHash: storedHash ? storedHash.substring(0, 8) + "..." : "NONE",
-    oauthCookiesFound: oauthCookies.map((c) => c.name),
-    totalCookies: allCookies.length,
-  });
-
   if (!storedHash) {
     // No stored state - either expired, already used, or attack attempt
-    console.log(
-      "[OAuth State Verify] No stored hash found for cookie:",
-      cookieName,
-    );
+    // SECURITY: Do not log cookie names or state values - prevents auth material exposure
     return false;
   }
 
-  // Compare hashes
+  // Compare hashes using constant-time comparison to prevent timing attacks
   const receivedHash = getStateHash(state);
-  const matches = storedHash === receivedHash;
 
-  console.log("[OAuth State Verify] Hash comparison:", {
-    storedHashPrefix: storedHash.substring(0, 8),
-    receivedHashPrefix: receivedHash.substring(0, 8),
-    matches,
-  });
+  // Length check first (not timing-sensitive)
+  if (storedHash.length !== receivedHash.length) {
+    return false;
+  }
 
-  return matches;
+  // Constant-time string comparison
+  let result = 0;
+  for (let i = 0; i < storedHash.length; i++) {
+    result |= storedHash.charCodeAt(i) ^ receivedHash.charCodeAt(i);
+  }
+
+  return result === 0;
 }
 
 /**

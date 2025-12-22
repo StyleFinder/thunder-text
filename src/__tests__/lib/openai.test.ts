@@ -136,14 +136,34 @@ describe('AIDescriptionGenerator', () => {
   })
 
   describe('calculateCost', () => {
-    it('should calculate cost correctly', () => {
-      const cost = generator.calculateCost(1000)
-      expect(cost).toBe(0.03) // 1000 tokens * 0.00003 per token
+    it('should calculate input cost correctly', () => {
+      const cost = generator.calculateCost(1000000, false)
+      expect(cost).toBe(0.15) // 1M tokens * $0.15/1M (GPT-4o-mini input)
+    })
+
+    it('should calculate output cost correctly', () => {
+      const cost = generator.calculateCost(1000000, true)
+      expect(cost).toBe(0.6) // 1M tokens * $0.60/1M (GPT-4o-mini output)
+    })
+
+    it('should default to input pricing', () => {
+      const cost = generator.calculateCost(1000000)
+      expect(cost).toBe(0.15) // Defaults to input pricing
     })
 
     it('should handle zero tokens', () => {
       const cost = generator.calculateCost(0)
       expect(cost).toBe(0)
+    })
+  })
+
+  describe('calculateTotalCost', () => {
+    it('should calculate combined input and output cost', () => {
+      const cost = generator.calculateTotalCost(1000000, 500000)
+      // Input: 1M * $0.15/1M = $0.15
+      // Output: 500K * $0.60/1M = $0.30
+      // Total: $0.45
+      expect(cost).toBe(0.45)
     })
   })
 

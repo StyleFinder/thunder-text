@@ -160,9 +160,9 @@ export async function POST(
 
     const generationTime = Date.now() - startTime;
 
-    // Calculate cost estimate (GPT-4 pricing: $0.03/1K input, $0.06/1K output)
-    const inputCost = ((generationResult.tokensUsed * 0.5) / 1000) * 0.03;
-    const outputCost = ((generationResult.tokensUsed * 0.5) / 1000) * 0.06;
+    // Calculate cost estimate (GPT-4o-mini pricing: $0.15/1M input, $0.60/1M output)
+    const inputCost = ((generationResult.tokensUsed * 0.5) / 1000000) * 0.15;
+    const outputCost = ((generationResult.tokensUsed * 0.5) / 1000000) * 0.60;
     const costEstimate = inputCost + outputCost;
 
     return NextResponse.json(

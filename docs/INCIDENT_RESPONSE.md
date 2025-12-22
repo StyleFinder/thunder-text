@@ -460,6 +460,11 @@ The root cause was [BRIEF ROOT CAUSE].
 | Update runbook for [X]   | @engineer | P3       | 2025-12-20 | Open   |
 ```
 
+### Alert Routing Update
+
+- `EXTERNAL_API_FAILURE` is now emitted by the circuit breaker for every non-OpenAI provider. Add this type to Supabase `alert_history` dashboards and Slack routing filters so Shopify/Facebook outages are surfaced with the rest of the P1 integrations.
+- Update downstream automation (PagerDuty, Linear auto-issue rules, incident bots, etc.) that previously matched only `OPENAI_API_FAILURE` so they page on the new type as well.
+
 ### Appendix
 
 ```markdown

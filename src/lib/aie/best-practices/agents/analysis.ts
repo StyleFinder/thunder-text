@@ -41,7 +41,7 @@ export class AnalysisAgent {
           { role: 'user', content: userPrompt },
         ],
         {
-          model: process.env.OPENAI_MODEL_ANALYSIS || 'gpt-4o',
+          model: process.env.OPENAI_MODEL_ANALYSIS || 'gpt-4o-mini',
           temperature: 0.3,
           response_format: { type: 'json_object' },
         }

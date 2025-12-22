@@ -20,6 +20,8 @@ import {
   selectTone,
   validateCharacterLimits,
 } from './utils';
+import { createRequestTracker } from '@/lib/monitoring/request-logger';
+import { logError } from '@/lib/monitoring/error-logger';
 
 /**
  * Generate 3 ad variants using GPT-4 with RAG context
@@ -95,101 +97,154 @@ async function generateSingleVariant(params: {
   brandVoice?: AIEBrandVoice;
   targetAudience?: string;
   imageUrl?: string;
+  shopId?: string;
 }): Promise<AIEAdVariantDraft> {
+  // Create request tracker for monitoring
+  const tracker = createRequestTracker('ad_generation', params.shopId);
+
   // Build the prompt with RAG context
   const prompt = buildGenerationPrompt(params);
-
-  // Call GPT-4 for ad generation
-  const response = await aieOpenAI.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      {
-        role: 'system',
-        content: `You are an expert ad copywriter specializing in ${params.platform} ads.
+  const systemPrompt = `You are an expert ad copywriter specializing in ${params.platform} ads.
 You create high-converting ad copy based on proven frameworks and best practices.
 Always follow platform-specific guidelines and character limits.
-Generate ads in JSON format with clear structure.`,
+Generate ads in JSON format with clear structure.`;
+
+  try {
+    // Call GPT-4o-mini for ad generation (text-only, cost-effective)
+    const response = await aieOpenAI.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      max_tokens: 1500,
+      temperature: 0.8, // Higher creativity for ad copy
+      response_format: { type: 'json_object' },
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('No response from GPT-4');
+    }
+
+    // Log successful request
+    const inputTokens = response.usage?.prompt_tokens || Math.ceil((systemPrompt.length + prompt.length) / 4);
+    const outputTokens = response.usage?.completion_tokens || Math.ceil(content.length / 4);
+
+    await tracker.complete({
+      model: 'gpt-4o-mini',
+      inputTokens,
+      outputTokens,
+      endpoint: 'chat.completions',
+      metadata: {
+        platform: params.platform,
+        goal: params.goal,
+        variantNumber: params.variantNumber,
+        variantType: params.variantType
+      }
+    });
+
+    const generated = JSON.parse(content);
+
+    // Validate character limits
+    const validation = validateCharacterLimits({
+      platform: params.platform,
+      headline: generated.headline,
+      primaryText: generated.primary_text,
+      description: generated.description,
+    });
+
+    if (!validation.valid) {
+      console.warn(`⚠️  Character limit warnings:`, validation.errors);
+    }
+
+    // Build variant draft
+    const variant: AIEAdVariantDraft = {
+      id: '', // Will be set by database
+      ad_request_id: '', // Will be set when saved
+      variant_number: params.variantNumber,
+      variant_type: params.variantType,
+      headline: generated.headline,
+      headline_alternatives: generated.headline_alternatives || [],
+      primary_text: generated.primary_text,
+      description: generated.description,
+      cta: generated.cta,
+      cta_rationale: generated.cta_rationale,
+      hook_technique: params.hookTechnique as any,
+      tone: params.tone as any,
+      predicted_score: 0, // Will be calculated
+      score_breakdown: {
+        brand_fit: 0,
+        context_relevance: 0,
+        platform_compliance: 0,
+        hook_strength: 0,
+        cta_clarity: 0,
       },
-      {
-        role: 'user',
-        content: prompt,
+      generation_reasoning: generated.reasoning,
+      rag_context_used: {
+        best_practice_ids: params.ragContext.best_practices
+          .slice(0, 5)
+          .map((bp) => bp.id),
+        example_ids: params.ragContext.ad_examples.slice(0, 3).map((ex) => ex.id),
       },
-    ],
-    max_tokens: 1500,
-    temperature: 0.8, // Higher creativity for ad copy
-    response_format: { type: 'json_object' },
-  });
-
-  const content = response.choices[0].message.content;
-  if (!content) {
-    throw new Error('No response from GPT-4');
-  }
-
-  const generated = JSON.parse(content);
-
-  // Validate character limits
-  const validation = validateCharacterLimits({
-    platform: params.platform,
-    headline: generated.headline,
-    primaryText: generated.primary_text,
-    description: generated.description,
-  });
-
-  if (!validation.valid) {
-    console.warn(`⚠️  Character limit warnings:`, validation.errors);
-  }
-
-  // Build variant draft
-  const variant: AIEAdVariantDraft = {
-    id: '', // Will be set by database
-    ad_request_id: '', // Will be set when saved
-    variant_number: params.variantNumber,
-    variant_type: params.variantType,
-    headline: generated.headline,
-    headline_alternatives: generated.headline_alternatives || [],
-    primary_text: generated.primary_text,
-    description: generated.description,
-    cta: generated.cta,
-    cta_rationale: generated.cta_rationale,
-    hook_technique: params.hookTechnique as any,
-    tone: params.tone as any,
-    predicted_score: 0, // Will be calculated
-    score_breakdown: {
-      brand_fit: 0,
-      context_relevance: 0,
-      platform_compliance: 0,
-      hook_strength: 0,
-      cta_clarity: 0,
-    },
-    generation_reasoning: generated.reasoning,
-    rag_context_used: {
-      best_practice_ids: params.ragContext.best_practices
-        .slice(0, 5)
-        .map((bp) => bp.id),
-      example_ids: params.ragContext.ad_examples.slice(0, 3).map((ex) => ex.id),
-    },
-    is_selected: false,
-    user_edited: false,
-    edit_history: [],
-    metadata: {
-      best_practices_used: params.ragContext.best_practices
-        .slice(0, 5)
-        .map((bp) => ({
-          id: bp.id,
-          title: bp.title,
-          similarity: bp.similarity,
+      is_selected: false,
+      user_edited: false,
+      edit_history: [],
+      metadata: {
+        best_practices_used: params.ragContext.best_practices
+          .slice(0, 5)
+          .map((bp) => ({
+            id: bp.id,
+            title: bp.title,
+            similarity: bp.similarity,
+          })),
+        examples_referenced: params.ragContext.ad_examples.slice(0, 3).map((ex) => ({
+          id: ex.id,
+          headline: ex.headline,
+          similarity: ex.similarity,
         })),
-      examples_referenced: params.ragContext.ad_examples.slice(0, 3).map((ex) => ({
-        id: ex.id,
-        headline: ex.headline,
-        similarity: ex.similarity,
-      })),
-    },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
-  return variant;
+    return variant;
+  } catch (error) {
+    // Log error to monitoring system
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const isTimeout = errorMessage.toLowerCase().includes('timeout');
+    const isRateLimited = errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('429');
+
+    await tracker.error({
+      model: 'gpt-4o-mini',
+      errorCode: isRateLimited ? '429' : undefined,
+      errorMessage,
+      endpoint: 'chat.completions',
+      isTimeout,
+      isRateLimited
+    });
+
+    await logError({
+      errorType: isTimeout ? 'timeout' : isRateLimited ? 'rate_limit' : 'api_error',
+      errorMessage,
+      shopId: params.shopId,
+      endpoint: 'ad-generator',
+      operationType: 'ad_generation',
+      requestData: {
+        platform: params.platform,
+        goal: params.goal,
+        variantNumber: params.variantNumber
+      }
+    });
+
+    throw error;
+  }
 }
 
 /**
