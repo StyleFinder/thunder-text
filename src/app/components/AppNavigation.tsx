@@ -80,7 +80,8 @@ function NavigationContent({ children }: AppNavigationProps) {
   // Determine user role:
   // PRIORITY: Shop param means store owner (always 'user' role)
   // - If has shop param -> store owner (role: 'user')
-  // - If has session with role -> use session role (coach/admin)
+  // - If has session with role -> use session role (coach/admin/shop)
+  // - 'shop' role from NextAuth session = treat as 'user' for nav purposes
   // - Default to 'user'
   let userRole: string;
 
@@ -89,8 +90,10 @@ function NavigationContent({ children }: AppNavigationProps) {
     // Always treat as 'user' role regardless of session
     userRole = "user";
   } else if (session?.user?.role) {
-    // No shop param, but has session with role = coach or admin
-    userRole = session.user.role;
+    // No shop param, but has session with role
+    // Map 'shop' role to 'user' for navigation filtering
+    // This ensures standalone users (shop role) see the same nav as Shopify users
+    userRole = session.user.role === "shop" ? "user" : session.user.role;
   } else {
     // Default to user
     userRole = "user";

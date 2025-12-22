@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Edit, Trash2, RotateCcw } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, RotateCcw, Ruler } from "lucide-react";
 import { logger } from "@/lib/logger";
 
 interface ShopSize {
@@ -285,19 +285,32 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold text-oxford-navy">Sizing Sets</h2>
-          <p className="text-sm text-muted-foreground">
-            Create custom sizing options for your products (e.g., XS-XXL,
-            numeric, shoe sizes)
-          </p>
+      {/* Header with icon - matches other settings cards */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+            style={{ background: "rgba(0, 102, 204, 0.1)" }}
+          >
+            <Ruler className="w-5 h-5" style={{ color: "#0066cc" }} />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-gray-900">Sizing Sets</h2>
+            <p className="text-sm text-gray-500">
+              Create custom sizing options for your products (e.g., XS-XXL,
+              numeric, shoe sizes)
+            </p>
+          </div>
         </div>
 
         {!isCreating && !editingId && (
           <Button
             onClick={startCreating}
-            className="bg-smart-blue-500 hover:bg-smart-blue-600"
+            className="flex-shrink-0 h-11 px-4 text-sm font-medium"
+            style={{
+              background: "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+              border: "none",
+            }}
           >
             <Plus className="mr-2 h-4 w-4" />
             Add New Set
@@ -484,14 +497,33 @@ export default function ShopSizes({ shop, onToast }: ShopSizesProps) {
       {/* Sizing Sets List */}
       <div className="space-y-4">
         {sizes.length === 0 ? (
-          <Card className="bg-muted/30">
-            <CardContent className="py-8 text-center">
-              <p className="text-muted-foreground">
-                No sizing sets yet. Click &quot;Add New Set&quot; to create your
-                first one.
-              </p>
-            </CardContent>
-          </Card>
+          <div
+            className="rounded-lg p-6 text-center"
+            style={{
+              background: "rgba(0, 102, 204, 0.05)",
+              border: "1px solid rgba(0, 102, 204, 0.1)",
+            }}
+          >
+            <Ruler
+              className="w-10 h-10 mx-auto mb-3"
+              style={{ color: "#0066cc", opacity: 0.5 }}
+            />
+            <p className="text-gray-600 mb-4">
+              No sizing sets yet. Click &quot;Add New Set&quot; to create your
+              first one.
+            </p>
+            <Button
+              onClick={startCreating}
+              className="h-10 px-4 text-sm font-medium"
+              style={{
+                background: "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                border: "none",
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add New Set
+            </Button>
+          </div>
         ) : (
           sizes.map((size) => {
             const isEditing = editingId === size.id;

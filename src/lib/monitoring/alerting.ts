@@ -5,44 +5,57 @@
  * - Slack webhooks (critical + high)
  * - Email via Resend (critical only)
  * - Database logging (all alerts)
+ *
+ * NOTE: This module uses lazy imports for server-only dependencies
+ * to prevent them from being bundled into client-side code.
  */
 
-import { supabaseAdmin } from '@/lib/supabase';
-import { sendEmail } from '@/lib/services/resend-service';
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
+
+// Lazy import for server-only supabaseAdmin to prevent client bundle issues
+const getSupabaseAdmin = async () => {
+  const { supabaseAdmin } = await import("@/lib/supabase");
+  return supabaseAdmin;
+};
+
+// Lazy import for sendEmail
+const getSendEmail = async () => {
+  const { sendEmail } = await import("@/lib/services/resend-service");
+  return sendEmail;
+};
 
 // Alert severity levels
 export enum AlertSeverity {
-  CRITICAL = 'critical', // App non-functional - immediate Slack + Email
-  HIGH = 'high',         // Feature degraded - Slack only
-  MEDIUM = 'medium',     // Isolated failures - Dashboard only
-  LOW = 'low',           // Warnings - Log only
+  CRITICAL = "critical", // App non-functional - immediate Slack + Email
+  HIGH = "high", // Feature degraded - Slack only
+  MEDIUM = "medium", // Isolated failures - Dashboard only
+  LOW = "low", // Warnings - Log only
 }
 
 // Alert types
 export enum AlertType {
   // Critical
-  OPENAI_API_FAILURE = 'openai_api_failure',
-  EXTERNAL_API_FAILURE = 'external_api_failure',
-  SUPABASE_CONNECTION_FAILURE = 'supabase_connection_failure',
-  SHOPIFY_AUTH_FAILURE = 'shopify_auth_failure',
-  HIGH_ERROR_RATE = 'high_error_rate',
-  GENERATION_FAILURE_SPIKE = 'generation_failure_spike',
-  DATABASE_WRITE_FAILURE = 'database_write_failure',
+  OPENAI_API_FAILURE = "openai_api_failure",
+  EXTERNAL_API_FAILURE = "external_api_failure",
+  SUPABASE_CONNECTION_FAILURE = "supabase_connection_failure",
+  SHOPIFY_AUTH_FAILURE = "shopify_auth_failure",
+  HIGH_ERROR_RATE = "high_error_rate",
+  GENERATION_FAILURE_SPIKE = "generation_failure_spike",
+  DATABASE_WRITE_FAILURE = "database_write_failure",
 
   // High
-  RATE_LIMIT_APPROACHING = 'rate_limit_approaching',
-  LATENCY_SPIKE = 'latency_spike',
-  SINGLE_STORE_AUTH_FAILURE = 'single_store_auth_failure',
-  WEBHOOK_DELIVERY_FAILURE = 'webhook_delivery_failure',
+  RATE_LIMIT_APPROACHING = "rate_limit_approaching",
+  LATENCY_SPIKE = "latency_spike",
+  SINGLE_STORE_AUTH_FAILURE = "single_store_auth_failure",
+  WEBHOOK_DELIVERY_FAILURE = "webhook_delivery_failure",
 
   // Medium
-  INDIVIDUAL_TIMEOUT = 'individual_timeout',
-  IMAGE_PROCESSING_SLOW = 'image_processing_slow',
+  INDIVIDUAL_TIMEOUT = "individual_timeout",
+  IMAGE_PROCESSING_SLOW = "image_processing_slow",
 
   // Low
-  DEPRECATION_WARNING = 'deprecation_warning',
-  USAGE_ANOMALY = 'usage_anomaly',
+  DEPRECATION_WARNING = "deprecation_warning",
+  USAGE_ANOMALY = "usage_anomaly",
 }
 
 interface AlertDetails {
@@ -58,7 +71,8 @@ interface AlertDetails {
 // Environment configuration
 const SLACK_WEBHOOK_URL = process.env.SLACK_ALERT_WEBHOOK;
 const DEV_ALERT_EMAIL = process.env.DEV_ALERT_EMAIL;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.thundertext.app';
+const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL || "https://app.thundertext.app";
 
 /**
  * Main alert trigger function
@@ -71,7 +85,10 @@ export async function triggerAlert(alert: AlertDetails): Promise<void> {
     const alertRecord = await logAlertToDatabase(alert);
 
     // 2. Send Slack notification (critical + high)
-    if (alert.severity === AlertSeverity.CRITICAL || alert.severity === AlertSeverity.HIGH) {
+    if (
+      alert.severity === AlertSeverity.CRITICAL ||
+      alert.severity === AlertSeverity.HIGH
+    ) {
       await sendSlackAlert(alert, alertRecord?.id);
     }
 
@@ -81,15 +98,15 @@ export async function triggerAlert(alert: AlertDetails): Promise<void> {
     }
 
     logger.info(`Alert triggered: ${alert.type}`, {
-      component: 'alerting',
+      component: "alerting",
       severity: alert.severity,
       alertId: alertRecord?.id,
       durationMs: Date.now() - startTime,
     });
   } catch (error) {
     // Don't let alerting failures break the app
-    logger.error('Failed to trigger alert', error as Error, {
-      component: 'alerting',
+    logger.error("Failed to trigger alert", error as Error, {
+      component: "alerting",
       alertType: alert.type,
     });
   }
@@ -98,10 +115,18 @@ export async function triggerAlert(alert: AlertDetails): Promise<void> {
 /**
  * Log alert to database
  */
-async function logAlertToDatabase(alert: AlertDetails): Promise<{ id: string } | null> {
+async function logAlertToDatabase(
+  alert: AlertDetails,
+): Promise<{ id: string } | null> {
+  // Skip database logging on client side
+  if (typeof window !== "undefined") {
+    return null;
+  }
+
   try {
+    const supabaseAdmin = await getSupabaseAdmin();
     const { data, error } = await supabaseAdmin
-      .from('alert_history')
+      .from("alert_history")
       .insert({
         severity: alert.severity,
         alert_type: alert.type,
@@ -111,14 +136,14 @@ async function logAlertToDatabase(alert: AlertDetails): Promise<{ id: string } |
         shop_id: alert.shopId || null,
         affected_component: alert.affectedComponent || null,
       })
-      .select('id')
+      .select("id")
       .single();
 
     if (error) throw error;
     return data;
   } catch (error) {
-    logger.error('Failed to log alert to database', error as Error, {
-      component: 'alerting',
+    logger.error("Failed to log alert to database", error as Error, {
+      component: "alerting",
     });
     return null;
   }
@@ -127,30 +152,40 @@ async function logAlertToDatabase(alert: AlertDetails): Promise<{ id: string } |
 /**
  * Send Slack alert via webhook
  */
-async function sendSlackAlert(alert: AlertDetails, alertId?: string): Promise<boolean> {
+async function sendSlackAlert(
+  alert: AlertDetails,
+  alertId?: string,
+): Promise<boolean> {
   if (!SLACK_WEBHOOK_URL) {
-    logger.warn('SLACK_ALERT_WEBHOOK not configured, skipping Slack notification', {
-      component: 'alerting',
-    });
+    logger.warn(
+      "SLACK_ALERT_WEBHOOK not configured, skipping Slack notification",
+      {
+        component: "alerting",
+      },
+    );
     return false;
   }
 
-  const emoji = alert.severity === AlertSeverity.CRITICAL ? ':rotating_light:' : ':warning:';
-  const color = alert.severity === AlertSeverity.CRITICAL ? '#dc2626' : '#f59e0b';
+  const emoji =
+    alert.severity === AlertSeverity.CRITICAL
+      ? ":rotating_light:"
+      : ":warning:";
+  const color =
+    alert.severity === AlertSeverity.CRITICAL ? "#dc2626" : "#f59e0b";
 
   const blocks = [
     {
-      type: 'header',
+      type: "header",
       text: {
-        type: 'plain_text',
+        type: "plain_text",
         text: `${emoji} ${alert.severity.toUpperCase()}: ${alert.title}`,
         emoji: true,
       },
     },
     {
-      type: 'section',
+      type: "section",
       text: {
-        type: 'mrkdwn',
+        type: "mrkdwn",
         text: alert.message,
       },
     },
@@ -159,10 +194,10 @@ async function sendSlackAlert(alert: AlertDetails, alertId?: string): Promise<bo
   // Add details if present
   if (alert.details && Object.keys(alert.details).length > 0) {
     blocks.push({
-      type: 'section',
+      type: "section",
       text: {
-        type: 'mrkdwn',
-        text: '```' + JSON.stringify(alert.details, null, 2) + '```',
+        type: "mrkdwn",
+        text: "```" + JSON.stringify(alert.details, null, 2) + "```",
       },
     });
   }
@@ -170,7 +205,7 @@ async function sendSlackAlert(alert: AlertDetails, alertId?: string): Promise<bo
   // Add context footer
   const contextElements = [
     `*Type:* ${alert.type}`,
-    `*Component:* ${alert.affectedComponent || 'unknown'}`,
+    `*Component:* ${alert.affectedComponent || "unknown"}`,
     `*Time:* ${new Date().toISOString()}`,
   ];
 
@@ -179,34 +214,34 @@ async function sendSlackAlert(alert: AlertDetails, alertId?: string): Promise<bo
   }
 
   blocks.push({
-    type: 'context',
+    type: "context",
     elements: contextElements.map((text) => ({
-      type: 'mrkdwn',
+      type: "mrkdwn",
       text,
     })),
-  } as unknown as typeof blocks[0]);
+  } as unknown as (typeof blocks)[0]);
 
   // Add action button for dashboard
   blocks.push({
-    type: 'actions',
+    type: "actions",
     elements: [
       {
-        type: 'button',
+        type: "button",
         text: {
-          type: 'plain_text',
-          text: 'View Dashboard',
+          type: "plain_text",
+          text: "View Dashboard",
           emoji: true,
         },
         url: `${APP_URL}/dev`,
-        style: alert.severity === AlertSeverity.CRITICAL ? 'danger' : 'primary',
+        style: alert.severity === AlertSeverity.CRITICAL ? "danger" : "primary",
       },
     ],
-  } as unknown as typeof blocks[0]);
+  } as unknown as (typeof blocks)[0]);
 
   try {
     const response = await fetch(SLACK_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         attachments: [
           {
@@ -223,19 +258,20 @@ async function sendSlackAlert(alert: AlertDetails, alertId?: string): Promise<bo
 
     // Update database with notification status
     if (alertId) {
+      const supabaseAdmin = await getSupabaseAdmin();
       await supabaseAdmin
-        .from('alert_history')
+        .from("alert_history")
         .update({
           notified_slack: true,
           notified_slack_at: new Date().toISOString(),
         })
-        .eq('id', alertId);
+        .eq("id", alertId);
     }
 
     return true;
   } catch (error) {
-    logger.error('Failed to send Slack alert', error as Error, {
-      component: 'alerting',
+    logger.error("Failed to send Slack alert", error as Error, {
+      component: "alerting",
     });
     return false;
   }
@@ -244,16 +280,20 @@ async function sendSlackAlert(alert: AlertDetails, alertId?: string): Promise<bo
 /**
  * Send email alert for critical issues
  */
-async function sendEmailAlert(alert: AlertDetails, alertId?: string): Promise<boolean> {
+async function sendEmailAlert(
+  alert: AlertDetails,
+  alertId?: string,
+): Promise<boolean> {
   if (!DEV_ALERT_EMAIL) {
-    logger.warn('DEV_ALERT_EMAIL not configured, skipping email notification', {
-      component: 'alerting',
+    logger.warn("DEV_ALERT_EMAIL not configured, skipping email notification", {
+      component: "alerting",
     });
     return false;
   }
 
   const html = generateAlertEmailHTML(alert, alertId);
 
+  const sendEmail = await getSendEmail();
   const result = await sendEmail({
     to: [DEV_ALERT_EMAIL],
     subject: `🚨 CRITICAL: ${alert.title} - Thunder Text`,
@@ -261,13 +301,14 @@ async function sendEmailAlert(alert: AlertDetails, alertId?: string): Promise<bo
   });
 
   if (result.success && alertId) {
+    const supabaseAdmin = await getSupabaseAdmin();
     await supabaseAdmin
-      .from('alert_history')
+      .from("alert_history")
       .update({
         notified_email: true,
         notified_email_at: new Date().toISOString(),
       })
-      .eq('id', alertId);
+      .eq("id", alertId);
   }
 
   return result.success;
@@ -279,7 +320,7 @@ async function sendEmailAlert(alert: AlertDetails, alertId?: string): Promise<bo
 function generateAlertEmailHTML(alert: AlertDetails, alertId?: string): string {
   const detailsHtml = alert.details
     ? `<pre style="background-color: #f4f4f5; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 12px;">${JSON.stringify(alert.details, null, 2)}</pre>`
-    : '';
+    : "";
 
   return `
 <!DOCTYPE html>
@@ -311,9 +352,9 @@ function generateAlertEmailHTML(alert: AlertDetails, alertId?: string): string {
       <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin-bottom: 24px;">
         <p style="margin: 0; font-size: 14px; color: #991b1b;">
           <strong>Type:</strong> ${alert.type}<br>
-          <strong>Component:</strong> ${alert.affectedComponent || 'Unknown'}<br>
+          <strong>Component:</strong> ${alert.affectedComponent || "Unknown"}<br>
           <strong>Time:</strong> ${new Date().toISOString()}<br>
-          ${alertId ? `<strong>Alert ID:</strong> ${alertId}` : ''}
+          ${alertId ? `<strong>Alert ID:</strong> ${alertId}` : ""}
         </p>
       </div>
 
@@ -343,12 +384,13 @@ function generateAlertEmailHTML(alert: AlertDetails, alertId?: string): string {
  */
 function escapeHtml(text: string): string {
   const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
   };
+  // eslint-disable-next-line security/detect-object-injection
   return text.replace(/[&<>"']/g, (char) => map[char]);
 }
 
@@ -359,17 +401,20 @@ function escapeHtml(text: string): string {
 /**
  * Trigger OpenAI API failure alert
  */
-export async function alertOpenAIFailure(error: Error, context?: Record<string, unknown>): Promise<void> {
+export async function alertOpenAIFailure(
+  error: Error,
+  context?: Record<string, unknown>,
+): Promise<void> {
   await triggerAlert({
     severity: AlertSeverity.CRITICAL,
     type: AlertType.OPENAI_API_FAILURE,
-    title: 'OpenAI API Failure',
+    title: "OpenAI API Failure",
     message: `OpenAI API is not responding or returning errors. AI generation is unavailable.`,
     details: {
       error: error.message,
       ...context,
     },
-    affectedComponent: 'openai',
+    affectedComponent: "openai",
   });
 }
 
@@ -379,19 +424,19 @@ export async function alertOpenAIFailure(error: Error, context?: Record<string, 
 export async function alertHighErrorRate(
   errorRate: number,
   totalRequests: number,
-  timeWindowMinutes: number
+  timeWindowMinutes: number,
 ): Promise<void> {
   await triggerAlert({
     severity: AlertSeverity.CRITICAL,
     type: AlertType.HIGH_ERROR_RATE,
-    title: 'High Error Rate Detected',
+    title: "High Error Rate Detected",
     message: `Error rate is ${errorRate.toFixed(1)}% over the last ${timeWindowMinutes} minutes.`,
     details: {
       errorRate,
       totalRequests,
       timeWindowMinutes,
     },
-    affectedComponent: 'generation',
+    affectedComponent: "generation",
   });
 }
 
@@ -401,7 +446,7 @@ export async function alertHighErrorRate(
 export async function alertRateLimitApproaching(
   service: string,
   currentUsage: number,
-  limit: number
+  limit: number,
 ): Promise<void> {
   const percentage = (currentUsage / limit) * 100;
   await triggerAlert({
@@ -425,18 +470,18 @@ export async function alertRateLimitApproaching(
 export async function alertLatencySpike(
   p95LatencyMs: number,
   thresholdMs: number,
-  operationType?: string
+  operationType?: string,
 ): Promise<void> {
   await triggerAlert({
     severity: AlertSeverity.HIGH,
     type: AlertType.LATENCY_SPIKE,
-    title: 'Latency Spike Detected',
+    title: "Latency Spike Detected",
     message: `P95 latency is ${(p95LatencyMs / 1000).toFixed(2)}s, exceeding threshold of ${(thresholdMs / 1000).toFixed(2)}s.`,
     details: {
       p95LatencyMs,
       thresholdMs,
       operationType,
     },
-    affectedComponent: 'performance',
+    affectedComponent: "performance",
   });
 }

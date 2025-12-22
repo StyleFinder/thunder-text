@@ -134,8 +134,8 @@ export async function GET(request: NextRequest) {
       facebookDraftsCount || 0,
     );
 
-    // Calculate time saved: average 15 min per product description, 10 min per ad
-    const timeSavedMinutes = productsGenerated * 15 + adsCreated * 10;
+    // Calculate time saved: average 8 min per product description, 9 min per ad
+    const timeSavedMinutes = productsGenerated * 8 + adsCreated * 9;
 
     // Format time saved
     let timeSavedDisplay: string;

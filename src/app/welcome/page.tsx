@@ -626,13 +626,43 @@ export default function WelcomePage() {
       if (shop) {
         headers.Authorization = `Bearer ${shop}`;
       }
-      await fetch("/api/onboarding/complete", {
+
+      const response = await fetch("/api/onboarding/complete", {
         method: "POST",
         headers,
         credentials: "include", // Include session cookies
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        logger.error(
+          "[Welcome] Failed to mark onboarding complete",
+          undefined,
+          {
+            component: "welcome",
+            status: response.status,
+            error: errorData.error || "Unknown error",
+            shop: shop || "standalone",
+            hasSession: !!session?.user?.id,
+            userId: session?.user?.id || "none",
+          },
+        );
+      } else {
+        logger.info("[Welcome] Onboarding marked complete successfully", {
+          component: "welcome",
+          shop: shop || "standalone",
+          userId: session?.user?.id || "none",
+        });
+      }
     } catch (error) {
-      console.error("[Welcome] Error marking onboarding complete:", error);
+      logger.error(
+        "[Welcome] Error marking onboarding complete:",
+        error as Error,
+        {
+          component: "welcome",
+          shop: shop || "standalone",
+        },
+      );
     }
 
     // Redirect to dashboard with shop param if available

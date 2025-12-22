@@ -30,6 +30,7 @@ import {
 } from "@/lib/security/oauth-validation";
 import { ZodError } from "zod";
 import { logger } from "@/lib/logger";
+import { alertIntegrationError } from "@/lib/alerting/critical-alerts";
 
 /**
  * Exchange authorization code for access token
@@ -460,12 +461,48 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify the record was actually inserted by reading it back
-    await supabaseAdmin
-      .from("integrations")
-      .select("id, shop_id, provider, is_active")
-      .eq("shop_id", shop_id)
-      .eq("provider", "facebook")
-      .single();
+    const { data: verifiedIntegration, error: verifyError } =
+      await supabaseAdmin
+        .from("integrations")
+        .select("id, shop_id, provider, is_active")
+        .eq("shop_id", shop_id)
+        .eq("provider", "facebook")
+        .single();
+
+    if (verifyError || !verifiedIntegration) {
+      // CRITICAL: Integration save claimed success but verification failed
+      await alertIntegrationError(
+        "Facebook integration verification failed - data may not have been saved",
+        {
+          shopId: shop_id,
+          shopDomain: shop_domain,
+          provider: "facebook",
+          facebookUserId: userInfo.id,
+          facebookUserName: userInfo.name,
+          hadAdAccounts: adAccounts.length > 0,
+        },
+        verifyError,
+      );
+      // Log additional details for debugging
+      logger.error(
+        "Integration verification failed after upsert",
+        verifyError as Error,
+        {
+          component: "facebook-oauth",
+          operation: "verify-integration",
+          shopId: shop_id,
+          shopDomain: shop_domain,
+        },
+      );
+    } else {
+      logger.info("Facebook integration verified successfully", {
+        component: "facebook-oauth",
+        operation: "verify-integration",
+        integrationId: verifiedIntegration.id,
+        shopId: shop_id,
+        isActive: verifiedIntegration.is_active,
+      });
+    }
 
     // Redirect based on return_to parameter (onboarding, connections, or main app)
     // Restore host and embedded params to maintain Shopify embedded app context (if they exist)

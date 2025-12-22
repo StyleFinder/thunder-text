@@ -12,6 +12,9 @@
  */
 
 import { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
+import { getToken } from "next-auth/jwt";
+import { authOptions } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import {
@@ -30,7 +33,7 @@ export interface AuthResult {
   userId?: string;
   shopDomain?: string;
   error?: string;
-  authMethod?: "session_token" | "api_key";
+  authMethod?: "session_token" | "api_key" | "cookie" | "nextauth";
 }
 
 /**
@@ -79,7 +82,9 @@ function parseJWT(token: string): ShopifySessionTokenPayload | null {
   try {
     const [, payload] = token.split(".");
     if (!payload) return null;
-    return JSON.parse(Buffer.from(payload, "base64").toString()) as ShopifySessionTokenPayload;
+    return JSON.parse(
+      Buffer.from(payload, "base64").toString(),
+    ) as ShopifySessionTokenPayload;
   } catch {
     return null;
   }
@@ -89,7 +94,9 @@ function parseJWT(token: string): ShopifySessionTokenPayload | null {
  * Extract shop domain from JWT dest claim
  * SECURITY [R-A2041]: Uses URL API for safe hostname extraction
  */
-function extractShopFromJWT(payload: ShopifySessionTokenPayload): string | null {
+function extractShopFromJWT(
+  payload: ShopifySessionTokenPayload,
+): string | null {
   try {
     const url = new URL(payload.dest);
     return url.hostname;
@@ -217,11 +224,165 @@ function validateShopifySessionToken(token: string): string | null {
 }
 
 /**
+ * Authenticate using cookies (shopify_shop cookie or NextAuth session)
+ * This supports standalone users and settings page access patterns.
+ *
+ * @param request - Next.js request object
+ * @returns Authentication result
+ */
+async function authenticateWithCookies(
+  request: NextRequest,
+): Promise<AuthResult> {
+  try {
+    // Check for shopify_shop cookie
+    const shopifyCookie = request.cookies.get("shopify_shop")?.value;
+
+    // Try to get NextAuth session
+    const session = await getServerSession(authOptions);
+    let nextAuthShop = session?.user?.shopDomain;
+
+    // Fallback to getToken if session is null (works better in some App Router contexts)
+    if (!session) {
+      const token = await getToken({
+        req: request,
+        secret: process.env.NEXTAUTH_SECRET,
+      });
+      if (token?.shopDomain) {
+        nextAuthShop = token.shopDomain as string;
+        logger.debug("[Content-Center Auth] Using getToken fallback", {
+          component: "content-center-auth",
+          shopDomain: nextAuthShop,
+        });
+      }
+    }
+
+    // Prefer NextAuth session over Shopify cookie
+    // Standalone users may have stale cookies but their NextAuth session is authoritative
+    let authenticatedShop = nextAuthShop || shopifyCookie;
+
+    if (!authenticatedShop) {
+      // Check URL parameter as final fallback
+      const { searchParams } = new URL(request.url);
+      const shopFromUrl = searchParams.get("shop");
+
+      // Only accept email-based shop params (standalone users) or .myshopify.com domains
+      if (
+        shopFromUrl &&
+        (shopFromUrl.includes("@") || shopFromUrl.includes(".myshopify.com"))
+      ) {
+        authenticatedShop = shopFromUrl;
+      }
+    }
+
+    if (!authenticatedShop) {
+      return {
+        authenticated: false,
+        error: "No cookie-based authentication found",
+      };
+    }
+
+    // Look up shop in database with multiple strategies
+    let shopData: {
+      id: string;
+      shop_domain: string;
+      shop_type: string;
+      linked_shopify_domain: string | null;
+    } | null = null;
+
+    // For .myshopify.com domains, check linked_shopify_domain FIRST (prioritize standalone accounts)
+    if (authenticatedShop.includes(".myshopify.com")) {
+      const linkedResult = await supabaseAdmin
+        .from("shops")
+        .select("id, shop_domain, shop_type, linked_shopify_domain")
+        .eq("linked_shopify_domain", authenticatedShop)
+        .eq("shop_type", "standalone")
+        .single();
+
+      if (linkedResult.data && !linkedResult.error) {
+        shopData = linkedResult.data;
+        logger.debug(
+          "[Content-Center Auth] Found standalone user by linked_shopify_domain",
+          {
+            component: "content-center-auth",
+            linkedShopifyDomain: authenticatedShop,
+            standaloneEmail: linkedResult.data.shop_domain,
+          },
+        );
+      }
+    }
+
+    // If no standalone user found, try shop_domain
+    if (!shopData) {
+      const result = await supabaseAdmin
+        .from("shops")
+        .select("id, shop_domain, shop_type, linked_shopify_domain")
+        .eq("shop_domain", authenticatedShop)
+        .eq("is_active", true)
+        .single();
+
+      if (result.data && !result.error) {
+        shopData = result.data;
+      }
+    }
+
+    // Try email lookup for standalone users (authenticatedShop might be an email)
+    if (!shopData && authenticatedShop.includes("@")) {
+      const emailResult = await supabaseAdmin
+        .from("shops")
+        .select("id, shop_domain, shop_type, linked_shopify_domain")
+        .eq("email", authenticatedShop)
+        .eq("shop_type", "standalone")
+        .single();
+
+      if (emailResult.data && !emailResult.error) {
+        shopData = emailResult.data;
+        logger.debug("[Content-Center Auth] Found standalone user by email", {
+          component: "content-center-auth",
+          email: authenticatedShop,
+        });
+      }
+    }
+
+    if (!shopData) {
+      logger.debug("[Content-Center Auth] No shop found for cookie auth", {
+        component: "content-center-auth",
+        authenticatedShop,
+      });
+      return {
+        authenticated: false,
+        error: "Shop not found for authenticated user",
+      };
+    }
+
+    logger.setUser(shopData.id, {
+      shop: shopData.shop_domain,
+    });
+
+    return {
+      authenticated: true,
+      userId: shopData.id,
+      shopDomain: shopData.shop_domain,
+      authMethod: nextAuthShop ? "nextauth" : "cookie",
+    };
+  } catch (error) {
+    logger.error("[Content-Center Auth] Cookie auth error:", error as Error, {
+      component: "content-center-auth",
+    });
+    return {
+      authenticated: false,
+      error: "Cookie authentication failed",
+    };
+  }
+}
+
+/**
  * Authenticate request using Shopify session token or API key
  *
  * Priority:
  * 1. Shopify Session Token in Authorization header (for embedded app)
  * 2. API Key in X-API-Key header (for server-to-server)
+ * 3. X-Shopify-Shop-Domain header with session token (for embedded iframe)
+ * 4. Cookie-based auth (for standalone users and settings pages)
  *
  * @param request - Next.js request object
  * @returns Authentication result with shop domain as user ID if successful
@@ -273,14 +434,14 @@ export async function authenticateRequest(
         }
       }
 
-      // Not a valid JWT - don't accept raw shop domains
-      logger.warn("Invalid authorization token format", {
-        component: "content-center-auth",
-      });
-      return {
-        authenticated: false,
-        error: "Invalid authorization token. Expected Shopify session token (JWT).",
-      };
+      // Not a valid JWT - continue to try other auth methods instead of failing immediately
+      // This allows cookie-based auth to work when a non-JWT Bearer token is sent
+      logger.debug(
+        "Bearer token is not a valid JWT, trying other auth methods",
+        {
+          component: "content-center-auth",
+        },
+      );
     }
 
     // 2. Try API Key authentication (X-API-Key header)
@@ -322,6 +483,12 @@ export async function authenticateRequest(
           };
         }
       }
+    }
+
+    // 4. Try cookie-based authentication (for standalone users and settings pages)
+    const cookieAuthResult = await authenticateWithCookies(request);
+    if (cookieAuthResult.authenticated) {
+      return cookieAuthResult;
     }
 
     return {

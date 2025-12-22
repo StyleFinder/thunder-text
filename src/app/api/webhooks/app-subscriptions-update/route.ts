@@ -18,6 +18,7 @@ import {
 } from "@/lib/middleware/webhook-validation";
 import { supabaseAdmin } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { alertBillingError } from "@/lib/alerting/critical-alerts";
 
 /**
  * Route segment config - webhook limits
@@ -69,6 +70,7 @@ function mapShopifyStatus(shopifyStatus: ShopifySubscriptionStatus): string {
     FROZEN: "frozen",
     CANCELLED: "cancelled",
   };
+  // eslint-disable-next-line security/detect-object-injection
   return statusMap[shopifyStatus] || "pending";
 }
 
@@ -101,7 +103,7 @@ export async function POST(request: NextRequest) {
       logger.error(
         `Webhook validation failed: ${validation.error}`,
         undefined,
-        { component: "app-subscriptions-update" }
+        { component: "app-subscriptions-update" },
       );
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -113,12 +115,14 @@ export async function POST(request: NextRequest) {
     if (!validateWebhookTopic(metadata.topic, ["app_subscriptions/update"])) {
       return NextResponse.json(
         { error: "Invalid webhook topic" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Parse webhook body
-    const webhookData: AppSubscriptionWebhookPayload = JSON.parse(validation.body!);
+    const webhookData: AppSubscriptionWebhookPayload = JSON.parse(
+      validation.body!,
+    );
     const subscription = webhookData.app_subscription;
     const shopDomain = metadata.shopDomain;
 
@@ -137,7 +141,7 @@ export async function POST(request: NextRequest) {
       });
       return NextResponse.json(
         { error: "Missing shop domain" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -149,12 +153,19 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (shopError || !shop) {
-      logger.error("Shop not found for subscription update", shopError as Error, {
-        component: "app-subscriptions-update",
-        shopDomain,
-      });
+      logger.error(
+        "Shop not found for subscription update",
+        shopError as Error,
+        {
+          component: "app-subscriptions-update",
+          shopDomain,
+        },
+      );
       // Return 200 to prevent Shopify from retrying - shop may have been deleted
-      return NextResponse.json({ success: false, error: "Shop not found" }, { status: 200 });
+      return NextResponse.json(
+        { success: false, error: "Shop not found" },
+        { status: 200 },
+      );
     }
 
     // Update shop with new subscription status
@@ -200,53 +211,94 @@ export async function POST(request: NextRequest) {
       .eq("id", shop.id);
 
     if (updateError) {
-      logger.error("Failed to update shop subscription status", updateError as Error, {
-        component: "app-subscriptions-update",
-        shopDomain,
-        chargeId: subscription.admin_graphql_api_id,
-      });
+      logger.error(
+        "Failed to update shop subscription status",
+        updateError as Error,
+        {
+          component: "app-subscriptions-update",
+          shopDomain,
+          chargeId: subscription.admin_graphql_api_id,
+        },
+      );
       // Don't return error - webhook should still succeed for logging
     }
 
-    // Log the billing event for audit trail
+    // Log the billing event for audit trail - CRITICAL for billing reconciliation
     try {
-      await supabaseAdmin.from("shopify_billing_events").insert({
-        shop_id: shop.id,
-        event_type: "subscription_update",
-        charge_id: subscription.admin_graphql_api_id,
-        status: subscription.status,
-        plan_name: subscription.name,
-        event_data: {
-          webhook_id: metadata.webhookId,
-          api_version: metadata.apiVersion,
-          currency: subscription.currency,
-          capped_amount: subscription.capped_amount,
-          trial_ends_on: subscription.trial_ends_on,
-          billing_on: subscription.billing_on,
-          test: subscription.test,
-          created_at: subscription.created_at,
-          updated_at: subscription.updated_at,
-        },
-      });
+      const { error: billingError } = await supabaseAdmin
+        .from("shopify_billing_events")
+        .insert({
+          shop_id: shop.id,
+          event_type: "subscription_update",
+          charge_id: subscription.admin_graphql_api_id,
+          status: subscription.status,
+          plan_name: subscription.name,
+          event_data: {
+            webhook_id: metadata.webhookId,
+            api_version: metadata.apiVersion,
+            currency: subscription.currency,
+            capped_amount: subscription.capped_amount,
+            trial_ends_on: subscription.trial_ends_on,
+            billing_on: subscription.billing_on,
+            test: subscription.test,
+            created_at: subscription.created_at,
+            updated_at: subscription.updated_at,
+          },
+        });
+
+      if (billingError) {
+        // CRITICAL: Billing event logging failure requires immediate attention
+        await alertBillingError(
+          "Failed to log billing event - data may be lost",
+          {
+            shopId: shop.id,
+            shopDomain,
+            chargeId: subscription.admin_graphql_api_id,
+            status: subscription.status,
+            planName: subscription.name,
+            webhookId: metadata.webhookId,
+          },
+          billingError,
+        );
+      }
     } catch (err) {
-      logger.error("Failed to log billing event", err as Error, {
-        component: "app-subscriptions-update",
-      });
+      // CRITICAL: Unexpected error in billing logging
+      await alertBillingError(
+        "Unexpected error logging billing event",
+        {
+          shopId: shop.id,
+          shopDomain,
+          chargeId: subscription.admin_graphql_api_id,
+          status: subscription.status,
+        },
+        err,
+      );
     }
 
     // Log webhook processing
     try {
-      await supabaseAdmin.from("webhook_logs").insert({
-        topic: metadata.topic,
-        shop_domain: shopDomain,
-        webhook_id: metadata.webhookId,
-        api_version: metadata.apiVersion,
-        processed_at: new Date().toISOString(),
-        status: "success",
-      });
+      const { error: webhookLogError } = await supabaseAdmin
+        .from("webhook_logs")
+        .insert({
+          topic: metadata.topic,
+          shop_domain: shopDomain,
+          webhook_id: metadata.webhookId,
+          api_version: metadata.apiVersion,
+          processed_at: new Date().toISOString(),
+          status: "success",
+        });
+
+      if (webhookLogError) {
+        logger.warn("Failed to log webhook success", {
+          component: "app-subscriptions-update",
+          error: webhookLogError.message,
+          webhookId: metadata.webhookId,
+        });
+      }
     } catch (err) {
       logger.error("Failed to log webhook", err as Error, {
         component: "app-subscriptions-update",
+        webhookId: metadata.webhookId,
       });
     }
 

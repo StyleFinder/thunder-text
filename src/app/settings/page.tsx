@@ -1,15 +1,13 @@
-'use client'
+"use client";
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense } from "react";
 
 // Force dynamic rendering for this page
-export const dynamic = 'force-dynamic'
-import { useSearchParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Separator } from '@/components/ui/separator'
+export const dynamic = "force-dynamic";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Loader2,
   AlertCircle,
@@ -27,149 +25,165 @@ import {
   Eye,
   Calendar,
   Clock,
-  CreditCard
-} from 'lucide-react'
-import { useNavigation } from '../hooks/useNavigation'
-import ShopSizes from '@/components/ShopSizes'
-import FacebookSettingsCard from '@/components/facebook/FacebookSettingsCard'
-import { useToast } from '@/hooks/use-toast'
-import { logger } from '@/lib/logger'
+  CreditCard,
+} from "lucide-react";
+import ShopSizes from "@/components/ShopSizes";
+import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 
 // Thunder Text shop info (not Zeus store info)
 interface ShopInfo {
-  id: string
-  shop_domain: string
-  created_at: string
-  updated_at: string
+  id: string;
+  shop_domain: string;
+  created_at: string;
+  updated_at: string;
 }
 
 function SettingsContent() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const shop = searchParams?.get('shop')
-  const authenticated = searchParams?.get('authenticated')
-  const { toast } = useToast()
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const shop = searchParams?.get("shop");
+  const _authenticated = searchParams?.get("authenticated");
+  const { toast } = useToast();
 
-  const [shopInfo, setShopInfo] = useState<ShopInfo | null>(null)
-  const [shopId, setShopId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [connectionsCount, setConnectionsCount] = useState(0)
-  const [llmsGenerating, setLlmsGenerating] = useState(false)
-  const [llmsContent, setLlmsContent] = useState<string | null>(null)
-  const [llmsStats, setLlmsStats] = useState<{ productCount: number; generatedAt: string } | null>(null)
-  const [copied, setCopied] = useState(false)
-  const [showPreview, setShowPreview] = useState(false)
+  const [shopInfo, setShopInfo] = useState<ShopInfo | null>(null);
+  const [_shopId, setShopId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [connectionsCount, setConnectionsCount] = useState(0);
+  const [llmsGenerating, setLlmsGenerating] = useState(false);
+  const [llmsContent, setLlmsContent] = useState<string | null>(null);
+  const [llmsStats, setLlmsStats] = useState<{
+    productCount: number;
+    generatedAt: string;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   // LLMs settings state
   const [llmsSettings, setLlmsSettings] = useState({
     include_products: true,
     include_collections: false,
     include_blog_posts: false,
-    sync_schedule: 'none' as 'none' | 'daily' | 'weekly',
+    sync_schedule: "none" as "none" | "daily" | "weekly",
     last_generated_at: null as string | null,
     next_sync_at: null as string | null,
     last_product_count: 0,
-  })
-  const [llmsSettingsLoading, setLlmsSettingsLoading] = useState(true)
-  const [llmsSettingsSaving, setLlmsSettingsSaving] = useState(false)
+  });
+  const [_llmsSettingsLoading, setLlmsSettingsLoading] = useState(true);
+  const [llmsSettingsSaving, setLlmsSettingsSaving] = useState(false);
 
   useEffect(() => {
     // Always fetch settings if we have a shop parameter
     if (shop) {
-      fetchSettings()
-      fetchConnections()
-      fetchShopId()
-      fetchLlmsSettings()
+      fetchSettings();
+      fetchConnections();
+      fetchShopId();
+      fetchLlmsSettings();
     } else {
       // If no shop parameter, just stop loading
-      setLoading(false)
-      setLlmsSettingsLoading(false)
+      setLoading(false);
+      setLlmsSettingsLoading(false);
     }
-  }, [shop])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shop]);
 
   const fetchShopId = async () => {
     try {
-      const response = await fetch(`/api/shops/lookup?shop=${encodeURIComponent(shop!)}`)
-      const data = await response.json()
+      const response = await fetch(
+        `/api/shops/lookup?shop=${encodeURIComponent(shop!)}`,
+      );
+      const data = await response.json();
       if (data.success && data.shopId) {
-        setShopId(data.shopId)
+        setShopId(data.shopId);
       }
     } catch (err) {
-      logger.error('Error fetching shop ID:', err as Error, { component: 'settings' })
+      logger.error("Error fetching shop ID:", err as Error, {
+        component: "settings",
+      });
     }
-  }
+  };
 
   const fetchSettings = async () => {
     try {
       // Thunder Text doesn't track usage limits like Zeus
       // This just shows basic shop info
       setShopInfo({
-        id: '1',
-        shop_domain: shop || '',
+        id: "1",
+        shop_domain: shop || "",
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+        updated_at: new Date().toISOString(),
+      });
 
-      setError(null)
+      setError(null);
     } catch (err) {
-      logger.error('Error fetching settings:', err as Error, { component: 'settings' })
-      setError('Failed to load settings. Please try again.')
+      logger.error("Error fetching settings:", err as Error, {
+        component: "settings",
+      });
+      setError("Failed to load settings. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchConnections = async () => {
     try {
-      const response = await fetch(`/api/settings/connections?shop=${shop}`)
-      const data = await response.json()
+      const response = await fetch(`/api/settings/connections?shop=${shop}`);
+      const data = await response.json();
 
       if (data.success && data.connections) {
         // Count connected integrations
-        const connected = data.connections.filter((c: any) => c.connected).length
-        setConnectionsCount(connected)
+        const connected = data.connections.filter(
+          (c: any) => c.connected,
+        ).length;
+        setConnectionsCount(connected);
       }
     } catch (err) {
-      logger.error('Error fetching connections:', err as Error, { component: 'settings' })
+      logger.error("Error fetching connections:", err as Error, {
+        component: "settings",
+      });
     }
-  }
+  };
 
   const fetchLlmsSettings = async () => {
     try {
-      const response = await fetch(`/api/llms/settings?shop=${shop}`)
-      const data = await response.json()
+      const response = await fetch(`/api/llms/settings?shop=${shop}`);
+      const data = await response.json();
 
       if (data.success && data.settings) {
         setLlmsSettings({
           include_products: data.settings.include_products ?? true,
           include_collections: data.settings.include_collections ?? false,
           include_blog_posts: data.settings.include_blog_posts ?? false,
-          sync_schedule: data.settings.sync_schedule ?? 'none',
+          sync_schedule: data.settings.sync_schedule ?? "none",
           last_generated_at: data.settings.last_generated_at,
           next_sync_at: data.settings.next_sync_at,
           last_product_count: data.settings.last_product_count ?? 0,
-        })
+        });
       }
     } catch (err) {
-      logger.error('Error fetching llms settings:', err as Error, { component: 'settings' })
+      logger.error("Error fetching llms settings:", err as Error, {
+        component: "settings",
+      });
     } finally {
-      setLlmsSettingsLoading(false)
+      setLlmsSettingsLoading(false);
     }
-  }
+  };
 
-  const saveLlmsSettings = async (newSettings: Partial<typeof llmsSettings>) => {
-    if (!shop) return
+  const saveLlmsSettings = async (
+    newSettings: Partial<typeof llmsSettings>,
+  ) => {
+    if (!shop) return;
 
-    setLlmsSettingsSaving(true)
-    const updatedSettings = { ...llmsSettings, ...newSettings }
-    setLlmsSettings(updatedSettings)
+    setLlmsSettingsSaving(true);
+    const updatedSettings = { ...llmsSettings, ...newSettings };
+    setLlmsSettings(updatedSettings);
 
     try {
       const response = await fetch(`/api/llms/settings?shop=${shop}`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           include_products: updatedSettings.include_products,
@@ -177,156 +191,165 @@ function SettingsContent() {
           include_blog_posts: updatedSettings.include_blog_posts,
           sync_schedule: updatedSettings.sync_schedule,
         }),
-      })
-      const data = await response.json()
+      });
+      const data = await response.json();
 
       if (data.success) {
         // Update with server response (includes next_sync_at)
         if (data.settings) {
-          setLlmsSettings(prev => ({
+          setLlmsSettings((prev) => ({
             ...prev,
             next_sync_at: data.settings.next_sync_at,
-          }))
+          }));
         }
         toast({
-          title: 'Settings saved',
-          description: 'AI Discovery settings updated successfully',
-        })
+          title: "Settings saved",
+          description: "AI Discovery settings updated successfully",
+        });
       } else {
         toast({
-          title: 'Error',
-          description: data.error || 'Failed to save settings',
-          variant: 'destructive',
-        })
+          title: "Error",
+          description: data.error || "Failed to save settings",
+          variant: "destructive",
+        });
       }
     } catch (err) {
-      logger.error('Error saving llms settings:', err as Error, { component: 'settings' })
+      logger.error("Error saving llms settings:", err as Error, {
+        component: "settings",
+      });
       toast({
-        title: 'Error',
-        description: 'Failed to save settings',
-        variant: 'destructive',
-      })
+        title: "Error",
+        description: "Failed to save settings",
+        variant: "destructive",
+      });
     } finally {
-      setLlmsSettingsSaving(false)
+      setLlmsSettingsSaving(false);
     }
-  }
+  };
 
   const generateLlmsTxt = async () => {
-    if (!shop) return
+    if (!shop) return;
 
-    setLlmsGenerating(true)
-    setLlmsContent(null)
-    setLlmsStats(null)
+    setLlmsGenerating(true);
+    setLlmsContent(null);
+    setLlmsStats(null);
 
     try {
       const response = await fetch(`/api/llms/generate?shop=${shop}`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-      })
-      const data = await response.json()
+      });
+      const data = await response.json();
 
       if (data.success) {
-        setLlmsContent(data.content)
+        setLlmsContent(data.content);
         setLlmsStats({
           productCount: data.stats.productCount,
           generatedAt: data.stats.generatedAt,
-        })
+        });
         // Update local llms settings with new generation info
-        setLlmsSettings(prev => ({
+        setLlmsSettings((prev) => ({
           ...prev,
           last_generated_at: data.stats.generatedAt,
           last_product_count: data.stats.productCount,
-        }))
+        }));
         toast({
-          title: 'Success',
+          title: "Success",
           description: `Generated llms.txt with ${data.stats.productCount} products`,
-        })
+        });
       } else {
         toast({
-          title: 'Error',
-          description: data.error || 'Failed to generate llms.txt',
-          variant: 'destructive',
-        })
+          title: "Error",
+          description: data.error || "Failed to generate llms.txt",
+          variant: "destructive",
+        });
       }
     } catch (err) {
-      logger.error('Error generating llms.txt:', err as Error, { component: 'settings' })
+      logger.error("Error generating llms.txt:", err as Error, {
+        component: "settings",
+      });
       toast({
-        title: 'Error',
-        description: 'Failed to generate llms.txt',
-        variant: 'destructive',
-      })
+        title: "Error",
+        description: "Failed to generate llms.txt",
+        variant: "destructive",
+      });
     } finally {
-      setLlmsGenerating(false)
+      setLlmsGenerating(false);
     }
-  }
+  };
 
   const downloadLlmsTxt = () => {
-    if (!llmsContent) return
+    if (!llmsContent) return;
 
-    const blob = new Blob([llmsContent], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'llms.txt'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    const blob = new Blob([llmsContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "llms.txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
     toast({
-      title: 'Downloaded',
-      description: 'llms.txt file downloaded successfully',
-    })
-  }
+      title: "Downloaded",
+      description: "llms.txt file downloaded successfully",
+    });
+  };
 
   const copyLlmsTxt = async () => {
-    if (!llmsContent) return
+    if (!llmsContent) return;
 
     try {
-      await navigator.clipboard.writeText(llmsContent)
-      setCopied(true)
+      await navigator.clipboard.writeText(llmsContent);
+      setCopied(true);
       toast({
-        title: 'Copied',
-        description: 'llms.txt content copied to clipboard',
-      })
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
+        title: "Copied",
+        description: "llms.txt content copied to clipboard",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (_err) {
       toast({
-        title: 'Error',
-        description: 'Failed to copy to clipboard',
-        variant: 'destructive',
-      })
+        title: "Error",
+        description: "Failed to copy to clipboard",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  }
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
 
   // Temporarily disable auth check for development
-  if (false) { // if (!shop || !authenticated) {
+  if (false) {
+    // if (!shop || !authenticated) {
     return (
       <div className="w-full flex flex-col items-center">
-        <div className="w-full" style={{ maxWidth: '800px' }}>
+        <div className="w-full" style={{ maxWidth: "800px" }}>
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-oxford-navy mb-2">Thunder Text Settings</h1>
+            <h1 className="text-3xl font-bold text-oxford-navy mb-2">
+              Thunder Text Settings
+            </h1>
           </div>
           <Card>
             <CardHeader>
-              <CardTitle className="text-oxford-navy">Authentication Required</CardTitle>
+              <CardTitle className="text-oxford-navy">
+                Authentication Required
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-oxford-navy">
                 Please access this page through your Shopify admin panel.
               </p>
               <Button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push("/dashboard")}
                 className="bg-smart-blue-500 hover:bg-smart-blue-600 text-white"
               >
                 Back to Dashboard
@@ -335,7 +358,7 @@ function SettingsContent() {
           </Card>
         </div>
       </div>
-    )
+    );
   }
 
   if (loading) {
@@ -355,7 +378,10 @@ function SettingsContent() {
           {/* Content skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
+              <div
+                key={i}
+                className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse"
+              >
                 <div className="h-5 bg-gray-200 rounded w-1/2 mb-4" />
                 <div className="h-4 bg-gray-100 rounded w-full mb-2" />
                 <div className="h-4 bg-gray-100 rounded w-3/4" />
@@ -364,7 +390,7 @@ function SettingsContent() {
           </div>
         </main>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -372,14 +398,17 @@ function SettingsContent() {
       <div
         className="min-h-screen flex items-center justify-center p-6"
         style={{
-          background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+          background:
+            "linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)",
         }}
       >
         <div className="w-full max-w-md">
           <div className="flex items-center justify-center gap-3 mb-8">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+              style={{
+                background: "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+              }}
             >
               <Zap className="w-5 h-5 text-white" />
             </div>
@@ -389,7 +418,7 @@ function SettingsContent() {
             <div className="text-center">
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
-                style={{ background: 'rgba(220, 38, 38, 0.1)' }}
+                style={{ background: "rgba(220, 38, 38, 0.1)" }}
               >
                 <AlertCircle className="w-8 h-8 text-red-500" />
               </div>
@@ -400,13 +429,14 @@ function SettingsContent() {
               <Button
                 className="w-full h-11 text-base font-medium"
                 style={{
-                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                  border: 'none'
+                  background:
+                    "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                  border: "none",
                 }}
                 onClick={() => {
-                  setLoading(true)
-                  setError(null)
-                  fetchSettings()
+                  setLoading(true);
+                  setError(null);
+                  fetchSettings();
                 }}
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -416,7 +446,7 @@ function SettingsContent() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -428,13 +458,18 @@ function SettingsContent() {
             <div className="flex items-center gap-4">
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)' }}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                }}
               >
                 <Settings className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-                <p className="text-gray-500 text-sm">Manage your Thunder Text preferences</p>
+                <p className="text-gray-500 text-sm">
+                  Manage your Thunder Text preferences
+                </p>
               </div>
             </div>
             <Button
@@ -450,47 +485,85 @@ function SettingsContent() {
           {/* Info banner */}
           <div
             className="rounded-xl p-4 flex items-center gap-3"
-            style={{ background: 'rgba(0, 102, 204, 0.05)', border: '1px solid rgba(0, 102, 204, 0.1)' }}
+            style={{
+              background: "rgba(0, 102, 204, 0.05)",
+              border: "1px solid rgba(0, 102, 204, 0.1)",
+            }}
           >
-            <Info className="w-5 h-5 flex-shrink-0" style={{ color: '#0066cc' }} />
-            <p className="text-sm" style={{ color: '#0066cc' }}>
-              Configure your prompts, templates, integrations, and size guides to customize your Thunder Text experience.
+            <Info
+              className="w-5 h-5 flex-shrink-0"
+              style={{ color: "#0066cc" }}
+            />
+            <p className="text-sm" style={{ color: "#0066cc" }}>
+              Configure your prompts, templates, integrations, and size guides
+              to customize your Thunder Text experience.
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Account Information */}
+          {/* Connections - TOP ROW */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Account Information</h3>
+              <div className="flex items-center gap-2 mb-1">
+                <Link2 className="w-5 h-5" style={{ color: "#0066cc" }} />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Connections
+                </h3>
+                {connectionsCount > 0 && (
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500 text-white text-xs font-semibold">
+                    {connectionsCount}
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-500">
+                Manage integrations with Shopify, Meta, Google, and more
+              </p>
             </div>
-            <div className="p-6">
-              {shopInfo && (
-                <div className="flex flex-col gap-3">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Shop</p>
-                    <p className="text-sm font-semibold text-gray-900">{shopInfo.shop_domain}</p>
-                  </div>
-                  <div className="h-px bg-gray-200" />
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Installed Since</p>
-                    <p className="text-sm text-gray-900">{formatDate(shopInfo.created_at)}</p>
+            <div className="p-6 flex flex-col gap-4">
+              <Link href={`/settings/connections?shop=${shop}`}>
+                <Button
+                  className="w-full h-11 text-base font-medium"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                    border: "none",
+                  }}
+                >
+                  <Link2 className="w-4 h-4 mr-2" />
+                  Manage Connections
+                </Button>
+              </Link>
+
+              {connectionsCount > 0 && (
+                <div className="rounded-lg p-4 bg-green-50 border border-green-200">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white text-sm">
+                      ✓
+                    </span>
+                    <p className="text-sm font-semibold text-green-700">
+                      {connectionsCount}{" "}
+                      {connectionsCount === 1 ? "platform" : "platforms"}{" "}
+                      connected
+                    </p>
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Billing & Plan */}
+          {/* Billing & Plan - TOP ROW */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center gap-2 mb-1">
-                <CreditCard className="w-5 h-5" style={{ color: '#0066cc' }} />
-                <h3 className="text-lg font-semibold text-gray-900">Billing & Plan</h3>
+                <CreditCard className="w-5 h-5" style={{ color: "#0066cc" }} />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Billing & Plan
+                </h3>
               </div>
               <p className="text-sm text-gray-500">
-                Manage your subscription, view billing details, and upgrade your plan
+                Manage your subscription, view billing details, and upgrade your
+                plan
               </p>
             </div>
             <div className="p-6 flex flex-col gap-4">
@@ -498,8 +571,9 @@ function SettingsContent() {
                 <Button
                   className="w-full h-11 text-base font-medium"
                   style={{
-                    background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                    border: 'none'
+                    background:
+                      "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                    border: "none",
                   }}
                 >
                   <CreditCard className="w-4 h-4 mr-2" />
@@ -509,15 +583,48 @@ function SettingsContent() {
             </div>
           </div>
 
+          {/* Account Information */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Account Information
+              </h3>
+            </div>
+            <div className="p-6">
+              {shopInfo && (
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Shop</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {shopInfo.shop_domain}
+                    </p>
+                  </div>
+                  <div className="h-px bg-gray-200" />
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">
+                      Installed Since
+                    </p>
+                    <p className="text-sm text-gray-900">
+                      {formatDate(shopInfo.created_at)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Prompts Management */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center gap-2 mb-1">
-                <FileText className="w-5 h-5" style={{ color: '#0066cc' }} />
-                <h3 className="text-lg font-semibold text-gray-900">Prompts Management</h3>
+                <FileText className="w-5 h-5" style={{ color: "#0066cc" }} />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Prompts Management
+                </h3>
               </div>
               <p className="text-sm text-gray-500">
-                Customize AI writing templates and system prompts for your product descriptions
+                Customize AI writing templates and system prompts for your
+                product descriptions
               </p>
             </div>
             <div className="p-6 flex flex-col gap-4">
@@ -525,8 +632,9 @@ function SettingsContent() {
                 <Button
                   className="w-full h-11 text-base font-medium"
                   style={{
-                    background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                    border: 'none'
+                    background:
+                      "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                    border: "none",
                   }}
                 >
                   <Settings className="w-4 h-4 mr-2" />
@@ -536,18 +644,26 @@ function SettingsContent() {
 
               <div
                 className="rounded-lg p-4"
-                style={{ background: 'rgba(0, 102, 204, 0.05)', border: '1px solid rgba(0, 102, 204, 0.1)' }}
+                style={{
+                  background: "rgba(0, 102, 204, 0.05)",
+                  border: "1px solid rgba(0, 102, 204, 0.1)",
+                }}
               >
-                <p className="text-sm font-semibold text-gray-900 mb-2">Current Settings:</p>
+                <p className="text-sm font-semibold text-gray-900 mb-2">
+                  Current Settings:
+                </p>
                 <div className="flex flex-col gap-1">
                   <p className="text-sm text-gray-700">
-                    • Global Default Template: <span className="font-semibold">Women's Clothing</span>
+                    • Global Default Template:{" "}
+                    <span className="font-semibold">Women&apos;s Clothing</span>
                   </p>
                   <p className="text-sm text-gray-700">
-                    • System Prompt: <span className="font-semibold">Active</span>
+                    • System Prompt:{" "}
+                    <span className="font-semibold">Active</span>
                   </p>
                   <p className="text-sm text-gray-700">
-                    • Category Templates: <span className="font-semibold">6 configured</span>
+                    • Category Templates:{" "}
+                    <span className="font-semibold">6 configured</span>
                   </p>
                 </div>
               </div>
@@ -558,8 +674,10 @@ function SettingsContent() {
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm col-span-1 lg:col-span-2">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center gap-2 mb-1">
-                <Bot className="w-5 h-5" style={{ color: '#0066cc' }} />
-                <h3 className="text-lg font-semibold text-gray-900">AI Discovery</h3>
+                <Bot className="w-5 h-5" style={{ color: "#0066cc" }} />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  AI Discovery
+                </h3>
                 {llmsSettings.last_generated_at && (
                   <span className="ml-auto px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
                     Published
@@ -567,7 +685,8 @@ function SettingsContent() {
                 )}
               </div>
               <p className="text-sm text-gray-500">
-                Generate an llms.txt file to help AI assistants like ChatGPT, Claude, and Gemini discover your products
+                Generate an llms.txt file to help AI assistants like ChatGPT,
+                Claude, and Gemini discover your products
               </p>
             </div>
             <div className="p-6">
@@ -576,13 +695,19 @@ function SettingsContent() {
                 <div className="flex flex-col gap-4">
                   {/* Content Type Selection */}
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 mb-3">Include Content</p>
+                    <p className="text-sm font-semibold text-gray-900 mb-3">
+                      Include Content
+                    </p>
                     <div className="flex flex-col gap-2">
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={llmsSettings.include_products}
-                          onChange={(e) => saveLlmsSettings({ include_products: e.target.checked })}
+                          onChange={(e) =>
+                            saveLlmsSettings({
+                              include_products: e.target.checked,
+                            })
+                          }
                           disabled={llmsSettingsSaving}
                           className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
@@ -592,33 +717,58 @@ function SettingsContent() {
                         <input
                           type="checkbox"
                           checked={llmsSettings.include_collections}
-                          onChange={(e) => saveLlmsSettings({ include_collections: e.target.checked })}
+                          onChange={(e) =>
+                            saveLlmsSettings({
+                              include_collections: e.target.checked,
+                            })
+                          }
                           disabled={llmsSettingsSaving}
                           className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
-                        <span className="text-sm text-gray-700">Collections</span>
-                        <span className="text-xs text-gray-400">(Coming soon)</span>
+                        <span className="text-sm text-gray-700">
+                          Collections
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          (Coming soon)
+                        </span>
                       </label>
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={llmsSettings.include_blog_posts}
-                          onChange={(e) => saveLlmsSettings({ include_blog_posts: e.target.checked })}
+                          onChange={(e) =>
+                            saveLlmsSettings({
+                              include_blog_posts: e.target.checked,
+                            })
+                          }
                           disabled={llmsSettingsSaving}
                           className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
-                        <span className="text-sm text-gray-700">Blog Posts</span>
-                        <span className="text-xs text-gray-400">(Coming soon)</span>
+                        <span className="text-sm text-gray-700">
+                          Blog Posts
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          (Coming soon)
+                        </span>
                       </label>
                     </div>
                   </div>
 
                   {/* Auto-Sync Schedule */}
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 mb-3">Auto-Sync Schedule</p>
+                    <p className="text-sm font-semibold text-gray-900 mb-3">
+                      Auto-Sync Schedule
+                    </p>
                     <select
                       value={llmsSettings.sync_schedule}
-                      onChange={(e) => saveLlmsSettings({ sync_schedule: e.target.value as 'none' | 'daily' | 'weekly' })}
+                      onChange={(e) =>
+                        saveLlmsSettings({
+                          sync_schedule: e.target.value as
+                            | "none"
+                            | "daily"
+                            | "weekly",
+                        })
+                      }
                       disabled={llmsSettingsSaving}
                       className="w-full h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
                     >
@@ -626,26 +776,31 @@ function SettingsContent() {
                       <option value="daily">Daily</option>
                       <option value="weekly">Once a week</option>
                     </select>
-                    {llmsSettings.sync_schedule !== 'none' && llmsSettings.next_sync_at && (
-                      <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        Next sync: {new Date(llmsSettings.next_sync_at).toLocaleDateString('en-US', {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: 'numeric',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    )}
+                    {llmsSettings.sync_schedule !== "none" &&
+                      llmsSettings.next_sync_at && (
+                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Next sync:{" "}
+                          {new Date(
+                            llmsSettings.next_sync_at,
+                          ).toLocaleDateString("en-US", {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      )}
                   </div>
 
                   {/* Generate Button */}
                   <Button
                     className="w-full h-11 text-base font-medium mt-2"
                     style={{
-                      background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                      border: 'none'
+                      background:
+                        "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                      border: "none",
                     }}
                     onClick={generateLlmsTxt}
                     disabled={llmsGenerating}
@@ -673,17 +828,22 @@ function SettingsContent() {
                         <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white text-sm">
                           ✓
                         </span>
-                        <p className="text-sm font-semibold text-green-700">Published</p>
+                        <p className="text-sm font-semibold text-green-700">
+                          Published
+                        </p>
                       </div>
                       <div className="flex flex-col gap-2 text-sm text-gray-600">
                         <p className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-gray-400" />
-                          Last updated: {new Date(llmsSettings.last_generated_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit'
+                          Last updated:{" "}
+                          {new Date(
+                            llmsSettings.last_generated_at,
+                          ).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
                           })}
                         </p>
                         {llmsSettings.last_product_count > 0 && (
@@ -699,10 +859,13 @@ function SettingsContent() {
                         <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-300 text-white text-sm">
                           -
                         </span>
-                        <p className="text-sm font-semibold text-gray-500">Not yet generated</p>
+                        <p className="text-sm font-semibold text-gray-500">
+                          Not yet generated
+                        </p>
                       </div>
                       <p className="text-sm text-gray-400">
-                        Click &quot;Generate llms.txt&quot; to create your AI discovery file
+                        Click &quot;Generate llms.txt&quot; to create your AI
+                        discovery file
                       </p>
                     </div>
                   )}
@@ -757,13 +920,19 @@ function SettingsContent() {
                   {/* Info Box */}
                   <div
                     className="rounded-lg p-4"
-                    style={{ background: 'rgba(0, 102, 204, 0.05)', border: '1px solid rgba(0, 102, 204, 0.1)' }}
+                    style={{
+                      background: "rgba(0, 102, 204, 0.05)",
+                      border: "1px solid rgba(0, 102, 204, 0.1)",
+                    }}
                   >
                     <p className="text-sm text-gray-700 mb-2">
                       <span className="font-semibold">What is llms.txt?</span>
                     </p>
                     <p className="text-sm text-gray-600">
-                      Similar to robots.txt for search engines, llms.txt helps AI assistants understand and recommend your products. Upload the generated file to your store&apos;s theme files.
+                      Similar to robots.txt for search engines, llms.txt helps
+                      AI assistants understand and recommend your products.
+                      Upload the generated file to your store&apos;s theme
+                      files.
                     </p>
                   </div>
                 </div>
@@ -774,7 +943,9 @@ function SettingsContent() {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                   <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[80vh] flex flex-col">
                     <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                      <h3 className="text-lg font-semibold text-gray-900">llms.txt Preview</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        llms.txt Preview
+                      </h3>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -821,63 +992,18 @@ function SettingsContent() {
             </div>
           </div>
 
-          {/* Connections */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center gap-2 mb-1">
-                <Link2 className="w-5 h-5" style={{ color: '#0066cc' }} />
-                <h3 className="text-lg font-semibold text-gray-900">Connections</h3>
-                {connectionsCount > 0 && (
-                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500 text-white text-xs font-semibold">
-                    {connectionsCount}
-                  </span>
-                )}
-              </div>
-              <p className="text-sm text-gray-500">
-                Manage integrations with Shopify, Meta, Google, and more
-              </p>
-            </div>
-            <div className="p-6 flex flex-col gap-4">
-              <Link href={`/settings/connections?shop=${shop}`}>
-                <Button
-                  className="w-full h-11 text-base font-medium"
-                  style={{
-                    background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                    border: 'none'
-                  }}
-                >
-                  <Link2 className="w-4 h-4 mr-2" />
-                  Manage Connections
-                </Button>
-              </Link>
-
-              {connectionsCount > 0 && (
-                <div className="rounded-lg p-4 bg-green-50 border border-green-200">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white text-sm">
-                      ✓
-                    </span>
-                    <p className="text-sm font-semibold text-green-700">
-                      {connectionsCount} {connectionsCount === 1 ? 'platform' : 'platforms'} connected
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Shop Sizes - Full Width */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm col-span-1 lg:col-span-2">
-            <div className="p-6">
+            <div className="p-6 pb-8">
               {shop && (
                 <ShopSizes
                   shop={shop}
                   onToast={(message: string, error?: boolean) => {
                     toast({
-                      title: error ? 'Error' : 'Success',
+                      title: error ? "Error" : "Success",
                       description: message,
-                      variant: error ? 'destructive' : 'default',
-                    })
+                      variant: error ? "destructive" : "default",
+                    });
                   }}
                 />
               )}
@@ -886,28 +1012,35 @@ function SettingsContent() {
         </div>
       </main>
     </div>
-  )
+  );
 }
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
-          >
-            <Zap className="w-6 h-6 text-white" />
-          </div>
-          <div className="flex items-center gap-3">
-            <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#0066cc' }} />
-            <p className="text-sm text-gray-500">Loading Settings...</p>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{
+                background: "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+              }}
+            >
+              <Zap className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Loader2
+                className="h-5 w-5 animate-spin"
+                style={{ color: "#0066cc" }}
+              />
+              <p className="text-sm text-gray-500">Loading Settings...</p>
+            </div>
           </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <SettingsContent />
     </Suspense>
-  )
+  );
 }

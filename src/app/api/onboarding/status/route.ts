@@ -44,6 +44,11 @@ export async function GET(request: NextRequest) {
 
     // Get shop data including onboarding status
     // Note: userId from getUserId() is actually the shop UUID (id), not the shop_domain
+    logger.info("[Onboarding Status] Looking up shop", {
+      component: "onboarding-status",
+      userId,
+    });
+
     const { data: shop, error: shopError } = await supabaseAdmin
       .from("shops")
       .select(
@@ -66,6 +71,14 @@ export async function GET(request: NextRequest) {
         { status: 404 },
       );
     }
+
+    logger.info("[Onboarding Status] Shop data found", {
+      component: "onboarding-status",
+      userId,
+      shopDomain: shop.shop_domain,
+      onboardingCompleted: shop.onboarding_completed,
+      onboardingCompletedAt: shop.onboarding_completed_at,
+    });
 
     const status: OnboardingStatus = {
       onboarding_completed: shop.onboarding_completed ?? false,

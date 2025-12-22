@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { getUserId } from "@/lib/auth/content-center-auth";
 import { generateMasterBusinessProfile } from "@/lib/services/business-profile-generator";
 import { logger } from "@/lib/logger";
+import { alertAuditFailure } from "@/lib/alerting/critical-alerts";
 import type {
   ApiResponse,
   GenerateProfileResponse,
@@ -53,7 +54,7 @@ export async function POST(
       logger.error("Error fetching responses", responsesError as Error, {
         component: "business-profile-generate",
         operation: "POST-fetchResponses",
-        profileId: profile.id
+        profileId: profile.id,
       });
       return NextResponse.json(
         { success: false, error: "Failed to fetch interview responses" },
@@ -74,7 +75,10 @@ export async function POST(
     }
 
     // Generate master business profile using AI service
-    console.log(`Generating master business profile for store ${userId}...`);
+    logger.info("Generating master business profile", {
+      component: "business-profile-generate",
+      storeId: userId,
+    });
 
     const { masterProfile, generationMetadata } =
       await generateMasterBusinessProfile(responses);
@@ -111,7 +115,7 @@ export async function POST(
       logger.error("Error updating profile", updateError as Error, {
         component: "business-profile-generate",
         operation: "POST-updateProfile",
-        profileId: profile.id
+        profileId: profile.id,
       });
       return NextResponse.json(
         { success: false, error: "Failed to save generated profile" },
@@ -120,17 +124,34 @@ export async function POST(
     }
 
     // Save generation history for audit trail
-    await supabaseAdmin.from("profile_generation_history").insert({
-      business_profile_id: profile.id,
-      profile_version: profile.profile_version + 1,
-      master_profile_text: JSON.stringify(masterProfile),
-      model_used: "gpt-4o",
-      generation_time_ms: generationMetadata.generationTimeMs,
-      tokens_used: generationMetadata.totalTokensUsed,
-      profile_word_count: masterProfile.profileSummary.split(/\s+/).length,
-      validation_passed: true,
-      validation_issues: [],
-    });
+    const { error: historyError } = await supabaseAdmin
+      .from("profile_generation_history")
+      .insert({
+        business_profile_id: profile.id,
+        profile_version: profile.profile_version + 1,
+        master_profile_text: JSON.stringify(masterProfile),
+        model_used: "gpt-4o",
+        generation_time_ms: generationMetadata.generationTimeMs,
+        tokens_used: generationMetadata.totalTokensUsed,
+        profile_word_count: masterProfile.profileSummary.split(/\s+/).length,
+        validation_passed: true,
+        validation_issues: [],
+      });
+
+    if (historyError) {
+      // Alert on audit trail failure - this is critical for compliance
+      await alertAuditFailure(
+        "Failed to save profile generation history",
+        {
+          profileId: profile.id,
+          storeId: userId,
+          profileVersion: profile.profile_version + 1,
+        },
+        historyError,
+      );
+      // Note: We don't fail the request since the profile was generated successfully
+      // The audit failure is logged and alerted for investigation
+    }
 
     return NextResponse.json(
       {
@@ -146,10 +167,14 @@ export async function POST(
       { status: 200 },
     );
   } catch (error) {
-    logger.error("Error in POST /api/business-profile/generate", error as Error, {
-      component: "business-profile-generate",
-      operation: "POST"
-    });
+    logger.error(
+      "Error in POST /api/business-profile/generate",
+      error as Error,
+      {
+        component: "business-profile-generate",
+        operation: "POST",
+      },
+    );
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

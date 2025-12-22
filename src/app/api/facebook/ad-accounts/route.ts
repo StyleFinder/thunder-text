@@ -1,12 +1,13 @@
 /**
  * GET /api/facebook/ad-accounts
  *
- * Retrieves all ad accounts for the connected Facebook user
+ * Retrieves the user's SELECTED ad accounts (not all available accounts)
+ * Selected accounts are stored in the integration's additional_metadata
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getAdAccounts, FacebookAPIError } from "@/lib/services/facebook-api";
+import { FacebookAPIError } from "@/lib/services/facebook-api";
 import { logger } from "@/lib/logger";
 import { lookupShopWithFallback } from "@/lib/shop-lookup";
 
@@ -39,19 +40,65 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get ad accounts from Facebook API
-    const adAccounts = await getAdAccounts(shopData.id);
+    // Get the Facebook integration to retrieve selected ad accounts
+    const { data: integration, error: integrationError } = await supabase
+      .from("integrations")
+      .select("additional_metadata, is_active")
+      .eq("shop_id", shopData.id)
+      .eq("provider", "facebook")
+      .single();
+
+    if (integrationError || !integration) {
+      throw new FacebookAPIError(
+        "Facebook account not connected",
+        404,
+        "NOT_CONNECTED",
+      );
+    }
+
+    if (!integration.is_active) {
+      throw new FacebookAPIError(
+        "Facebook integration is not active",
+        404,
+        "NOT_CONNECTED",
+      );
+    }
+
+    // Return only the SELECTED ad accounts from integration metadata
+    // ad_accounts contains the user-selected accounts (after selection in Settings)
+    const selectedAdAccounts =
+      integration.additional_metadata?.ad_accounts || [];
+
+    if (selectedAdAccounts.length === 0) {
+      // If no accounts selected yet, this might be first-time setup
+      // Return empty with a helpful message
+      return NextResponse.json({
+        success: true,
+        data: [],
+        message:
+          "No ad accounts selected. Please select accounts in Settings > Connections.",
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      data: adAccounts.map((account) => ({
-        id: account.id,
-        account_id: account.account_id,
-        name: account.name,
-        status: account.account_status,
-        currency: account.currency,
-        timezone: account.timezone_name,
-      })),
+      data: selectedAdAccounts.map(
+        (account: {
+          id: string;
+          account_id?: string;
+          name: string;
+          account_status?: number;
+          currency?: string;
+          timezone_name?: string;
+        }) => ({
+          id: account.id,
+          account_id: account.account_id || account.id.replace("act_", ""),
+          name: account.name,
+          status: account.account_status,
+          currency: account.currency,
+          timezone: account.timezone_name,
+        }),
+      ),
     });
   } catch (error) {
     logger.error("Error in GET /api/facebook/ad-accounts:", error as Error, {

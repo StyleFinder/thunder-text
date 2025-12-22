@@ -26,8 +26,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get shop domain from session
-    const shopDomain = (session.user as { shopDomain?: string }).shopDomain;
+    // Parse body first to get shopId for standalone users
+    const body = await req.json();
+    const {
+      shopId: shopIdFromBody, // Shop domain sent from frontend
+      productInfo,
+      platform,
+      goal,
+      adLengthMode,
+      targetAudience,
+      imageUrls,
+      audienceTemperature,
+      productComplexity,
+      productPrice,
+      hasStrongStory,
+      isPremiumBrand,
+    } = body;
+
+    // Get shop domain from session OR request body (for standalone users)
+    const shopDomain =
+      (session.user as { shopDomain?: string }).shopDomain || shopIdFromBody;
     if (!shopDomain) {
       return NextResponse.json(
         { error: "No shop associated with account" },
@@ -83,23 +101,6 @@ export async function POST(req: NextRequest) {
 
     // Use session-derived shop ID
     const shopId = shopData.id;
-
-    const body = await req.json();
-    const {
-      productInfo,
-      platform,
-      goal,
-      adLengthMode,
-      targetAudience,
-      imageUrls,
-      audienceTemperature,
-      productComplexity,
-      productPrice,
-      hasStrongStory,
-      isPremiumBrand,
-    } = body;
-
-    // Note: shopId from body is ignored - we use session-derived shopId
 
     if (!productInfo || !platform || !goal) {
       return NextResponse.json(

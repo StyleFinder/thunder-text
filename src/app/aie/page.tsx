@@ -278,6 +278,12 @@ export default function AIEPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<string>("");
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
   const [facebookConnected, setFacebookConnected] = useState(false);
+  const [facebookSuccessModalOpen, setFacebookSuccessModalOpen] =
+    useState(false);
+  const [facebookSuccessData, setFacebookSuccessData] = useState<{
+    campaignName: string;
+    adAccountName: string;
+  } | null>(null);
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -704,8 +710,16 @@ export default function AIEPage() {
             if (postData.success) {
               setResultsModalOpen(false);
               setError(null);
-              // Navigate to ads library with success message
-              router.push(`/ads-library?shop=${shop}&posted=true`);
+              // Get campaign and account names for success message
+              const campaignName =
+                campaigns.find((c) => c.id === selectedCampaign)?.name ||
+                "your campaign";
+              const adAccountName =
+                adAccounts.find((a) => a.id === selectedAdAccount)?.name ||
+                "your ad account";
+              // Show success modal
+              setFacebookSuccessData({ campaignName, adAccountName });
+              setFacebookSuccessModalOpen(true);
               return;
             } else {
               // Ad saved but posting failed - go to edit page
@@ -874,7 +888,7 @@ export default function AIEPage() {
                   <div className="flex items-center gap-2 mb-2">
                     <Facebook className="w-5 h-5 text-blue-600" />
                     <Label className="text-base font-semibold text-gray-900">
-                      {getPlatformCampaignLabel(platform)} Campaign (Optional)
+                      {getPlatformCampaignLabel(platform)} Campaign
                     </Label>
                   </div>
 
@@ -1970,6 +1984,92 @@ export default function AIEPage() {
                 }}
               >
                 Add Image
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Facebook Success Modal */}
+      {mounted && (
+        <Dialog
+          open={facebookSuccessModalOpen}
+          onOpenChange={(open) => {
+            setFacebookSuccessModalOpen(open);
+            if (!open) setFacebookSuccessData(null);
+          }}
+        >
+          <DialogContent className="max-w-md rounded-xl p-0 overflow-hidden">
+            <DialogHeader className="px-6 py-5 border-b border-gray-200 bg-white">
+              <DialogTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <svg
+                  className="w-6 h-6 text-green-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Ad Posted Successfully!
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="p-6 flex flex-col gap-4 bg-gray-50">
+              <p className="text-gray-700">
+                Your ad has been successfully posted to Facebook!
+              </p>
+              {facebookSuccessData && (
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="flex flex-col gap-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Campaign:</span>
+                      <span className="font-medium text-gray-900">
+                        {facebookSuccessData.campaignName}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Ad Account:</span>
+                      <span className="font-medium text-gray-900">
+                        {facebookSuccessData.adAccountName}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-500">
+                You can view and manage your ads in the Ads Library.
+              </p>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 bg-white flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFacebookSuccessModalOpen(false);
+                  setFacebookSuccessData(null);
+                }}
+                className="border-gray-200 hover:bg-gray-50"
+              >
+                Close
+              </Button>
+              <Button
+                onClick={() => {
+                  setFacebookSuccessModalOpen(false);
+                  setFacebookSuccessData(null);
+                  router.push("/ads");
+                }}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                  border: "none",
+                }}
+              >
+                View Ads Library
               </Button>
             </div>
           </DialogContent>
