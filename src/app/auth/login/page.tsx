@@ -70,35 +70,48 @@ export default function LoginPage() {
         const statusData = await statusResponse.json();
 
         if (statusResponse.ok && statusData.success && statusData.data) {
-          const { onboarding_completed, shop_domain } = statusData.data;
+          const { onboarding_completed, shop_domain, shop_id } = statusData.data;
 
-          if (!onboarding_completed) {
-            // New user - go to welcome/onboarding
-            router.push("/welcome");
-            return;
-          }
+          // Check if Shopify is connected - this is the TRUE indicator of onboarding completion
+          // A shop_domain that doesn't start with "pending-" means Shopify is connected
+          const hasShopifyConnected = shop_domain && !shop_domain.startsWith("pending-");
 
-          // Onboarding is complete - now check if Shopify is still connected
-          const shopStatusResponse = await fetch("/api/shop/status");
-          const shopStatusData = await shopStatusResponse.json();
+          // If onboarding is complete OR Shopify is connected, user should go to dashboard
+          if (onboarding_completed || hasShopifyConnected) {
+            // Check if Shopify is still connected (not uninstalled)
+            const shopStatusResponse = await fetch("/api/shop/status");
+            const shopStatusData = await shopStatusResponse.json();
 
-          if (
-            shopStatusResponse.ok &&
-            shopStatusData.success &&
-            shopStatusData.data
-          ) {
-            const { isConnected } = shopStatusData.data;
+            if (
+              shopStatusResponse.ok &&
+              shopStatusData.success &&
+              shopStatusData.data
+            ) {
+              const { isConnected } = shopStatusData.data;
 
-            if (isConnected) {
-              // Shop is connected - go to dashboard
-              router.push(`/dashboard?shop=${shop_domain}`);
+              if (isConnected) {
+                // Shop is connected - go to dashboard using UUID-based route
+                if (shop_id) {
+                  router.push(`/stores/${shop_id}/dashboard`);
+                } else {
+                  // Fallback to legacy route if shop_id not available
+                  router.push(`/dashboard?shop=${shop_domain}`);
+                }
+              } else {
+                // Shop is disconnected (app was uninstalled) - show reconnect page
+                router.push(`/shopify-disconnected?shop=${shop_domain}`);
+              }
             } else {
-              // Shop is disconnected (app was uninstalled) - show reconnect page
-              router.push(`/shopify-disconnected?shop=${shop_domain}`);
+              // Couldn't check shop status - go to dashboard using UUID-based route
+              if (shop_id) {
+                router.push(`/stores/${shop_id}/dashboard`);
+              } else {
+                router.push(`/dashboard?shop=${shop_domain}`);
+              }
             }
           } else {
-            // Couldn't check shop status - go to dashboard and let it handle it
-            router.push(`/dashboard?shop=${shop_domain}`);
+            // New user who hasn't connected Shopify yet - go to welcome/onboarding
+            router.push("/welcome");
           }
         } else {
           // Account not found in shops table - show error

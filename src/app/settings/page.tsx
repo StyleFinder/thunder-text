@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from "react";
 // Force dynamic rendering for this page
 export const dynamic = "force-dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useShop } from "@/hooks/useShop";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +43,7 @@ interface ShopInfo {
 function SettingsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const shop = searchParams?.get("shop");
+  const { shop } = useShop();
   const _authenticated = searchParams?.get("authenticated");
   const { toast } = useToast();
 

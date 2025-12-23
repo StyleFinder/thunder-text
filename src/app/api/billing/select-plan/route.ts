@@ -93,8 +93,8 @@ export async function POST(request: NextRequest) {
         shopId: shop.id,
       });
 
-      // Redirect to dashboard
-      const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?shop=${normalizedDomain}&plan=free`;
+      // Redirect to dashboard - use UUID-based route
+      const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/stores/${shop.id}/dashboard?plan=free`;
 
       return NextResponse.json({
         success: true,

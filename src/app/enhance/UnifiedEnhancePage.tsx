@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useShop } from "@/hooks/useShop";
 import Image from "next/image";
 import {
   ProductImageUpload,
@@ -55,10 +56,11 @@ interface EnhancementOptions {
 export default function UnifiedEnhancePage() {
   const searchParams = useSearchParams();
   const { shop: authShop, authenticatedFetch } = useShopifyAuth();
+  const { shop: shopFromHook, shopId, isUuidRouting } = useShop();
 
   const productId = searchParams?.get("productId") || "";
   const shop =
-    searchParams?.get("shop") ||
+    shopFromHook ||
     authShop ||
     "zunosai-staging-test-store.myshopify.com";
 
@@ -592,7 +594,12 @@ export default function UnifiedEnhancePage() {
         onProductSelect={(id) => {
           const params = new URLSearchParams(window.location.search);
           params.set("productId", id);
-          window.location.href = `/enhance?${params}`;
+          // Use UUID routing if we're in a /stores/{shopId}/ route, otherwise use legacy route
+          if (isUuidRouting && shopId) {
+            window.location.href = `/stores/${shopId}/enhance?${params}`;
+          } else {
+            window.location.href = `/enhance?${params}`;
+          }
         }}
       />
     );
@@ -666,9 +673,14 @@ export default function UnifiedEnhancePage() {
               <Button
                 variant="outline"
                 className="border-gray-200 hover:bg-gray-50"
-                onClick={() =>
-                  (window.location.href = `/dashboard?shop=${shop}`)
-                }
+                onClick={() => {
+                  // Use UUID routing if available, otherwise use legacy route
+                  if (isUuidRouting && shopId) {
+                    window.location.href = `/stores/${shopId}/dashboard`;
+                  } else {
+                    window.location.href = `/dashboard?shop=${shop}`;
+                  }
+                }}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Dashboard
@@ -885,9 +897,13 @@ export default function UnifiedEnhancePage() {
                 variant="outline"
                 size="lg"
                 className="border-gray-200"
-                onClick={() =>
-                  (window.location.href = `/dashboard?shop=${shop}`)
-                }
+                onClick={() => {
+                  if (isUuidRouting && shopId) {
+                    window.location.href = `/stores/${shopId}/dashboard`;
+                  } else {
+                    window.location.href = `/dashboard?shop=${shop}`;
+                  }
+                }}
               >
                 Cancel
               </Button>

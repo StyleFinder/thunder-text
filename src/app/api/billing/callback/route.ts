@@ -102,14 +102,15 @@ export async function GET(request: NextRequest) {
           logger.info("[Billing Callback] Subscription activated", {
             component: "billing-callback",
             shopDomain: normalizedDomain,
+            shopId: shop.id,
             plan,
             subscriptionId: activeSubscription.id,
           });
 
-          // Redirect to dashboard with success
+          // Redirect to dashboard with success - use UUID-based route
           return NextResponse.redirect(
             new URL(
-              `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?shop=${normalizedDomain}&subscription=confirmed&plan=${plan}`
+              `${process.env.NEXT_PUBLIC_APP_URL}/stores/${shop.id}/dashboard?subscription=confirmed&plan=${plan}`
             )
           );
         }
@@ -128,10 +129,10 @@ export async function GET(request: NextRequest) {
       const activeSubscription = await getActiveSubscription(normalizedDomain);
 
       if (activeSubscription && activeSubscription.status === "ACTIVE") {
-        // They have an active subscription, redirect to dashboard
+        // They have an active subscription, redirect to dashboard - use UUID-based route
         return NextResponse.redirect(
           new URL(
-            `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?shop=${normalizedDomain}&subscription=existing`
+            `${process.env.NEXT_PUBLIC_APP_URL}/stores/${shop.id}/dashboard?subscription=existing`
           )
         );
       }

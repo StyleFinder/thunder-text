@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown from 'react-markdown'; // eslint-disable-line @typescript-eslint/no-unused-vars
 import { CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import type {
   ChatMessage,
@@ -25,11 +25,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import styles from './page.module.css';
-import { logger } from '@/lib/logger'
+import styles from './page.module.css'; // eslint-disable-line @typescript-eslint/no-unused-vars
+import { logger } from '@/lib/logger';
+import { useShop } from '@/hooks/useShop';
 
 export default function BrandVoicePage() {
   const router = useRouter();
+
+  // Use the unified shop hook for authentication
+  const { shopDomain, hasShop, isLoading: authLoading } = useShop();
 
   // State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -41,51 +45,12 @@ export default function BrandVoicePage() {
   const [isGeneratingProfile, setIsGeneratingProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
-  const [shopDomain, setShopDomain] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasLoadedProfile = useRef(false);
   const [isResetting, setIsResetting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-
-  // Get shop domain from URL params or API (for embedded app)
-  useEffect(() => {
-    const initShop = async () => {
-      // First, try URL params
-      if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(window.location.search);
-        const shop = params.get('shop');
-
-        if (shop) {
-          setShopDomain(shop);
-          setIsAuthenticated(true);
-          setAuthLoading(false);
-          return;
-        }
-      }
-
-      // Fallback: fetch from API (uses cookie set by middleware)
-      try {
-        const res = await fetch('/api/shop/me');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.domain) {
-            setShopDomain(data.domain);
-            setIsAuthenticated(true);
-          }
-        }
-      } catch (e) {
-        logger.error('Failed to fetch shop:', e as Error, { component: 'business-profile' });
-      }
-
-      setAuthLoading(false);
-    };
-
-    initShop();
-  }, []);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -132,18 +97,18 @@ export default function BrandVoicePage() {
   };
 
   useEffect(() => {
-    if (shopDomain && isAuthenticated && !hasLoadedProfile.current) {
+    if (hasShop && shopDomain && !hasLoadedProfile.current) {
       hasLoadedProfile.current = true;
       loadProfile();
     }
-  }, [shopDomain, isAuthenticated]);
+  }, [shopDomain, hasShop]);
 
   // If not authenticated, set profileLoading to false
   useEffect(() => {
-    if (!authLoading && (!isAuthenticated || !shopDomain)) {
+    if (!authLoading && !hasShop) {
       setProfileLoading(false);
     }
-  }, [authLoading, isAuthenticated, shopDomain]);
+  }, [authLoading, hasShop]);
 
   // Profile completed - redirect to settings page
   useEffect(() => {
@@ -455,7 +420,7 @@ export default function BrandVoicePage() {
   }
 
   // Not authenticated
-  if (!isAuthenticated || !shopDomain) {
+  if (!hasShop) {
     return (
       <div className="w-full flex flex-col items-center" style={{ padding: '32px', background: '#fafaf9', minHeight: '100vh' }}>
         <div className="w-full" style={{ maxWidth: '800px' }}>
@@ -463,7 +428,7 @@ export default function BrandVoicePage() {
             <AlertCircle className="h-4 w-4" style={{ color: '#cc0066' }} />
             <AlertTitle style={{ fontSize: '16px', fontWeight: 600, color: '#991b1b', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginBottom: '4px' }}>Authentication Required</AlertTitle>
             <AlertDescription style={{ fontSize: '14px', color: '#991b1b', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-              Please access this page from your Shopify admin.
+              Please log in to access this page.
             </AlertDescription>
           </Alert>
         </div>

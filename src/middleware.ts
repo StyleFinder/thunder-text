@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 /**
+ * URL Routing Architecture
+ *
+ * ThunderText uses UUID-based routing for shop context:
+ * - /stores/{shopId}/dashboard - Shop dashboard
+ * - /stores/{shopId}/settings - Shop settings
+ * - /stores/{shopId}/products - Products management
+ *
+ * This replaces the old query-param pattern (?shop=domain.myshopify.com)
+ * for cleaner URLs and better security (no domain exposure).
+ */
+
+/**
  * CORS Configuration for ThunderText (Non-Embedded External Shopify App)
  *
  * Architecture: ThunderText runs on its own domain (app.zunosai.com / thunder-text.onrender.com)
@@ -50,12 +62,26 @@ function isAllowedOrigin(origin: string): boolean {
 /**
  * Protected routes that require authentication
  * Unauthenticated users will be redirected to /auth/login
+ *
+ * New UUID-based routes: /stores/{shopId}/...
+ * Legacy routes kept for any direct access attempts
  */
 const PROTECTED_ROUTES = [
+  "/stores", // New UUID-based routing
+  // Legacy routes - will redirect to /stores/{shopId}/...
   "/dashboard",
   "/settings",
   "/products",
   "/generate",
+  "/create-pd",
+  "/enhance",
+  "/aie",
+  "/ads-library",
+  "/brand-voice",
+  "/content-center",
+  "/create-ad",
+  "/business-profile",
+  "/best-practices",
   "/bhb",
 ];
 
@@ -72,6 +98,17 @@ const PUBLIC_ROUTES = [
   "/pricing", // Plan selection page after Shopify OAuth - must be public
   "/",
 ];
+
+/**
+ * Extract shop UUID from path if present
+ * Pattern: /stores/{uuid}/...
+ */
+function extractShopIdFromPath(pathname: string): string | null {
+  const match = pathname.match(
+    /^\/stores\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i
+  );
+  return match ? match[1] : null;
+}
 
 /**
  * Check if a pathname matches any protected route
@@ -136,6 +173,51 @@ export async function middleware(request: NextRequest) {
       loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);
     }
+
+    // For shop users accessing /stores routes, validate shop access
+    if (pathname.startsWith("/stores/") && token.role === "shop") {
+      const pathShopId = extractShopIdFromPath(pathname);
+
+      // Shop users can only access their own shop
+      // For shop users, token.id IS their shop UUID
+      if (pathShopId && pathShopId !== token.id) {
+        console.warn(
+          `[Middleware] Shop access denied: user ${token.id} attempted to access shop ${pathShopId}`
+        );
+        // Redirect to their own shop's dashboard
+        const redirectUrl = new URL(`/stores/${token.id}/dashboard`, request.url);
+        return NextResponse.redirect(redirectUrl);
+      }
+    }
+
+    // LEGACY ROUTE REDIRECT: Redirect old routes to new UUID-based routes
+    // Only for shop users who have a shopId
+    if (token.role === "shop" && token.id) {
+      const legacyRoutes = [
+        "/dashboard",
+        "/settings",
+        "/products",
+        "/generate",
+        "/create-pd",
+        "/enhance",
+        "/aie",
+        "/ads-library",
+        "/brand-voice",
+        "/content-center",
+        "/create-ad",
+        "/business-profile",
+        "/best-practices",
+      ];
+      for (const route of legacyRoutes) {
+        if (pathname === route || pathname.startsWith(`${route}/`)) {
+          // Extract the sub-path after the legacy route
+          const subPath = pathname.replace(route, "") || "";
+          const newPath = `/stores/${token.id}${route}${subPath}`;
+          console.log(`[Middleware] Redirecting legacy route: ${pathname} -> ${newPath}`);
+          return NextResponse.redirect(new URL(newPath, request.url));
+        }
+      }
+    }
   }
 
   // Handle CORS for API routes
@@ -176,7 +258,7 @@ export async function middleware(request: NextRequest) {
       response.headers.set("Access-Control-Max-Age", "86400");
     } else if (origin) {
       // Unauthorized cross-origin request
-      console.warn("⚠️ CORS violation attempt from:", origin);
+      console.warn("[Middleware] CORS violation attempt from:", origin);
       response.headers.set("Access-Control-Allow-Origin", "null");
       response.headers.set("Access-Control-Allow-Methods", "OPTIONS");
       response.headers.set("Access-Control-Max-Age", "0");
@@ -201,16 +283,27 @@ export const config = {
   // Middleware needed for:
   // 1. Root path (Shopify hosted install redirect detection)
   // 2. API routes (CORS handling)
-  // 3. Protected page routes (authentication)
+  // 3. Protected page routes (authentication) - both new and legacy
   // Security headers for pages are applied via next.config.ts
   // Note: /welcome is public (for Shopify install flow) - not included here
   matcher: [
     "/",
     "/api/:path*",
+    "/stores/:path*", // New UUID-based routes
+    // Legacy routes - will redirect to UUID-based routes for shop users
     "/dashboard/:path*",
     "/settings/:path*",
     "/products/:path*",
     "/generate/:path*",
+    "/create-pd/:path*",
+    "/enhance/:path*",
+    "/aie/:path*",
+    "/ads-library/:path*",
+    "/brand-voice/:path*",
+    "/content-center/:path*",
+    "/create-ad/:path*",
+    "/business-profile/:path*",
+    "/best-practices/:path*",
     "/bhb/:path*",
   ],
 };

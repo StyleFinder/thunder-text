@@ -665,8 +665,28 @@ export default function WelcomePage() {
       );
     }
 
-    // Redirect to dashboard with shop param if available
-    router.push(shop ? `/dashboard?shop=${shop}` : "/dashboard");
+    // Redirect to dashboard - use UUID-based route
+    // For shop users, their session.user.id IS the shopId
+    const shopId = session?.user?.id;
+    if (shopId) {
+      router.push(`/stores/${shopId}/dashboard`);
+    } else if (shop) {
+      // Fallback: fetch shopId from API if session doesn't have it
+      try {
+        const response = await fetch(`/api/shop/profile?shop=${shop}`);
+        const data = await response.json();
+        if (data.shop?.id) {
+          router.push(`/stores/${data.shop.id}/dashboard`);
+          return;
+        }
+      } catch {
+        // Fall through to legacy redirect
+      }
+      // Legacy fallback if shopId lookup fails
+      router.push(`/dashboard?shop=${shop}`);
+    } else {
+      router.push("/dashboard");
+    }
   };
 
   return (

@@ -8,6 +8,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useNavigation } from "@/app/hooks/useNavigation";
+import { useShop } from "@/hooks/useShop";
 import {
   Search,
   Package,
@@ -243,7 +245,8 @@ interface GenerationResult {
 
 export default function AIEPage() {
   const searchParams = useSearchParams();
-  const shop = searchParams?.get("shop") || "demo-shop";
+  const { shop } = useShop();
+  const { buildUrl } = useNavigation();
 
   const [mounted, setMounted] = useState(false);
   const [platform, setPlatform] = useState<string>("meta");
@@ -338,6 +341,8 @@ export default function AIEPage() {
 
   // Fetch products with debounced search
   const fetchProducts = useCallback(async () => {
+    if (!shop) return;
+
     try {
       setLoadingProducts(true);
 
@@ -385,6 +390,8 @@ export default function AIEPage() {
 
   // Fetch Facebook Ad Accounts
   const fetchAdAccounts = useCallback(async () => {
+    if (!shop) return;
+
     try {
       const response = await fetch(
         `/api/facebook/ad-accounts?shop=${encodeURIComponent(shop)}`,
@@ -412,6 +419,8 @@ export default function AIEPage() {
   // Fetch Facebook Campaigns for selected ad account
   const fetchCampaigns = useCallback(
     async (adAccountId: string) => {
+      if (!shop) return;
+
       setIsLoadingCampaigns(true);
       try {
         const response = await fetch(
@@ -898,7 +907,7 @@ export default function AIEPage() {
                       <AlertDescription className="text-yellow-700">
                         Connect your Facebook account in{" "}
                         <a
-                          href={`/settings/connections?shop=${shop}`}
+                          href={buildUrl("/settings")}
                           className="underline font-medium"
                         >
                           Settings

@@ -7,7 +7,10 @@ declare module 'next-auth' {
     email: string;
     name?: string;
     role: 'admin' | 'coach' | 'shop';
+    /** @deprecated Use shopId instead - domain exposed for backward compatibility */
     shopDomain?: string;
+    /** UUID of the shop - use this for routing */
+    shopId?: string;
     twoFactorEnabled?: boolean;
     hasShopifyLinked?: boolean;
     staffRole?: 'owner' | 'staff';
@@ -19,7 +22,10 @@ declare module 'next-auth' {
       email: string;
       name?: string;
       role: 'admin' | 'coach' | 'shop';
+      /** @deprecated Use shopId instead - domain exposed for backward compatibility */
       shopDomain?: string;
+      /** UUID of the shop - use this for routing */
+      shopId?: string;
       twoFactorEnabled?: boolean;
       hasShopifyLinked?: boolean;
       staffRole?: 'owner' | 'staff';
@@ -32,7 +38,10 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     role: 'admin' | 'coach' | 'shop';
+    /** @deprecated Use shopId instead */
     shopDomain?: string;
+    /** UUID of the shop - use this for routing */
+    shopId?: string;
     twoFactorEnabled?: boolean;
     hasShopifyLinked?: boolean;
     staffRole?: 'owner' | 'staff';

@@ -408,12 +408,15 @@ export async function GET(req: NextRequest) {
 
       // Merge pending shop data into existing shop
       // Only update fields that are missing in the existing shop
+      // IMPORTANT: Mark onboarding complete since Shopify is now connected
       const mergeData: Record<string, unknown> = {
         shopify_access_token: access_token,
         shopify_scope: scope || "",
         shop_type: "shopify",
         is_active: true,
         uninstalled_at: null, // Clear uninstall flag on reinstall
+        onboarding_completed: true, // Mark onboarding complete on Shopify connection
+        onboarding_completed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
 
@@ -503,6 +506,8 @@ export async function GET(req: NextRequest) {
 
       // Update existing shop with new tokens
       // Clear uninstalled_at in case this is a reinstall after uninstall
+      // IMPORTANT: Also mark onboarding as complete when Shopify is (re)connected
+      // This ensures existing users who reconnect go to dashboard, not welcome
       await supabaseAdmin
         .from("shops")
         .update({
@@ -511,6 +516,8 @@ export async function GET(req: NextRequest) {
           shop_type: "shopify",
           is_active: true,
           uninstalled_at: null, // Clear uninstall flag on reinstall
+          onboarding_completed: true, // Mark onboarding complete on Shopify connection
+          onboarding_completed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq("id", shopId);
@@ -520,6 +527,7 @@ export async function GET(req: NextRequest) {
         shop: fullShopDomain,
         isNewInstallation,
         hasCompleteInfo: existingHasCompleteInfo,
+        markedOnboardingComplete: true,
       });
     } else if (pendingShop) {
       // User signed up via email/password and now connecting Shopify
@@ -533,6 +541,7 @@ export async function GET(req: NextRequest) {
         pendingShop.store_name && pendingShop.owner_name
       );
 
+      // IMPORTANT: Mark onboarding complete since Shopify is now connected
       await supabaseAdmin
         .from("shops")
         .update({
@@ -541,6 +550,8 @@ export async function GET(req: NextRequest) {
           shopify_scope: scope || "",
           shop_type: "shopify",
           is_active: true,
+          onboarding_completed: true, // Mark onboarding complete on Shopify connection
+          onboarding_completed_at: new Date().toISOString(),
           installed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -551,6 +562,7 @@ export async function GET(req: NextRequest) {
         shop: fullShopDomain,
         pendingShopId: shopId,
         hasCompletedStoreInfo,
+        markedOnboardingComplete: true,
         preservedData: {
           email: pendingShop.email,
           store_name: pendingShop.store_name,
@@ -651,7 +663,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Determine redirect destination based on flow
-    // - Existing shops (re-auth) → dashboard
+    // - Existing shops (re-auth) → dashboard (UUID-based route)
     // - New installation → /pricing page to select plan (free trial, starter, or pro)
     let redirectUrl: string;
 
@@ -659,6 +671,7 @@ export async function GET(req: NextRequest) {
     logger.info("[Shopify Callback] Redirect decision factors (DIAGNOSTIC)", {
       component: "callback",
       shop: fullShopDomain,
+      shopId,
       isNewInstallation,
       hasCompletedStoreInfo,
       existingShopFound: !!existingShop,
@@ -666,12 +679,13 @@ export async function GET(req: NextRequest) {
     });
 
     if (!isNewInstallation) {
-      // Re-authentication of existing shop
-      redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?shop=${fullShopDomain}&authenticated=true`;
+      // Re-authentication of existing shop - use UUID-based route
+      redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/stores/${shopId}/dashboard?authenticated=true`;
     } else {
       // New installation → redirect to pricing page to select plan
       // User will choose: free trial, starter, or pro plan
-      redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/pricing?shop=${fullShopDomain}`;
+      // Pass shopId so pricing can redirect to UUID-based dashboard after selection
+      redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/pricing?shop=${fullShopDomain}&shopId=${shopId}`;
     }
 
     // DIAGNOSTIC: Log final redirect decision

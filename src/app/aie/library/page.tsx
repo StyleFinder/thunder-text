@@ -6,7 +6,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Loader2, X } from 'lucide-react';
-import { logger } from '@/lib/logger'
+import { logger } from '@/lib/logger';
+import { useShop } from '@/hooks/useShop';
 
 interface AdLibraryItem {
   id: string;
@@ -277,8 +277,7 @@ function AdCard({ ad, onStatusChange, onEdit }: AdCardProps) {
 }
 
 export default function AdLibraryPage() {
-  const searchParams = useSearchParams();
-  const shop = searchParams?.get('shop') || 'demo-shop';
+  const { shopId } = useShop();
 
   const [selected, setSelected] = useState('all');
   const [ads, setAds] = useState<AdLibraryItem[]>([]);
@@ -297,10 +296,12 @@ export default function AdLibraryPage() {
   const statusFilter = selected === 'all' ? null : selected;
 
   const fetchAds = async () => {
+    if (!shopId) return;
+
     try {
       setLoading(true);
       const url = new URL('/api/aie/library', window.location.origin);
-      url.searchParams.set('shopId', shop);
+      url.searchParams.set('shopId', shopId);
       if (statusFilter) {
         url.searchParams.set('status', statusFilter);
       }
@@ -324,7 +325,7 @@ export default function AdLibraryPage() {
 
   useEffect(() => {
     fetchAds();
-  }, [shop, selected]);
+  }, [shopId, selected]);
 
   const handleStatusChange = async (adId: string, newStatus: string) => {
     try {
@@ -371,7 +372,7 @@ export default function AdLibraryPage() {
               asChild
               className="bg-smart-500 hover:bg-smart-600 text-white"
             >
-              <a href={`/aie?shop=${shop}`}>
+              <a href={`/aie?shop=${shopId}`}>
                 <Plus className="w-4 h-4 mr-2" />
                 Generate New Ad
               </a>
@@ -449,7 +450,7 @@ export default function AdLibraryPage() {
                           asChild
                           className="bg-smart-500 hover:bg-smart-600 text-white"
                         >
-                          <a href={`/aie?shop=${shop}`}>
+                          <a href={`/aie?shop=${shopId}`}>
                             Generate New Ad
                           </a>
                         </Button>

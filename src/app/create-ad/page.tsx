@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Loader2, Zap } from 'lucide-react';
+import { useShop } from '@/hooks/useShop';
 
 /**
  * Redirect /create-ad to /aie (Ad Intelligence Engine)
@@ -10,17 +11,15 @@ import { Loader2, Zap } from 'lucide-react';
  */
 export default function CreateAdRedirect() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const { shop } = useShop();
 
   useEffect(() => {
-    const shop = searchParams?.get('shop');
-
     if (shop) {
       router.replace(`/aie?shop=${shop}`);
     } else {
       router.replace('/aie');
     }
-  }, [router, searchParams]);
+  }, [router, shop]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

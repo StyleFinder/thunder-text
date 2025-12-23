@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useShop } from "@/hooks/useShop";
 import {
   Loader2,
   Library,
@@ -59,8 +60,7 @@ interface SavedAd {
 
 export default function AdsLibraryPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const shop = searchParams?.get("shop") || "";
+  const { shop } = useShop();
 
   const [ads, setAds] = useState<SavedAd[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,6 +71,8 @@ export default function AdsLibraryPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchAds = useCallback(async () => {
+    if (!shop) return;
+
     setIsLoading(true);
     setError(null);
 

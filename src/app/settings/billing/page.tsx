@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useShop } from "@/hooks/useShop";
 import { Button } from "@/components/ui/button";
 import {
   Loader2,
@@ -174,7 +175,7 @@ function BillingContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
-  const shop = searchParams?.get("shop");
+  const { shop } = useShop();
 
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);

@@ -6,6 +6,7 @@ import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { Input } from "@/components/ui/input";
+import { useShop } from "@/hooks/useShop";
 
 // Force dynamic rendering for this page
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ interface Template {
 
 function PromptsSettingsContent() {
   const searchParams = useSearchParams();
-  const shop = searchParams?.get("shop") || "test-store";
+  const { shop } = useShop();
   const { toast } = useToast();
 
   // State

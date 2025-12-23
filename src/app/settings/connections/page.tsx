@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useShop } from "@/hooks/useShop";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -104,11 +105,7 @@ const PROVIDER_INFO: Record<
 export default function ConnectionsPage() {
   const searchParams = useSearchParams();
   const { data: session, status: sessionStatus } = useSession();
-
-  // Get shop from URL params first, then fallback to session
-  const shopFromUrl = searchParams?.get("shop");
-  const shopFromSession = session?.user?.shopDomain;
-  const shop = shopFromUrl || shopFromSession;
+  const { shop } = useShop();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

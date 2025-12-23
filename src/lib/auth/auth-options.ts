@@ -206,6 +206,8 @@ export const authOptions: NextAuthOptions = {
             email: shop.email,
             name: shop.store_name || shop.display_name || shop.email,
             role: "shop",
+            // UUID-based routing: shopId is primary identifier
+            shopId: shop.id,
             shopDomain: hasShopifyLinked ? shop.shop_domain : undefined,
             hasShopifyLinked,
           };
@@ -223,6 +225,8 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        // UUID-based routing: shopId is primary, shopDomain kept for compatibility
+        token.shopId = user.shopId;
         token.shopDomain = user.shopDomain;
         token.twoFactorEnabled = user.twoFactorEnabled;
         token.hasShopifyLinked = user.hasShopifyLinked;
@@ -257,6 +261,8 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         session.user.id = token.id;
         session.user.role = token.role;
+        // UUID-based routing: shopId is primary, shopDomain kept for compatibility
+        session.user.shopId = token.shopId;
         session.user.shopDomain = token.shopDomain;
         session.user.twoFactorEnabled = token.twoFactorEnabled as boolean;
         session.user.hasShopifyLinked = token.hasShopifyLinked as boolean;

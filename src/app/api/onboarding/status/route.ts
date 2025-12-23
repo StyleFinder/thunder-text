@@ -10,6 +10,7 @@ export interface OnboardingStatus {
   onboarding_completed_at: string | null;
   user_type: "store" | "coach";
   shop_domain: string;
+  shop_id: string;
 }
 
 /**
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
     const { data: shop, error: shopError } = await supabaseAdmin
       .from("shops")
       .select(
-        "shop_domain, onboarding_completed, onboarding_completed_at, user_type",
+        "id, shop_domain, onboarding_completed, onboarding_completed_at, user_type",
       )
       .eq("id", userId)
       .single();
@@ -85,6 +86,7 @@ export async function GET(request: NextRequest) {
       onboarding_completed_at: shop.onboarding_completed_at,
       user_type: shop.user_type ?? "store",
       shop_domain: shop.shop_domain,
+      shop_id: shop.id,
     };
 
     return NextResponse.json(

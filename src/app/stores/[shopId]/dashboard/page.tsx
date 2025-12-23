@@ -2,9 +2,8 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useNavigation } from "../hooks/useNavigation";
+import { useShopContext } from "../ShopContext";
 import { useShopStatus } from "@/hooks/useShopStatus";
-import { useShop } from "@/hooks/useShop";
 import {
   Loader2,
   Sparkles,
@@ -23,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { HotTakesCard } from "../components/HotTakesCard";
+import { HotTakesCard } from "@/app/components/HotTakesCard";
 
 export const dynamic = "force-dynamic";
 
@@ -104,29 +103,40 @@ function StatCard({
   );
 }
 
-// Plan config for usage limits
-const PLAN_CREDITS: Record<string, number> = {
-  free: 0, // Free plan uses feature-based limits, not credits
-  starter: 5000,
-  pro: 25000,
-};
-
 // Free plan feature limits
 const FREE_PLAN_LIMITS = {
   productDescriptions: 15,
   adDescriptions: 10,
 };
 
-// Free Plan Usage Card Component - Shows free plan limits with upgrade prompt
+// Usage stats interface
+interface UsageStats {
+  productDescriptions: {
+    used: number;
+    limit: number;
+    remaining: number;
+    percentUsed: number;
+  };
+  ads: {
+    used: number;
+    limit: number;
+    remaining: number;
+    percentUsed: number;
+  };
+  plan: string;
+  periodStart: string;
+  periodEnd: string;
+}
+
+// Free Plan Usage Card Component
 function PlanUsageCard({
-  shop,
+  shopId,
   usage,
 }: {
-  shop: string;
+  shopId: string;
   subscription: SubscriptionInfo | null;
   usage?: UsageStats;
 }) {
-  // Use real usage data from API, fallback to zeros if not available
   const productDescUsed = usage?.productDescriptions.used ?? 0;
   const adDescUsed = usage?.ads.used ?? 0;
   const productDescTotal = usage?.productDescriptions.limit ?? FREE_PLAN_LIMITS.productDescriptions;
@@ -218,7 +228,7 @@ function PlanUsageCard({
                 Get 5,000+ credits/month + 14-day free trial
               </p>
             </div>
-            <Link href={`/settings/billing?shop=${shop}`}>
+            <Link href={`/stores/${shopId}/settings/billing`}>
               <Button
                 size="sm"
                 className="bg-white hover:bg-gray-100 text-amber-600 font-medium shadow-md"
@@ -235,20 +245,19 @@ function PlanUsageCard({
   );
 }
 
-// Active Plan Card - Shows for paid plan users (Starter/Pro)
+// Active Plan Card
 function ActivePlanCard({
-  shop,
+  shopId,
   subscription,
   usage,
 }: {
-  shop: string;
+  shopId: string;
   subscription: SubscriptionInfo;
   usage?: UsageStats;
 }) {
   const planName = subscription.plan === "pro" ? "Pro" : "Starter";
   const isPro = subscription.plan === "pro";
 
-  // Use real usage data - show product descriptions usage for paid plans
   const productUsed = usage?.productDescriptions.used ?? 0;
   const productLimit = usage?.productDescriptions.limit ?? (isPro ? 5000 : 2000);
   const adsUsed = usage?.ads.used ?? 0;
@@ -410,7 +419,7 @@ function ActivePlanCard({
                   Upgrade to Pro for 5,000 products & 1,000 ads/month
                 </p>
               </div>
-              <Link href={`/settings/billing?shop=${shop}`}>
+              <Link href={`/stores/${shopId}/settings/billing`}>
                 <Button
                   size="sm"
                   className="bg-white hover:bg-gray-100 text-amber-600 font-medium shadow-md"
@@ -433,7 +442,7 @@ function ActivePlanCard({
             >
               {usage?.productDescriptions.remaining.toLocaleString() ?? 0} products remaining
             </p>
-            <Link href={`/settings/billing?shop=${shop}`}>
+            <Link href={`/stores/${shopId}/settings/billing`}>
               <Button
                 size="sm"
                 variant="ghost"
@@ -459,22 +468,21 @@ function FeatureTile({
   icon: Icon,
   title,
   description,
-  onClick,
+  href,
   variant = "default",
 }: {
   icon: React.ElementType;
   title: string;
   description: string;
-  onClick: () => void;
+  href: string;
   variant?: "default" | "primary";
 }) {
   const isPrimary = variant === "primary";
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full text-left p-5 rounded-xl border transition-all group ${
+    <Link
+      href={href}
+      className={`block w-full text-left p-5 rounded-xl border transition-all group ${
         isPrimary
           ? "bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500 hover:from-blue-700 hover:to-blue-800"
           : "bg-white border-gray-200 hover:border-blue-200 hover:shadow-md"
@@ -516,17 +524,17 @@ function FeatureTile({
           </p>
         </div>
       </div>
-    </button>
+    </Link>
   );
 }
 
-// Upgrade Banner Component - Shows when usage is at 90%+ for free/starter plans
+// Usage Limit Banner
 function UsageLimitBanner({
-  shop,
+  shopId,
   usage,
   currentPlan,
 }: {
-  shop: string;
+  shopId: string;
   usage: UsageStats;
   currentPlan: string;
 }) {
@@ -534,7 +542,6 @@ function UsageLimitBanner({
   const adPercent = usage.ads.percentUsed;
   const maxPercent = Math.max(productPercent, adPercent);
 
-  // Only show banner if usage is at 90%+ and not on Pro plan
   if (maxPercent < 90 || currentPlan === "pro") {
     return null;
   }
@@ -592,7 +599,7 @@ function UsageLimitBanner({
             </p>
           </div>
         </div>
-        <Link href={`/settings/billing?shop=${shop}`}>
+        <Link href={`/stores/${shopId}/settings/billing`}>
           <Button
             className={`${
               isAtLimit
@@ -609,25 +616,6 @@ function UsageLimitBanner({
   );
 }
 
-// Usage stats interface (from API)
-interface UsageStats {
-  productDescriptions: {
-    used: number;
-    limit: number;
-    remaining: number;
-    percentUsed: number;
-  };
-  ads: {
-    used: number;
-    limit: number;
-    remaining: number;
-    percentUsed: number;
-  };
-  plan: string;
-  periodStart: string;
-  periodEnd: string;
-}
-
 // Stats interface
 interface DashboardStats {
   productsGenerated: number;
@@ -639,13 +627,9 @@ interface DashboardStats {
 }
 
 function DashboardContent() {
-  const { navigateTo } = useNavigation();
+  const { shopId, shopDomain } = useShopContext();
   const { data: session, status } = useSession();
-  const { shop, isLoading: shopLoading } = useShop();
-  const [_shopId, setShopId] = useState<string | null>(null);
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(
-    null,
-  );
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     productsGenerated: 0,
@@ -656,23 +640,18 @@ function DashboardContent() {
   });
   const [statsLoading, setStatsLoading] = useState(true);
 
+  // Use shop domain for display, fall back to shopId
+  const shop = shopDomain || shopId;
+
   // Check if shop is still connected to Shopify
-  // This will redirect to /shopify-disconnected if the app was uninstalled
   useShopStatus({
-    shop: shop || undefined,
-    redirectOnDisconnect: !!shop, // Only redirect if we have a shop to check
+    shop: shopDomain || undefined,
+    redirectOnDisconnect: !!shopDomain,
   });
 
-  const storeName = shop
-    ? decodeURIComponent(shop).replace(".myshopify.com", "")
+  const storeName = shopDomain
+    ? decodeURIComponent(shopDomain).replace(".myshopify.com", "")
     : "Your Store";
-
-  // Fetch shopId from session
-  useEffect(() => {
-    if (session?.user?.id) {
-      setShopId(session.user.id as string);
-    }
-  }, [session]);
 
   // Fetch subscription status
   useEffect(() => {
@@ -740,8 +719,8 @@ function DashboardContent() {
     subscription?.plan === "starter" || subscription?.plan === "pro";
   const isActivePaid = isPaidPlan && subscription?.status === "active";
 
-  // Show loading while session or shop is being fetched
-  if (status === "loading" || shopLoading) {
+  // Show loading while session is being fetched
+  if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-4">
@@ -802,17 +781,18 @@ function DashboardContent() {
                 Please install Thunder Text from your Shopify admin panel to
                 access the dashboard.
               </p>
-              <Button
-                className="w-full h-11 text-base font-medium"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
-                  border: "none",
-                }}
-                onClick={() => navigateTo("/")}
-              >
-                Back to Home
-              </Button>
+              <Link href="/">
+                <Button
+                  className="w-full h-11 text-base font-medium"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                    border: "none",
+                  }}
+                >
+                  Back to Home
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -871,10 +851,10 @@ function DashboardContent() {
           />
         </div>
 
-        {/* Usage Limit Warning Banner - Shows at 90%+ usage */}
+        {/* Usage Limit Warning Banner */}
         {!statsLoading && stats.usage && (
           <UsageLimitBanner
-            shop={shop}
+            shopId={shopId}
             usage={stats.usage}
             currentPlan={stats.usage.plan}
           />
@@ -896,7 +876,7 @@ function DashboardContent() {
               icon={Sparkles}
               title="Create New Product"
               description="Upload images and generate compelling product descriptions instantly"
-              onClick={() => navigateTo("/create-pd")}
+              href={`/stores/${shopId}/create-pd`}
               variant="primary"
             />
 
@@ -904,25 +884,25 @@ function DashboardContent() {
               icon={PenTool}
               title="Enhance Existing Product"
               description="Improve your current product descriptions with AI optimization"
-              onClick={() => navigateTo("/enhance")}
+              href={`/stores/${shopId}/enhance`}
             />
 
             <FeatureTile
               icon={Megaphone}
               title="Create Social Media Ad"
               description="Generate high-converting ad copy for Facebook, Instagram & more"
-              onClick={() => navigateTo("/aie")}
+              href={`/stores/${shopId}/aie`}
             />
           </div>
         </div>
 
-        {/* Plan Card - Shows different card based on subscription status */}
+        {/* Plan Card */}
         {!subscriptionLoading && (
           <div className="mt-8">
             {isActivePaid && subscription ? (
-              <ActivePlanCard shop={shop} subscription={subscription} usage={stats.usage} />
+              <ActivePlanCard shopId={shopId} subscription={subscription} usage={stats.usage} />
             ) : (
-              <PlanUsageCard shop={shop} subscription={subscription} usage={stats.usage} />
+              <PlanUsageCard shopId={shopId} subscription={subscription} usage={stats.usage} />
             )}
           </div>
         )}

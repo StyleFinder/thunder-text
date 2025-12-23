@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { logger } from "@/lib/logger";
 import { authenticatedFetch } from "@/lib/shopify/api-client";
 import { type ProductCategory } from "@/lib/prompts-types";
+import { useShop } from "@/hooks/useShop";
 
 // Extracted components
 import {
@@ -82,8 +83,7 @@ function StepIndicator({
 
 function CreateProductContent() {
   const searchParams = useSearchParams();
-  const shop = searchParams?.get("shop");
-  const authenticated = searchParams?.get("authenticated");
+  const { shop, isAuthenticated } = useShop();
 
   // Admin extension redirect parameters
   const productId = searchParams?.get("productId");
@@ -225,7 +225,7 @@ function CreateProductContent() {
   // Fetch global default template
   useEffect(() => {
     async function fetchGlobalDefaultTemplate() {
-      if (!shop || !authenticated) return;
+      if (!shop || !isAuthenticated) return;
 
       try {
         const response = await fetch(
@@ -246,7 +246,7 @@ function CreateProductContent() {
     }
 
     fetchGlobalDefaultTemplate();
-  }, [shop, authenticated, initialFormValues]);
+  }, [shop, isAuthenticated, initialFormValues]);
 
   // Category detection from image
   const detectCategoryFromImage = useCallback(
