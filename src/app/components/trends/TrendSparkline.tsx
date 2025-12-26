@@ -69,10 +69,11 @@ export function TrendSparkline({
             fontSize: "12px",
           }}
           labelFormatter={(label) => new Date(label).toLocaleDateString()}
-          formatter={(value: number, name: string) => {
+          formatter={(value, name) => {
+            if (value === undefined) return ["-", name ?? ""];
             if (name === "value") return [`Interest: ${value}`, "Current"];
             if (name === "seasonal") return [`Typical: ${value}`, "Historical"];
-            return [value, name];
+            return [value, name ?? ""];
           }}
         />
 
