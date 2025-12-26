@@ -20,6 +20,7 @@ import {
   ChevronDown,
   FilePlus,
   Package,
+  Sparkles,
 } from "lucide-react";
 import { useNavigation } from "../hooks/useNavigation";
 import { Button } from "@/components/ui/button";
@@ -211,6 +212,19 @@ function NavigationContent({ children }: AppNavigationProps) {
         label: "Ads Library",
         url: buildUrl("/ads-library"),
         matchPaths: ["/ads-library"],
+        exactMatch: false,
+      }),
+      allowedRoles: ["user", "admin"],
+    },
+    {
+      url: buildUrl("/image-generation"),
+      label: "Image Generation",
+      icon: Sparkles,
+      onClick: () => navigateTo("/image-generation"),
+      matches: isActive({
+        label: "Image Generation",
+        url: buildUrl("/image-generation"),
+        matchPaths: ["/image-generation"],
         exactMatch: false,
       }),
       allowedRoles: ["user", "admin"],

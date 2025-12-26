@@ -49,9 +49,12 @@ const serverEnvSchema = z.object({
   FACEBOOK_APP_ID: z.string().optional(),
   FACEBOOK_APP_SECRET: z.string().optional(),
 
-  // Optional: Google
+  // Optional: Google OAuth
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+
+  // Optional: Google AI (Gemini/Imagen)
+  GOOGLE_AI_API_KEY: z.string().optional(),
 
   // Optional: TikTok
   TIKTOK_CLIENT_KEY: z.string().optional(),

@@ -11,7 +11,7 @@ import { MODEL_PRICING, type ModelName } from '@/lib/config/models';
 
 export interface ApiRequestLog {
   shopId?: string;
-  operationType: 'product_description' | 'ad_generation' | 'business_profile' | 'voice_profile' | 'image_analysis' | 'content_generation';
+  operationType: 'product_description' | 'ad_generation' | 'business_profile' | 'voice_profile' | 'image_analysis' | 'content_generation' | 'image_generation';
   endpoint?: string;
   model: string;
   inputTokens: number;

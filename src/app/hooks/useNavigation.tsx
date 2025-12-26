@@ -97,6 +97,7 @@ export function useNavigation() {
           "/trends",
           "/facebook-ads",
           "/ad-vault",
+          "/image-generation",
         ];
 
         for (const shopPath of shopPaths) {

@@ -118,17 +118,19 @@ export function AdMockupModal({ open, onClose, variant, platform, goal, shopId, 
       {(productData?.images?.[0]?.src || productData?.image) && (
         <div style={{
           width: '100%',
-          aspectRatio: '1.91/1',
           backgroundColor: '#f0f2f5',
-          overflow: 'hidden'
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '0'
         }}>
           <img
             src={productData?.images?.[0]?.src || productData?.image}
             alt={productData?.images?.[0]?.alt || productData?.title}
             style={{
               width: '100%',
-              height: '100%',
-              objectFit: 'cover'
+              maxHeight: '400px',
+              objectFit: 'contain'
             }}
           />
         </div>
@@ -505,20 +507,21 @@ export function AdMockupModal({ open, onClose, variant, platform, goal, shopId, 
       </div>
 
       {/* Image */}
-      {productData?.image && (
+      {(productData?.images?.[0]?.src || productData?.image) && (
         <div style={{
           width: '100%',
-          aspectRatio: '1/1',
           backgroundColor: '#fafafa',
-          overflow: 'hidden'
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center'
         }}>
           <img
             src={productData?.images?.[0]?.src || productData?.image}
             alt={productData?.images?.[0]?.alt || productData?.title}
             style={{
               width: '100%',
-              height: '100%',
-              objectFit: 'cover'
+              maxHeight: '400px',
+              objectFit: 'contain'
             }}
           />
         </div>

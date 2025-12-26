@@ -303,6 +303,31 @@ export function sanitizeJSON(input: string): unknown | null {
 }
 
 /**
+ * Sanitize product description HTML for Shopify
+ *
+ * Replaces &nbsp; entities with regular spaces to ensure clean copy/paste
+ * from Shopify admin. Also normalizes other common HTML entities.
+ *
+ * @param html - HTML content to sanitize
+ * @returns Sanitized HTML with &nbsp; replaced by regular spaces
+ */
+export function sanitizeDescriptionForShopify(html: string): string {
+  if (!html) return "";
+
+  let sanitized = html;
+
+  // Replace &nbsp; entities with regular spaces (all common variations)
+  sanitized = sanitized.replace(/&nbsp;/gi, " ");
+  sanitized = sanitized.replace(/&#160;/g, " ");
+  sanitized = sanitized.replace(/&#xA0;/gi, " ");
+
+  // Normalize multiple consecutive spaces to single space
+  sanitized = sanitized.replace(/ {2,}/g, " ");
+
+  return sanitized.trim();
+}
+
+/**
  * Validate content type is allowed
  *
  * @param contentType - Content type to validate

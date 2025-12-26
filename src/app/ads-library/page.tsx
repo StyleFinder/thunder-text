@@ -508,7 +508,10 @@ export default function AdsLibraryPage() {
             }}
             platform={selectedAd.platform}
             goal={selectedAd.campaign_goal}
-            productData={selectedAd.product_metadata}
+            productData={{
+              ...selectedAd.product_metadata,
+              image: selectedAd.image_urls?.[0]
+            }}
             previewOnly={true}
           />
         )}

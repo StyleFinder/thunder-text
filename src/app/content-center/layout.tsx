@@ -2,11 +2,11 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { Sparkles, FileText, User, Home } from "lucide-react";
+import { useShop } from "@/hooks/useShop";
 
 interface NavItem {
-  href: string;
+  basePath: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   description: string;
@@ -14,25 +14,25 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    href: "/content-center",
+    basePath: "",
     label: "Dashboard",
     icon: Home,
     description: "Overview and stats",
   },
   {
-    href: "/content-center/generate",
+    basePath: "/generate",
     label: "Generate",
     icon: Sparkles,
     description: "Create new content",
   },
   {
-    href: "/content-center/library",
+    basePath: "/library",
     label: "Library",
     icon: FileText,
     description: "Saved content",
   },
   {
-    href: "/content-center/voice",
+    basePath: "/voice",
     label: "Brand Voice",
     icon: User,
     description: "Voice settings & samples",
@@ -45,12 +45,25 @@ export default function ContentCenterLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { shopId } = useShop();
 
-  const isActive = (href: string) => {
-    if (href === "/content-center") {
-      return pathname === href;
+  // Determine base path based on whether we're in UUID routing or legacy routing
+  const isUuidRouting = pathname?.includes('/stores/') && shopId;
+  const contentCenterBase = isUuidRouting
+    ? `/stores/${shopId}/content-center`
+    : '/content-center';
+
+  const getHref = (basePath: string) => {
+    return `${contentCenterBase}${basePath}`;
+  };
+
+  const isActive = (basePath: string) => {
+    const fullPath = getHref(basePath);
+    if (basePath === "") {
+      // Dashboard - exact match for base path
+      return pathname === contentCenterBase || pathname === `${contentCenterBase}/`;
     }
-    return pathname?.startsWith(href);
+    return pathname?.startsWith(fullPath);
   };
 
   return (
@@ -78,10 +91,11 @@ export default function ContentCenterLayout({
           <nav className="flex gap-1 overflow-x-auto pb-px -mb-px">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
-              const active = isActive(item.href);
+              const active = isActive(item.basePath);
+              const href = getHref(item.basePath);
 
               return (
-                <Link key={item.href} href={item.href}>
+                <Link key={item.basePath} href={href}>
                   <button
                     style={{
                       position: 'relative',

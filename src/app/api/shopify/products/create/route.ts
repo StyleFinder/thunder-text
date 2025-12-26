@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateGoogleProductMetafields, generateGoogleVariantMetafields, validateGoogleMetafields } from '@/lib/google-metafields'
 import { logger } from '@/lib/logger'
+import { sanitizeDescriptionForShopify } from '@/lib/security/input-sanitization'
 
 export async function POST(request: NextRequest) {
   // Check if we're in a build environment without proper configuration
@@ -156,9 +157,12 @@ export async function POST(request: NextRequest) {
       })
     }
     
+    // Sanitize description to remove &nbsp; and other HTML entities
+    const sanitizedDescription = sanitizeDescriptionForShopify(generatedContent.description || '')
+
     const productInput = {
       title: generatedContent.title,
-      descriptionHtml: generatedContent.description,
+      descriptionHtml: sanitizedDescription,
       status: 'DRAFT',
       productType: shopifyProductType,
       vendor: shopDomain.split('.')[0],

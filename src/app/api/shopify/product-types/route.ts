@@ -79,40 +79,65 @@ export async function GET(request: NextRequest) {
     // Dynamic imports to avoid loading during build
     const { supabaseAdmin } = await import("@/lib/supabase");
 
-    // Get shop domain from query param
+    // Get shop domain or ID from query param
     const url = new URL(request.url);
     const shop = url.searchParams.get("shop");
-    console.log("📋 Shop parameter received:", shop);
+    const shopId = url.searchParams.get("shopId");
+    console.log("📋 Shop parameters received:", { shop, shopId });
 
-    if (!shop) {
+    if (!shop && !shopId) {
       logger.error("❌ No shop parameter provided", undefined, {
         component: "product-types",
       });
       return NextResponse.json(
-        { error: "Shop parameter required" },
+        { error: "Shop parameter required (shop or shopId)" },
         { status: 400, headers: corsHeaders },
       );
     }
 
-    // Look up shop (checks both shop_domain and linked_shopify_domain)
-    const fullShopDomain = shop.includes(".myshopify.com")
-      ? shop
-      : `${shop}.myshopify.com`;
-    console.log("📊 Looking up shop:", fullShopDomain);
+    let store: {
+      shop_domain: string;
+      shopify_access_token: string | null;
+      shopify_access_token_legacy: string | null;
+    } | null = null;
 
-    const store = await findShopByDomain(supabaseAdmin, shop);
+    // Try to find shop by ID first (if provided)
+    if (shopId) {
+      console.log("📊 Looking up shop by ID:", shopId);
+      const { data: shopById } = await supabaseAdmin
+        .from("shops")
+        .select("shop_domain, shopify_access_token, shopify_access_token_legacy")
+        .eq("id", shopId)
+        .single();
+
+      if (shopById) {
+        store = shopById;
+        console.log("✅ Found shop by ID:", store.shop_domain);
+      }
+    }
+
+    // Fall back to domain lookup if ID lookup failed or wasn't provided
+    if (!store && shop) {
+      const fullShopDomain = shop.includes(".myshopify.com")
+        ? shop
+        : `${shop}.myshopify.com`;
+      console.log("📊 Looking up shop by domain:", fullShopDomain);
+      store = await findShopByDomain(supabaseAdmin, shop);
+    }
 
     if (!store) {
       logger.error("❌ Shop lookup error:", undefined, {
-        searchedDomain: fullShopDomain,
+        searchedId: shopId || undefined,
+        searchedDomain: shop || undefined,
         component: "product-types",
       });
       return NextResponse.json(
         {
           error: "Shop not found",
           details: {
-            searchedDomain: fullShopDomain,
-            message: "No store found with this domain",
+            searchedId: shopId || undefined,
+            searchedDomain: shop || undefined,
+            message: "No store found with this identifier",
           },
         },
         { status: 404, headers: corsHeaders },

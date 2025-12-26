@@ -3,6 +3,7 @@ import { type EnhancementResponse } from "../openai-enhancement";
 import { type EnhancementProductData } from "./product-enhancement";
 import { logger } from "@/lib/logger";
 import { getShopToken } from "./token-manager";
+import { sanitizeDescriptionForShopify } from "@/lib/security/input-sanitization";
 
 export interface ProductUpdateOptions {
   updateTitle?: boolean;
@@ -124,9 +125,9 @@ export class ShopifyProductUpdater {
         changes.title_updated = true;
       }
 
-      // Update description
+      // Update description - sanitize to remove &nbsp; entities that cause copy/paste issues
       if (updateDescription && enhancedContent.description) {
-        updateInput.descriptionHtml = enhancedContent.description;
+        updateInput.descriptionHtml = sanitizeDescriptionForShopify(enhancedContent.description);
         changes.description_updated = true;
       }
 

@@ -54,6 +54,11 @@ function isAllowedOrigin(origin: string): boolean {
     ) {
       return true;
     }
+
+    // Allow ngrok domains for development tunneling
+    if (origin.endsWith(".ngrok.app") || origin.endsWith(".ngrok-free.app")) {
+      return true;
+    }
   }
 
   return false;
@@ -234,7 +239,9 @@ export async function middleware(request: NextRequest) {
         (process.env.RENDER_EXTERNAL_URL &&
           referer.startsWith(process.env.RENDER_EXTERNAL_URL)) ||
         (process.env.NODE_ENV === "development" &&
-          referer.startsWith("http://localhost:")));
+          (referer.startsWith("http://localhost:") ||
+            referer.includes(".ngrok.app") ||
+            referer.includes(".ngrok-free.app"))));
 
     // For same-origin requests, let browser handle it
     if (!origin && isOwnDomainReferer) {

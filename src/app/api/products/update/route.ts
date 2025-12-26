@@ -7,6 +7,7 @@ import { ShopifyAPI } from "@/lib/shopify";
 import { getShopToken } from "@/lib/shopify/token-manager";
 import { logger } from "@/lib/logger";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { sanitizeDescriptionForShopify } from "@/lib/security/input-sanitization";
 
 // Lazy-initialized Supabase client
 let supabaseClient: SupabaseClient | null = null;
@@ -248,7 +249,8 @@ export async function POST(request: NextRequest) {
 
     if (updates.description) {
       // Shopify uses descriptionHtml for the product description
-      productInput.descriptionHtml = updates.description;
+      // Sanitize to remove &nbsp; entities that cause copy/paste issues
+      productInput.descriptionHtml = sanitizeDescriptionForShopify(updates.description);
     }
 
     // SEO fields are updated through metafields

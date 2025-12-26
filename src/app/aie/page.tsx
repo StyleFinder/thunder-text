@@ -293,6 +293,24 @@ export default function AIEPage() {
     setMounted(true);
   }, []);
 
+  // Check for image passed from Image Generation page
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const imageUrl = sessionStorage.getItem('aie_image_url');
+      if (imageUrl) {
+        // Add the image to selected images
+        setSelectedImageUrls((prev) => {
+          if (!prev.includes(imageUrl)) {
+            return [...prev, imageUrl];
+          }
+          return prev;
+        });
+        // Clear from sessionStorage to prevent re-adding on page refresh
+        sessionStorage.removeItem('aie_image_url');
+      }
+    }
+  }, []);
+
   // Product selection state
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -338,6 +356,44 @@ export default function AIEPage() {
     { label: "Traffic", value: "traffic" },
     { label: "App Installs", value: "app_installs" },
   ];
+
+  // Reset form to initial state (used after successful Facebook post)
+  const handleResetForm = useCallback(() => {
+    // Reset product selection
+    setSelectedProducts([]);
+    setSelectedImageUrls([]);
+
+    // Reset form fields
+    setDescription("");
+    setTargetAudience("");
+    setPlatform("meta");
+    setGoal("conversion");
+
+    // Reset advanced options
+    setShowAdvancedOptions(false);
+    setAdLengthMode("AUTO");
+    setAudienceTemperature("COLD");
+    setProductComplexity("LOW");
+    setProductPrice("");
+    setHasStrongStory(false);
+    setIsPremiumBrand(false);
+
+    // Reset generation state
+    setLoading(false);
+    setLoadingStep("");
+    setLoadingProgress(0);
+    setError(null);
+    setResult(null);
+    setEditableVariants([]);
+    setResultsModalOpen(false);
+
+    // Reset search
+    setSearchQuery("");
+    setDebouncedSearchQuery("");
+
+    // Keep Facebook connection state (adAccounts, campaigns, facebookConnected)
+    // as these don't need to be reset
+  }, []);
 
   // Fetch products with debounced search
   const fetchProducts = useCallback(async () => {
@@ -731,7 +787,7 @@ export default function AIEPage() {
               setFacebookSuccessModalOpen(true);
               return;
             } else {
-              // Ad saved but posting failed - go to edit page
+              // Ad saved but posting failed - redirect to edit page
               logger.error(
                 "Failed to post to Facebook:",
                 new Error(postData.error?.message || "Unknown error"),
@@ -742,6 +798,9 @@ export default function AIEPage() {
               setError(
                 `Ad saved but Facebook posting failed: ${postData.error?.message || "Unknown error"}. You can try again from the edit page.`,
               );
+              setResultsModalOpen(false);
+              router.push(buildUrl(`/ads-library/${adId}/edit`));
+              return;
             }
           } catch (postErr) {
             logger.error("Error posting to Facebook:", postErr as Error, {
@@ -750,13 +809,17 @@ export default function AIEPage() {
             setError(
               "Ad saved but Facebook posting failed. You can try again from the edit page.",
             );
+            // Still redirect to edit page on error so user can retry
+            setResultsModalOpen(false);
+            router.push(buildUrl(`/ads-library/${adId}/edit`));
+            return;
           }
         }
 
+        // For "Save Only" (not posting to Facebook) - redirect to edit page
         setResultsModalOpen(false);
         setError(null);
-        // Navigate to the ad editor page
-        router.push(`/ads-library/${adId}/edit?shop=${shop}`);
+        router.push(buildUrl(`/ads-library/${adId}/edit`));
       } else {
         throw new Error(data.error?.message || "Failed to save ad");
       }
@@ -2004,8 +2067,11 @@ export default function AIEPage() {
         <Dialog
           open={facebookSuccessModalOpen}
           onOpenChange={(open) => {
-            setFacebookSuccessModalOpen(open);
-            if (!open) setFacebookSuccessData(null);
+            if (!open) {
+              setFacebookSuccessModalOpen(false);
+              setFacebookSuccessData(null);
+              handleResetForm();
+            }
           }}
         >
           <DialogContent className="max-w-md rounded-xl p-0 overflow-hidden">
@@ -2051,7 +2117,7 @@ export default function AIEPage() {
                 </div>
               )}
               <p className="text-sm text-gray-500">
-                You can view and manage your ads in the Ads Library.
+                Your ad is now live. Click below to create another ad or view your ads library.
               </p>
             </div>
 
@@ -2061,16 +2127,17 @@ export default function AIEPage() {
                 onClick={() => {
                   setFacebookSuccessModalOpen(false);
                   setFacebookSuccessData(null);
+                  router.push(buildUrl("/ads-library"));
                 }}
                 className="border-gray-200 hover:bg-gray-50"
               >
-                Close
+                View Ads Library
               </Button>
               <Button
                 onClick={() => {
                   setFacebookSuccessModalOpen(false);
                   setFacebookSuccessData(null);
-                  router.push("/ads");
+                  handleResetForm();
                 }}
                 style={{
                   background:
@@ -2078,7 +2145,8 @@ export default function AIEPage() {
                   border: "none",
                 }}
               >
-                View Ads Library
+                <Sparkles className="w-4 h-4 mr-2" />
+                Create Another Ad
               </Button>
             </div>
           </DialogContent>
