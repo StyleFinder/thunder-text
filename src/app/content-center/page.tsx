@@ -541,7 +541,7 @@ export default function ContentCenterPage() {
               </Link>
             </div>
 
-            {/* Progress Indicator */}
+            {/* Progress Indicator - always shows step 1 as active since this block only renders for select-type */}
             <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
               <div className="flex items-center gap-2">
                 <div
@@ -549,14 +549,14 @@ export default function ContentCenterPage() {
                     height: '8px',
                     width: '8px',
                     borderRadius: '50%',
-                    background: currentStep === 'select-type' ? '#0066cc' : '#e5e7eb',
+                    background: '#0066cc',
                   }}
                 />
                 <span
                   style={{
                     fontSize: '14px',
-                    fontWeight: currentStep === 'select-type' ? 600 : 400,
-                    color: currentStep === 'select-type' ? '#003366' : '#6b7280',
+                    fontWeight: 600,
+                    color: '#003366',
                     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
                   }}
                 >
@@ -572,14 +572,14 @@ export default function ContentCenterPage() {
                     height: '8px',
                     width: '8px',
                     borderRadius: '50%',
-                    background: currentStep === 'configure' ? '#0066cc' : '#e5e7eb',
+                    background: '#e5e7eb',
                   }}
                 />
                 <span
                   style={{
                     fontSize: '14px',
-                    fontWeight: currentStep === 'configure' ? 600 : 400,
-                    color: currentStep === 'configure' ? '#003366' : '#6b7280',
+                    fontWeight: 400,
+                    color: '#6b7280',
                     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
                   }}
                 >
@@ -595,14 +595,14 @@ export default function ContentCenterPage() {
                     height: '8px',
                     width: '8px',
                     borderRadius: '50%',
-                    background: currentStep === 'result' ? '#0066cc' : '#e5e7eb',
+                    background: '#e5e7eb',
                   }}
                 />
                 <span
                   style={{
                     fontSize: '14px',
-                    fontWeight: currentStep === 'result' ? 600 : 400,
-                    color: currentStep === 'result' ? '#003366' : '#6b7280',
+                    fontWeight: 400,
+                    color: '#6b7280',
                     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
                   }}
                 >
