@@ -4,10 +4,15 @@
  * Defines plan-based limits for product descriptions and ads,
  * and provides utilities to check and enforce usage limits.
  *
- * Plan Limits:
- * - Free: 30 products/month, 30 ads/month
- * - Starter ($19/mo): 2,000 products/month, 300 ads/month
- * - Pro ($34/mo): 5,000 products/month, 1,000 ads/month
+ * Plan Limits (optimized for 70% profit margin):
+ * - Free: 30 products/month, 30 ads/month (trial)
+ * - Starter ($19/mo): 2,500 products/month, 500 ads/month, 200 images/month
+ * - Pro ($34/mo): 4,500 products/month, 1,000 ads/month, 400 images/month
+ *
+ * Cost basis:
+ * - Product descriptions: $0.0008/each (gpt-4o-mini vision)
+ * - Ads: $0.002/each (gpt-4o-mini)
+ * - Images: $0.01/each (gpt-image-1 standard)
  */
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -19,23 +24,39 @@ import { logger } from "@/lib/logger";
 export interface PlanLimits {
   productDescriptions: number;
   ads: number;
+  images: number;
 }
 
 /**
- * Usage limits by plan
+ * Usage limits by plan (optimized for 70% profit margin)
+ *
+ * Starter ($19/mo) - Max AI cost: $5.70
+ *   - 2,500 descriptions × $0.0008 = $2.00
+ *   - 500 ads × $0.002 = $1.00
+ *   - 200 images × $0.01 = $2.00
+ *   - Total cost: $5.00 → 74% margin
+ *
+ * Pro ($34/mo) - Max AI cost: $10.20
+ *   - 4,500 descriptions × $0.0008 = $3.60
+ *   - 1,000 ads × $0.002 = $2.00
+ *   - 400 images × $0.01 = $4.00
+ *   - Total cost: $9.60 → 72% margin
  */
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
   free: {
     productDescriptions: 30,
     ads: 30,
+    images: 10,
   },
   starter: {
-    productDescriptions: 2000,
-    ads: 300,
+    productDescriptions: 2500,
+    ads: 500,
+    images: 200,
   },
   pro: {
-    productDescriptions: 5000,
+    productDescriptions: 4500,
     ads: 1000,
+    images: 400,
   },
 };
 

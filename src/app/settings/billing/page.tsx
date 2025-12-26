@@ -44,19 +44,22 @@ interface ShopSubscription {
   error?: string;
 }
 
-// Plan configuration with features
-// Free plan: Permanent free tier with limited features (no trial)
-// Starter/Pro: Paid plans with 14-day trial (one-time per shop)
+// Plan configuration with features (optimized for 70%+ profit margin)
+// Cost basis:
+// - Product descriptions: $0.0008/each (gpt-4o-mini vision)
+// - Ads: $0.002/each (gpt-4o-mini)
+// - Images: $0.01/each (gpt-image-1 standard)
 const PLANS = {
   free: {
-    name: "Free",
+    name: "Free Trial",
     monthlyPrice: 0,
     annualPrice: 0,
-    credits: "Limited", // Feature-based limits instead of credits
+    credits: "Limited",
     features: [
-      "15 product descriptions/month",
-      "10 ad descriptions/month",
-      "Basic features",
+      "30 product descriptions",
+      "30 ad descriptions",
+      "10 AI images",
+      "14-day trial",
       "Email support",
     ],
   },
@@ -64,10 +67,11 @@ const PLANS = {
     name: "Starter",
     monthlyPrice: 19,
     annualPrice: 190,
-    credits: "5,000",
+    credits: "2,500 descriptions",
     features: [
-      "5,000 credits/month",
-      "14-day free trial",
+      "2,500 product descriptions/month",
+      "500 ads & social posts/month",
+      "200 AI images/month",
       "Multi-language support",
       "AI image alt text",
       "SEO optimization",
@@ -78,12 +82,12 @@ const PLANS = {
     name: "Pro",
     monthlyPrice: 34,
     annualPrice: 340,
-    credits: "25,000",
+    credits: "4,500 descriptions",
     features: [
-      "25,000 credits/month",
-      "14-day free trial",
+      "4,500 product descriptions/month",
+      "1,000 ads & social posts/month",
+      "400 AI images/month",
       "All Starter features",
-      "Generate ads & social content",
       "Web search integration",
       "Bulk generation",
       "Priority support",
@@ -172,7 +176,7 @@ function BillingToggle({
 }
 
 function BillingContent() {
-  const searchParams = useSearchParams();
+  const _searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
   const { shop } = useShop();

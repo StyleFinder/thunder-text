@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
       feedback,
       provider = 'openai', // Default to OpenAI for iterations
       aspectRatio = '1:1',
-      quality = 'standard',
+      quality: _qualityIgnored = 'standard', // Quality parameter ignored - always use standard for cost efficiency
     } = body;
 
     // Validate required fields
@@ -127,11 +127,11 @@ export async function POST(req: NextRequest) {
     const iterationPrompt = `Based on the provided image, make these changes: ${feedback}.
 Maintain the overall style and composition while applying the requested modifications.`;
 
-    // Generate iterated image using the previous image as reference
+    // Generate iterated image using the previous image as reference (always standard quality for cost efficiency)
     const result = await generateImage(iterationPrompt, previousImageUrl, {
       provider: provider as ImageProvider,
       aspectRatio: aspectRatio as AspectRatio,
-      quality: quality as ImageQuality,
+      quality: 'standard' as ImageQuality, // Force standard quality - HD disabled for cost savings
       shopId,
       conversationId,
     });

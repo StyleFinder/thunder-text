@@ -100,9 +100,9 @@ export class AIDescriptionGenerator {
       // Build the prompt based on request parameters and custom prompts
       const prompt = await this.buildPrompt(request);
 
-      // Analyze images using GPT-4o with vision
+      // Analyze images using GPT-4o-mini with vision (94% cost savings vs gpt-4o)
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "user",
@@ -429,9 +429,9 @@ This section has plain text describing product details. No bold tags on this tex
 <b>Perfect For</b>
 More plain text here describing what it's perfect for.`;
 
-      // Call GPT-4 Vision with images
+      // Call GPT-4o-mini Vision with images (94% cost savings vs gpt-4o)
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "user",

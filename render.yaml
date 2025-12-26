@@ -9,9 +9,11 @@ services:
       - key: NODE_ENV
         value: production
       - key: SHOPIFY_APP_URL
-        value: https://thunder-text.onrender.com
+        value: https://app.zunosai.com
       - key: NEXTAUTH_URL
-        value: https://thunder-text.onrender.com
+        value: https://app.zunosai.com
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://app.zunosai.com
       - key: SHOPIFY_API_KEY
         sync: false
       - key: SHOPIFY_API_SECRET
@@ -30,6 +32,7 @@ services:
         sync: false
     healthCheckPath: /api/health
     domains:
+      - app.zunosai.com
       - thunder-text.onrender.com
     scaling:
       minInstances: 1

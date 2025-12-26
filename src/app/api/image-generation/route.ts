@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       provider,
       model,
       aspectRatio = '1:1',
-      quality = 'standard',
+      quality: _qualityIgnored = 'standard', // Quality parameter ignored - always use standard for cost efficiency
       conversationId,
       questionnaireAnswers,
       shopId: shopIdFromBody,
@@ -161,12 +161,12 @@ export async function POST(req: NextRequest) {
       hasReferenceImage: !!referenceImage,
     });
 
-    // Generate image
+    // Generate image (always use standard quality for cost efficiency - $0.01 vs $0.02 for HD)
     const result = await generateImage(prompt, referenceImage, {
       provider: provider as ImageProvider,
       model,
       aspectRatio: aspectRatio as AspectRatio,
-      quality: quality as ImageQuality,
+      quality: 'standard' as ImageQuality, // Force standard quality - HD disabled for cost savings
       shopId,
       conversationId,
       questionnaireAnswers,
