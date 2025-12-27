@@ -418,8 +418,10 @@ export async function POST(request: NextRequest) {
       
       try {
         for (const [index, imageData] of uploadedImages.entries()) {
-          
-          const altText = `${generatedContent.title} - Image ${index + 1}`
+
+          // Use AI-generated alt-text if available, otherwise fallback to title-based
+          const altText = generatedContent.imageAltTexts?.[index]
+            || `${generatedContent.title} - Image ${index + 1}`
           const uploadResult = await shopify.createProductImage(
             createdProduct.id,
             imageData,

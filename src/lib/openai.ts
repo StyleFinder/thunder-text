@@ -32,6 +32,7 @@ export interface ProductDescriptionResponse {
   bulletPoints: string[];
   metaDescription: string;
   keywords: string[];
+  imageAltTexts: string[];
   confidence: number;
   processingTime: number;
   tokenUsage: {
@@ -47,6 +48,7 @@ export interface ProductEnhancementResponse {
   seoTitle?: string;
   metaDescription?: string;
   promotionalCopy?: string;
+  imageAltTexts?: string[];
   confidence?: number;
   processingTime: number;
   tokenUsage: {
@@ -221,8 +223,17 @@ Please provide a JSON response with the following structure:
   "bulletPoints": ["Key feature 1", "Key feature 2", "Key feature 3", "Key feature 4", "Key feature 5"],
   "metaDescription": "Search engine meta description (150-160 characters)",
   "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
+  "imageAltTexts": ["SEO alt text for image 1", "SEO alt text for image 2"],
   "confidence": 0.95
 }
+
+IMAGE ALT TEXT REQUIREMENTS:
+- Generate one SEO-optimized alt text for each provided image (in order)
+- Each alt text should be 80-125 characters
+- Describe what's visible in each image specifically
+- Include the product name/type and key visual features
+- Use natural language, no keyword stuffing
+- Format: "[Product type] [key visual details] [color/material if visible]"
 
 CRITICAL: The "description" field must strictly follow the custom prompt guidelines above, especially the formatting rules and section structure provided in the category template.
 `.trim();
@@ -244,6 +255,9 @@ CRITICAL: The "description" field must strictly follow the custom prompt guideli
             : [],
           metaDescription: parsed.metaDescription || "",
           keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
+          imageAltTexts: Array.isArray(parsed.imageAltTexts)
+            ? parsed.imageAltTexts
+            : [],
           confidence:
             typeof parsed.confidence === "number" ? parsed.confidence : 0.8,
         };
@@ -261,6 +275,7 @@ CRITICAL: The "description" field must strictly follow the custom prompt guideli
       bulletPoints: [],
       metaDescription: content.substring(0, 160),
       keywords: [],
+      imageAltTexts: [],
       confidence: 0.5,
     };
   }
@@ -379,6 +394,10 @@ REQUIRED SECTIONS:
           '"promotionalCopy": "Short promotional copy for marketing"',
         );
       }
+      // Always include alt-texts for SEO (bundled with description generation)
+      outputFields.push(
+        '"imageAltTexts": ["SEO alt text for image 1", "SEO alt text for image 2"]',
+      );
       outputFields.push('"confidence": 0.95');
 
       const prompt = `${templateInstructions}
@@ -427,7 +446,15 @@ Opening paragraph goes here as plain text without any tags.
 This section has plain text describing product details. No bold tags on this text.
 
 <b>Perfect For</b>
-More plain text here describing what it's perfect for.`;
+More plain text here describing what it's perfect for.
+
+IMAGE ALT TEXT REQUIREMENTS:
+- Generate one SEO-optimized alt text for each provided image (in order)
+- Each alt text should be 80-125 characters
+- Describe what's visible in each image specifically
+- Include the product name/type and key visual features
+- Use natural language, no keyword stuffing
+- Format: "[Product type] [key visual details] [color/material if visible]"`;
 
       // Call GPT-4o-mini Vision with images (94% cost savings vs gpt-4o)
       const response = await openai.chat.completions.create({
