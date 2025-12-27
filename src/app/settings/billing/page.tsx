@@ -44,7 +44,7 @@ interface ShopSubscription {
   error?: string;
 }
 
-// Plan configuration with features (optimized for 70%+ profit margin)
+// Plan configuration with features (optimized for 85%+ profit margin)
 // Cost basis:
 // - Product descriptions: $0.0008/each (gpt-4o-mini vision)
 // - Ads: $0.002/each (gpt-4o-mini)
@@ -65,16 +65,16 @@ const PLANS = {
   },
   starter: {
     name: "Starter",
-    monthlyPrice: 19,
-    annualPrice: 190,
-    credits: "2,500 descriptions",
+    monthlyPrice: 14,
+    annualPrice: 140,
+    credits: "1,500 descriptions",
     features: [
-      "2,500 product descriptions/month",
-      "500 ads & social posts/month",
-      "200 AI images/month",
-      "Multi-language support",
-      "AI image alt text",
-      "SEO optimization",
+      "1,500 product descriptions/month",
+      "100 ads & social posts/month",
+      "Product titles & meta descriptions",
+      "SEO-friendly descriptions",
+      "Image SEO (alt text)",
+      "Direct Shopify import",
       "Email support",
     ],
   },
@@ -82,14 +82,14 @@ const PLANS = {
     name: "Pro",
     monthlyPrice: 34,
     annualPrice: 340,
-    credits: "4,500 descriptions",
+    credits: "3,000 descriptions",
     features: [
-      "4,500 product descriptions/month",
-      "1,000 ads & social posts/month",
-      "400 AI images/month",
+      "3,000 product descriptions/month",
+      "400 ads & social posts/month",
+      "200 AI images/month",
       "All Starter features",
+      "AI image generation",
       "Web search integration",
-      "Bulk generation",
       "Priority support",
     ],
   },

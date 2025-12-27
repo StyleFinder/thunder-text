@@ -43,7 +43,7 @@ interface Plan {
 }
 
 // Plans matching the existing system: free, starter, pro
-// Optimized for 70%+ profit margin based on AI costs:
+// Optimized for 85%+ profit margin based on AI costs:
 // - Product descriptions: $0.0008/each (gpt-4o-mini vision)
 // - Ads: $0.002/each (gpt-4o-mini)
 // - Images: $0.01/each (gpt-image-1 standard)
@@ -51,17 +51,17 @@ const PLANS: Plan[] = [
   {
     id: "starter",
     name: "Starter",
-    monthlyPrice: 19,
-    annualPrice: 190,
-    credits: "2,500 Product Descriptions",
-    bulkGeneration: "500 Ads & Social Posts • 200 AI Images",
+    monthlyPrice: 14,
+    annualPrice: 140,
+    credits: "1,500 Product Descriptions",
+    bulkGeneration: "100 Ads & Social Posts",
     features: [
       { icon: FileText, text: "AI Generated Descriptions, Titles, & Meta", included: true },
-      { icon: Languages, text: "Multi-Language Support", included: true },
-      { icon: Languages, text: "Translate to any language", included: true },
-      { icon: Settings, text: "Custom Instructions", included: true },
-      { icon: Image, text: "AI Image Alt Text Generator", included: true },
-      { icon: Headphones, text: "Standard Email Support", included: true },
+      { icon: FileText, text: "Product Titles & Meta Descriptions", included: true },
+      { icon: Search, text: "SEO-Friendly Descriptions", included: true },
+      { icon: Image, text: "Image SEO (Alt Text)", included: true },
+      { icon: Settings, text: "Direct Shopify Import", included: true },
+      { icon: Headphones, text: "Email Support", included: true },
     ],
   },
   {
@@ -69,22 +69,18 @@ const PLANS: Plan[] = [
     name: "Pro",
     monthlyPrice: 34,
     annualPrice: 340,
-    credits: "4,500 Product Descriptions",
-    bulkGeneration: "1,000 Ads & Social Posts • 400 AI Images",
+    credits: "3,000 Product Descriptions",
+    bulkGeneration: "400 Ads & Social Posts • 200 AI Images",
     highlighted: true,
     badge: "Most Popular",
     features: [
-      { icon: FileText, text: "AI Generated Descriptions, Titles, & Meta", included: true },
-      { icon: Languages, text: "Multi-Language Support", included: true },
-      { icon: Languages, text: "Translate to any language", included: true },
-      { icon: Settings, text: "Advanced Custom Instructions", included: true },
-      { icon: Image, text: "AI Image Generation (400/month)", included: true },
-      { icon: MessageSquare, text: "Generate Ads, Captions & Social Content", included: true },
-      { icon: Image, text: "Generate using product images", included: true },
-      { icon: Search, text: "Generate descriptions with web search", included: true },
-      { icon: FileText, text: "Generate using product meta data", included: true },
-      { icon: Sparkles, text: "Formatted Descriptions (custom formats)", included: true },
-      { icon: Video, text: "Priority Video/Voice Support", included: true },
+      { icon: FileText, text: "All Starter Features", included: true },
+      { icon: FileText, text: "3,000 Product Descriptions/month", included: true },
+      { icon: MessageSquare, text: "400 Ads & Social Posts/month", included: true },
+      { icon: Image, text: "200 AI Image Generations/month", included: true },
+      { icon: Search, text: "Web Search Integration", included: true },
+      { icon: Sparkles, text: "Advanced Custom Instructions", included: true },
+      { icon: Video, text: "Priority Support", included: true },
     ],
   },
 ];

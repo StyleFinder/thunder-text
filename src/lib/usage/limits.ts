@@ -4,10 +4,10 @@
  * Defines plan-based limits for product descriptions and ads,
  * and provides utilities to check and enforce usage limits.
  *
- * Plan Limits (optimized for 70% profit margin):
+ * Plan Limits (optimized for 85%+ profit margin):
  * - Free: 30 products/month, 30 ads/month (trial)
- * - Starter ($19/mo): 2,500 products/month, 500 ads/month, 200 images/month
- * - Pro ($34/mo): 4,500 products/month, 1,000 ads/month, 400 images/month
+ * - Starter ($14/mo): 1,500 products/month, 100 ads/month
+ * - Pro ($34/mo): 3,000 products/month, 400 ads/month, 200 images/month
  *
  * Cost basis:
  * - Product descriptions: $0.0008/each (gpt-4o-mini vision)
@@ -28,19 +28,18 @@ export interface PlanLimits {
 }
 
 /**
- * Usage limits by plan (optimized for 70% profit margin)
+ * Usage limits by plan (optimized for 85%+ profit margin)
  *
- * Starter ($19/mo) - Max AI cost: $5.70
- *   - 2,500 descriptions × $0.0008 = $2.00
- *   - 500 ads × $0.002 = $1.00
+ * Starter ($14/mo) - Max AI cost: $1.40
+ *   - 1,500 descriptions × $0.0008 = $1.20
+ *   - 100 ads × $0.002 = $0.20
+ *   - Total cost: $1.40 → 90% margin
+ *
+ * Pro ($34/mo) - Max AI cost: $5.20
+ *   - 3,000 descriptions × $0.0008 = $2.40
+ *   - 400 ads × $0.002 = $0.80
  *   - 200 images × $0.01 = $2.00
- *   - Total cost: $5.00 → 74% margin
- *
- * Pro ($34/mo) - Max AI cost: $10.20
- *   - 4,500 descriptions × $0.0008 = $3.60
- *   - 1,000 ads × $0.002 = $2.00
- *   - 400 images × $0.01 = $4.00
- *   - Total cost: $9.60 → 72% margin
+ *   - Total cost: $5.20 → 85% margin
  */
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
   free: {
@@ -49,14 +48,14 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     images: 10,
   },
   starter: {
-    productDescriptions: 2500,
-    ads: 500,
-    images: 200,
+    productDescriptions: 1500,
+    ads: 100,
+    images: 0,
   },
   pro: {
-    productDescriptions: 4500,
-    ads: 1000,
-    images: 400,
+    productDescriptions: 3000,
+    ads: 400,
+    images: 200,
   },
 };
 

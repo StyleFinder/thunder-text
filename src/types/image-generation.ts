@@ -247,16 +247,16 @@ export const DEFAULT_MODELS: Record<ImageProvider, ImageModel> = {
 };
 
 /**
- * Monthly image generation limits by plan (optimized for 70% margin)
+ * Monthly image generation limits by plan (optimized for 85% margin)
  * Cost per image: $0.01 (gpt-image-1 standard quality)
  *
- * Starter ($19/mo): 200 images × $0.01 = $2.00 AI cost
- * Pro ($34/mo): 400 images × $0.01 = $4.00 AI cost
+ * Starter ($14/mo): 0 images (Pro feature only)
+ * Pro ($34/mo): 200 images × $0.01 = $2.00 AI cost
  */
 export const CREDIT_LIMITS: Record<string, number> = {
   free: 10,
-  starter: 200,
-  pro: 400,
+  starter: 0,
+  pro: 200,
 };
 
 /**
