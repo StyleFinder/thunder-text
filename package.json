@@ -64,7 +64,7 @@
     "@shopify/shopify-api": "^11.14.1",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.57.2",
-    "@types/dompurify": "^3.0.5",
+    "@types/dompurify": "^3.2.0",
     "@types/qrcode": "^1.5.6",
     "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
