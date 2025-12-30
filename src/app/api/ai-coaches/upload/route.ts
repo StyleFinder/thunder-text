@@ -3,6 +3,8 @@
  *
  * POST /api/ai-coaches/upload
  * Upload files for coach chat context (inventory reports, SOPs, etc.)
+ *
+ * @security P1 - Magic byte validation prevents disguised malicious files
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -16,6 +18,102 @@ import {
   type FileAttachment,
   type FileCategory,
 } from "@/types/ai-coaches";
+
+/**
+ * Magic byte signatures for file type validation
+ * These are the first bytes of each file type that identify the format
+ * Using Map instead of object to avoid prototype pollution risks
+ * @security Prevents MIME type spoofing attacks
+ */
+const FILE_MAGIC_BYTES = new Map<string, readonly number[] | null>([
+  // PDF: %PDF
+  ["application/pdf", [0x25, 0x50, 0x44, 0x46]],
+  // PNG: .PNG
+  ["image/png", [0x89, 0x50, 0x4e, 0x47]],
+  // JPEG: FFD8FF
+  ["image/jpeg", [0xff, 0xd8, 0xff]],
+  // GIF: GIF87a or GIF89a
+  ["image/gif", [0x47, 0x49, 0x46]],
+  // WebP: RIFF....WEBP
+  ["image/webp", [0x52, 0x49, 0x46, 0x46]],
+  // Microsoft Office Open XML formats (DOCX, XLSX, PPTX) - ZIP archive
+  [
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    [0x50, 0x4b, 0x03, 0x04],
+  ],
+  [
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    [0x50, 0x4b, 0x03, 0x04],
+  ],
+  [
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    [0x50, 0x4b, 0x03, 0x04],
+  ],
+  // Legacy Microsoft Office (DOC, XLS, PPT) - Compound File Binary Format
+  ["application/msword", [0xd0, 0xcf, 0x11, 0xe0]],
+  ["application/vnd.ms-excel", [0xd0, 0xcf, 0x11, 0xe0]],
+  ["application/vnd.ms-powerpoint", [0xd0, 0xcf, 0x11, 0xe0]],
+  // Text-based formats: no specific magic bytes (content validated separately)
+  ["text/plain", null],
+  ["text/csv", null],
+  ["text/markdown", null],
+  ["application/json", null],
+]);
+
+/**
+ * Validate file content matches declared MIME type using magic bytes
+ * @security Prevents uploading malicious files disguised as allowed types
+ */
+function validateMagicBytes(buffer: Buffer, mimeType: string): boolean {
+  // Check if MIME type is in our allowlist
+  if (!FILE_MAGIC_BYTES.has(mimeType)) {
+    // Unknown MIME type - reject for security
+    return false;
+  }
+
+  const signature = FILE_MAGIC_BYTES.get(mimeType);
+
+  // If no signature defined for this type (null), allow it (text-based formats)
+  if (signature === null || signature === undefined) {
+    return true;
+  }
+
+  // Check if buffer is long enough
+  if (buffer.length < signature.length) {
+    return false;
+  }
+
+  // Compare magic bytes
+  return signature.every((byte, idx) => buffer.readUInt8(idx) === byte);
+}
+
+/**
+ * Additional validation for text-based files
+ * @security Ensures text files don't contain binary content or exploits
+ */
+function validateTextContent(buffer: Buffer, mimeType: string): boolean {
+  // Only validate text-based MIME types
+  if (!mimeType.startsWith("text/") && mimeType !== "application/json") {
+    return true;
+  }
+
+  // Check for null bytes which indicate binary content
+  const content = buffer.toString("utf-8");
+  if (content.includes("\0")) {
+    return false;
+  }
+
+  // For JSON, try to parse it
+  if (mimeType === "application/json") {
+    try {
+      JSON.parse(content);
+    } catch {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -112,14 +210,50 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Read file buffer early for validation
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // SECURITY: Validate magic bytes match declared MIME type
+    // Prevents disguised malicious files (e.g., executable hidden as image)
+    if (!validateMagicBytes(buffer, file.type)) {
+      logger.warn("File magic bytes mismatch", {
+        component: "ai-coaches-upload",
+        storeId: userId,
+        fileName: file.name,
+        declaredType: file.type,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "File content does not match declared type. Please upload a valid file.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // SECURITY: Additional validation for text-based files
+    if (!validateTextContent(buffer, file.type)) {
+      logger.warn("Invalid text file content", {
+        component: "ai-coaches-upload",
+        storeId: userId,
+        fileName: file.name,
+        mimeType: file.type,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid file content. Text files must contain valid text.",
+        },
+        { status: 400 },
+      );
+    }
+
     // Generate unique file path
     const fileId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const extension = fileTypeInfo.extension;
     const storagePath = `coach-uploads/${userId}/${fileId}${extension}`;
-
-    // Read file buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
 
     // Upload to Supabase Storage
     const { error: uploadError } = await supabaseAdmin.storage
