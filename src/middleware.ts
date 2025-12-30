@@ -148,9 +148,6 @@ export async function middleware(request: NextRequest) {
     const timestamp = searchParams.get("timestamp");
 
     if (shop && hmac && timestamp) {
-      console.log("[Middleware] Detected Shopify hosted install redirect");
-      console.log("[Middleware] Shop:", shop, "Has HMAC:", !!hmac, "Has timestamp:", !!timestamp);
-
       // Normalize shop domain
       const normalizedShop = shop.includes(".myshopify.com") ? shop : `${shop}.myshopify.com`;
 
@@ -218,7 +215,6 @@ export async function middleware(request: NextRequest) {
           // Extract the sub-path after the legacy route
           const subPath = pathname.replace(route, "") || "";
           const newPath = `/stores/${token.id}${route}${subPath}`;
-          console.log(`[Middleware] Redirecting legacy route: ${pathname} -> ${newPath}`);
           return NextResponse.redirect(new URL(newPath, request.url));
         }
       }

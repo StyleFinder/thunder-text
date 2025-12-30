@@ -35,10 +35,6 @@ export async function retrieveRAGContext(params: {
     // Generate embedding for the query
     const { embedding, cached } = await generateEmbeddingWithCache(params.query);
 
-    console.log(
-      `🔍 RAG retrieval: ${params.platform}/${params.category}/${params.goal} (embedding ${cached ? 'cached' : 'generated'})`
-    );
-
     // Retrieve best practices
     const bestPractices = await retrieveBestPractices({
       embedding,
@@ -60,10 +56,6 @@ export async function retrieveRAGContext(params: {
     });
 
     const retrievalTime = Date.now() - startTime;
-
-    console.log(
-      `✅ RAG retrieved: ${bestPractices.length} best practices, ${adExamples.length} examples (${retrievalTime}ms)`
-    );
 
     // Log retrieval for debugging and optimization
     // This will help us understand which best practices are being retrieved
@@ -174,9 +166,6 @@ async function retrieveAdExamples(params: {
   }
 
   if (!data || data.length === 0) {
-    console.log(
-      `ℹ️  No ad examples found for ${params.platform}/${params.category}`
-    );
     return [];
   }
 

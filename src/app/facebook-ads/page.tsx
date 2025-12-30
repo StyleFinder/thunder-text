@@ -98,10 +98,8 @@ function FacebookAdsContent() {
     const authorizeUrl = `/api/facebook/oauth/authorize?shop=${shop}`
 
     if (isEmbedded) {
-      console.log('🔀 Using window.open(_top) for OAuth flow (embedded context)')
       window.open(authorizeUrl, '_top')
     } else {
-      console.log('🔀 Using window.location for OAuth flow (non-embedded)')
       window.location.href = authorizeUrl
     }
   }

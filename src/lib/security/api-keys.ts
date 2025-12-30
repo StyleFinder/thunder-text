@@ -430,14 +430,11 @@ export function validateEnvironmentVariables(): void {
  * This is for internal service tracking, not customer API key tracking
  */
 export function logAPIUsage(
-  service: string,
-  operation: string,
-  metadata?: Record<string, unknown>
+  _service: string,
+  _operation: string,
+  _metadata?: Record<string, unknown>
 ): void {
-  // Log to console in development, could be extended to log to analytics
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[API Usage] ${service}:${operation}`, metadata);
-  }
+  // Placeholder for future analytics integration
   // In production, you might want to send this to an analytics service
 }
 

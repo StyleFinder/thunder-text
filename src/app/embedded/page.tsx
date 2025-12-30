@@ -13,14 +13,6 @@ export default function EmbeddedApp() {
   const { isAuthenticated, isEmbedded, shop, isLoading, error } = useShopifyAuth();
 
   useEffect(() => {
-    console.log('[Embedded] Context check:', {
-      isInIframe: window.top !== window.self,
-      hasHost: !!searchParams?.get('host'),
-      shop,
-      locationHref: window.location.href,
-      isAuthenticated
-    });
-
     if (isAuthenticated && shop) {
       const params = new URLSearchParams({
         shop,

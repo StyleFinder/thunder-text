@@ -93,7 +93,6 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (integrationError || !integration) {
-      console.log("No Facebook integration found for shop:", shop);
       return NextResponse.json(
         { error: "Facebook integration not found" },
         { status: 404 },
@@ -105,14 +104,7 @@ export async function POST(request: NextRequest) {
       const decryptedToken = await decryptToken(
         integration.encrypted_access_token,
       );
-      const revoked = await revokeToken(decryptedToken);
-      if (revoked) {
-        console.log("Facebook token revoked successfully");
-      } else {
-        console.log(
-          "Facebook token revocation failed, but continuing with local deletion",
-        );
-      }
+      await revokeToken(decryptedToken);
     } catch (error) {
       logger.error(
         "Error during token revocation (continuing anyway):",
@@ -136,11 +128,6 @@ export async function POST(request: NextRequest) {
       );
       throw deleteError;
     }
-
-    console.log(
-      "Facebook integration disconnected successfully for shop:",
-      shop,
-    );
 
     return NextResponse.json({
       success: true,

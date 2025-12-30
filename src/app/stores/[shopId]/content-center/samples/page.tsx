@@ -58,12 +58,12 @@ export default function SamplesPage() {
     e.preventDefault()
     setIsDragging(false)
     // TODO: Handle file upload with shop context
-    console.log('Files dropped:', e.dataTransfer.files, 'Shop:', shop)
+    // Files available at: e.dataTransfer.files
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     // TODO: Handle file upload with shop context
-    console.log('Files selected:', e.target.files, 'Shop:', shop)
+    // Files available at: e.target.files
   }
 
   const removeSample = (id: string) => {

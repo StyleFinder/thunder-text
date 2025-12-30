@@ -355,9 +355,8 @@ export default function AdLibraryPage() {
     }
   };
 
-  const handleEdit = (ad: AdLibraryItem) => {
+  const handleEdit = (_ad: AdLibraryItem) => {
     // Future: Open edit modal
-    console.log('Edit ad:', ad);
     setBannerMessage('Edit functionality coming soon');
     setBannerTone('info');
   };

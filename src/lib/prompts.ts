@@ -77,14 +77,8 @@ export async function getSystemPrompt(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
       )
     ) {
-      console.log("📍 Converting shop domain to UUID...");
       actualStoreId = (await getStoreId(storeId)) || storeId;
     }
-
-    console.log(
-      "🔎 Querying system_prompts table with store_id:",
-      actualStoreId,
-    );
     const { data, error } = await supabaseAdmin
       .from("system_prompts")
       .select("*")
@@ -102,10 +96,6 @@ export async function getSystemPrompt(
       return null;
     }
 
-    console.log(
-      "✅ System prompt found:",
-      data ? `${data.name} (${data.content.length} chars)` : "null",
-    );
     return data;
   } catch (error) {
     logger.error("Error in getSystemPrompt", error as Error, {
@@ -252,7 +242,6 @@ export async function getGlobalDefaultTemplate(
       .single();
 
     if (error || !data) {
-      console.log("No global default template found, using general");
       return "general";
     }
 
@@ -688,10 +677,6 @@ export async function initializeDefaultPrompts(storeId: string): Promise<void> {
       .single();
 
     if (existingPrompt) {
-      console.log(
-        "Default prompts already initialized for store:",
-        actualStoreId,
-      );
       return;
     }
 
@@ -711,11 +696,6 @@ export async function initializeDefaultPrompts(storeId: string): Promise<void> {
     for (const category of categories) {
       await resetCategoryTemplate(actualStoreId, category);
     }
-
-    console.log(
-      "✅ Successfully initialized default prompts for store:",
-      actualStoreId,
-    );
   } catch (error) {
     logger.error("Error initializing default prompts", error as Error, {
       component: "prompts",

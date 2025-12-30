@@ -86,21 +86,13 @@ export async function generateMasterBusinessProfile(
     return acc;
   }, {});
 
-  console.log(
-    "Starting master profile generation with",
-    responses.length,
-    "responses",
-  );
-
   try {
     // Stage 1: Market Research Analysis
-    console.log("Stage 1: Generating Market Research Analysis...");
     const marketResearch = await generateMarketResearch(responsesMap);
     totalTokens += estimateTokens(marketResearch);
     stagesCompleted.push("market_research");
 
     // Stage 2: Ideal Customer Avatar
-    console.log("Stage 2: Generating Ideal Customer Avatar...");
     const idealCustomerAvatar = await generateIdealCustomerAvatar(
       responsesMap,
       marketResearch,
@@ -109,7 +101,6 @@ export async function generateMasterBusinessProfile(
     stagesCompleted.push("ideal_customer_avatar");
 
     // Stage 3: Pain Point & Content Strategy
-    console.log("Stage 3: Generating Pain Point & Content Strategy...");
     const painPointStrategy = await generatePainPointStrategy(
       responsesMap,
       idealCustomerAvatar,
@@ -119,13 +110,11 @@ export async function generateMasterBusinessProfile(
     stagesCompleted.push("pain_point_strategy");
 
     // Stage 4: Brand Mission, Vision & Values
-    console.log("Stage 4: Generating Brand Mission, Vision & Values...");
     const missionVisionValues = await generateMissionVisionValues(responsesMap);
     totalTokens += estimateTokens(missionVisionValues);
     stagesCompleted.push("mission_vision_values");
 
     // Stage 5: Brand Positioning Statement
-    console.log("Stage 5: Generating Brand Positioning Statement...");
     const positioningStatement = await generatePositioningStatement(
       responsesMap,
       marketResearch,
@@ -134,7 +123,6 @@ export async function generateMasterBusinessProfile(
     stagesCompleted.push("positioning_statement");
 
     // Stage 6: AI Engine Custom Instructions
-    console.log("Stage 6: Generating AI Engine Instructions...");
     const aiEngineInstructions = await generateAIEngineInstructions(
       responsesMap,
       missionVisionValues,
@@ -145,7 +133,6 @@ export async function generateMasterBusinessProfile(
     stagesCompleted.push("ai_engine_instructions");
 
     // Stage 7: Create Executive Summary
-    console.log("Stage 7: Creating Executive Summary...");
     const profileSummary = await generateExecutiveSummary(responsesMap, {
       marketResearch,
       idealCustomerAvatar,
@@ -188,12 +175,6 @@ export async function generateMasterBusinessProfile(
       validationPassed: true,
       validationIssues: [],
     };
-
-    console.log("Master profile generation complete:", {
-      stages: stagesCompleted.length,
-      tokens: totalTokens,
-      timeMs: metadata.generationTimeMs,
-    });
 
     return {
       masterProfile,

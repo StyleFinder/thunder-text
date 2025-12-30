@@ -19,6 +19,7 @@ import {
   ArrowRight,
   Gift,
   CheckCircle,
+  HourglassIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -463,6 +464,116 @@ function ActivePlanCard({
   );
 }
 
+// Pending Plan Card - for subscriptions awaiting activation
+function PendingPlanCard({
+  shopId,
+  subscription,
+}: {
+  shopId: string;
+  subscription: SubscriptionInfo;
+}) {
+  const planName = subscription.plan === "pro" ? "Pro" : "Starter";
+  const isPro = subscription.plan === "pro";
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden shadow-lg"
+      style={{
+        background: isPro
+          ? "linear-gradient(135deg, #fef3c7 0%, #fcd34d 50%, #f59e0b 100%)"
+          : "linear-gradient(135deg, #dbeafe 0%, #93c5fd 50%, #3b82f6 100%)",
+        border: isPro ? "2px solid #f59e0b" : "2px solid #3b82f6",
+      }}
+    >
+      <div className="p-5 bg-white/90 backdrop-blur-sm">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                isPro
+                  ? "bg-gradient-to-br from-amber-400 to-amber-600"
+                  : "bg-gradient-to-br from-blue-400 to-blue-600"
+              }`}
+            >
+              {isPro ? (
+                <Crown className="w-5 h-5 text-white" />
+              ) : (
+                <Zap className="w-5 h-5 text-white" />
+              )}
+            </div>
+            <div>
+              <h3
+                className={`font-semibold ${isPro ? "text-amber-900" : "text-blue-900"}`}
+              >
+                {planName} Plan
+              </h3>
+              <p
+                className={`text-xs ${isPro ? "text-amber-700" : "text-blue-700"}`}
+              >
+                Subscription pending
+              </p>
+            </div>
+          </div>
+          <span
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300"
+          >
+            <HourglassIcon className="w-3 h-3" />
+            Pending
+          </span>
+        </div>
+
+        {/* Pending Status Message */}
+        <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 mb-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <HourglassIcon className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-amber-900">
+                Awaiting activation
+              </p>
+              <p className="text-xs text-amber-700 mt-1">
+                Your {planName} subscription is being processed. This usually takes a few moments.
+                If you just completed checkout, please refresh the page.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => window.location.reload()}
+            size="sm"
+            className={
+              isPro
+                ? "bg-amber-600 hover:bg-amber-700 text-white"
+                : "bg-blue-600 hover:bg-blue-700 text-white"
+            }
+          >
+            <Loader2 className="w-3 h-3 mr-1" />
+            Refresh Status
+          </Button>
+          <Link href={`/stores/${shopId}/settings/billing`}>
+            <Button
+              size="sm"
+              variant="outline"
+              className={
+                isPro
+                  ? "border-amber-300 text-amber-700 hover:bg-amber-50"
+                  : "border-blue-300 text-blue-700 hover:bg-blue-50"
+              }
+            >
+              View Billing
+              <ArrowRight className="w-3 h-3 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Feature Tile Component
 function FeatureTile({
   icon: Icon,
@@ -718,6 +829,7 @@ function DashboardContent() {
   const isPaidPlan =
     subscription?.plan === "starter" || subscription?.plan === "pro";
   const isActivePaid = isPaidPlan && subscription?.status === "active";
+  const isPendingPaid = isPaidPlan && subscription?.status === "pending";
 
   // Show loading while session is being fetched
   if (status === "loading") {
@@ -901,6 +1013,8 @@ function DashboardContent() {
           <div className="mt-8">
             {isActivePaid && subscription ? (
               <ActivePlanCard shopId={shopId} subscription={subscription} usage={stats.usage} />
+            ) : isPendingPaid && subscription ? (
+              <PendingPlanCard shopId={shopId} subscription={subscription} />
             ) : (
               <PlanUsageCard shopId={shopId} subscription={subscription} usage={stats.usage} />
             )}

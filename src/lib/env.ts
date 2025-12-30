@@ -175,9 +175,6 @@ if (typeof window === 'undefined') {
   // Only run server validation on the server
   try {
     validateServerEnv();
-    if (process.env.NODE_ENV !== 'test') {
-      console.log('✅ Environment variables validated successfully');
-    }
   } catch (error) {
     // Error already logged in validateServerEnv
   }

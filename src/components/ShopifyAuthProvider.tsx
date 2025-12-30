@@ -37,7 +37,6 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
   const performTokenExchange = async () => {
     // Prevent multiple simultaneous token exchanges
     if (isExchanging) {
-      console.log('Token exchange already in progress, skipping...')
       return
     }
 
@@ -46,7 +45,6 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
 
       const shopParam = searchParams?.get('shop')
       if (!shopParam) {
-        console.log('No shop parameter found')
         setIsLoading(false)
         setIsExchanging(false)
         return
@@ -59,7 +57,6 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
                         window.top !== window.self
 
       if (!isEmbedded) {
-        console.log('Not in embedded context, skipping token exchange')
         // For non-embedded contexts (like direct URL access),
         // we'll rely on the authenticated=true parameter
         const authenticated = searchParams?.get('authenticated') === 'true'
@@ -124,7 +121,6 @@ export function ShopifyAuthProvider({ children }: ShopifyAuthProviderProps) {
       // Check if script is already in DOM
       const existingScript = document.querySelector('script[src="https://cdn.shopify.com/shopifycloud/app-bridge.js"]')
       if (existingScript) {
-        console.log('⏳ App Bridge script already loading, waiting...')
         setIsLoading(false)
         setIsExchanging(false)
         return

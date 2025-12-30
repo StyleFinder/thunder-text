@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import type { ImageProvider, AspectRatio, ImageQuality } from '@/types/image-generation';
 import { CREDIT_LIMITS } from '@/types/image-generation';
+import { startRequestTracker, calculateImageCost } from '@/lib/monitoring/api-logger';
 
 /**
  * POST /api/image-generation
@@ -24,6 +25,9 @@ import { CREDIT_LIMITS } from '@/types/image-generation';
  * - conversationId: string (optional) - For iteration tracking
  */
 export async function POST(req: NextRequest) {
+  const tracker = startRequestTracker();
+  let shopId: string | null = null;
+
   try {
     // SECURITY: Require session authentication
     const session = await getServerSession(authOptions);
@@ -104,12 +108,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Shop is not active' }, { status: 403 });
     }
 
-    const shopId = shopData.id;
+    shopId = shopData.id;
     const plan = shopData.plan || 'starter';
 
     // Check usage limits
     const usageCheck = await checkUsageLimits(shopId, plan);
     if (!usageCheck.allowed) {
+      // Log rate limited request
+      await tracker.log({
+        shopId,
+        operationType: 'image_generation',
+        endpoint: '/api/image-generation',
+        model: 'gpt-image-1',
+        status: 'rate_limited',
+        metadata: { plan, used: usageCheck.used, limit: usageCheck.limit },
+      });
+
       return NextResponse.json(
         {
           error: 'Monthly image generation limit reached',
@@ -175,6 +189,22 @@ export async function POST(req: NextRequest) {
     // Record usage
     await recordUsage(shopId, result.costCents, result.provider, result.model);
 
+    // Log successful API request
+    const imageCost = calculateImageCost('gpt-image-1', 'standard');
+    await tracker.log({
+      shopId,
+      operationType: 'image_generation',
+      endpoint: '/api/image-generation',
+      model: result.model || 'gpt-image-1',
+      costUsd: imageCost,
+      status: 'success',
+      metadata: {
+        provider: result.provider,
+        aspectRatio,
+        hasReferenceImage: !!referenceImage,
+      },
+    });
+
     // Return result with usage info
     return NextResponse.json({
       ...result,
@@ -188,6 +218,24 @@ export async function POST(req: NextRequest) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Image generation error:', error as Error, {
       component: 'image-generation',
+    });
+
+    // Determine error type for logging
+    let errorType = 'api_error';
+    if (errorMessage.includes('circuit breaker')) {
+      errorType = 'timeout';
+    } else if (errorMessage.includes('content policy') || errorMessage.includes('safety')) {
+      errorType = 'validation_error';
+    }
+
+    // Log failed API request
+    await tracker.logError({
+      shopId,
+      operationType: 'image_generation',
+      endpoint: '/api/image-generation',
+      model: 'gpt-image-1',
+      errorType,
+      errorMessage,
     });
 
     // Check for specific error types

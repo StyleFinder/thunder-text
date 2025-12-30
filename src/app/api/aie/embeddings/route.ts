@@ -47,9 +47,6 @@ export const GET = requireAuth('user')(async (request) => {
  */
 export const POST = requireAuth('user')(async (request) => {
   try {
-
-    console.log('⚡ Generating embeddings...');
-
     const result = await ensureBestPracticeEmbeddings();
 
     return NextResponse.json({

@@ -108,18 +108,13 @@ export async function GET(request: NextRequest) {
   let stateData: GoogleOAuthState | undefined
 
   try {
-    console.log('🔵 Google OAuth callback received:', request.url)
-
     const { searchParams } = new URL(request.url)
     const code = searchParams.get('code')
     const state = searchParams.get('state')
     const error = searchParams.get('error')
 
-    console.log('🔵 Callback parameters:', { hasCode: !!code, hasState: !!state, error })
-
     // Handle user denial or errors from Google
     if (error) {
-      console.log('Google OAuth error:', error)
 
       const redirectUrl = new URL('/onboarding/welcome', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
       redirectUrl.searchParams.set('google_error', error)
@@ -179,13 +174,8 @@ export async function GET(request: NextRequest) {
 
     const { shop_id, shop_domain, return_to } = stateData
 
-    console.log('🔵 Processing Google OAuth callback for shop:', shop_domain)
-    console.log('🔵 State data:', { shop_id, shop_domain, return_to })
-
     // Exchange authorization code for access token
-    console.log('🔵 Starting token exchange...')
     const tokenData = await exchangeCodeForToken(code)
-    console.log('🔵 Token exchange successful')
     const { access_token, refresh_token, expires_in, scope } = tokenData
 
     // Get user's Google account information

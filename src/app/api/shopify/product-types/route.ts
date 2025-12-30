@@ -83,7 +83,6 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const shop = url.searchParams.get("shop");
     const shopId = url.searchParams.get("shopId");
-    console.log("📋 Shop parameters received:", { shop, shopId });
 
     if (!shop && !shopId) {
       logger.error("❌ No shop parameter provided", undefined, {
@@ -103,7 +102,6 @@ export async function GET(request: NextRequest) {
 
     // Try to find shop by ID first (if provided)
     if (shopId) {
-      console.log("📊 Looking up shop by ID:", shopId);
       const { data: shopById } = await supabaseAdmin
         .from("shops")
         .select("shop_domain, shopify_access_token, shopify_access_token_legacy")
@@ -112,16 +110,11 @@ export async function GET(request: NextRequest) {
 
       if (shopById) {
         store = shopById;
-        console.log("✅ Found shop by ID:", store.shop_domain);
       }
     }
 
     // Fall back to domain lookup if ID lookup failed or wasn't provided
     if (!store && shop) {
-      const fullShopDomain = shop.includes(".myshopify.com")
-        ? shop
-        : `${shop}.myshopify.com`;
-      console.log("📊 Looking up shop by domain:", fullShopDomain);
       store = await findShopByDomain(supabaseAdmin, shop);
     }
 

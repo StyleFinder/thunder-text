@@ -34,9 +34,6 @@ export default function RootPage() {
         // When Shopify redirects after install via hosted OAuth, it sends these params to application_url
         // We need to kick off proper OAuth to get the access token
         if (shop && hmac && timestamp) {
-          console.log("[Root] Detected Shopify install redirect - initiating OAuth flow");
-          console.log("[Root] Shop:", shop, "Has HMAC:", !!hmac, "Has Host:", !!host);
-
           // Redirect to our OAuth initiation endpoint
           // This will generate proper state, store it, and redirect to Shopify OAuth
           // IMPORTANT: Use window.location.href for API routes - router.replace can't handle them
@@ -47,7 +44,6 @@ export default function RootPage() {
 
         if (!shop) {
           // No shop parameter - redirect to login page
-          console.log("[Root] No shop parameter, redirecting to login");
           router.replace("/auth/login");
           return;
         }
@@ -61,7 +57,6 @@ export default function RootPage() {
 
         if (!response.ok) {
           // Shop not found or error - redirect to welcome for new setup
-          console.log("[Root] Shop not found, redirecting to welcome");
           router.replace(`/welcome?shop=${shop}`);
           return;
         }
@@ -73,21 +68,14 @@ export default function RootPage() {
 
           if (user_type === "coach") {
             // Coach user - redirect to coach portal
-            console.log(
-              "[Root] Coach user detected, redirecting to coach login",
-            );
             router.replace("/coach/login");
             return;
           }
 
           // Store user - check onboarding status
           if (onboarding_completed) {
-            console.log("[Root] Onboarding complete, redirecting to dashboard");
             router.replace(`/dashboard?shop=${shop}`);
           } else {
-            console.log(
-              "[Root] Onboarding not complete, redirecting to welcome",
-            );
             router.replace(`/welcome?shop=${shop}`);
           }
         } else {

@@ -60,12 +60,6 @@ export async function POST(
       [profile.id],
     );
 
-    console.log(
-      "✅ Deleted responses:",
-      deleteResult.rowCount || 0,
-      "rows affected",
-    );
-
     // Reset profile status
     const { error: updateError } = await supabaseAdmin
       .from("business_profiles")

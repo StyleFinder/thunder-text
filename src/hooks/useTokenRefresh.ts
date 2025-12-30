@@ -47,8 +47,6 @@ export function useTokenRefresh() {
     isRefreshingRef.current = true
 
     try {
-      console.log('🔐 Getting fresh session token from App Bridge...')
-
       // Get fresh session token from App Bridge
       const sessionToken = await app.idToken()
 
@@ -107,8 +105,6 @@ export function useTokenRefresh() {
     refreshTimerRef.current = setTimeout(() => {
       checkTokenExpiration()
     }, delay)
-
-    console.log(`⏰ Next token check scheduled in ${Math.round(delay / 1000)} seconds`)
   }, [checkTokenExpiration])
 
   /**

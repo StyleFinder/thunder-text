@@ -21,8 +21,6 @@ export async function analyzeImage(
       return cached;
     }
 
-    console.log('⚡ Analyzing image with OpenAI Vision...');
-
     // Call OpenAI Vision API
     const response = await aieOpenAI.chat.completions.create({
       model: 'gpt-4o',

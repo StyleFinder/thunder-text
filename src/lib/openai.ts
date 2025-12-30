@@ -85,15 +85,15 @@ export class AIDescriptionGenerator {
         return true;
       });
 
-      console.log("🎨 OpenAI API - Processing images:", {
+      logger.debug("OpenAI API - Processing images", {
+        component: "openai",
         originalCount: request.images.length,
         validCount: validImages.length,
-        firstImage: validImages[0]?.substring(0, 100),
       });
 
       // Ensure we have at least one image
       if (validImages.length === 0) {
-        console.log("🔴 No valid images provided, using placeholder");
+        logger.debug("No valid images provided, using placeholder", { component: "openai" });
         validImages.push(
           "https://via.placeholder.com/400x400/cccccc/969696?text=No+Image",
         );

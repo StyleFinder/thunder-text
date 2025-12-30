@@ -9,16 +9,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { sessionToken, shop } = body
 
-    console.log('🧪 Token Exchange Debug Test:', {
-      shop,
-      hasSessionToken: !!sessionToken,
-      sessionTokenLength: sessionToken?.length,
-      hasApiKey: !!process.env.NEXT_PUBLIC_SHOPIFY_API_KEY,
-      hasApiSecret: !!process.env.SHOPIFY_API_SECRET,
-      apiKey: process.env.NEXT_PUBLIC_SHOPIFY_API_KEY?.substring(0, 8) + '...',
-      apiSecretFirst8: process.env.SHOPIFY_API_SECRET?.substring(0, 8) + '...',
-    })
-
     if (!sessionToken || !shop) {
       return NextResponse.json({
         success: false,
@@ -37,16 +27,6 @@ export async function POST(request: NextRequest) {
     try {
       const [header, payload, signature] = sessionToken.split('.')
       const decodedPayload = JSON.parse(Buffer.from(payload, 'base64').toString())
-      console.log('📋 Session token payload:', {
-        iss: decodedPayload.iss,
-        dest: decodedPayload.dest,
-        aud: decodedPayload.aud,
-        sub: decodedPayload.sub,
-        exp: decodedPayload.exp,
-        nbf: decodedPayload.nbf,
-        iat: decodedPayload.iat,
-        jti: decodedPayload.jti,
-      })
 
       // Check if token is expired
       const now = Math.floor(Date.now() / 1000)
@@ -80,14 +60,6 @@ export async function POST(request: NextRequest) {
       grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
       requested_token_type: 'urn:shopify:params:oauth:token-type:online-access-token',
     }
-
-    console.log('📤 Sending Token Exchange request:', {
-      url: tokenExchangeUrl,
-      clientId: requestBody.client_id,
-      hasClientSecret: !!requestBody.client_secret,
-      subjectTokenType: requestBody.subject_token_type,
-      grantType: requestBody.grant_type,
-    })
 
     // Perform Token Exchange
     const response = await fetch(tokenExchangeUrl, {

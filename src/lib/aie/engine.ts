@@ -267,8 +267,6 @@ export class AdIntelligenceEngine {
   ) {
     const { supabaseAdmin } = await import("@/lib/supabase/admin");
 
-    console.log(`💾 Saving selected variant for shop ${request.shopId}...`);
-
     // 1. Create (or find) Ad Request
     // For now, we create a new request record for each saved action to keep it simple,
     // or we could pass a requestID if we wanted to group them.

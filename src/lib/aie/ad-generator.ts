@@ -37,8 +37,6 @@ export async function generateAdVariants(params: {
   imageUrl?: string;
 }): Promise<AIEAdVariantDraft[]> {
   try {
-    console.log(`🎨 Generating 3 ad variants for ${params.platform}/${params.goal}`);
-
     // Determine variant types (3 different approaches)
     const variantTypes = determineVariantTypes(params.platform, params.goal);
 
@@ -49,10 +47,6 @@ export async function generateAdVariants(params: {
       const variantType = variantTypes[i];
       const hookTechnique = selectHookTechnique(variantType);
       const tone = selectTone(variantType, params.platform);
-
-      console.log(
-        `  Variant ${i + 1}: ${variantType} (${hookTechnique} hook, ${tone} tone)`
-      );
 
       const variant = await generateSingleVariant({
         ...params,

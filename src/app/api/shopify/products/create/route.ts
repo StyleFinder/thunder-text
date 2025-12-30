@@ -281,7 +281,6 @@ export async function POST(request: NextRequest) {
 
     // Combine all metafields
     const metafields = [...thunderTextMetafields, ...googleMetafields]
-    console.log('📊 Total metafields to create:', metafields.length)
 
     // Create metafields
     try {
@@ -289,7 +288,6 @@ export async function POST(request: NextRequest) {
         shopify.createProductMetafield(createdProduct.id, metafield)
       )
       await Promise.all(metafieldPromises)
-      console.log('Metafields created successfully')
     } catch (metafieldError) {
       logger.error('Error creating metafields', metafieldError as Error, { component: 'product-create', operation: 'create-metafields' })
       // Continue anyway, metafields are not critical
@@ -414,8 +412,6 @@ export async function POST(request: NextRequest) {
 
     // Upload images using the corrected GraphQL media upload approach
     if (uploadedImages && uploadedImages.length > 0) {
-      console.log(`📤 Starting image upload process for ${uploadedImages.length} image(s)...`)
-      
       try {
         for (const [index, imageData] of uploadedImages.entries()) {
 
@@ -437,7 +433,6 @@ export async function POST(request: NextRequest) {
 
       } catch (imageError) {
         logger.error('Error during image upload process', imageError as Error, { component: 'product-create', operation: 'upload-images' })
-        console.log('Product created successfully, but images failed to upload. Images can be uploaded manually in Shopify admin.')
         // Continue anyway, the product was created successfully
       }
     } else {

@@ -65,7 +65,6 @@ export async function generateAds(
     }
 
     const shopUuid = shop.id;
-    console.log(`🏪 Shop found: ${shopUuid}`);
 
     // Step 2: Create ad request record
     const { data: adRequest, error: requestError } = await aieSupabase
@@ -101,7 +100,6 @@ export async function generateAds(
     let category = extractCategory(undefined, params.description);
 
     if (params.imageUrl) {
-      console.log('📸 Analyzing product image...');
       imageAnalysis = await analyzeImage(params.imageUrl);
       category = imageAnalysis.category;
       aiCost += 0.01; // GPT-4 Vision cost
@@ -129,8 +127,6 @@ export async function generateAds(
       goal: params.goal,
     });
 
-    console.log(`📚 Enriched query: ${enrichedQuery.substring(0, 100)}...`);
-
     // Step 4: Retrieve RAG context
     const ragContext = await retrieveRAGContext({
       query: enrichedQuery,
@@ -142,10 +138,6 @@ export async function generateAds(
     });
 
     aiCost += 0.0001; // Embedding cost
-
-    console.log(
-      `✅ RAG context retrieved: ${ragContext.best_practices.length} practices, ${ragContext.ad_examples.length} examples`
-    );
 
     // Step 5: Generate ad variants
     const variantDrafts = await generateAdVariants({
@@ -176,10 +168,6 @@ export async function generateAds(
 
     // Rank variants by score
     const rankedVariants = rankVariants(scoredVariants);
-
-    console.log(
-      `✅ Variants scored and ranked: ${rankedVariants.map((v) => `#${v.rank} (${(v.score.predicted_score * 100).toFixed(0)}%)`).join(', ')}`
-    );
 
     // Step 7: Save variants to database
     const savedVariants = await Promise.all(
@@ -237,10 +225,6 @@ export async function generateAds(
         ai_cost: aiCost,
       })
       .eq('id', adRequestId);
-
-    console.log(
-      `✅ AIE pipeline complete: ${generationTimeMs}ms, $${aiCost.toFixed(4)}`
-    );
 
     return {
       adRequestId,

@@ -117,7 +117,6 @@ export default function UnifiedEnhancePage() {
   // Load product data function
   const loadProduct = useCallback(async () => {
     if (!productId || productId.trim() === "" || !shop) {
-      console.log("Missing required params:", { productId, shop });
       return;
     }
 
@@ -125,7 +124,6 @@ export default function UnifiedEnhancePage() {
     setError(null);
 
     try {
-      console.log("Loading product data for:", { productId, shop });
       const isTestStore = shop.includes("zunosai-staging-test-store");
       const isEmbedded =
         typeof window !== "undefined" && window.top !== window.self;

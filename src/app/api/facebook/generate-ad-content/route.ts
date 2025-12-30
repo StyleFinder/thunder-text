@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
 import { lookupShopWithFallback } from "@/lib/shop-lookup";
 import { canGenerateAdByDomain } from "@/lib/usage/limits";
+import { startRequestTracker } from "@/lib/monitoring/api-logger";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,6 +19,9 @@ const openai = new OpenAI({
  * POST - Generate Facebook ad title and copy from product data using AI
  */
 export async function POST(request: NextRequest) {
+  const tracker = startRequestTracker();
+  let shopId: string | null = null;
+
   try {
     const body = await request.json();
     const { shop, productTitle, productDescription } = body;
@@ -42,6 +46,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    shopId = shopData.id;
+
     // Check usage limits before generating
     const usageCheck = await canGenerateAdByDomain(shop);
     if (!usageCheck.allowed) {
@@ -52,6 +58,17 @@ export async function POST(request: NextRequest) {
         used: usageCheck.used,
         limit: usageCheck.limit,
       });
+
+      // Log rate limited request
+      await tracker.log({
+        shopId,
+        operationType: 'ad_generation',
+        endpoint: '/api/facebook/generate-ad-content',
+        model: 'gpt-4o-mini',
+        status: 'rate_limited',
+        metadata: { plan: usageCheck.plan, used: usageCheck.used, limit: usageCheck.limit },
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -130,6 +147,18 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks):
       throw new Error("AI generated invalid content");
     }
 
+    // Log successful API request
+    await tracker.log({
+      shopId,
+      operationType: 'ad_generation',
+      endpoint: '/api/facebook/generate-ad-content',
+      model: 'gpt-4o-mini',
+      inputTokens: completion.usage?.prompt_tokens || 0,
+      outputTokens: completion.usage?.completion_tokens || 0,
+      status: 'success',
+      metadata: { productTitle },
+    });
+
     return NextResponse.json({
       success: true,
       data: {
@@ -141,6 +170,17 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks):
     logger.error("Error generating ad content:", error as Error, {
       component: "generate-ad-content",
     });
+
+    // Log failed API request
+    await tracker.logError({
+      shopId,
+      operationType: 'ad_generation',
+      endpoint: '/api/facebook/generate-ad-content',
+      model: 'gpt-4o-mini',
+      errorType: 'api_error',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+    });
+
     return NextResponse.json(
       {
         success: false,

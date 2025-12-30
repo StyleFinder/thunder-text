@@ -20,71 +20,88 @@ interface ShopLayoutProps {
 }
 
 export default async function ShopLayout({ children, params }: ShopLayoutProps) {
-  const { shopId } = await params;
+  try {
+    const { shopId } = await params;
 
-  // Validate UUID format
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(shopId)) {
-    notFound();
-  }
-
-  // Get session
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user) {
-    redirect("/auth/login");
-  }
-
-  let shopDomain: string | null = null;
-
-  // For shop users, verify they can only access their own shop
-  if (session.user.role === "shop") {
-    if (session.user.id !== shopId) {
-      // Redirect to their own shop
-      redirect(`/stores/${session.user.id}/dashboard`);
+    // Validate UUID format
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(shopId)) {
+      notFound();
     }
-    // Shop user's domain is in their session
-    shopDomain = session.user.shopDomain || null;
-  }
 
-  // For admin/coach users, verify shop exists and fetch domain
-  if (session.user.role === "admin" || session.user.role === "coach") {
-    const { data: shop, error } = await supabaseAdmin
+    // Get session
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      redirect("/auth/login");
+    }
+
+    let shopDomain: string | null = null;
+
+    // For shop users, verify they can only access their own shop
+    if (session.user.role === "shop") {
+      if (session.user.id !== shopId) {
+        // Redirect to their own shop
+        redirect(`/stores/${session.user.id}/dashboard`);
+      }
+      // Shop user's domain is in their session
+      shopDomain = session.user.shopDomain || null;
+    }
+
+    // For admin/coach users, verify shop exists and fetch domain
+    if (session.user.role === "admin" || session.user.role === "coach") {
+      const { data: shop, error } = await supabaseAdmin
+        .from("shops")
+        .select("id, shop_domain")
+        .eq("id", shopId)
+        .single();
+
+      if (error || !shop) {
+        notFound();
+      }
+      shopDomain = shop.shop_domain;
+    }
+
+    // ALWAYS verify the shop exists in the database and fetch domain
+    // This handles cases where:
+    // 1. Session shopDomain is stale/undefined (e.g., after OAuth updates the DB but not the session)
+    // 2. The shop record was merged/deleted during OAuth (session points to deleted record)
+    const { data: dbShop, error: dbError } = await supabaseAdmin
       .from("shops")
-      .select("id, shop_domain")
+      .select("shop_domain")
       .eq("id", shopId)
       .single();
 
-    if (error || !shop) {
-      notFound();
+    if (dbError || !dbShop) {
+      // Shop doesn't exist - likely merged into another record during OAuth
+      // Redirect to login to get a fresh session
+      redirect("/auth/login?error=session_expired");
     }
-    shopDomain = shop.shop_domain;
+
+    // Use database value as source of truth (more recent than session)
+    shopDomain = dbShop.shop_domain || null;
+
+    // Shop context is now validated - render children with context
+    return (
+      <ShopProvider shopId={shopId} shopDomain={shopDomain}>
+        {children}
+      </ShopProvider>
+    );
+  } catch (error) {
+    // Re-throw Next.js navigation errors (redirect/notFound throw special errors)
+    // These have a digest property starting with 'NEXT_'
+    const isNextError = error instanceof Error &&
+      'digest' in error &&
+      typeof (error as { digest?: string }).digest === 'string' &&
+      (error as { digest: string }).digest.startsWith('NEXT_');
+
+    if (isNextError) {
+      throw error;
+    }
+
+    // Log unexpected errors and redirect to login
+    console.error('[ShopLayout] Unexpected error:', error);
+    redirect("/auth/login?error=layout_error");
   }
-
-  // ALWAYS verify the shop exists in the database and fetch domain
-  // This handles cases where:
-  // 1. Session shopDomain is stale/undefined (e.g., after OAuth updates the DB but not the session)
-  // 2. The shop record was merged/deleted during OAuth (session points to deleted record)
-  const { data: dbShop, error: dbError } = await supabaseAdmin
-    .from("shops")
-    .select("shop_domain")
-    .eq("id", shopId)
-    .single();
-
-  if (dbError || !dbShop) {
-    // Shop doesn't exist - likely merged into another record during OAuth
-    // Redirect to login to get a fresh session
-    redirect("/auth/login?error=session_expired");
-  }
-
-  // Use database value as source of truth (more recent than session)
-  shopDomain = dbShop.shop_domain || null;
-
-  // Shop context is now validated - render children with context
-  return (
-    <ShopProvider shopId={shopId} shopDomain={shopDomain}>
-      {children}
-    </ShopProvider>
-  );
 }

@@ -67,7 +67,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 /**
  * POST - Authenticate with secret
- * SECURITY: Secret must be provided in Authorization header, not URL or body
+ * SECURITY: Secret must be provided in X-Dev-Key or Authorization header, not URL or body
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // Check if dev auth is configured
@@ -97,25 +97,33 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return createRateLimitResponse(rateLimitResult.resetIn);
   }
 
-  // Get secret from Authorization header
-  const authHeader = request.headers.get('Authorization');
+  // Get secret from X-Dev-Key header (preferred) or Authorization header
+  let providedSecret: string | null = null;
 
-  if (!authHeader?.startsWith('Bearer ')) {
-    logger.warn('Dev auth attempt without Authorization header', {
+  const devKeyHeader = request.headers.get('X-Dev-Key');
+  if (devKeyHeader) {
+    providedSecret = devKeyHeader;
+  } else {
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      providedSecret = authHeader.substring(7);
+    }
+  }
+
+  if (!providedSecret) {
+    logger.warn('Dev auth attempt without key header', {
       component: 'dev-auth',
       clientIp,
     });
     return NextResponse.json(
       {
         error: 'Bad Request',
-        message: 'Authorization header required. Format: Authorization: Bearer <DEV_ADMIN_SECRET>',
+        message: 'X-Dev-Key header required',
         remainingAttempts: rateLimitResult.remaining,
       },
       { status: 400 }
     );
   }
-
-  const providedSecret = authHeader.substring(7);
 
   // Authenticate and create session
   const sessionToken = authenticateWithSecret(providedSecret);
@@ -136,29 +144,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // Success - set session cookie
+  // Success
   logger.info('Dev auth successful', {
     component: 'dev-auth',
     clientIp,
   });
 
-  // Create response and set cookie
-  const response = NextResponse.json({
+  // Return simple success response (no cookies needed with header-based auth)
+  return NextResponse.json({
     authenticated: true,
     message: 'Dev dashboard access granted',
-    expiresIn: 86400, // 24 hours in seconds
   });
-
-  // Set the session token cookie
-  response.cookies.set('dev_session_token', sessionToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24, // 24 hours
-    path: '/',
-  });
-
-  return response;
 }
 
 /**
@@ -174,7 +170,7 @@ export async function DELETE(_request: NextRequest): Promise<NextResponse> {
   });
 
   // Clear the cookie
-  response.cookies.delete('dev_session_token');
+  response.cookies.delete('dev_auth');
 
   return response;
 }

@@ -126,15 +126,6 @@ export async function POST(
     let responseError: Error | null = null;
 
     try {
-      console.log("🔵 Attempting tenant-scoped INSERT:", {
-        tenant_id: userId,
-        business_profile_id: profile.id,
-        prompt_key,
-        question_number,
-        word_count: wordCount,
-        character_count: characterCount,
-      });
-
       // Use tenant-aware query function that logs and validates tenant access
       const result = await queryWithTenant<BusinessProfileResponse>(
         userId, // Tenant ID for audit logging
@@ -220,8 +211,8 @@ export async function POST(
       .eq("is_current", true);
 
     const questionsCompleted = allResponses?.length || 0;
-    // Use interview mode to determine total questions: quick_start = 7, full = 21
-    const totalQuestions = profile.interview_mode === "quick_start" ? 7 : 21;
+    // Use interview mode to determine total questions: quick_start = 12 (7 original + 5 AI coaching), full = 21
+    const totalQuestions = profile.interview_mode === "quick_start" ? 12 : 21;
     const percentageComplete = Math.round(
       (questionsCompleted / totalQuestions) * 100,
     );

@@ -5,6 +5,7 @@ import {
 } from "@/lib/middleware/cors";
 import { logger } from "@/lib/logger";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { startRequestTracker } from "@/lib/monitoring/api-logger";
 
 export async function OPTIONS(request: NextRequest) {
   return handleCorsPreflightRequest(request);
@@ -22,6 +23,7 @@ export async function OPTIONS(request: NextRequest) {
 export async function POST(request: NextRequest) {
   // Use secure CORS headers that restrict to Shopify domains
   const corsHeaders = createCorsHeaders(request);
+  const tracker = startRequestTracker();
 
   // Check if we're in a build environment without proper configuration
   if (
@@ -33,6 +35,8 @@ export async function POST(request: NextRequest) {
       { status: 503, headers: corsHeaders },
     );
   }
+
+  let shopId: string | null = null;
 
   try {
     const body = await request.json();
@@ -65,7 +69,7 @@ export async function POST(request: NextRequest) {
     // This prevents arbitrary requests with fake shop domains
     const { data: shopData, error: shopError } = await supabaseAdmin
       .from("shops")
-      .select("id, access_token, plan")
+      .select("id, shopify_access_token, plan")
       .eq("shop_domain", shopDomain)
       .single();
 
@@ -80,8 +84,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    shopId = shopData.id;
+
     // SECURITY: Verify shop has a valid access token (proves active installation)
-    if (!shopData.access_token) {
+    if (!shopData.shopify_access_token) {
       logger.warn("Generate request for shop without access token", {
         component: "generate",
         shopId: shopData.id,
@@ -106,6 +112,22 @@ export async function POST(request: NextRequest) {
       storeId: shopData.id,
     });
 
+    // Log successful API request
+    await tracker.log({
+      shopId,
+      operationType: 'product_description',
+      endpoint: '/api/generate',
+      model: 'gpt-4o-mini',
+      inputTokens: result.tokenUsage.prompt,
+      outputTokens: result.tokenUsage.completion,
+      status: 'success',
+      metadata: {
+        category,
+        targetLength,
+        imageCount: images?.length || 0,
+      },
+    });
+
     return NextResponse.json(
       {
         success: true,
@@ -117,6 +139,17 @@ export async function POST(request: NextRequest) {
     logger.error("Generation API error:", error as Error, {
       component: "generate",
     });
+
+    // Log failed API request
+    await tracker.logError({
+      shopId,
+      operationType: 'product_description',
+      endpoint: '/api/generate',
+      model: 'gpt-4o-mini',
+      errorType: 'api_error',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+    });
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500, headers: corsHeaders },

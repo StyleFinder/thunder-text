@@ -26,9 +26,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useOptionalShopContext } from '@/app/stores/[shopId]/ShopContext';
 
 export default function BrandVoicePage() {
   const router = useRouter();
+
+  // Try to get shop context from ShopProvider (when accessed via /stores/[shopId]/brand-voice)
+  const shopContext = useOptionalShopContext();
 
   // State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -40,9 +44,9 @@ export default function BrandVoicePage() {
   const [isGeneratingProfile, setIsGeneratingProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
-  const [shopDomain, setShopDomain] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [shopDomain, setShopDomain] = useState<string | null>(shopContext?.shopDomain || null);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!shopContext);
+  const [authLoading, setAuthLoading] = useState(!shopContext);
   const [profileLoading, setProfileLoading] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -50,8 +54,16 @@ export default function BrandVoicePage() {
   const [isResetting, setIsResetting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // Get shop domain from URL params or API (for embedded app)
+  // Get shop domain from ShopContext, URL params, or API (for embedded app)
   useEffect(() => {
+    // If we have shop context from provider, we're already authenticated
+    if (shopContext) {
+      setShopDomain(shopContext.shopDomain);
+      setIsAuthenticated(true);
+      setAuthLoading(false);
+      return;
+    }
+
     const initShop = async () => {
       // First, try URL params
       if (typeof window !== 'undefined') {
@@ -84,7 +96,7 @@ export default function BrandVoicePage() {
     };
 
     initShop();
-  }, []);
+  }, [shopContext]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -128,7 +140,6 @@ export default function BrandVoicePage() {
             data.data.profile.interview_status === 'in_progress' &&
             !data.data.profile.master_profile_text
           ) {
-            console.log('[BrandVoice] All questions answered, triggering profile generation...');
             setInterviewStatus('in_progress');
             addAIMessage("All questions completed! Now generating your Business Profile...");
             setTimeout(() => generateProfile(), 1000);
@@ -194,9 +205,9 @@ export default function BrandVoicePage() {
         setProfile(data.data.profile);
         setCurrentPrompt(data.data.first_prompt);
         setInterviewStatus('in_progress');
-        setTotalQuestions(data.data.total_questions || (mode === 'quick_start' ? 7 : 19));
+        setTotalQuestions(data.data.total_questions || (mode === 'quick_start' ? 12 : 19));
 
-        const timeEstimate = mode === 'quick_start' ? '5-7 minutes' : '15-20 minutes';
+        const timeEstimate = mode === 'quick_start' ? '8-10 minutes' : '15-20 minutes';
         addAIMessage(
           `Hi! I'm here to learn about your business so we can create content that truly represents your brand. This ${mode === 'quick_start' ? 'quick' : ''} conversation will take about ${timeEstimate}. Ready to get started?`
         );
@@ -496,13 +507,13 @@ export default function BrandVoicePage() {
                   </div>
                   <CardHeader style={{ padding: '24px' }}>
                     <CardTitle style={{ fontSize: '20px', fontWeight: 700, color: '#0066cc', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginBottom: '4px' }}>Quick Start</CardTitle>
-                    <CardDescription style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>7 essential questions in ~5-7 minutes</CardDescription>
+                    <CardDescription style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>12 essential questions in ~8-10 minutes</CardDescription>
                   </CardHeader>
                   <CardContent style={{ padding: '0 24px 24px 24px' }}>
                     <div style={{ marginBottom: '16px' }}>
                       {[
-                        'Perfect for running ads quickly',
-                        'Captures core brand voice & customer insights',
+                        'Perfect for running ads & AI coaches quickly',
+                        'Captures brand voice, customer insights & operations',
                         'Can expand to full profile later',
                       ].map((item, i) => (
                         <div key={i} className="flex items-start" style={{ gap: '8px', marginBottom: '8px' }}>

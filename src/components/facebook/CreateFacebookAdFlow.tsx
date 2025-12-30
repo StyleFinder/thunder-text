@@ -125,10 +125,6 @@ export default function CreateFacebookAdFlow({
           }),
         );
 
-        if (transformedProducts.length > 0) {
-          console.log("📋 First product:", transformedProducts[0]);
-        }
-
         setProducts(transformedProducts);
       } else {
         logger.error(`❌ Products API error: ${data.error}`, undefined, { component: 'CreateFacebookAdFlow' });
@@ -308,8 +304,6 @@ export default function CreateFacebookAdFlow({
       });
 
       const submitData = await submitResponse.json();
-
-      console.log("📤 Submit response:", submitData);
 
       if (!submitData.success) {
         logger.error("❌ Submit error:", submitData as Error, { component: 'CreateFacebookAdFlow' });

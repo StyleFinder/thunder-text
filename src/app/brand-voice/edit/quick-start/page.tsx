@@ -17,8 +17,16 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 
-// Quick Start prompt keys - these are the 7 essential questions for ad generation
+// Quick Start prompt keys - these are the 12 essential questions for ad generation & AI coaches
+// AI Coaching questions come FIRST (1-5), then brand voice questions (6-12)
 const QUICK_START_PROMPT_KEYS = [
+  // AI Coaching questions (1-5)
+  'discount_comfort',
+  'inventory_size',
+  'time_availability',
+  'quarterly_goal',
+  'policies_summary',
+  // Brand Voice questions (6-12)
   'business_description',
   'ideal_customer',
   'customer_pain_points',
@@ -305,7 +313,7 @@ export default function EditQuickStartAnswersPage() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold">Quick Start Answers</h1>
-            <p className="text-muted-foreground mt-1">The 7 essential questions for ad generation</p>
+            <p className="text-muted-foreground mt-1">The 12 essential questions for ad generation & AI coaches</p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -346,11 +354,11 @@ export default function EditQuickStartAnswersPage() {
             <div>
               <h3 className="font-semibold text-lg mb-1">Quick Start Progress</h3>
               <p className="text-sm text-muted-foreground">
-                These 7 questions capture the essential information for generating effective ads.
+                These 12 questions capture the essential information for generating effective ads and enabling AI coaches.
               </p>
             </div>
-            <Badge variant={answeredCount === 7 ? 'default' : 'secondary'}>
-              {answeredCount} of 7 answered
+            <Badge variant={answeredCount === 12 ? 'default' : 'secondary'}>
+              {answeredCount} of 12 answered
             </Badge>
           </div>
         </CardContent>

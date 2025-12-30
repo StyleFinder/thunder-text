@@ -38,7 +38,6 @@ export default function CoachLoginPage() {
       return;
     }
 
-    console.log('[Coach Login] Login successful, redirecting to BHB dashboard...');
     const callbackUrl = searchParams.get('callbackUrl') || '/bhb';
     router.push(callbackUrl);
   };
