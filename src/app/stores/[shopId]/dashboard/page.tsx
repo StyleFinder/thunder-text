@@ -20,6 +20,8 @@ import {
   Gift,
   CheckCircle,
   HourglassIcon,
+  XCircle,
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -140,7 +142,8 @@ function PlanUsageCard({
 }) {
   const productDescUsed = usage?.productDescriptions.used ?? 0;
   const adDescUsed = usage?.ads.used ?? 0;
-  const productDescTotal = usage?.productDescriptions.limit ?? FREE_PLAN_LIMITS.productDescriptions;
+  const productDescTotal =
+    usage?.productDescriptions.limit ?? FREE_PLAN_LIMITS.productDescriptions;
   const adDescTotal = usage?.ads.limit ?? FREE_PLAN_LIMITS.adDescriptions;
   const productPercent = usage?.productDescriptions.percentUsed ?? 0;
   const adPercent = usage?.ads.percentUsed ?? 0;
@@ -260,7 +263,8 @@ function ActivePlanCard({
   const isPro = subscription.plan === "pro";
 
   const productUsed = usage?.productDescriptions.used ?? 0;
-  const productLimit = usage?.productDescriptions.limit ?? (isPro ? 5000 : 2000);
+  const productLimit =
+    usage?.productDescriptions.limit ?? (isPro ? 5000 : 2000);
   const adsUsed = usage?.ads.used ?? 0;
   const adsLimit = usage?.ads.limit ?? (isPro ? 1000 : 300);
   const productPercent = usage?.productDescriptions.percentUsed ?? 0;
@@ -414,7 +418,9 @@ function ActivePlanCard({
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-white font-medium text-sm">
-                  {maxPercent >= 100 ? "You've reached your limit!" : "Running low on usage!"}
+                  {maxPercent >= 100
+                    ? "You've reached your limit!"
+                    : "Running low on usage!"}
                 </p>
                 <p className="text-amber-100 text-xs mt-0.5">
                   Upgrade to Pro for 5,000 products & 1,000 ads/month
@@ -441,7 +447,8 @@ function ActivePlanCard({
             <p
               className={`text-sm ${isPro ? "text-amber-800" : "text-blue-800"}`}
             >
-              {usage?.productDescriptions.remaining.toLocaleString() ?? 0} products remaining
+              {usage?.productDescriptions.remaining.toLocaleString() ?? 0}{" "}
+              products remaining
             </p>
             <Link href={`/stores/${shopId}/settings/billing`}>
               <Button
@@ -514,9 +521,7 @@ function PendingPlanCard({
               </p>
             </div>
           </div>
-          <span
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300"
-          >
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
             <HourglassIcon className="w-3 h-3" />
             Pending
           </span>
@@ -533,8 +538,9 @@ function PendingPlanCard({
                 Awaiting activation
               </p>
               <p className="text-xs text-amber-700 mt-1">
-                Your {planName} subscription is being processed. This usually takes a few moments.
-                If you just completed checkout, please refresh the page.
+                Your {planName} subscription is being processed. This usually
+                takes a few moments. If you just completed checkout, please
+                refresh the page.
               </p>
             </div>
           </div>
@@ -563,6 +569,99 @@ function PendingPlanCard({
                   ? "border-amber-300 text-amber-700 hover:bg-amber-50"
                   : "border-blue-300 text-blue-700 hover:bg-blue-50"
               }
+            >
+              View Billing
+              <ArrowRight className="w-3 h-3 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Cancelled Plan Card - for subscriptions that have been cancelled
+function CancelledPlanCard({
+  shopId,
+  subscription,
+}: {
+  shopId: string;
+  subscription: SubscriptionInfo;
+}) {
+  const planName = subscription.plan === "pro" ? "Pro" : "Starter";
+  const isPro = subscription.plan === "pro";
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden shadow-lg"
+      style={{
+        background:
+          "linear-gradient(135deg, #fee2e2 0%, #fca5a5 50%, #ef4444 100%)",
+        border: "2px solid #ef4444",
+      }}
+    >
+      <div className="p-5 bg-white/90 backdrop-blur-sm">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                isPro
+                  ? "bg-gradient-to-br from-amber-400 to-amber-600"
+                  : "bg-gradient-to-br from-blue-400 to-blue-600"
+              }`}
+            >
+              {isPro ? (
+                <Crown className="w-5 h-5 text-white" />
+              ) : (
+                <Zap className="w-5 h-5 text-white" />
+              )}
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">{planName} Plan</h3>
+              <p className="text-xs text-gray-500">Subscription cancelled</p>
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-300">
+            <XCircle className="w-3 h-3" />
+            Cancelled
+          </span>
+        </div>
+
+        {/* Cancelled Status Message */}
+        <div className="p-4 bg-red-50 rounded-lg border border-red-200 mb-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-red-900">
+                Subscription Cancelled
+              </p>
+              <p className="text-xs text-red-700 mt-1">
+                Your {planName} subscription has been cancelled. You&apos;re now
+                on the Free plan with limited features. Resubscribe anytime to
+                restore full access.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          <Link href={`/stores/${shopId}/settings/billing`}>
+            <Button
+              size="sm"
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Zap className="w-3 h-3 mr-1" />
+              Resubscribe
+            </Button>
+          </Link>
+          <Link href={`/stores/${shopId}/settings/billing`}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-red-300 text-red-700 hover:bg-red-50"
             >
               View Billing
               <ArrowRight className="w-3 h-3 ml-1" />
@@ -739,8 +838,10 @@ interface DashboardStats {
 
 function DashboardContent() {
   const { shopId, shopDomain } = useShopContext();
-  const { data: session, status } = useSession();
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const { data: _session, status } = useSession();
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(
+    null,
+  );
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     productsGenerated: 0,
@@ -830,6 +931,7 @@ function DashboardContent() {
     subscription?.plan === "starter" || subscription?.plan === "pro";
   const isActivePaid = isPaidPlan && subscription?.status === "active";
   const isPendingPaid = isPaidPlan && subscription?.status === "pending";
+  const isCancelledPaid = isPaidPlan && subscription?.status === "cancelled";
 
   // Show loading while session is being fetched
   if (status === "loading") {
@@ -1012,11 +1114,21 @@ function DashboardContent() {
         {!subscriptionLoading && (
           <div className="mt-8">
             {isActivePaid && subscription ? (
-              <ActivePlanCard shopId={shopId} subscription={subscription} usage={stats.usage} />
+              <ActivePlanCard
+                shopId={shopId}
+                subscription={subscription}
+                usage={stats.usage}
+              />
             ) : isPendingPaid && subscription ? (
               <PendingPlanCard shopId={shopId} subscription={subscription} />
+            ) : isCancelledPaid && subscription ? (
+              <CancelledPlanCard shopId={shopId} subscription={subscription} />
             ) : (
-              <PlanUsageCard shopId={shopId} subscription={subscription} usage={stats.usage} />
+              <PlanUsageCard
+                shopId={shopId}
+                subscription={subscription}
+                usage={stats.usage}
+              />
             )}
           </div>
         )}
