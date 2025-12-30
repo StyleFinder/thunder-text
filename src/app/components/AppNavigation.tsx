@@ -21,6 +21,7 @@ import {
   FilePlus,
   Package,
   Sparkles,
+  Bot,
 } from "lucide-react";
 import { useNavigation } from "../hooks/useNavigation";
 import { Button } from "@/components/ui/button";
@@ -134,6 +135,20 @@ function NavigationContent({ children }: AppNavigationProps) {
         exactMatch: false,
       }),
       allowedRoles: ["user", "admin"], // Store owners only
+    },
+    // AI Coaches - moved to second position
+    {
+      url: buildUrl("/ai-coaches"),
+      label: "AI Coaches",
+      icon: Bot,
+      onClick: () => navigateTo("/ai-coaches"),
+      matches: isActive({
+        label: "AI Coaches",
+        url: buildUrl("/ai-coaches"),
+        matchPaths: ["/ai-coaches"],
+        exactMatch: false,
+      }),
+      allowedRoles: ["user", "admin"],
     },
     // Coach Dashboard (BHB Dashboard)
     {
