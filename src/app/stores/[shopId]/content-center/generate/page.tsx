@@ -1,9 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { ContentTypeSelector } from '@/components/content-center/ContentTypeSelector'
-import { GenerationControls, GenerationParams } from '@/components/content-center/GenerationControls'
-import { GenerationResultView } from '@/components/content-center/GenerationResultView'
+import { ContentTypeSelector, GenerationControls, GenerationResultView } from '@/features/content-center'
+import type { GenerationParams } from '@/features/content-center/components/GenerationControls'
 import { ContentLoader } from '@/components/ui/loading/ContentLoader'
 import { ArrowLeft } from 'lucide-react'
 import { ContentType, GeneratedContent } from '@/types/content-center'

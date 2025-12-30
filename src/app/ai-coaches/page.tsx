@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CoachCard } from "@/components/ai-coaches/CoachCard";
+import { CoachCard } from "@/features/ai-coaches";
 import {
   RefreshCw,
   AlertCircle,

@@ -15,7 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { BHBLayout } from "@/components/bhb";
+import { BHBLayout } from "@/features/bhb";
 
 interface HotTake {
   id: string;

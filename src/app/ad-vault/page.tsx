@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Card, Button, Badge, Input, Table, PageLayout, Text } from '@/components/bhb';
+import { Card, Button, Badge, Input, Table, PageLayout, Text } from '@/features/bhb';
 import { colors } from '@/lib/design-system/colors';
 import { layout } from '@/lib/design-system/layout';
 import { logger } from '@/lib/logger'

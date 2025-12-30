@@ -4,7 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ChatInterface } from "@/components/ai-coaches/ChatInterface";
+import { ChatInterface } from "@/features/ai-coaches";
 import { RefreshCw, AlertCircle } from "lucide-react";
 import { COACH_KEYS, CoachKey } from "@/types/ai-coaches";
 import { logger } from "@/lib/logger";

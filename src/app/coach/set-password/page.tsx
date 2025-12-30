@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, Button, Input, Text } from '@/components/bhb';
+import { Card, Button, Input, Text } from '@/features/bhb';
 import { colors } from '@/lib/design-system/colors';
 import { layout } from '@/lib/design-system/layout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
