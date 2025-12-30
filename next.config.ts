@@ -62,24 +62,54 @@ const nextConfig: NextConfig = {
 
   // Security headers for non-embedded external Shopify app
   // ThunderText runs on its own domain (not embedded in Shopify Admin iframe)
+  // @security P1 - Critical security headers per API Security Checklist
   async headers() {
+    // Build comprehensive CSP directives
+    const cspDirectives = [
+      // Default: only allow same origin
+      "default-src 'self'",
+      // Scripts: self + inline (required for Next.js) + eval (development only)
+      // Note: 'unsafe-inline' and 'unsafe-eval' needed for Next.js hot reload in dev
+      `script-src 'self' 'unsafe-inline' ${process.env.NODE_ENV === "development" ? "'unsafe-eval'" : ""} https://cdn.sentry.io https://browser.sentry-cdn.com`,
+      // Styles: self + inline (required for CSS-in-JS and Tailwind)
+      "style-src 'self' 'unsafe-inline'",
+      // Images: self + data URIs + HTTPS (for external images)
+      "img-src 'self' data: https: blob:",
+      // Fonts: self only
+      "font-src 'self'",
+      // Connect: API endpoints, Supabase, Sentry, external APIs
+      "connect-src 'self' https://*.supabase.co https://*.sentry.io https://sentry.io wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://graph.facebook.com https://*.upstash.io",
+      // Frame ancestors: none (not embeddable)
+      "frame-ancestors 'none'",
+      // Base URI: prevent base tag hijacking
+      "base-uri 'self'",
+      // Form action: only submit to self
+      "form-action 'self'",
+      // Object/embed: block plugins
+      "object-src 'none'",
+      // Upgrade insecure requests in production
+      ...(process.env.NODE_ENV === "production"
+        ? ["upgrade-insecure-requests"]
+        : []),
+    ];
+
     return [
       {
         source: "/:path*",
         headers: [
           {
-            // SECURITY: Prevent clickjacking - this app is NOT embedded in iframes
-            // See shopify.app.toml: embedded = false
+            // SECURITY: Comprehensive Content Security Policy
+            // Prevents XSS, clickjacking, and data injection attacks
             key: "Content-Security-Policy",
-            value: "frame-ancestors 'none'",
+            value: cspDirectives.filter(Boolean).join("; "),
           },
           {
-            // Prevent MIME type sniffing
+            // Prevent MIME type sniffing attacks
             key: "X-Content-Type-Options",
             value: "nosniff",
           },
           {
-            // Prevent clickjacking (legacy header, CSP is primary)
+            // Prevent clickjacking (legacy header, CSP frame-ancestors is primary)
             key: "X-Frame-Options",
             value: "DENY",
           },
@@ -89,9 +119,30 @@ const nextConfig: NextConfig = {
             value: "1; mode=block",
           },
           {
-            // Control referrer information
+            // Control referrer information to prevent data leakage
             key: "Referrer-Policy",
             value: "strict-origin-when-cross-origin",
+          },
+          {
+            // Permissions Policy: disable unnecessary browser features
+            // Reduces attack surface by blocking access to sensitive APIs
+            key: "Permissions-Policy",
+            value:
+              "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=(self)",
+          },
+          {
+            // DNS prefetch control: enable for performance
+            key: "X-DNS-Prefetch-Control",
+            value: "on",
+          },
+          {
+            // Strict Transport Security: enforce HTTPS (1 year + subdomains)
+            // Only applied in production to avoid issues with local dev
+            key: "Strict-Transport-Security",
+            value:
+              process.env.NODE_ENV === "production"
+                ? "max-age=31536000; includeSubDomains; preload"
+                : "max-age=0",
           },
         ],
       },
@@ -103,6 +154,11 @@ const nextConfig: NextConfig = {
             // API Version header for client version detection
             key: "X-API-Version",
             value: API_VERSION,
+          },
+          {
+            // Prevent caching of API responses by default
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate, proxy-revalidate",
           },
         ],
       },
