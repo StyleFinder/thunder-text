@@ -33,7 +33,15 @@ import {
   Sparkles,
   ExternalLink,
   AlertCircle,
+  Wand2,
+  Info,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
@@ -60,9 +68,7 @@ export default function UnifiedEnhancePage() {
 
   const productId = searchParams?.get("productId") || "";
   const shop =
-    shopFromHook ||
-    authShop ||
-    "zunosai-staging-test-store.myshopify.com";
+    shopFromHook || authShop || "zunosai-staging-test-store.myshopify.com";
 
   // Product data states
   const [productData, setProductData] = useState<EnhancementProductData | null>(
@@ -114,6 +120,9 @@ export default function UnifiedEnhancePage() {
   const [applying, setApplying] = useState(false);
   const [progress, setProgress] = useState(0);
 
+  // Track which fields were auto-populated from Shopify
+  const [autoPopulatedFields, setAutoPopulatedFields] = useState<string[]>([]);
+
   // Load product data function
   const loadProduct = useCallback(async () => {
     if (!productId || productId.trim() === "" || !shop) {
@@ -139,9 +148,11 @@ export default function UnifiedEnhancePage() {
 
       if (data) {
         setProductData(data);
+        const populatedFields: string[] = [];
 
         if (data.productType) {
           setParentCategory(data.productType.toLowerCase());
+          populatedFields.push("parentCategory");
         }
 
         if (data.variants && data.variants.length > 0) {
@@ -170,21 +181,25 @@ export default function UnifiedEnhancePage() {
             const uniqueSizes = [...new Set(sizes)];
             if (uniqueSizes.includes("XS") && uniqueSizes.includes("XL")) {
               setAvailableSizing("xs-xl");
+              populatedFields.push("availableSizing");
             } else if (
               uniqueSizes.includes("XS") &&
               uniqueSizes.includes("XXL")
             ) {
               setAvailableSizing("xs-xxl");
+              populatedFields.push("availableSizing");
             } else if (
               uniqueSizes.includes("S") &&
               uniqueSizes.includes("XXXL")
             ) {
               setAvailableSizing("s-xxxl");
+              populatedFields.push("availableSizing");
             } else if (
               uniqueSizes.length === 1 &&
               uniqueSizes[0] === "One Size"
             ) {
               setAvailableSizing("onesize");
+              populatedFields.push("availableSizing");
             }
           }
         }
@@ -210,6 +225,7 @@ export default function UnifiedEnhancePage() {
           if (materials) {
             extractedFabric = materials;
             setFabricMaterial(materials);
+            populatedFields.push("fabricMaterial");
           }
         }
 
@@ -223,7 +239,10 @@ export default function UnifiedEnhancePage() {
             )
             .map((line) => line.replace(/^[•\-]\s*/, ""))
             .join("\n");
-          if (features) setKeyFeatures(features);
+          if (features) {
+            setKeyFeatures(features);
+            populatedFields.push("keyFeatures");
+          }
         }
 
         // Intelligent extraction from description text
@@ -244,6 +263,9 @@ export default function UnifiedEnhancePage() {
               const match = data.originalDescription.match(pattern);
               if (match && match[1]) {
                 setFabricMaterial(match[1].trim());
+                if (!populatedFields.includes("fabricMaterial")) {
+                  populatedFields.push("fabricMaterial");
+                }
                 break;
               }
             }
@@ -321,6 +343,7 @@ export default function UnifiedEnhancePage() {
             // Remove duplicates and limit to 5
             const uniqueOccasions = [...new Set(foundOccasions)].slice(0, 5);
             setOccasionUse(uniqueOccasions.join(", "));
+            populatedFields.push("occasionUse");
           }
         }
 
@@ -333,11 +356,18 @@ export default function UnifiedEnhancePage() {
             type.includes("dress")
           ) {
             setSelectedTemplate("womens_clothing");
+            populatedFields.push("selectedTemplate");
           } else if (type.includes("jewelry") || type.includes("accessory")) {
             setSelectedTemplate("jewelry_accessories");
+            populatedFields.push("selectedTemplate");
           } else {
             setSelectedTemplate("general");
           }
+        }
+
+        // Set auto-populated fields state
+        if (populatedFields.length > 0) {
+          setAutoPopulatedFields(populatedFields);
         }
       }
     } catch (err) {
@@ -734,6 +764,82 @@ export default function UnifiedEnhancePage() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Smart Fill Indicator */}
+          {autoPopulatedFields.length > 0 && (
+            <TooltipProvider>
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-green-100">
+                      <Wand2 className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-green-800">
+                          Smart Fill Applied
+                        </h3>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <Info className="w-4 h-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs p-3">
+                            <p className="text-sm">
+                              We analyzed your Shopify product data and
+                              pre-filled fields to save you time. You can edit
+                              any field before generating.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <p className="text-xs text-green-600">
+                        {autoPopulatedFields.length} field
+                        {autoPopulatedFields.length !== 1 ? "s" : ""}{" "}
+                        auto-filled from your Shopify data
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {autoPopulatedFields.includes("parentCategory") && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        Category
+                      </span>
+                    )}
+                    {autoPopulatedFields.includes("availableSizing") && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        Sizing
+                      </span>
+                    )}
+                    {autoPopulatedFields.includes("fabricMaterial") && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        Material
+                      </span>
+                    )}
+                    {autoPopulatedFields.includes("occasionUse") && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        Occasion
+                      </span>
+                    )}
+                    {autoPopulatedFields.includes("keyFeatures") && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        Features
+                      </span>
+                    )}
+                    {autoPopulatedFields.includes("selectedTemplate") && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        Template
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </TooltipProvider>
           )}
 
           {/* Main Form */}

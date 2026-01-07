@@ -3,16 +3,16 @@
  * Retrieves relevant best practices and ad examples using pgvector similarity search
  */
 
-import { aieSupabase, generateEmbeddingWithCache } from './clients';
+import { aieSupabase, generateEmbeddingWithCache } from "./clients";
 import type {
   AIEPlatform,
   AIEGoal,
   AIEBestPractice,
   AIEAdExample,
   AIERAGContext,
-} from './types';
-import { AIERAGRetrievalError } from './types';
-import { logger } from '@/lib/logger'
+} from "./types";
+import { AIERAGRetrievalError } from "./types";
+import { logger } from "@/lib/logger";
 
 /**
  * Retrieve relevant context for ad generation using RAG
@@ -33,7 +33,9 @@ export async function retrieveRAGContext(params: {
 
   try {
     // Generate embedding for the query
-    const { embedding, cached } = await generateEmbeddingWithCache(params.query);
+    const { embedding, cached: _cached } = await generateEmbeddingWithCache(
+      params.query,
+    );
 
     // Retrieve best practices
     const bestPractices = await retrieveBestPractices({
@@ -62,7 +64,8 @@ export async function retrieveRAGContext(params: {
     // and optimize the system over time
     const avgSimilarity =
       bestPractices.length > 0
-        ? bestPractices.reduce((sum, bp) => sum + (bp.similarity || 0), 0) / bestPractices.length
+        ? bestPractices.reduce((sum, bp) => sum + (bp.similarity || 0), 0) /
+          bestPractices.length
         : 0;
 
     const ragContext: AIERAGContext = {
@@ -81,10 +84,12 @@ export async function retrieveRAGContext(params: {
 
     return ragContext;
   } catch (error) {
-    logger.error('Error in RAG retrieval:', error as Error, { component: 'rag-retriever' });
+    logger.error("Error in RAG retrieval:", error as Error, {
+      component: "rag-retriever",
+    });
     throw new AIERAGRetrievalError(
-      'Failed to retrieve RAG context',
-      error instanceof Error ? error : undefined
+      "Failed to retrieve RAG context",
+      error instanceof Error ? error : undefined,
     );
   }
 }
@@ -101,7 +106,7 @@ async function retrieveBestPractices(params: {
   similarityThreshold: number;
 }): Promise<AIEBestPractice[]> {
   // Call the database function for pgvector search
-  const { data, error } = await aieSupabase.rpc('search_aie_best_practices', {
+  const { data, error } = await aieSupabase.rpc("search_aie_best_practices", {
     query_embedding: params.embedding,
     match_platform: params.platform,
     match_goal: params.goal,
@@ -111,13 +116,15 @@ async function retrieveBestPractices(params: {
   });
 
   if (error) {
-    logger.error('Error retrieving best practices:', error as Error, { component: 'rag-retriever' });
+    logger.error("Error retrieving best practices:", error as Error, {
+      component: "rag-retriever",
+    });
     throw new Error(`Best practices retrieval failed: ${error.message}`);
   }
 
   if (!data || data.length === 0) {
     console.warn(
-      `⚠️  No best practices found for ${params.platform}/${params.category}/${params.goal}`
+      `⚠️  No best practices found for ${params.platform}/${params.category}/${params.goal}`,
     );
     return [];
   }
@@ -148,19 +155,21 @@ async function retrieveAdExamples(params: {
   similarityThreshold: number;
 }): Promise<AIEAdExample[]> {
   // Call the database function for pgvector search
-  const { data, error } = await aieSupabase.rpc('search_aie_ad_examples', {
+  const { data, error } = await aieSupabase.rpc("search_aie_ad_examples", {
     query_embedding: params.embedding,
     match_platform: params.platform,
     match_category: params.category,
     match_format: params.format || null,
-    performance_tags: ['high'], // Only retrieve high-performing ads
+    performance_tags: ["high"], // Only retrieve high-performing ads
     seasonal_tags: [], // Can be enhanced later for seasonal targeting
     top_k: params.topK,
     similarity_threshold: params.similarityThreshold,
   });
 
   if (error) {
-    logger.error('Error retrieving ad examples:', error as Error, { component: 'rag-retriever' });
+    logger.error("Error retrieving ad examples:", error as Error, {
+      component: "rag-retriever",
+    });
     // Don't throw - ad examples are optional, best practices are more important
     return [];
   }
@@ -201,7 +210,7 @@ export async function logRAGRetrieval(params: {
   topK: number;
 }): Promise<void> {
   try {
-    await aieSupabase.from('aie_rag_retrieval_logs').insert({
+    await aieSupabase.from("aie_rag_retrieval_logs").insert({
       ad_request_id: params.adRequestId,
       query_embedding: params.queryEmbedding,
       query_text: params.queryText,
@@ -220,7 +229,9 @@ export async function logRAGRetrieval(params: {
       top_k: params.topK,
     });
   } catch (error) {
-    logger.error('Error logging RAG retrieval:', error as Error, { component: 'rag-retriever' });
+    logger.error("Error logging RAG retrieval:", error as Error, {
+      component: "rag-retriever",
+    });
     // Don't throw - logging failure shouldn't break the flow
   }
 }
@@ -251,10 +262,15 @@ export function buildEnrichedQuery(params: {
       parts.push(`Product type: ${params.imageAnalysis.subcategory}`);
     }
     if (params.imageAnalysis.mood && params.imageAnalysis.mood.length > 0) {
-      parts.push(`Visual mood: ${params.imageAnalysis.mood.join(', ')}`);
+      parts.push(`Visual mood: ${params.imageAnalysis.mood.join(", ")}`);
     }
-    if (params.imageAnalysis.keywords && params.imageAnalysis.keywords.length > 0) {
-      parts.push(`Keywords: ${params.imageAnalysis.keywords.slice(0, 5).join(', ')}`);
+    if (
+      params.imageAnalysis.keywords &&
+      params.imageAnalysis.keywords.length > 0
+    ) {
+      parts.push(
+        `Keywords: ${params.imageAnalysis.keywords.slice(0, 5).join(", ")}`,
+      );
     }
   }
 
@@ -264,5 +280,5 @@ export function buildEnrichedQuery(params: {
 
   parts.push(`Campaign goal: ${params.goal}`);
 
-  return parts.join(' | ');
+  return parts.join(" | ");
 }

@@ -1,20 +1,32 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 /**
  * Content Generation Prompts
  * Templates for generating different types of content with brand voice
  */
 
-export type ContentType = 'blog' | 'ad' | 'store_copy' | 'social_facebook' | 'social_instagram' | 'social_tiktok'
-export type CTAType = 'shop_now' | 'learn_more' | 'visit_website' | 'contact_us' | 'custom'
+export type ContentType =
+  | "blog"
+  | "ad"
+  | "store_copy"
+  | "social_facebook"
+  | "social_instagram"
+  | "social_tiktok";
+export type CTAType =
+  | "shop_now"
+  | "learn_more"
+  | "visit_website"
+  | "contact_us"
+  | "custom";
 
 interface PromptTemplateParams {
-  voiceProfile: string
-  topic: string
-  wordCount: number
-  toneIntensity: number
-  ctaType: CTAType
-  customCTA?: string
-  platform?: string
-  additionalContext?: string
+  voiceProfile: string;
+  topic: string;
+  wordCount: number;
+  toneIntensity: number;
+  ctaType: CTAType;
+  customCTA?: string;
+  platform?: string;
+  additionalContext?: string;
 }
 
 /**
@@ -36,7 +48,7 @@ Quality standards:
 - Match the emotional tone to the brand voice
 - Be grammatically perfect
 
-CRITICAL: The brand voice profile is the foundation. Every sentence should sound like it was written by the person whose voice you're matching.`
+CRITICAL: The brand voice profile is the foundation. Every sentence should sound like it was written by the person whose voice you're matching.`;
 
 /**
  * Content type specific prompts
@@ -63,7 +75,7 @@ STYLE GUIDELINES:
 - Break up text with subheadings for scannability
 - End with actionable takeaway or next steps
 
-${params.additionalContext ? `ADDITIONAL CONTEXT:\n${params.additionalContext}\n` : ''}
+${params.additionalContext ? `ADDITIONAL CONTEXT:\n${params.additionalContext}\n` : ""}
 
 Write the blog post now, matching the brand voice profile exactly.`,
 
@@ -89,7 +101,7 @@ AD WRITING PRINCIPLES:
 - Use power words that match the brand voice
 - Make the CTA impossible to ignore
 
-${params.additionalContext ? `ADDITIONAL CONTEXT:\n${params.additionalContext}\n` : ''}
+${params.additionalContext ? `ADDITIONAL CONTEXT:\n${params.additionalContext}\n` : ""}
 
 Write the ad copy now, matching the brand voice profile exactly.`,
 
@@ -115,7 +127,7 @@ STORE COPY GUIDELINES:
 - Build trust and credibility
 - Make purchasing decision easy
 
-${params.additionalContext ? `ADDITIONAL CONTEXT:\n${params.additionalContext}\n` : ''}
+${params.additionalContext ? `ADDITIONAL CONTEXT:\n${params.additionalContext}\n` : ""}
 
 Write the store copy now, matching the brand voice profile exactly.`,
 
@@ -141,7 +153,7 @@ FACEBOOK BEST PRACTICES:
 - Encourage engagement (questions, reactions)
 - Link placement at end
 
-${params.additionalContext ? `ADDITIONAL CONTEXT:\n${params.additionalContext}\n` : ''}
+${params.additionalContext ? `ADDITIONAL CONTEXT:\n${params.additionalContext}\n` : ""}
 
 Write the Facebook post now, matching the brand voice profile exactly.`,
 
@@ -168,7 +180,7 @@ INSTAGRAM BEST PRACTICES:
 - Connect to visual content
 - End with engaging question or CTA
 
-${params.additionalContext ? `ADDITIONAL CONTEXT:\n${params.additionalContext}\n` : ''}
+${params.additionalContext ? `ADDITIONAL CONTEXT:\n${params.additionalContext}\n` : ""}
 
 Write the Instagram caption now, matching the brand voice profile exactly.`,
 
@@ -195,10 +207,10 @@ TIKTOK WRITING STYLE:
 - Trending phrases acceptable if genuine
 - Focus on value and entertainment
 
-${params.additionalContext ? `ADDITIONAL CONTEXT:\n${params.additionalContext}\n` : ''}
+${params.additionalContext ? `ADDITIONAL CONTEXT:\n${params.additionalContext}\n` : ""}
 
-Write the TikTok content now, matching the brand voice profile exactly.`
-}
+Write the TikTok content now, matching the brand voice profile exactly.`,
+};
 
 /**
  * Construct full user prompt with voice profile
@@ -206,9 +218,9 @@ Write the TikTok content now, matching the brand voice profile exactly.`
 export function buildContentPrompt(
   contentType: ContentType,
   voiceProfile: string,
-  params: PromptTemplateParams
+  params: PromptTemplateParams,
 ): string {
-  const contentPrompt = CONTENT_TYPE_PROMPTS[contentType](params)
+  const contentPrompt = CONTENT_TYPE_PROMPTS[contentType](params);
 
   return `
 BRAND VOICE PROFILE:
@@ -219,7 +231,7 @@ ${voiceProfile}
 ${contentPrompt}
 
 REMEMBER: Every word must sound like it was written by the person described in the brand voice profile above. This is not optional.
-`
+`;
 }
 
 /**
@@ -227,53 +239,56 @@ REMEMBER: Every word must sound like it was written by the person described in t
  */
 function getToneIntensityDescription(intensity: number): string {
   const descriptions: Record<number, string> = {
-    1: 'Very subtle and understated - minimal personality',
-    2: 'Gentle and balanced - light personality touch',
-    3: 'Moderate - noticeable personality while professional',
-    4: 'Strong and expressive - bold personality shines through',
-    5: 'Maximum intensity - full personality on display'
-  }
-  return descriptions[intensity] || descriptions[3]
+    1: "Very subtle and understated - minimal personality",
+    2: "Gentle and balanced - light personality touch",
+    3: "Moderate - noticeable personality while professional",
+    4: "Strong and expressive - bold personality shines through",
+    5: "Maximum intensity - full personality on display",
+  };
+  return descriptions[intensity] || descriptions[3];
 }
 
 /**
  * Get CTA text based on type
  */
 function getCTAText(type: CTAType, customText?: string): string {
-  if (type === 'custom' && customText) {
-    return customText
+  if (type === "custom" && customText) {
+    return customText;
   }
 
   const ctas: Record<CTAType, string> = {
-    shop_now: 'Shop Now',
-    learn_more: 'Learn More',
-    visit_website: 'Visit Our Website',
-    contact_us: 'Contact Us',
-    custom: customText || 'Take Action'
-  }
+    shop_now: "Shop Now",
+    learn_more: "Learn More",
+    visit_website: "Visit Our Website",
+    contact_us: "Contact Us",
+    custom: customText || "Take Action",
+  };
 
-  return ctas[type]
+  return ctas[type];
 }
 
 /**
  * Validate content generation parameters
  */
-export function validateContentParams(params: PromptTemplateParams): { valid: boolean; error?: string } {
+export function validateContentParams(params: PromptTemplateParams): {
+  valid: boolean;
+  error?: string;
+} {
   if (params.wordCount < 50 || params.wordCount > 2000) {
-    return { valid: false, error: 'Word count must be between 50 and 2000' }
+    return { valid: false, error: "Word count must be between 50 and 2000" };
   }
 
   if (params.toneIntensity < 1 || params.toneIntensity > 5) {
-    return { valid: false, error: 'Tone intensity must be between 1 and 5' }
+    return { valid: false, error: "Tone intensity must be between 1 and 5" };
   }
 
   if (!params.topic || params.topic.trim().length === 0) {
-    return { valid: false, error: 'Topic is required' }
+    return { valid: false, error: "Topic is required" };
   }
 
   if (params.topic.length > 500) {
-    return { valid: false, error: 'Topic must be less than 500 characters' }
+    return { valid: false, error: "Topic must be less than 500 characters" };
   }
 
-  return { valid: true }
+  return { valid: true };
 }

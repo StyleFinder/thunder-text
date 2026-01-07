@@ -1,6 +1,8 @@
 /**
  * AIE Ad Generator Page
  * Main UI for generating AI-powered ad copy
+ *
+ * Refactored to use modular components from ./components/
  */
 
 /* eslint-disable @next/next/no-img-element */
@@ -11,11 +13,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useNavigation } from "@/app/hooks/useNavigation";
 import { useShop } from "@/hooks/useShop";
 import {
-  Search,
   Package,
   Loader2,
   X,
-  Check,
   Megaphone,
   ArrowLeft,
   Sparkles,
@@ -30,9 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -48,203 +46,25 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { logger } from "@/lib/logger";
-import { getCharacterLimits } from "@/lib/aie/utils/platformConstraints";
-import type { AiePlatform } from "@/types/aie";
 
-interface Campaign {
-  id: string;
-  name: string;
-  status: string;
-  objective: string;
-}
-
-interface AdAccount {
-  id: string;
-  name: string;
-  account_id: string;
-  currency: string;
-}
-
-interface ShopifyProduct {
-  id: string;
-  title: string;
-  description: string;
-  images: Array<{ url: string; altText?: string }>;
-  handle: string;
-}
-
-interface ImageSelectionModalProps {
-  product: ShopifyProduct;
-  onComplete: (selectedImages: string[]) => void;
-  onCancel: () => void;
-  isOpen: boolean;
-}
-
-function ImageSelectionModal({
-  product,
-  onComplete,
-  onCancel,
-  isOpen,
-}: ImageSelectionModalProps) {
-  const [tempSelectedImages, setTempSelectedImages] = useState<string[]>([]);
-
-  const toggleImage = (imageUrl: string) => {
-    if (tempSelectedImages.includes(imageUrl)) {
-      setTempSelectedImages(
-        tempSelectedImages.filter((url) => url !== imageUrl),
-      );
-    } else {
-      setTempSelectedImages([...tempSelectedImages, imageUrl]);
-    }
-  };
-
-  const handleDone = () => {
-    if (tempSelectedImages.length === 0) {
-      // If no images selected, select all by default
-      const allImages = product.images.map((img) => img.url);
-      onComplete(allImages);
-    } else {
-      onComplete(tempSelectedImages);
-    }
-    setTempSelectedImages([]);
-  };
-
-  const handleCancel = () => {
-    setTempSelectedImages([]);
-    onCancel();
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
-      <DialogContent className="max-w-4xl w-[90vw] max-h-[80vh] rounded-xl p-0 overflow-hidden flex flex-col z-[60]">
-        <DialogHeader className="px-6 py-5 border-b border-gray-200 bg-white flex-shrink-0 relative">
-          <button
-            onClick={handleCancel}
-            className="absolute right-6 top-5 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <DialogTitle className="text-lg font-semibold text-gray-900 pr-10">
-            Select Images from {product.title}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="p-6 flex flex-col gap-5 overflow-y-auto flex-1 bg-gray-50">
-          {product.images.length === 0 ? (
-            <Alert className="bg-amber-50 border-amber-200 rounded-lg">
-              <AlertDescription className="text-amber-700">
-                This product has no images. You can still add it, but consider
-                adding images to your product first.
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
-              {product.images.map((image, idx) => {
-                const isSelected = tempSelectedImages.includes(image.url);
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => toggleImage(image.url)}
-                    className={`relative p-2 rounded-lg transition-all duration-200 ${
-                      isSelected
-                        ? "border-2 border-blue-500 bg-blue-50 ring-2 ring-blue-100"
-                        : "border border-gray-200 bg-white hover:border-blue-400"
-                    }`}
-                  >
-                    <img
-                      src={image.url}
-                      alt={
-                        image.altText || `${product.title} - Image ${idx + 1}`
-                      }
-                      className="w-full h-40 object-cover rounded-md"
-                    />
-                    {isSelected && (
-                      <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md">
-                        <Check className="w-4 h-4" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {tempSelectedImages.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-              <p className="text-sm text-blue-700 font-medium">
-                {tempSelectedImages.length} of {product.images.length} images
-                selected
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="px-6 py-4 border-t border-gray-200 bg-white flex-shrink-0 flex justify-end gap-3">
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            className="border-gray-200 hover:bg-gray-50"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDone}
-            style={{
-              background: "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
-              border: "none",
-            }}
-          >
-            {tempSelectedImages.length > 0
-              ? `Add ${tempSelectedImages.length} Image${tempSelectedImages.length !== 1 ? "s" : ""}`
-              : "Add All Images"}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-interface GeneratedVariant {
-  id: string;
-  variantNumber: number;
-  variantType: string;
-  headline: string;
-  headlineAlternatives: string[];
-  primaryText: string;
-  description?: string;
-  cta: string;
-  ctaRationale?: string;
-  hookTechnique: string;
-  tone: string;
-  predictedScore: number;
-  scoreBreakdown: {
-    brand_fit: number;
-    context_relevance: number;
-    platform_compliance: number;
-    hook_strength: number;
-    cta_clarity: number;
-  };
-  generationReasoning?: string;
-}
-
-interface EditableVariant extends GeneratedVariant {
-  editedHeadline?: string;
-  editedPrimaryText?: string;
-  editedDescription?: string;
-}
-
-interface GenerationResult {
-  adRequestId: string;
-  variants: GeneratedVariant[];
-  metadata: {
-    generationTimeMs: number;
-    aiCost: number;
-  };
-}
+// Import modular components
+import {
+  ImageSelectionModal,
+  GenerationProgress,
+  ResultsModal,
+  UnifiedProductSelector,
+} from "./components";
+import type {
+  Campaign,
+  AdAccount,
+  ShopifyProduct,
+  EditableVariant,
+  GenerationResult,
+  GeneratedVariant,
+} from "./types";
 
 export default function AIEPage() {
-  const searchParams = useSearchParams();
+  const _searchParams = useSearchParams();
   const { shop } = useShop();
   const { buildUrl } = useNavigation();
 
@@ -273,6 +93,12 @@ export default function AIEPage() {
     [],
   );
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
+  const [comparisonMode, setComparisonMode] = useState<"grid" | "compare">(
+    "grid",
+  );
+  const [selectedForComparison, setSelectedForComparison] = useState<string[]>(
+    [],
+  );
 
   // Facebook Campaign selection state
   const [adAccounts, setAdAccounts] = useState<AdAccount[]>([]);
@@ -295,8 +121,8 @@ export default function AIEPage() {
 
   // Check for image passed from Image Generation page
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const imageUrl = sessionStorage.getItem('aie_image_url');
+    if (typeof window !== "undefined") {
+      const imageUrl = sessionStorage.getItem("aie_image_url");
       if (imageUrl) {
         // Add the image to selected images
         setSelectedImageUrls((prev) => {
@@ -306,7 +132,7 @@ export default function AIEPage() {
           return prev;
         });
         // Clear from sessionStorage to prevent re-adding on page refresh
-        sessionStorage.removeItem('aie_image_url');
+        sessionStorage.removeItem("aie_image_url");
       }
     }
   }, []);
@@ -322,8 +148,6 @@ export default function AIEPage() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [imageSelectionModalOpen, setImageSelectionModalOpen] = useState(false);
-  const [imageUrlModalOpen, setImageUrlModalOpen] = useState(false);
-  const [tempImageUrl, setTempImageUrl] = useState("");
   const [currentProductForImageSelection, setCurrentProductForImageSelection] =
     useState<ShopifyProduct | null>(null);
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -593,12 +417,10 @@ export default function AIEPage() {
     }
   };
 
-  const handleImageUrlSubmit = () => {
-    if (tempImageUrl && !selectedImageUrls.includes(tempImageUrl)) {
-      setSelectedImageUrls([...selectedImageUrls, tempImageUrl]);
+  const handleImageUrlAdd = (url: string) => {
+    if (url && !selectedImageUrls.includes(url)) {
+      setSelectedImageUrls([...selectedImageUrls, url]);
     }
-    setImageUrlModalOpen(false);
-    setTempImageUrl("");
   };
 
   const handleClearAll = () => {
@@ -679,7 +501,9 @@ export default function AIEPage() {
       setEditableVariants(variants);
       setLoadingProgress(100);
 
-      // Open results modal
+      // Open results modal and reset comparison state
+      setComparisonMode("grid");
+      setSelectedForComparison([]);
       setResultsModalOpen(true);
     } catch (err) {
       logger.error("Generation error:", err as Error, { component: "aie" });
@@ -831,22 +655,6 @@ export default function AIEPage() {
         err instanceof Error ? err.message : "Failed to save ad to library",
       );
     }
-  };
-
-  const formatScore = (score: number) => {
-    // Score is 0-10 from AI, convert to percentage (0-100)
-    const percentage = (score * 10).toFixed(0);
-    if (score >= 8)
-      return {
-        text: `${percentage}% - Excellent`,
-        variant: "default" as const,
-      };
-    if (score >= 6)
-      return { text: `${percentage}% - Good`, variant: "secondary" as const };
-    return {
-      text: `${percentage}% - Needs Improvement`,
-      variant: "outline" as const,
-    };
   };
 
   const router = useRouter();
@@ -1066,30 +874,27 @@ export default function AIEPage() {
                 </CardContent>
               </Card>
 
-              {/* Product/Image Selection Buttons */}
+              {/* Unified Product/Image Selection */}
               <div className="flex flex-col gap-3">
                 <Label className="text-base font-semibold text-gray-900">
                   Products & Images
                 </Label>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <Button
-                    variant="outline"
-                    onClick={() => setProductModalOpen(true)}
-                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                  >
-                    <Package className="w-4 h-4 mr-2" />
-                    Add Product
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setImageUrlModalOpen(true)}
-                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                  >
-                    Add Custom Image URL
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setProductModalOpen(true)}
+                  className="border-blue-500 text-blue-600 hover:bg-blue-50 w-fit"
+                >
+                  <Package className="w-4 h-4 mr-2" />
+                  Add Products or Images
+                  {(selectedProducts.length > 0 ||
+                    selectedImageUrls.length > 0) && (
+                    <span className="ml-2 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                      {selectedProducts.length + selectedImageUrls.length}
+                    </span>
+                  )}
+                </Button>
                 <p className="text-sm text-gray-500">
-                  Select a product and choose images, or add custom image URLs
+                  Select from your Shopify store or add custom image URLs
                 </p>
               </div>
 
@@ -1387,6 +1192,29 @@ export default function AIEPage() {
                 )}
               </div>
 
+              {/* Credit Cost Display */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">
+                      Generation Cost
+                    </span>
+                  </div>
+                  <span className="text-sm font-semibold text-blue-900">
+                    1 credit
+                  </span>
+                </div>
+                <p className="text-xs text-blue-600 mt-1">
+                  Generates 3 ad variants optimized for{" "}
+                  {platform === "meta"
+                    ? "Facebook"
+                    : platform === "instagram"
+                      ? "Instagram"
+                      : "your platform"}
+                </p>
+              </div>
+
               <Button
                 className="w-full h-11 text-base font-medium"
                 style={{
@@ -1426,553 +1254,49 @@ export default function AIEPage() {
 
       {/* Progress Modal - Shows during generation */}
       {mounted && (
-        <Dialog open={loading} onOpenChange={() => {}}>
-          <DialogContent className="max-w-md rounded-xl">
-            <DialogHeader>
-              <div className="flex items-center gap-3 mb-2">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
-                  }}
-                >
-                  <Loader2 className="w-5 h-5 text-white animate-spin" />
-                </div>
-                <DialogTitle className="text-gray-900 text-lg">
-                  Generating Ad Variants
-                </DialogTitle>
-              </div>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              <p className="text-sm text-gray-700 font-medium">{loadingStep}</p>
-              <Progress value={loadingProgress} className="w-full h-2" />
-              <p className="text-sm text-gray-500">
-                This typically takes 10-15 seconds. We&apos;re analyzing best
-                practices and generating unique ad variants optimized for your
-                platform.
-              </p>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <GenerationProgress isOpen={loading} progress={loadingProgress} />
       )}
 
       {/* Results Modal - Shows generated ad variants */}
-      {mounted && resultsModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-5">
-          <div className="bg-white rounded-xl w-[90%] max-w-6xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                  }}
-                >
-                  <Check className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Ad Variants Generated
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    Select a variant to save to your library
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setResultsModalOpen(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-6 overflow-y-auto flex-1 bg-gray-50">
-              <div className="space-y-4">
-                {result && (
-                  <Alert className="bg-blue-50 border-blue-200 rounded-lg">
-                    <AlertDescription className="text-blue-700">
-                      Generated {result.variants.length} variants
-                      {result.metadata?.generationTimeMs && (
-                        <>
-                          {" "}
-                          in{" "}
-                          {(result.metadata.generationTimeMs / 1000).toFixed(2)}
-                          s
-                        </>
-                      )}
-                      {result.metadata?.aiCost && (
-                        <> • AI Cost: ${result.metadata.aiCost.toFixed(4)}</>
-                      )}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {editableVariants.map((variant) => {
-                    const scoreInfo = formatScore(variant.predictedScore);
-
-                    return (
-                      <Card
-                        key={variant.id}
-                        className="bg-white border-gray-200"
-                      >
-                        <CardContent className="p-5 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h3 className="font-semibold text-gray-900">
-                              Variant {variant.variantNumber}
-                            </h3>
-                            <Badge variant={scoreInfo.variant}>
-                              {scoreInfo.text}
-                            </Badge>
-                          </div>
-
-                          <Badge variant="outline" className="border-gray-300">
-                            {variant.variantType}
-                          </Badge>
-
-                          <Separator />
-
-                          {/* Media Section */}
-                          {selectedProducts.length > 0 && (
-                            <>
-                              <div>
-                                <p className="text-sm font-semibold mb-2">
-                                  Media (
-                                  {
-                                    selectedProducts.flatMap((p) => p.images)
-                                      .length
-                                  }{" "}
-                                  {selectedProducts.flatMap((p) => p.images)
-                                    .length === 1
-                                    ? "image"
-                                    : "images"}
-                                  )
-                                </p>
-                                <div
-                                  className={`grid gap-2 ${
-                                    selectedProducts.flatMap((p) => p.images)
-                                      .length === 1
-                                      ? "grid-cols-1"
-                                      : "grid-cols-[repeat(auto-fill,minmax(80px,1fr))]"
-                                  }`}
-                                >
-                                  {selectedProducts
-                                    .flatMap((p) => p.images)
-                                    .slice(0, 4)
-                                    .map((img, idx) => (
-                                      <div
-                                        key={idx}
-                                        className="relative pb-[100%] bg-gray-100 rounded-lg overflow-hidden"
-                                      >
-                                        <img
-                                          src={img.url}
-                                          alt={
-                                            img.altText ||
-                                            `Product image ${idx + 1}`
-                                          }
-                                          className="absolute inset-0 w-full h-full object-cover"
-                                        />
-                                      </div>
-                                    ))}
-                                  {selectedProducts.flatMap((p) => p.images)
-                                    .length > 4 && (
-                                    <div className="relative pb-[100%] bg-gray-100 rounded-lg flex items-center justify-center">
-                                      <p className="text-sm text-gray-600 font-semibold">
-                                        +
-                                        {selectedProducts.flatMap(
-                                          (p) => p.images,
-                                        ).length - 4}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                                {selectedProducts.flatMap((p) => p.images)
-                                  .length > 1 && (
-                                  <p className="text-xs text-gray-600 text-center mt-1">
-                                    Carousel
-                                  </p>
-                                )}
-                              </div>
-                              <Separator />
-                            </>
-                          )}
-
-                          <div className="space-y-2">
-                            <Label htmlFor={`headline-${variant.id}`}>
-                              Headline
-                            </Label>
-                            <Textarea
-                              id={`headline-${variant.id}`}
-                              value={variant.editedHeadline || ""}
-                              onChange={(e) =>
-                                handleVariantEdit(
-                                  variant.id,
-                                  "headline",
-                                  e.target.value,
-                                )
-                              }
-                              rows={2}
-                              maxLength={
-                                getCharacterLimits(platform as AiePlatform)
-                                  .headline.max
-                              }
-                              className="resize-none"
-                            />
-                            <p
-                              className={`text-xs ${(variant.editedHeadline?.length || 0) > getCharacterLimits(platform as AiePlatform).headline.max ? "text-red-500" : "text-gray-500"}`}
-                            >
-                              {variant.editedHeadline?.length || 0}/
-                              {
-                                getCharacterLimits(platform as AiePlatform)
-                                  .headline.max
-                              }{" "}
-                              characters
-                            </p>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor={`primary-${variant.id}`}>
-                              Ad Copy
-                            </Label>
-                            <Textarea
-                              id={`primary-${variant.id}`}
-                              value={variant.editedPrimaryText || ""}
-                              onChange={(e) =>
-                                handleVariantEdit(
-                                  variant.id,
-                                  "primaryText",
-                                  e.target.value,
-                                )
-                              }
-                              rows={3}
-                              maxLength={
-                                getCharacterLimits(platform as AiePlatform)
-                                  .primaryText.max
-                              }
-                              className="resize-none"
-                            />
-                            <p
-                              className={`text-xs ${(variant.editedPrimaryText?.length || 0) > getCharacterLimits(platform as AiePlatform).primaryText.max ? "text-red-500" : "text-gray-500"}`}
-                            >
-                              {variant.editedPrimaryText?.length || 0}/
-                              {
-                                getCharacterLimits(platform as AiePlatform)
-                                  .primaryText.max
-                              }{" "}
-                              characters
-                            </p>
-                          </div>
-
-                          {variant.description && (
-                            <div className="space-y-2">
-                              <Label htmlFor={`desc-${variant.id}`}>
-                                Description
-                              </Label>
-                              <Textarea
-                                id={`desc-${variant.id}`}
-                                value={variant.editedDescription || ""}
-                                onChange={(e) =>
-                                  handleVariantEdit(
-                                    variant.id,
-                                    "description",
-                                    e.target.value,
-                                  )
-                                }
-                                rows={2}
-                                className="resize-none"
-                              />
-                            </div>
-                          )}
-
-                          {variant.cta && (
-                            <div>
-                              <p className="text-sm font-semibold mb-1">
-                                Call-to-Action
-                              </p>
-                              <Badge>{variant.cta}</Badge>
-                            </div>
-                          )}
-
-                          <Separator />
-
-                          {variant.scoreBreakdown && (
-                            <div>
-                              <p className="text-sm font-semibold mb-2 text-gray-700">
-                                Quality Scores
-                              </p>
-                              <div className="flex items-center gap-1 flex-wrap">
-                                {variant.scoreBreakdown.hook_strength !==
-                                  undefined && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-blue-50 text-blue-700"
-                                  >
-                                    Hook:{" "}
-                                    {(
-                                      variant.scoreBreakdown.hook_strength * 100
-                                    ).toFixed(0)}
-                                    %
-                                  </Badge>
-                                )}
-                                {variant.scoreBreakdown.cta_clarity !==
-                                  undefined && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-blue-50 text-blue-700"
-                                  >
-                                    CTA:{" "}
-                                    {(
-                                      variant.scoreBreakdown.cta_clarity * 100
-                                    ).toFixed(0)}
-                                    %
-                                  </Badge>
-                                )}
-                                {variant.scoreBreakdown.platform_compliance !==
-                                  undefined && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-blue-50 text-blue-700"
-                                  >
-                                    Platform:{" "}
-                                    {(
-                                      variant.scoreBreakdown
-                                        .platform_compliance * 100
-                                    ).toFixed(0)}
-                                    %
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {variant.headlineAlternatives &&
-                            variant.headlineAlternatives.length > 0 && (
-                              <>
-                                <Separator />
-                                <div>
-                                  <p className="text-sm font-semibold mb-1 text-gray-700">
-                                    Alternative Headlines
-                                  </p>
-                                  <div className="space-y-1">
-                                    {variant.headlineAlternatives
-                                      .slice(0, 2)
-                                      .map((alt, idx) => (
-                                        <p
-                                          key={idx}
-                                          className="text-xs text-gray-500"
-                                        >
-                                          • {alt}
-                                        </p>
-                                      ))}
-                                  </div>
-                                </div>
-                              </>
-                            )}
-
-                          <Separator />
-
-                          <div className="space-y-2">
-                            <Button
-                              className="w-full h-10 font-medium"
-                              style={{
-                                background:
-                                  "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
-                                border: "none",
-                              }}
-                              onClick={() =>
-                                handleSelectVariant(variant, false)
-                              }
-                            >
-                              Save to Library
-                            </Button>
-                            {selectedCampaign && selectedAdAccount && (
-                              <Button
-                                className="w-full h-10 font-medium"
-                                style={{
-                                  background:
-                                    "linear-gradient(135deg, #1877f2 0%, #4267b2 100%)",
-                                  border: "none",
-                                }}
-                                onClick={() =>
-                                  handleSelectVariant(variant, true)
-                                }
-                              >
-                                <Facebook className="w-4 h-4 mr-2" />
-                                Save & Post to Facebook
-                              </Button>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Product Selection Modal - Only render after mount to prevent hydration mismatch */}
       {mounted && (
-        <Dialog
-          open={productModalOpen}
+        <ResultsModal
+          isOpen={resultsModalOpen}
+          onClose={() => setResultsModalOpen(false)}
+          result={result}
+          editableVariants={editableVariants}
+          comparisonMode={comparisonMode}
+          setComparisonMode={setComparisonMode}
+          selectedForComparison={selectedForComparison}
+          setSelectedForComparison={setSelectedForComparison}
+          selectedProducts={selectedProducts}
+          selectedCampaign={selectedCampaign}
+          selectedAdAccount={selectedAdAccount}
+          platform={platform}
+          onVariantEdit={handleVariantEdit}
+          onSelectVariant={handleSelectVariant}
+        />
+      )}
+      {/* Unified Product Selection Modal */}
+      {mounted && (
+        <UnifiedProductSelector
+          isOpen={productModalOpen}
           onOpenChange={(open) => {
             setProductModalOpen(open);
             if (!open) setSearchQuery("");
           }}
-        >
-          <DialogContent className="max-w-4xl w-[90vw] max-h-[80vh] rounded-xl p-0 overflow-hidden flex flex-col">
-            <DialogHeader className="px-6 py-5 border-b border-gray-200 bg-white flex-shrink-0 relative">
-              <button
-                onClick={() => {
-                  setProductModalOpen(false);
-                  setSearchQuery("");
-                }}
-                className="absolute right-6 top-5 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
-                  }}
-                >
-                  <Package className="w-5 h-5 text-white" />
-                </div>
-                <DialogTitle className="text-lg font-semibold text-gray-900">
-                  Add Products
-                </DialogTitle>
-              </div>
-            </DialogHeader>
-
-            <div className="p-6 flex flex-col gap-5 overflow-y-auto flex-1 bg-gray-50">
-              <div className="flex flex-col gap-2 w-full">
-                <Label
-                  htmlFor="product-search"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  Search Products
-                </Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    id="product-search"
-                    value={searchQuery}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    placeholder="Start typing to search..."
-                    autoFocus
-                    className="pl-10 h-11 border-gray-200"
-                  />
-                </div>
-              </div>
-
-              {selectedProducts.length > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-                  <p className="text-sm text-blue-700 font-medium">
-                    {selectedProducts.length} product
-                    {selectedProducts.length !== 1 ? "s" : ""} selected
-                  </p>
-                </div>
-              )}
-
-              {loadingProducts && (
-                <div className="flex items-center justify-center gap-2 py-8">
-                  <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                  <p className="text-sm text-gray-500">Loading products...</p>
-                </div>
-              )}
-
-              {!loadingProducts && products.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-8">
-                  {searchQuery
-                    ? "No products found"
-                    : "Start typing to search products"}
-                </p>
-              )}
-
-              {!loadingProducts && products.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {products.map((product) => {
-                    const isSelected = selectedProducts.find(
-                      (p) => p.id === product.id,
-                    );
-                    return (
-                      <button
-                        key={product.id}
-                        type="button"
-                        onClick={() => handleProductSelect(product)}
-                        className={`text-left bg-white rounded-lg p-3 flex flex-col gap-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${
-                          isSelected
-                            ? "border-2 border-blue-500 ring-2 ring-blue-100"
-                            : "border border-gray-200 hover:border-blue-400"
-                        }`}
-                      >
-                        {product.images[0]?.url && (
-                          <img
-                            src={product.images[0].url}
-                            alt={product.title}
-                            className="w-full h-40 object-cover rounded-md"
-                          />
-                        )}
-                        <div className="flex flex-col gap-2 flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
-                            {product.title}
-                          </p>
-                          {isSelected && (
-                            <span className="inline-flex items-center self-start bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                              <Check className="w-3 h-3 mr-1" />
-                              Added
-                            </span>
-                          )}
-                          {product.description && (
-                            <p className="text-xs text-gray-500 line-clamp-2">
-                              {product.description}
-                            </p>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="px-6 py-4 border-t border-gray-200 bg-white flex-shrink-0 flex justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setProductModalOpen(false);
-                  setSearchQuery("");
-                }}
-                className="border-gray-200 hover:bg-gray-50"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  setProductModalOpen(false);
-                  setSearchQuery("");
-                }}
-                style={{
-                  background:
-                    "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
-                  border: "none",
-                }}
-              >
-                Done
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          products={products}
+          selectedProducts={selectedProducts}
+          loadingProducts={loadingProducts}
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          onProductSelect={handleProductSelect}
+          selectedImageUrls={selectedImageUrls}
+          onImageUrlAdd={handleImageUrlAdd}
+          onDone={() => {
+            setProductModalOpen(false);
+            setSearchQuery("");
+          }}
+        />
       )}
 
       {/* Image Selection Modal - Shows for ONE product at a time */}
@@ -1983,83 +1307,6 @@ export default function AIEPage() {
           onCancel={handleImageSelectionCancel}
           isOpen={imageSelectionModalOpen}
         />
-      )}
-
-      {/* Image URL Modal */}
-      {mounted && (
-        <Dialog
-          open={imageUrlModalOpen}
-          onOpenChange={(open) => {
-            setImageUrlModalOpen(open);
-            if (!open) setTempImageUrl("");
-          }}
-        >
-          <DialogContent className="max-w-lg rounded-xl p-0 overflow-hidden">
-            <DialogHeader className="px-6 py-5 border-b border-gray-200 bg-white">
-              <DialogTitle className="text-lg font-semibold text-gray-900">
-                Add Product Image URL
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="p-6 flex flex-col gap-5 bg-gray-50">
-              <div className="flex flex-col gap-2">
-                <Label
-                  htmlFor="image-url"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  Image URL
-                </Label>
-                <Input
-                  id="image-url"
-                  value={tempImageUrl}
-                  onChange={(e) => setTempImageUrl(e.target.value)}
-                  placeholder="https://example.com/product-image.jpg"
-                  autoFocus
-                  className="h-11 border-gray-200"
-                />
-                <p className="text-sm text-gray-500">
-                  Enter a direct URL to your product image
-                </p>
-              </div>
-
-              {tempImageUrl && (
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm font-semibold text-gray-900">Preview</p>
-                  <img
-                    src={tempImageUrl}
-                    alt="Preview"
-                    className="w-32 h-32 object-cover rounded-lg"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="px-6 py-4 border-t border-gray-200 bg-white flex justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setImageUrlModalOpen(false);
-                  setTempImageUrl("");
-                }}
-                className="border-gray-200 hover:bg-gray-50"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleImageUrlSubmit}
-                disabled={!tempImageUrl.trim()}
-                style={{
-                  background: !tempImageUrl.trim()
-                    ? "#9ca3af"
-                    : "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
-                  border: "none",
-                }}
-              >
-                Add Image
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       )}
 
       {/* Facebook Success Modal */}
@@ -2117,7 +1364,8 @@ export default function AIEPage() {
                 </div>
               )}
               <p className="text-sm text-gray-500">
-                Your ad is now live. Click below to create another ad or view your ads library.
+                Your ad is now live. Click below to create another ad or view
+                your ads library.
               </p>
             </div>
 

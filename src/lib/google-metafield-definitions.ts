@@ -1,227 +1,232 @@
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
 
 // Google Shopping Metafield Definitions
 // Creates structured metafield definitions for better Shopify admin integration
 
 export interface MetafieldDefinition {
-  namespace: string
-  key: string
-  name: string
-  description: string
+  namespace: string;
+  key: string;
+  name: string;
+  description: string;
   type: {
-    name: string
-    category?: string
-    choices?: string[]
-  }
-  owner_type: 'product' | 'product_variant'
+    name: string;
+    category?: string;
+    choices?: string[];
+  };
+  owner_type: "product" | "product_variant";
   validations?: Array<{
-    name: string
-    value: string
-  }>
+    name: string;
+    value: string;
+  }>;
 }
 
 // Google Shopping Product Metafield Definitions
 export const GOOGLE_PRODUCT_METAFIELD_DEFINITIONS: MetafieldDefinition[] = [
   {
-    namespace: 'google',
-    key: 'google_product_category',
-    name: 'Google Product Category',
-    description: 'Google Shopping product category for better search visibility and compliance',
+    namespace: "google",
+    key: "google_product_category",
+    name: "Google Product Category",
+    description:
+      "Google Shopping product category for better search visibility and compliance",
     type: {
-      name: 'single_line_text_field'
+      name: "single_line_text_field",
     },
-    owner_type: 'product',
+    owner_type: "product",
     validations: [
       {
-        name: 'max',
-        value: '750'
-      }
-    ]
+        name: "max",
+        value: "750",
+      },
+    ],
   },
   {
-    namespace: 'google',
-    key: 'condition',
-    name: 'Condition',
-    description: 'Product condition for Google Shopping (new, refurbished, used)',
+    namespace: "google",
+    key: "condition",
+    name: "Condition",
+    description:
+      "Product condition for Google Shopping (new, refurbished, used)",
     type: {
-      name: 'single_line_text_field',
-      category: 'choices',
-      choices: ['new', 'refurbished', 'used']
+      name: "single_line_text_field",
+      category: "choices",
+      choices: ["new", "refurbished", "used"],
     },
-    owner_type: 'product'
+    owner_type: "product",
   },
   {
-    namespace: 'google',
-    key: 'gender',
-    name: 'Target Gender',
-    description: 'Target gender for the product (male, female, unisex)',
+    namespace: "google",
+    key: "gender",
+    name: "Target Gender",
+    description: "Target gender for the product (male, female, unisex)",
     type: {
-      name: 'single_line_text_field',
-      category: 'choices',
-      choices: ['male', 'female', 'unisex']
+      name: "single_line_text_field",
+      category: "choices",
+      choices: ["male", "female", "unisex"],
     },
-    owner_type: 'product'
+    owner_type: "product",
   },
   {
-    namespace: 'google',
-    key: 'age_group',
-    name: 'Age Group',
-    description: 'Target age group for the product',
+    namespace: "google",
+    key: "age_group",
+    name: "Age Group",
+    description: "Target age group for the product",
     type: {
-      name: 'single_line_text_field',
-      category: 'choices',
-      choices: ['newborn', 'infant', 'toddler', 'kids', 'adult']
+      name: "single_line_text_field",
+      category: "choices",
+      choices: ["newborn", "infant", "toddler", "kids", "adult"],
     },
-    owner_type: 'product'
+    owner_type: "product",
   },
   {
-    namespace: 'google',
-    key: 'material',
-    name: 'Material',
-    description: 'Primary material the product is made from',
+    namespace: "google",
+    key: "material",
+    name: "Material",
+    description: "Primary material the product is made from",
     type: {
-      name: 'single_line_text_field'
+      name: "single_line_text_field",
     },
-    owner_type: 'product'
+    owner_type: "product",
   },
   {
-    namespace: 'google',
-    key: 'pattern',
-    name: 'Pattern',
-    description: 'Pattern or design of the product (solid, striped, floral, etc.)',
+    namespace: "google",
+    key: "pattern",
+    name: "Pattern",
+    description:
+      "Pattern or design of the product (solid, striped, floral, etc.)",
     type: {
-      name: 'single_line_text_field'
+      name: "single_line_text_field",
     },
-    owner_type: 'product'
+    owner_type: "product",
   },
   {
-    namespace: 'google',
-    key: 'size_type',
-    name: 'Size Type',
-    description: 'Size classification for the product',
+    namespace: "google",
+    key: "size_type",
+    name: "Size Type",
+    description: "Size classification for the product",
     type: {
-      name: 'single_line_text_field',
-      category: 'choices',
-      choices: ['regular', 'petite', 'plus', 'big_and_tall', 'maternity']
+      name: "single_line_text_field",
+      category: "choices",
+      choices: ["regular", "petite", "plus", "big_and_tall", "maternity"],
     },
-    owner_type: 'product'
+    owner_type: "product",
   },
   {
-    namespace: 'google',
-    key: 'product_highlights',
-    name: 'Product Highlights',
-    description: 'Key features and selling points of the product',
+    namespace: "google",
+    key: "product_highlights",
+    name: "Product Highlights",
+    description: "Key features and selling points of the product",
     type: {
-      name: 'list.single_line_text_field'
+      name: "list.single_line_text_field",
     },
-    owner_type: 'product'
-  }
-]
+    owner_type: "product",
+  },
+];
 
 // Google Shopping Variant Metafield Definitions
 export const GOOGLE_VARIANT_METAFIELD_DEFINITIONS: MetafieldDefinition[] = [
   {
-    namespace: 'google',
-    key: 'google_color',
-    name: 'Google Color',
-    description: 'Color of this specific variant for Google Shopping',
+    namespace: "google",
+    key: "google_color",
+    name: "Google Color",
+    description: "Color of this specific variant for Google Shopping",
     type: {
-      name: 'single_line_text_field'
+      name: "single_line_text_field",
     },
-    owner_type: 'product_variant'
+    owner_type: "product_variant",
   },
   {
-    namespace: 'google',
-    key: 'google_size',
-    name: 'Google Size',
-    description: 'Size of this specific variant for Google Shopping',
+    namespace: "google",
+    key: "google_size",
+    name: "Google Size",
+    description: "Size of this specific variant for Google Shopping",
     type: {
-      name: 'single_line_text_field'
+      name: "single_line_text_field",
     },
-    owner_type: 'product_variant'
+    owner_type: "product_variant",
   },
   {
-    namespace: 'google',
-    key: 'google_material',
-    name: 'Google Material',
-    description: 'Material of this specific variant for Google Shopping',
+    namespace: "google",
+    key: "google_material",
+    name: "Google Material",
+    description: "Material of this specific variant for Google Shopping",
     type: {
-      name: 'single_line_text_field'
+      name: "single_line_text_field",
     },
-    owner_type: 'product_variant'
-  }
-]
+    owner_type: "product_variant",
+  },
+];
 
 // Thunder Text Metafield Definitions
 export const THUNDER_TEXT_METAFIELD_DEFINITIONS: MetafieldDefinition[] = [
   {
-    namespace: 'thunder_text',
-    key: 'meta_description',
-    name: 'Thunder Text Meta Description',
-    description: 'SEO meta description generated by Thunder Text AI',
+    namespace: "thunder_text",
+    key: "meta_description",
+    name: "Thunder Text Meta Description",
+    description: "SEO meta description generated by Thunder Text AI",
     type: {
-      name: 'single_line_text_field'
+      name: "single_line_text_field",
     },
-    owner_type: 'product',
+    owner_type: "product",
     validations: [
       {
-        name: 'max',
-        value: '320'
-      }
-    ]
+        name: "max",
+        value: "320",
+      },
+    ],
   },
   {
-    namespace: 'thunder_text',
-    key: 'keywords',
-    name: 'Thunder Text Keywords',
-    description: 'SEO keywords generated by Thunder Text AI',
+    namespace: "thunder_text",
+    key: "keywords",
+    name: "Thunder Text Keywords",
+    description: "SEO keywords generated by Thunder Text AI",
     type: {
-      name: 'json'
+      name: "json",
     },
-    owner_type: 'product'
+    owner_type: "product",
   },
   {
-    namespace: 'thunder_text',
-    key: 'bullet_points',
-    name: 'Thunder Text Bullet Points',
-    description: 'Product bullet points generated by Thunder Text AI',
+    namespace: "thunder_text",
+    key: "bullet_points",
+    name: "Thunder Text Bullet Points",
+    description: "Product bullet points generated by Thunder Text AI",
     type: {
-      name: 'json'
+      name: "json",
     },
-    owner_type: 'product'
-  }
-]
+    owner_type: "product",
+  },
+];
 
 // SEO Metafield Definitions
 export const SEO_METAFIELD_DEFINITIONS: MetafieldDefinition[] = [
   {
-    namespace: 'seo',
-    key: 'meta_description',
-    name: 'SEO Meta Description',
-    description: 'Search engine meta description for better SEO',
+    namespace: "seo",
+    key: "meta_description",
+    name: "SEO Meta Description",
+    description: "Search engine meta description for better SEO",
     type: {
-      name: 'single_line_text_field'
+      name: "single_line_text_field",
     },
-    owner_type: 'product',
+    owner_type: "product",
     validations: [
       {
-        name: 'max',
-        value: '320'
-      }
-    ]
-  }
-]
+        name: "max",
+        value: "320",
+      },
+    ],
+  },
+];
 
 // Combined definitions for bulk operations
 export const ALL_METAFIELD_DEFINITIONS = [
   ...GOOGLE_PRODUCT_METAFIELD_DEFINITIONS,
   ...GOOGLE_VARIANT_METAFIELD_DEFINITIONS,
   ...THUNDER_TEXT_METAFIELD_DEFINITIONS,
-  ...SEO_METAFIELD_DEFINITIONS
-]
+  ...SEO_METAFIELD_DEFINITIONS,
+];
 
 // Convert to Shopify GraphQL format
-export function formatMetafieldDefinitionForShopify(definition: MetafieldDefinition) {
+export function formatMetafieldDefinitionForShopify(
+  definition: MetafieldDefinition,
+) {
   const baseDefinition = {
     name: definition.name,
     description: definition.description,
@@ -229,56 +234,61 @@ export function formatMetafieldDefinitionForShopify(definition: MetafieldDefinit
     key: definition.key,
     ownerType: definition.owner_type.toUpperCase(),
     type: definition.type.name,
-    validations: definition.validations || []
-  }
+    validations: definition.validations || [],
+  };
 
   // Handle choice-based types
-  if (definition.type.category === 'choices' && definition.type.choices) {
+  if (definition.type.category === "choices" && definition.type.choices) {
     return {
       ...baseDefinition,
-      type: 'single_line_text_field',
+      type: "single_line_text_field",
       validations: [
         ...baseDefinition.validations,
         {
-          name: 'choices',
-          value: JSON.stringify(definition.type.choices)
-        }
-      ]
-    }
+          name: "choices",
+          value: JSON.stringify(definition.type.choices),
+        },
+      ],
+    };
   }
 
-  return baseDefinition
+  return baseDefinition;
 }
 
 interface ShopifyGraphQLClient {
-  request: (mutation: string, options: { variables: Record<string, unknown> }) => Promise<{
+  request: (
+    mutation: string,
+    options: { variables: Record<string, unknown> },
+  ) => Promise<{
     data?: {
       metafieldDefinitionCreate?: {
         metafieldDefinition?: {
-          id: string
-          name: string
-          namespace: string
-          key: string
-          ownerType: string
-        }
+          id: string;
+          name: string;
+          namespace: string;
+          key: string;
+          ownerType: string;
+        };
         userErrors?: Array<{
-          field: string[]
-          message: string
-        }>
-      }
-    }
-  }>
+          field: string[];
+          message: string;
+        }>;
+      };
+    };
+  }>;
 }
 
 // Create all metafield definitions via GraphQL
-export async function createMetafieldDefinitions(shopifyClient: ShopifyGraphQLClient) {
-  
-  const results = []
-  
+export async function createMetafieldDefinitions(
+  shopifyClient: ShopifyGraphQLClient,
+) {
+  const results = [];
+
   for (const definition of ALL_METAFIELD_DEFINITIONS) {
     try {
-      const formattedDefinition = formatMetafieldDefinitionForShopify(definition)
-      
+      const formattedDefinition =
+        formatMetafieldDefinitionForShopify(definition);
+
       const mutation = `
         mutation metafieldDefinitionCreate($definition: MetafieldDefinitionInput!) {
           metafieldDefinitionCreate(definition: $definition) {
@@ -295,47 +305,57 @@ export async function createMetafieldDefinitions(shopifyClient: ShopifyGraphQLCl
             }
           }
         }
-      `
-      
+      `;
+
       const response = await shopifyClient.request(mutation, {
         variables: {
-          definition: formattedDefinition
-        }
-      })
+          definition: formattedDefinition,
+        },
+      });
 
-      if (response.data?.metafieldDefinitionCreate?.userErrors && response.data.metafieldDefinitionCreate.userErrors.length > 0) {
-        const errors = response.data.metafieldDefinitionCreate.userErrors
+      if (
+        response.data?.metafieldDefinitionCreate?.userErrors &&
+        response.data.metafieldDefinitionCreate.userErrors.length > 0
+      ) {
+        const errors = response.data.metafieldDefinitionCreate.userErrors;
         // Ignore "already exists" errors
-        const nonExistenceErrors = errors.filter((error: { field: string[]; message: string }) =>
-          !error.message.includes('already exists') &&
-          !error.message.includes('already taken')
-        )
-        
+        const nonExistenceErrors = errors.filter(
+          (error: { field: string[]; message: string }) =>
+            !error.message.includes("already exists") &&
+            !error.message.includes("already taken"),
+        );
+
         if (nonExistenceErrors.length > 0) {
-          logger.error(`Error creating definition for ${definition.namespace}.${definition.key}: ${JSON.stringify(nonExistenceErrors)}`, new Error('Metafield definition creation failed'), { component: 'google-metafield-definitions' })
+          logger.error(
+            `Error creating definition for ${definition.namespace}.${definition.key}: ${JSON.stringify(nonExistenceErrors)}`,
+            new Error("Metafield definition creation failed"),
+            { component: "google-metafield-definitions" },
+          );
         } else {
         }
       } else {
       }
-      
+
       results.push({
-        definition: definition.namespace + '.' + definition.key,
-        success: true
-      })
-      
+        definition: definition.namespace + "." + definition.key,
+        success: true,
+      });
     } catch (error) {
-      logger.error(`❌ Failed to create definition for ${definition.namespace}.${definition.key}:`, error as Error, { component: 'google-metafield-definitions' })
+      logger.error(
+        `❌ Failed to create definition for ${definition.namespace}.${definition.key}:`,
+        error as Error,
+        { component: "google-metafield-definitions" },
+      );
       results.push({
-        definition: definition.namespace + '.' + definition.key,
+        definition: definition.namespace + "." + definition.key,
         success: false,
-        error: error
-      })
+        error: error,
+      });
     }
   }
-  
-  const successful = results.filter(r => r.success).length
-  const total = results.length
-  
-  
-  return results
+
+  const _successful = results.filter((r) => r.success).length;
+  const _total = results.length;
+
+  return results;
 }

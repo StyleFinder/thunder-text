@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 /**
  * useSubscription Hook
  *
@@ -43,7 +44,7 @@ export interface UseSubscriptionResult {
  */
 export function useSubscription(): UseSubscriptionResult {
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(
-    null
+    null,
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,8 +63,7 @@ export function useSubscription(): UseSubscriptionResult {
 
       setSubscription(data.data);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Unknown error";
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
       console.error("Failed to fetch subscription:", errorMessage);
     } finally {
@@ -136,7 +136,7 @@ export function useTrialWarning(): {
  */
 export function isFeatureAvailable(
   requiredPlan: "free" | "starter" | "pro",
-  currentPlan: string | null
+  currentPlan: string | null,
 ): boolean {
   const planHierarchy = { free: 0, starter: 1, pro: 2 };
   const required = planHierarchy[requiredPlan] ?? 0;

@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 /**
  * Questionnaire Configuration
  *
@@ -15,11 +16,14 @@
  * 7. usage - always shown
  */
 
-import type { Question, QuestionnaireAnswer } from '@/types/image-generation';
-import { shouldShowSizeQuestion, getAutoSize } from './product-category-config';
+import type { Question, QuestionnaireAnswer } from "@/types/image-generation";
+import {
+  shouldShowSizeQuestion,
+  getAutoSize as _getAutoSize,
+} from "./product-category-config";
 
 // Re-export for convenience
-export { shouldShowSizeQuestion, getAutoSize } from './product-category-config';
+export { shouldShowSizeQuestion, getAutoSize } from "./product-category-config";
 
 /**
  * Questions for the guided questionnaire flow
@@ -27,218 +31,229 @@ export { shouldShowSizeQuestion, getAutoSize } from './product-category-config';
  */
 export const QUESTIONNAIRE_QUESTIONS: Question[] = [
   {
-    id: 'productType',
-    text: 'What type of product is this?',
+    id: "productType",
+    text: "What type of product is this?",
     options: [], // Options are loaded dynamically from Shopify product types
     allowCustom: true,
     isDynamic: true,
   },
   {
-    id: 'style',
-    text: 'What style of photo are you looking for?',
+    id: "style",
+    text: "What style of photo are you looking for?",
     options: [
       {
-        label: 'Professional/Studio',
-        value: 'professional',
-        icon: '📸',
-        description: 'Clean, polished shots like those in catalogs or e-commerce sites',
+        label: "Professional/Studio",
+        value: "professional",
+        icon: "📸",
+        description:
+          "Clean, polished shots like those in catalogs or e-commerce sites",
       },
       {
-        label: 'Lifestyle/Contextual',
-        value: 'lifestyle',
-        icon: '🏠',
-        description: 'Product shown in real-life settings, being used naturally',
+        label: "Lifestyle/Contextual",
+        value: "lifestyle",
+        icon: "🏠",
+        description:
+          "Product shown in real-life settings, being used naturally",
       },
       {
-        label: 'Bold & Vibrant',
-        value: 'bold',
-        icon: '🎨',
-        description: 'Eye-catching colors and creative compositions that stand out',
+        label: "Bold & Vibrant",
+        value: "bold",
+        icon: "🎨",
+        description:
+          "Eye-catching colors and creative compositions that stand out",
       },
       {
-        label: 'Minimalist/Clean',
-        value: 'minimal',
-        icon: '✨',
-        description: 'Simple, uncluttered designs with lots of white space',
+        label: "Minimalist/Clean",
+        value: "minimal",
+        icon: "✨",
+        description: "Simple, uncluttered designs with lots of white space",
       },
     ],
     allowCustom: true,
   },
   {
-    id: 'productSize',
-    text: 'How big is your product?',
+    id: "productSize",
+    text: "How big is your product?",
     options: [
       {
-        label: 'Tiny (fits in palm)',
-        value: 'tiny',
-        icon: '💎',
-        description: 'Jewelry, coins, small accessories that fit in your hand',
+        label: "Tiny (fits in palm)",
+        value: "tiny",
+        icon: "💎",
+        description: "Jewelry, coins, small accessories that fit in your hand",
       },
       {
-        label: 'Small (handheld)',
-        value: 'small',
-        icon: '📱',
-        description: 'Phone, wallet, cosmetics, small electronics',
+        label: "Small (handheld)",
+        value: "small",
+        icon: "📱",
+        description: "Phone, wallet, cosmetics, small electronics",
       },
       {
-        label: 'Tabletop/Decorative',
-        value: 'tabletop',
-        icon: '🏺',
-        description: 'Small decorative items, mini trees, vases, figurines (6-24 inches)',
+        label: "Tabletop/Decorative",
+        value: "tabletop",
+        icon: "🏺",
+        description:
+          "Small decorative items, mini trees, vases, figurines (6-24 inches)",
       },
       {
-        label: 'Medium (fits on desk)',
-        value: 'medium',
-        icon: '💻',
-        description: 'Laptop, small appliances, desk accessories',
+        label: "Medium (fits on desk)",
+        value: "medium",
+        icon: "💻",
+        description: "Laptop, small appliances, desk accessories",
       },
       {
-        label: 'Large (floor-standing)',
-        value: 'large',
-        icon: '🪴',
-        description: 'Floor lamps, full-size trees, standing items (3-6 feet)',
+        label: "Large (floor-standing)",
+        value: "large",
+        icon: "🪴",
+        description: "Floor lamps, full-size trees, standing items (3-6 feet)",
       },
       {
-        label: 'Extra Large (furniture)',
-        value: 'xlarge',
-        icon: '🛋️',
-        description: 'Furniture, large equipment, oversized items',
+        label: "Extra Large (furniture)",
+        value: "xlarge",
+        icon: "🛋️",
+        description: "Furniture, large equipment, oversized items",
       },
     ],
     allowCustom: true,
-    conditionalOn: 'productType',
+    conditionalOn: "productType",
     shouldShow: (answers: QuestionnaireAnswer[]) => {
-      const productTypeAnswer = answers.find((a) => a.questionId === 'productType');
+      const productTypeAnswer = answers.find(
+        (a) => a.questionId === "productType",
+      );
       if (!productTypeAnswer) return true; // Show by default if no answer yet
       return shouldShowSizeQuestion(productTypeAnswer.answer);
     },
   },
   {
-    id: 'environment',
-    text: 'Where should your product be shown?',
+    id: "environment",
+    text: "Where should your product be shown?",
     options: [
       {
-        label: 'Indoor (home setting)',
-        value: 'indoor_home',
-        icon: '🛋️',
-        description: 'Living room, bedroom, kitchen, or other residential spaces',
+        label: "Indoor (home setting)",
+        value: "indoor_home",
+        icon: "🛋️",
+        description:
+          "Living room, bedroom, kitchen, or other residential spaces",
       },
       {
-        label: 'Indoor (commercial)',
-        value: 'indoor_commercial',
-        icon: '🏪',
-        description: 'Office, retail store, restaurant, or professional setting',
+        label: "Indoor (commercial)",
+        value: "indoor_commercial",
+        icon: "🏪",
+        description:
+          "Office, retail store, restaurant, or professional setting",
       },
       {
-        label: 'Outdoor/Nature',
-        value: 'outdoor',
-        icon: '🌿',
-        description: 'Garden, patio, beach, forest, or other outdoor environments',
+        label: "Outdoor/Nature",
+        value: "outdoor",
+        icon: "🌿",
+        description:
+          "Garden, patio, beach, forest, or other outdoor environments",
       },
       {
-        label: 'Studio/Plain background',
-        value: 'studio',
-        icon: '⬜',
-        description: 'Clean backdrop with no distractions, focus on the product',
+        label: "Studio/Plain background",
+        value: "studio",
+        icon: "⬜",
+        description:
+          "Clean backdrop with no distractions, focus on the product",
       },
     ],
     allowCustom: true,
   },
   {
-    id: 'mood',
-    text: 'What mood or atmosphere do you want?',
+    id: "mood",
+    text: "What mood or atmosphere do you want?",
     options: [
       {
-        label: 'Luxury/Premium',
-        value: 'luxury',
-        icon: '💎',
-        description: 'Elegant, high-end feeling with rich textures and refined details',
+        label: "Luxury/Premium",
+        value: "luxury",
+        icon: "💎",
+        description:
+          "Elegant, high-end feeling with rich textures and refined details",
       },
       {
-        label: 'Cozy/Warm',
-        value: 'cozy',
-        icon: '🔥',
-        description: 'Inviting and comfortable, like a warm embrace',
+        label: "Cozy/Warm",
+        value: "cozy",
+        icon: "🔥",
+        description: "Inviting and comfortable, like a warm embrace",
       },
       {
-        label: 'Energetic/Dynamic',
-        value: 'energetic',
-        icon: '⚡',
-        description: 'Active, lively feeling with movement and excitement',
+        label: "Energetic/Dynamic",
+        value: "energetic",
+        icon: "⚡",
+        description: "Active, lively feeling with movement and excitement",
       },
       {
-        label: 'Natural/Organic',
-        value: 'natural',
-        icon: '🌱',
-        description: 'Earth tones, sustainable vibes, connection to nature',
+        label: "Natural/Organic",
+        value: "natural",
+        icon: "🌱",
+        description: "Earth tones, sustainable vibes, connection to nature",
       },
       {
-        label: 'Minimalist',
-        value: 'minimal',
-        icon: '🤍',
-        description: 'Calm, serene, and uncluttered aesthetic',
+        label: "Minimalist",
+        value: "minimal",
+        icon: "🤍",
+        description: "Calm, serene, and uncluttered aesthetic",
       },
     ],
     allowCustom: true,
   },
   {
-    id: 'lighting',
-    text: 'What kind of lighting?',
+    id: "lighting",
+    text: "What kind of lighting?",
     options: [
       {
-        label: 'Natural daylight',
-        value: 'natural',
-        icon: '☀️',
-        description: 'Soft, even light like sun through a window',
+        label: "Natural daylight",
+        value: "natural",
+        icon: "☀️",
+        description: "Soft, even light like sun through a window",
       },
       {
-        label: 'Warm ambient',
-        value: 'warm',
-        icon: '🕯️',
-        description: 'Golden, cozy tones from candles or lamps',
+        label: "Warm ambient",
+        value: "warm",
+        icon: "🕯️",
+        description: "Golden, cozy tones from candles or lamps",
       },
       {
-        label: 'Bright studio',
-        value: 'bright',
-        icon: '💡',
-        description: 'Crisp, even illumination that shows every detail',
+        label: "Bright studio",
+        value: "bright",
+        icon: "💡",
+        description: "Crisp, even illumination that shows every detail",
       },
       {
-        label: 'Dramatic/Moody',
-        value: 'dramatic',
-        icon: '🌙',
-        description: 'Strong shadows and contrast for artistic effect',
+        label: "Dramatic/Moody",
+        value: "dramatic",
+        icon: "🌙",
+        description: "Strong shadows and contrast for artistic effect",
       },
     ],
     allowCustom: true,
   },
   {
-    id: 'usage',
-    text: 'Where will you use this image?',
+    id: "usage",
+    text: "Where will you use this image?",
     options: [
       {
-        label: 'Website product page',
-        value: 'website',
-        icon: '🌐',
-        description: 'Main product photos for your online store',
+        label: "Website product page",
+        value: "website",
+        icon: "🌐",
+        description: "Main product photos for your online store",
       },
       {
-        label: 'Social media',
-        value: 'social',
-        icon: '📱',
-        description: 'Instagram, Facebook, Pinterest, or TikTok posts',
+        label: "Social media",
+        value: "social",
+        icon: "📱",
+        description: "Instagram, Facebook, Pinterest, or TikTok posts",
       },
       {
-        label: 'Ads/Promotions',
-        value: 'ads',
-        icon: '📢',
-        description: 'Paid advertising campaigns and promotional content',
+        label: "Ads/Promotions",
+        value: "ads",
+        icon: "📢",
+        description: "Paid advertising campaigns and promotional content",
       },
       {
-        label: 'Marketing materials',
-        value: 'marketing',
-        icon: '📄',
-        description: 'Brochures, emails, presentations, or print materials',
+        label: "Marketing materials",
+        value: "marketing",
+        icon: "📄",
+        description: "Brochures, emails, presentations, or print materials",
       },
     ],
     allowCustom: true,
@@ -272,7 +287,7 @@ export function getQuestionById(id: string): Question | null {
  * @returns The next question to show, or null if questionnaire is complete
  */
 export function getNextQuestion(
-  currentAnswers: QuestionnaireAnswer[]
+  currentAnswers: QuestionnaireAnswer[],
 ): { question: Question; index: number } | null {
   const answeredIds = new Set(currentAnswers.map((a) => a.questionId));
 
@@ -302,7 +317,9 @@ export function getNextQuestion(
  * @param currentAnswers - Array of answers already collected
  * @returns Array of questions that should be shown
  */
-export function getVisibleQuestions(currentAnswers: QuestionnaireAnswer[]): Question[] {
+export function getVisibleQuestions(
+  currentAnswers: QuestionnaireAnswer[],
+): Question[] {
   return QUESTIONNAIRE_QUESTIONS.filter((question) => {
     if (question.shouldShow) {
       return question.shouldShow(currentAnswers);
@@ -317,7 +334,9 @@ export function getVisibleQuestions(currentAnswers: QuestionnaireAnswer[]): Ques
  * @param currentAnswers - Array of answers already collected
  * @returns Progress information
  */
-export function getQuestionnaireProgress(currentAnswers: QuestionnaireAnswer[]): {
+export function getQuestionnaireProgress(
+  currentAnswers: QuestionnaireAnswer[],
+): {
   answered: number;
   total: number;
   percentage: number;
@@ -336,7 +355,7 @@ export function getQuestionnaireProgress(currentAnswers: QuestionnaireAnswer[]):
  * Build a summary message from questionnaire answers
  */
 export function buildAnswerSummary(
-  answers: Array<{ questionId: string; answerLabel: string }>
+  answers: Array<{ questionId: string; answerLabel: string }>,
 ): string {
   if (answers.length === 0) {
     return "Let's create an image! Describe the scene you'd like to see your product in.";
@@ -345,13 +364,13 @@ export function buildAnswerSummary(
   const parts: string[] = [];
   const answerMap = new Map(answers.map((a) => [a.questionId, a.answerLabel]));
 
-  const productType = answerMap.get('productType');
-  const style = answerMap.get('style');
-  const productSize = answerMap.get('productSize');
-  const environment = answerMap.get('environment');
-  const mood = answerMap.get('mood');
-  const lighting = answerMap.get('lighting');
-  const usage = answerMap.get('usage');
+  const productType = answerMap.get("productType");
+  const style = answerMap.get("style");
+  const productSize = answerMap.get("productSize");
+  const environment = answerMap.get("environment");
+  const mood = answerMap.get("mood");
+  const lighting = answerMap.get("lighting");
+  const usage = answerMap.get("usage");
 
   if (style) {
     parts.push(`a "${style.toLowerCase()}" style photo`);
@@ -384,7 +403,7 @@ export function buildAnswerSummary(
     return "Great! Now describe the scene you'd like to see your product in.";
   }
 
-  return `Got it! You're looking for ${parts.join(', ')}.\n\nNow it's your turn! Type a description of your scene below. For example:\n• "On a cozy fireplace mantel with holiday decorations"\n• "In a bright kitchen on a marble countertop"\n• "On a wooden desk in a modern home office"`;
+  return `Got it! You're looking for ${parts.join(", ")}.\n\nNow it's your turn! Type a description of your scene below. For example:\n• "On a cozy fireplace mantel with holiday decorations"\n• "In a bright kitchen on a marble countertop"\n• "On a wooden desk in a modern home office"`;
 }
 
 /**
@@ -392,7 +411,7 @@ export function buildAnswerSummary(
  * Returns an object that can be merged with the prompt parser's parsed values
  */
 export function mapAnswersToPromptFields(
-  answers: Array<{ questionId: string; answer: string }>
+  answers: Array<{ questionId: string; answer: string }>,
 ): {
   photographyStyle?: string;
   environmentSetting?: string;
@@ -406,43 +425,43 @@ export function mapAnswersToPromptFields(
   const answerMap = new Map(answers.map((a) => [a.questionId, a.answer]));
 
   // Map productType - used for category-based logic
-  const productType = answerMap.get('productType');
+  const productType = answerMap.get("productType");
   if (productType) {
     result.productType = productType;
   }
 
   // Map style to photographyStyle
-  const style = answerMap.get('style');
+  const style = answerMap.get("style");
   if (style) {
     result.photographyStyle = style;
   }
 
   // Map productSize - CRITICAL for proper scale/proportion
-  const productSize = answerMap.get('productSize');
+  const productSize = answerMap.get("productSize");
   if (productSize) {
     result.productSize = productSize;
   }
 
   // Map environment to environmentSetting
-  const environment = answerMap.get('environment');
+  const environment = answerMap.get("environment");
   if (environment) {
     result.environmentSetting = environment;
   }
 
   // Map mood to atmosphereIntent
-  const mood = answerMap.get('mood');
+  const mood = answerMap.get("mood");
   if (mood) {
     result.atmosphereIntent = mood;
   }
 
   // Map lighting to lightingPreference
-  const lighting = answerMap.get('lighting');
+  const lighting = answerMap.get("lighting");
   if (lighting) {
     result.lightingPreference = lighting;
   }
 
   // Map usage to intendedUse
-  const usage = answerMap.get('usage');
+  const usage = answerMap.get("usage");
   if (usage) {
     result.intendedUse = usage;
   }

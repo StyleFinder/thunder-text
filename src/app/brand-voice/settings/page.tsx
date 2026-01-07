@@ -1,18 +1,32 @@
-'use client';
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
-import { logger } from '@/lib/logger'
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { logger } from "@/lib/logger";
 import {
   Trash2,
   Loader2,
@@ -21,7 +35,7 @@ import {
   Upload,
   X,
   ArrowLeft,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface ToneSliders {
   playfulSerious: number;
@@ -59,9 +73,9 @@ interface WritingSample {
 }
 
 const defaultSettings: BrandVoiceSettings = {
-  voiceTone: '',
-  voiceStyle: '',
-  voicePersonality: '',
+  voiceTone: "",
+  voiceStyle: "",
+  voicePersonality: "",
   voiceVocabulary: { preferred: [], avoided: [] },
   toneSliders: {
     playfulSerious: 3,
@@ -71,25 +85,26 @@ const defaultSettings: BrandVoiceSettings = {
     simpleDetailed: 3,
     boldSoft: 3,
   },
-  customerTerm: '',
-  signatureSentence: '',
+  customerTerm: "",
+  signatureSentence: "",
   valuePillars: [],
-  audienceDescription: '',
-  writingSamples: '',
+  audienceDescription: "",
+  writingSamples: "",
 };
 
 export default function BrandVoiceSettingsPage() {
   const router = useRouter();
   const [settings, setSettings] = useState<BrandVoiceSettings>(defaultSettings);
-  const [originalSettings, setOriginalSettings] = useState<BrandVoiceSettings>(defaultSettings);
+  const [originalSettings, setOriginalSettings] =
+    useState<BrandVoiceSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [shopDomain, setShopDomain] = useState<string | null>(null);
-  const [newPreferredWord, setNewPreferredWord] = useState('');
-  const [newAvoidedWord, setNewAvoidedWord] = useState('');
-  const [newValuePillar, setNewValuePillar] = useState('');
+  const [newPreferredWord, setNewPreferredWord] = useState("");
+  const [newAvoidedWord, setNewAvoidedWord] = useState("");
+  const [newValuePillar, setNewValuePillar] = useState("");
 
   // Writing samples state
   const [writingSamples, setWritingSamples] = useState<WritingSample[]>([]);
@@ -97,27 +112,29 @@ export default function BrandVoiceSettingsPage() {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [sampleError, setSampleError] = useState<string | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [sampleToDelete, setSampleToDelete] = useState<WritingSample | null>(null);
+  const [sampleToDelete, setSampleToDelete] = useState<WritingSample | null>(
+    null,
+  );
   const [canUpload, setCanUpload] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showPasteModal, setShowPasteModal] = useState(false);
-  const [pastedText, setPastedText] = useState('');
-  const [pastedTextName, setPastedTextName] = useState('');
+  const [pastedText, setPastedText] = useState("");
+  const [pastedTextName, setPastedTextName] = useState("");
   const [savingPastedText, setSavingPastedText] = useState(false);
 
   // Get shop domain
   useEffect(() => {
     const initShop = async () => {
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         const params = new URLSearchParams(window.location.search);
-        const shop = params.get('shop');
+        const shop = params.get("shop");
         if (shop) {
           setShopDomain(shop);
           return;
         }
       }
       try {
-        const res = await fetch('/api/shop/me');
+        const res = await fetch("/api/shop/me");
         if (res.ok) {
           const data = await res.json();
           if (data.domain) {
@@ -125,7 +142,9 @@ export default function BrandVoiceSettingsPage() {
           }
         }
       } catch (e) {
-        logger.error('Failed to fetch shop:', e as Error, { component: 'settings' });
+        logger.error("Failed to fetch shop:", e as Error, {
+          component: "settings",
+        });
       }
     };
     initShop();
@@ -137,9 +156,9 @@ export default function BrandVoiceSettingsPage() {
 
     const loadSettings = async () => {
       try {
-        const response = await fetch('/api/business-profile/settings', {
+        const response = await fetch("/api/business-profile/settings", {
           headers: {
-            'Authorization': `Bearer ${shopDomain}`,
+            Authorization: `Bearer ${shopDomain}`,
           },
         });
 
@@ -150,11 +169,13 @@ export default function BrandVoiceSettingsPage() {
             setOriginalSettings(data.data.settings);
           }
         } else {
-          setError('Failed to load settings');
+          setError("Failed to load settings");
         }
       } catch (err) {
-        logger.error('Error loading settings:', err as Error, { component: 'settings' });
-        setError('Failed to load settings');
+        logger.error("Error loading settings:", err as Error, {
+          component: "settings",
+        });
+        setError("Failed to load settings");
       } finally {
         setLoading(false);
       }
@@ -168,8 +189,8 @@ export default function BrandVoiceSettingsPage() {
     if (!shopDomain) return;
     setSamplesLoading(true);
     try {
-      const response = await fetch('/api/business-profile/writing-samples', {
-        headers: { 'Authorization': `Bearer ${shopDomain}` },
+      const response = await fetch("/api/business-profile/writing-samples", {
+        headers: { Authorization: `Bearer ${shopDomain}` },
       });
       if (response.ok) {
         const data = await response.json();
@@ -179,7 +200,9 @@ export default function BrandVoiceSettingsPage() {
         }
       }
     } catch (err) {
-      logger.error('Error loading samples:', err as Error, { component: 'settings' });
+      logger.error("Error loading samples:", err as Error, {
+        component: "settings",
+      });
     } finally {
       setSamplesLoading(false);
     }
@@ -191,7 +214,8 @@ export default function BrandVoiceSettingsPage() {
     }
   }, [shopDomain, loadWritingSamples]);
 
-  const hasChanges = JSON.stringify(settings) !== JSON.stringify(originalSettings);
+  const hasChanges =
+    JSON.stringify(settings) !== JSON.stringify(originalSettings);
 
   const handleSave = async () => {
     if (!shopDomain) return;
@@ -201,101 +225,118 @@ export default function BrandVoiceSettingsPage() {
     setSuccess(null);
 
     try {
-      const response = await fetch('/api/business-profile/settings', {
-        method: 'PUT',
+      const response = await fetch("/api/business-profile/settings", {
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${shopDomain}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${shopDomain}`,
         },
         body: JSON.stringify({ settings }),
       });
 
       if (response.ok) {
         setOriginalSettings(settings);
-        setSuccess('Settings saved successfully!');
+        setSuccess("Settings saved successfully!");
         setTimeout(() => setSuccess(null), 3000);
       } else {
         const data = await response.json();
-        setError(data.error || 'Failed to save settings');
+        setError(data.error || "Failed to save settings");
       }
     } catch (err) {
-      logger.error('Error saving settings:', err as Error, { component: 'settings' });
-      setError('Failed to save settings');
+      logger.error("Error saving settings:", err as Error, {
+        component: "settings",
+      });
+      setError("Failed to save settings");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSliderChange = useCallback((key: keyof ToneSliders, value: number[]) => {
-    setSettings(prev => ({
-      ...prev,
-      toneSliders: {
-        ...prev.toneSliders,
-        [key]: value[0],
-      },
-    }));
-  }, []);
+  const handleSliderChange = useCallback(
+    (key: keyof ToneSliders, value: number[]) => {
+      setSettings((prev) => ({
+        ...prev,
+        toneSliders: {
+          ...prev.toneSliders,
+          [key]: value[0],
+        },
+      }));
+    },
+    [],
+  );
 
   const addPreferredWord = () => {
-    if (newPreferredWord.trim() && !settings.voiceVocabulary.preferred.includes(newPreferredWord.trim())) {
-      setSettings(prev => ({
+    if (
+      newPreferredWord.trim() &&
+      !settings.voiceVocabulary.preferred.includes(newPreferredWord.trim())
+    ) {
+      setSettings((prev) => ({
         ...prev,
         voiceVocabulary: {
           ...prev.voiceVocabulary,
-          preferred: [...prev.voiceVocabulary.preferred, newPreferredWord.trim()],
+          preferred: [
+            ...prev.voiceVocabulary.preferred,
+            newPreferredWord.trim(),
+          ],
         },
       }));
-      setNewPreferredWord('');
+      setNewPreferredWord("");
     }
   };
 
   const removePreferredWord = (word: string) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
       voiceVocabulary: {
         ...prev.voiceVocabulary,
-        preferred: prev.voiceVocabulary.preferred.filter(w => w !== word),
+        preferred: prev.voiceVocabulary.preferred.filter((w) => w !== word),
       },
     }));
   };
 
   const addAvoidedWord = () => {
-    if (newAvoidedWord.trim() && !settings.voiceVocabulary.avoided.includes(newAvoidedWord.trim())) {
-      setSettings(prev => ({
+    if (
+      newAvoidedWord.trim() &&
+      !settings.voiceVocabulary.avoided.includes(newAvoidedWord.trim())
+    ) {
+      setSettings((prev) => ({
         ...prev,
         voiceVocabulary: {
           ...prev.voiceVocabulary,
           avoided: [...prev.voiceVocabulary.avoided, newAvoidedWord.trim()],
         },
       }));
-      setNewAvoidedWord('');
+      setNewAvoidedWord("");
     }
   };
 
   const removeAvoidedWord = (word: string) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
       voiceVocabulary: {
         ...prev.voiceVocabulary,
-        avoided: prev.voiceVocabulary.avoided.filter(w => w !== word),
+        avoided: prev.voiceVocabulary.avoided.filter((w) => w !== word),
       },
     }));
   };
 
   const addValuePillar = () => {
-    if (newValuePillar.trim() && !settings.valuePillars.includes(newValuePillar.trim())) {
-      setSettings(prev => ({
+    if (
+      newValuePillar.trim() &&
+      !settings.valuePillars.includes(newValuePillar.trim())
+    ) {
+      setSettings((prev) => ({
         ...prev,
         valuePillars: [...prev.valuePillars, newValuePillar.trim()],
       }));
-      setNewValuePillar('');
+      setNewValuePillar("");
     }
   };
 
   const removeValuePillar = (pillar: string) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
-      valuePillars: prev.valuePillars.filter(p => p !== pillar),
+      valuePillars: prev.valuePillars.filter((p) => p !== pillar),
     }));
   };
 
@@ -307,12 +348,12 @@ export default function BrandVoiceSettingsPage() {
     setUploadingFile(true);
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     try {
-      const response = await fetch('/api/business-profile/writing-samples', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${shopDomain}` },
+      const response = await fetch("/api/business-profile/writing-samples", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${shopDomain}` },
         body: formData,
       });
 
@@ -320,23 +361,25 @@ export default function BrandVoiceSettingsPage() {
 
       if (response.ok && data.success) {
         await loadWritingSamples();
-        setSuccess('Writing sample uploaded successfully!');
+        setSuccess("Writing sample uploaded successfully!");
         setTimeout(() => setSuccess(null), 3000);
       } else {
-        setSampleError(data.error || 'Failed to upload file');
+        setSampleError(data.error || "Failed to upload file");
       }
     } catch (err) {
-      logger.error('Upload error:', err as Error, { component: 'settings' });
-      setSampleError('Failed to upload file');
+      logger.error("Upload error:", err as Error, { component: "settings" });
+      setSampleError("Failed to upload file");
     } finally {
       setUploadingFile(false);
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
     }
   };
 
-  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
       handleFileUpload(file);
@@ -352,22 +395,25 @@ export default function BrandVoiceSettingsPage() {
     if (!shopDomain || !sampleToDelete) return;
 
     try {
-      const response = await fetch(`/api/business-profile/writing-samples/${sampleToDelete.id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${shopDomain}` },
-      });
+      const response = await fetch(
+        `/api/business-profile/writing-samples/${sampleToDelete.id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${shopDomain}` },
+        },
+      );
 
       if (response.ok) {
         await loadWritingSamples();
-        setSuccess('Writing sample deleted successfully!');
+        setSuccess("Writing sample deleted successfully!");
         setTimeout(() => setSuccess(null), 3000);
       } else {
         const data = await response.json();
-        setSampleError(data.error || 'Failed to delete sample');
+        setSampleError(data.error || "Failed to delete sample");
       }
     } catch (err) {
-      logger.error('Delete error:', err as Error, { component: 'settings' });
-      setSampleError('Failed to delete sample');
+      logger.error("Delete error:", err as Error, { component: "settings" });
+      setSampleError("Failed to delete sample");
     } finally {
       setDeleteModalOpen(false);
       setSampleToDelete(null);
@@ -382,15 +428,16 @@ export default function BrandVoiceSettingsPage() {
 
   const getFileTypeLabel = (mimeType: string): string => {
     const typeMap: Record<string, string> = {
-      'text/plain': 'TXT',
-      'text/markdown': 'MD',
-      'text/csv': 'CSV',
-      'application/pdf': 'PDF',
-      'application/msword': 'DOC',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
-      'application/rtf': 'RTF',
+      "text/plain": "TXT",
+      "text/markdown": "MD",
+      "text/csv": "CSV",
+      "application/pdf": "PDF",
+      "application/msword": "DOC",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        "DOCX",
+      "application/rtf": "RTF",
     };
-    return typeMap[mimeType] || 'FILE';
+    return typeMap[mimeType] || "FILE";
   };
 
   const handleSavePastedText = async () => {
@@ -400,17 +447,18 @@ export default function BrandVoiceSettingsPage() {
     setSampleError(null);
 
     // Create a text file from pasted content
-    const fileName = pastedTextName.trim() || `Sample ${new Date().toLocaleDateString()}`;
-    const blob = new Blob([pastedText], { type: 'text/plain' });
-    const file = new File([blob], `${fileName}.txt`, { type: 'text/plain' });
+    const fileName =
+      pastedTextName.trim() || `Sample ${new Date().toLocaleDateString()}`;
+    const blob = new Blob([pastedText], { type: "text/plain" });
+    const file = new File([blob], `${fileName}.txt`, { type: "text/plain" });
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     try {
-      const response = await fetch('/api/business-profile/writing-samples', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${shopDomain}` },
+      const response = await fetch("/api/business-profile/writing-samples", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${shopDomain}` },
         body: formData,
       });
 
@@ -419,16 +467,16 @@ export default function BrandVoiceSettingsPage() {
       if (response.ok && data.success) {
         await loadWritingSamples();
         setShowPasteModal(false);
-        setPastedText('');
-        setPastedTextName('');
-        setSuccess('Writing sample saved successfully!');
+        setPastedText("");
+        setPastedTextName("");
+        setSuccess("Writing sample saved successfully!");
         setTimeout(() => setSuccess(null), 3000);
       } else {
-        setSampleError(data.error || 'Failed to save text');
+        setSampleError(data.error || "Failed to save text");
       }
     } catch (err) {
-      logger.error('Save error:', err as Error, { component: 'settings' });
-      setSampleError('Failed to save text');
+      logger.error("Save error:", err as Error, { component: "settings" });
+      setSampleError("Failed to save text");
     } finally {
       setSavingPastedText(false);
     }
@@ -438,7 +486,7 @@ export default function BrandVoiceSettingsPage() {
     label,
     leftLabel,
     rightLabel,
-    sliderKey
+    sliderKey,
   }: {
     label: string;
     leftLabel: string;
@@ -478,15 +526,19 @@ export default function BrandVoiceSettingsPage() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Brand Voice Settings</h1>
-          <p className="text-muted-foreground">Quick adjustments to your brand voice without redoing the interview</p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Brand Voice Settings
+          </h1>
+          <p className="text-muted-foreground">
+            Quick adjustments to your brand voice without redoing the interview
+          </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.push('/brand-voice')}>
+          <Button variant="outline" onClick={() => router.push("/brand-voice")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
-          <Button variant="outline" onClick={() => router.push('/brand-voice')}>
+          <Button variant="outline" onClick={() => router.push("/brand-voice")}>
             Business Profile
           </Button>
           <Button
@@ -496,17 +548,14 @@ export default function BrandVoiceSettingsPage() {
           >
             Discard Changes
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!hasChanges || saving}
-          >
+          <Button onClick={handleSave} disabled={!hasChanges || saving}>
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
               </>
             ) : (
-              'Save Changes'
+              "Save Changes"
             )}
           </Button>
         </div>
@@ -523,7 +572,9 @@ export default function BrandVoiceSettingsPage() {
       {success && (
         <Alert className="bg-green-50 border-green-200">
           <AlertTitle className="text-green-800">Success</AlertTitle>
-          <AlertDescription className="text-green-700">{success}</AlertDescription>
+          <AlertDescription className="text-green-700">
+            {success}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -586,7 +637,9 @@ export default function BrandVoiceSettingsPage() {
             <Input
               id="voiceTone"
               value={settings.voiceTone}
-              onChange={(e) => setSettings(prev => ({ ...prev, voiceTone: e.target.value }))}
+              onChange={(e) =>
+                setSettings((prev) => ({ ...prev, voiceTone: e.target.value }))
+              }
               placeholder="e.g., Warm, welcoming, and confident"
             />
           </div>
@@ -595,7 +648,9 @@ export default function BrandVoiceSettingsPage() {
             <Input
               id="voiceStyle"
               value={settings.voiceStyle}
-              onChange={(e) => setSettings(prev => ({ ...prev, voiceStyle: e.target.value }))}
+              onChange={(e) =>
+                setSettings((prev) => ({ ...prev, voiceStyle: e.target.value }))
+              }
               placeholder="e.g., Conversational with a touch of humor"
             />
           </div>
@@ -604,7 +659,12 @@ export default function BrandVoiceSettingsPage() {
             <Input
               id="voicePersonality"
               value={settings.voicePersonality}
-              onChange={(e) => setSettings(prev => ({ ...prev, voicePersonality: e.target.value }))}
+              onChange={(e) =>
+                setSettings((prev) => ({
+                  ...prev,
+                  voicePersonality: e.target.value,
+                }))
+              }
               placeholder="e.g., A knowledgeable friend who genuinely cares"
             />
           </div>
@@ -640,7 +700,7 @@ export default function BrandVoiceSettingsPage() {
                 value={newPreferredWord}
                 onChange={(e) => setNewPreferredWord(e.target.value)}
                 placeholder="Add a word or phrase"
-                onKeyPress={(e) => e.key === 'Enter' && addPreferredWord()}
+                onKeyPress={(e) => e.key === "Enter" && addPreferredWord()}
               />
               <Button onClick={addPreferredWord}>Add</Button>
             </div>
@@ -671,7 +731,7 @@ export default function BrandVoiceSettingsPage() {
                 value={newAvoidedWord}
                 onChange={(e) => setNewAvoidedWord(e.target.value)}
                 placeholder="Add a word to avoid"
-                onKeyPress={(e) => e.key === 'Enter' && addAvoidedWord()}
+                onKeyPress={(e) => e.key === "Enter" && addAvoidedWord()}
               />
               <Button onClick={addAvoidedWord}>Add</Button>
             </div>
@@ -686,11 +746,18 @@ export default function BrandVoiceSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="customerTerm">How do you refer to your customers?</Label>
+            <Label htmlFor="customerTerm">
+              How do you refer to your customers?
+            </Label>
             <Input
               id="customerTerm"
               value={settings.customerTerm}
-              onChange={(e) => setSettings(prev => ({ ...prev, customerTerm: e.target.value }))}
+              onChange={(e) =>
+                setSettings((prev) => ({
+                  ...prev,
+                  customerTerm: e.target.value,
+                }))
+              }
               placeholder="e.g., community members, guests, friends"
             />
             <p className="text-sm text-muted-foreground">
@@ -702,7 +769,12 @@ export default function BrandVoiceSettingsPage() {
             <Input
               id="signatureSentence"
               value={settings.signatureSentence}
-              onChange={(e) => setSettings(prev => ({ ...prev, signatureSentence: e.target.value }))}
+              onChange={(e) =>
+                setSettings((prev) => ({
+                  ...prev,
+                  signatureSentence: e.target.value,
+                }))
+              }
               placeholder="e.g., Elevating everyday moments"
             />
             <p className="text-sm text-muted-foreground">
@@ -735,7 +807,7 @@ export default function BrandVoiceSettingsPage() {
                 value={newValuePillar}
                 onChange={(e) => setNewValuePillar(e.target.value)}
                 placeholder="Add a value pillar"
-                onKeyPress={(e) => e.key === 'Enter' && addValuePillar()}
+                onKeyPress={(e) => e.key === "Enter" && addValuePillar()}
               />
               <Button onClick={addValuePillar}>Add</Button>
             </div>
@@ -753,7 +825,12 @@ export default function BrandVoiceSettingsPage() {
           <Textarea
             id="audienceDescription"
             value={settings.audienceDescription}
-            onChange={(e) => setSettings(prev => ({ ...prev, audienceDescription: e.target.value }))}
+            onChange={(e) =>
+              setSettings((prev) => ({
+                ...prev,
+                audienceDescription: e.target.value,
+              }))
+            }
             placeholder="Describe your ideal customer..."
             rows={4}
           />
@@ -770,7 +847,8 @@ export default function BrandVoiceSettingsPage() {
             <div>
               <CardTitle>Writing Samples</CardTitle>
               <CardDescription>
-                Upload examples of copy that represent your brand voice (max 3 files)
+                Upload examples of copy that represent your brand voice (max 3
+                files)
               </CardDescription>
             </div>
             <span className="text-sm text-muted-foreground">
@@ -805,7 +883,8 @@ export default function BrandVoiceSettingsPage() {
                     <div>
                       <p className="font-medium text-sm">{sample.file_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {getFileTypeLabel(sample.file_type)} • {formatFileSize(sample.file_size)}
+                        {getFileTypeLabel(sample.file_type)} •{" "}
+                        {formatFileSize(sample.file_size)}
                       </p>
                     </div>
                   </div>
@@ -822,7 +901,9 @@ export default function BrandVoiceSettingsPage() {
           ) : (
             <div className="flex flex-col items-center justify-center py-8 bg-muted/50 rounded-lg">
               <FileText className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">No writing samples uploaded yet</p>
+              <p className="text-sm text-muted-foreground">
+                No writing samples uploaded yet
+              </p>
             </div>
           )}
 
@@ -830,7 +911,10 @@ export default function BrandVoiceSettingsPage() {
           {canUpload && (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <Button onClick={() => setShowPasteModal(true)} variant="outline">
+                <Button
+                  onClick={() => setShowPasteModal(true)}
+                  variant="outline"
+                >
                   Paste Text
                 </Button>
                 <span className="text-sm text-muted-foreground">or</span>
@@ -847,7 +931,7 @@ export default function BrandVoiceSettingsPage() {
                 <label htmlFor="file-upload" className="cursor-pointer">
                   <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm font-medium">
-                    {uploadingFile ? 'Uploading...' : 'Upload file'}
+                    {uploadingFile ? "Uploading..." : "Upload file"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Drop file here (TXT, MD, PDF, DOC, DOCX)
@@ -860,7 +944,8 @@ export default function BrandVoiceSettingsPage() {
           {!canUpload && (
             <Alert>
               <AlertDescription>
-                Maximum of 3 writing samples reached. Delete one to upload a new file.
+                Maximum of 3 writing samples reached. Delete one to upload a new
+                file.
               </AlertDescription>
             </Alert>
           )}
@@ -873,7 +958,8 @@ export default function BrandVoiceSettingsPage() {
           <DialogHeader>
             <DialogTitle>Delete writing sample?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{sampleToDelete?.file_name}&quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;{sampleToDelete?.file_name}
+              &quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -916,7 +1002,8 @@ export default function BrandVoiceSettingsPage() {
                 rows={8}
               />
               <p className="text-xs text-muted-foreground">
-                Include headlines, product descriptions, emails, or social posts that capture your voice
+                Include headlines, product descriptions, emails, or social posts
+                that capture your voice
               </p>
             </div>
           </div>
@@ -925,8 +1012,8 @@ export default function BrandVoiceSettingsPage() {
               variant="outline"
               onClick={() => {
                 setShowPasteModal(false);
-                setPastedText('');
-                setPastedTextName('');
+                setPastedText("");
+                setPastedTextName("");
               }}
             >
               Cancel
@@ -941,7 +1028,7 @@ export default function BrandVoiceSettingsPage() {
                   Saving...
                 </>
               ) : (
-                'Save Sample'
+                "Save Sample"
               )}
             </Button>
           </DialogFooter>
@@ -950,20 +1037,20 @@ export default function BrandVoiceSettingsPage() {
 
       {/* Bottom Actions */}
       <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={() => router.push('/brand-voice/profile')}>
+        <Button
+          variant="outline"
+          onClick={() => router.push("/brand-voice/profile")}
+        >
           Cancel
         </Button>
-        <Button
-          onClick={handleSave}
-          disabled={!hasChanges || saving}
-        >
+        <Button onClick={handleSave} disabled={!hasChanges || saving}>
           {saving ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Saving...
             </>
           ) : (
-            'Save Changes'
+            "Save Changes"
           )}
         </Button>
       </div>

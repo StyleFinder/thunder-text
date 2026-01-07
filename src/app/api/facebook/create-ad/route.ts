@@ -612,7 +612,7 @@ export async function POST(request: NextRequest) {
       });
     } catch (submitError) {
       // Log the error with full context
-      const errorMessage =
+      const _errorMessage =
         submitError instanceof Error ? submitError.message : "Unknown error";
       const errorCode =
         submitError instanceof FacebookAPIError

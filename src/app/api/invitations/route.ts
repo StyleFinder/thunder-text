@@ -28,14 +28,14 @@ export async function GET(req: NextRequest) {
   if (!shop) {
     return NextResponse.json(
       { error: "Shop parameter required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
   try {
     // Get the shop - try shop_domain first, then email (for standalone users)
     let masterShop = null;
-    let shopError = null;
+    let _shopError = null;
 
     // Try by shop_domain first (works for Shopify stores and some standalone)
     const { data: shopByDomain, error: domainError } = await supabaseAdmin
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
       if (shopByEmail) {
         masterShop = shopByEmail;
       } else {
-        shopError = domainError || emailError;
+        _shopError = domainError || emailError;
       }
     }
 
@@ -69,7 +69,10 @@ export async function GET(req: NextRequest) {
 
     // For standalone users, get the master Shopify shop ID for invitation tracking
     let masterShopId = masterShop.id;
-    if (masterShop.shop_type === "standalone" && masterShop.linked_shopify_domain) {
+    if (
+      masterShop.shop_type === "standalone" &&
+      masterShop.linked_shopify_domain
+    ) {
       // Get the linked master Shopify shop
       const { data: linkedShop } = await supabaseAdmin
         .from("shops")
@@ -96,7 +99,7 @@ export async function GET(req: NextRequest) {
         expires_at,
         accepted_at,
         accepted_by_user_id
-      `
+      `,
       )
       .eq("master_shop_id", masterShopId)
       .order("created_at", { ascending: false });
@@ -115,15 +118,18 @@ export async function GET(req: NextRequest) {
       });
       return NextResponse.json(
         { error: "Failed to fetch invitations" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     // Get invitation limits - use the standalone user's ID if that's what we have
     // The get_invitation_limit function checks shops.plan for that shop
-    const { data: limitData } = await supabaseAdmin.rpc("get_invitation_limit", {
-      shop_id: masterShop.id, // Use the original shop found (standalone or shopify)
-    });
+    const { data: limitData } = await supabaseAdmin.rpc(
+      "get_invitation_limit",
+      {
+        shop_id: masterShop.id, // Use the original shop found (standalone or shopify)
+      },
+    );
 
     const { data: usedData } = await supabaseAdmin.rpc("get_used_invitations", {
       shop_id: masterShopId,
@@ -150,7 +156,9 @@ export async function GET(req: NextRequest) {
     // Get staff members (accepted invitations with user accounts)
     const { data: staffMembers } = await supabaseAdmin
       .from("shops")
-      .select("id, email, display_name, created_at, staff_role, invited_via_invitation_id")
+      .select(
+        "id, email, display_name, created_at, staff_role, invited_via_invitation_id",
+      )
       .eq("linked_shopify_domain", staffLookupDomain)
       .eq("shop_type", "standalone")
       .eq("is_active", true);
@@ -171,7 +179,7 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -188,7 +196,7 @@ export async function POST(req: NextRequest) {
     if (!shop || !email) {
       return NextResponse.json(
         { error: "Shop and email are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -197,7 +205,7 @@ export async function POST(req: NextRequest) {
     if (!emailRegex.test(email)) {
       return NextResponse.json(
         { error: "Invalid email format" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -232,7 +240,7 @@ export async function POST(req: NextRequest) {
         if (!realMaster) {
           return NextResponse.json(
             { error: "Master shop not found" },
-            { status: 404 }
+            { status: 404 },
           );
         }
         // Continue with realMaster
@@ -241,7 +249,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json(
         { error: "Shop not found or not authorized to send invitations" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -252,7 +260,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -265,7 +273,7 @@ async function createInvitation(
     store_name: string | null;
   },
   email: string,
-  name?: string
+  name?: string,
 ) {
   const normalizedEmail = email.toLowerCase().trim();
 
@@ -280,7 +288,7 @@ async function createInvitation(
   if (existingUser) {
     return NextResponse.json(
       { error: "This email is already a team member" },
-      { status: 409 }
+      { status: 409 },
     );
   }
 
@@ -295,7 +303,7 @@ async function createInvitation(
         error:
           "Invitation limit reached. Upgrade your plan to invite more team members.",
       },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -311,7 +319,7 @@ async function createInvitation(
   if (existingInvite) {
     return NextResponse.json(
       { error: "An invitation is already pending for this email" },
-      { status: 409 }
+      { status: 409 },
     );
   }
 
@@ -339,7 +347,7 @@ async function createInvitation(
     });
     return NextResponse.json(
       { error: "Failed to create invitation" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -368,11 +376,15 @@ async function createInvitation(
     });
   } catch (emailError) {
     // Log error but don't fail - invitation is created
-    logger.error("[Invitations] Failed to send invitation email", emailError as Error, {
-      component: "invitations",
-      invitationId: invitation.id,
-      email: normalizedEmail,
-    });
+    logger.error(
+      "[Invitations] Failed to send invitation email",
+      emailError as Error,
+      {
+        component: "invitations",
+        invitationId: invitation.id,
+        email: normalizedEmail,
+      },
+    );
   }
 
   return NextResponse.json({

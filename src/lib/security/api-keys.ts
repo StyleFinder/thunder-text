@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 /**
  * API Key Security & Validation
  *
@@ -8,14 +9,14 @@
  * - Rate limiting support
  */
 
-import { createHash, randomBytes } from 'crypto';
-import { supabaseAdmin } from '@/lib/supabase/admin';
-import { logger } from '@/lib/logger';
+import { createHash, randomBytes } from "crypto";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { logger } from "@/lib/logger";
 
 /**
  * API Key Scopes
  */
-export type ApiKeyScope = 'read' | 'write' | 'delete' | 'admin';
+export type ApiKeyScope = "read" | "write" | "delete" | "admin";
 
 /**
  * API Key validation result
@@ -45,8 +46,8 @@ export interface ApiKeyCreationResult {
  * Format: tt_live_xxxxxxxxxxxxxxxxxxxx (32 random chars)
  */
 export function generateApiKey(): string {
-  const prefix = 'tt_live_';
-  const randomPart = randomBytes(24).toString('base64url');
+  const prefix = "tt_live_";
+  const randomPart = randomBytes(24).toString("base64url");
   return `${prefix}${randomPart}`;
 }
 
@@ -55,7 +56,7 @@ export function generateApiKey(): string {
  * Uses SHA-256 for fast validation
  */
 export function hashApiKey(apiKey: string): string {
-  return createHash('sha256').update(apiKey).digest('hex');
+  return createHash("sha256").update(apiKey).digest("hex");
 }
 
 /**
@@ -71,12 +72,12 @@ export function getKeyPrefix(apiKey: string): string {
 export async function createApiKey(
   shopId: string,
   name: string,
-  scopes: ApiKeyScope[] = ['read'],
+  scopes: ApiKeyScope[] = ["read"],
   options?: {
     rateLimitPerMinute?: number;
     rateLimitPerDay?: number;
     expiresAt?: Date;
-  }
+  },
 ): Promise<ApiKeyCreationResult> {
   try {
     const apiKey = generateApiKey();
@@ -84,7 +85,7 @@ export async function createApiKey(
     const keyPrefix = getKeyPrefix(apiKey);
 
     const { data, error } = await supabaseAdmin
-      .from('api_keys')
+      .from("api_keys")
       .insert({
         shop_id: shopId,
         name,
@@ -93,24 +94,28 @@ export async function createApiKey(
         scopes,
         rate_limit_per_minute: options?.rateLimitPerMinute || 60,
         rate_limit_per_day: options?.rateLimitPerDay || 10000,
-        expires_at: options?.expiresAt?.toISOString() || null
+        expires_at: options?.expiresAt?.toISOString() || null,
       })
-      .select('id')
+      .select("id")
       .single();
 
     if (error) {
-      logger.error('[API Keys] Failed to create API key:', error as unknown as Error, {
-        component: 'api-keys',
-        shopId
-      });
-      return { success: false, error: 'Failed to create API key' };
+      logger.error(
+        "[API Keys] Failed to create API key:",
+        error as unknown as Error,
+        {
+          component: "api-keys",
+          shopId,
+        },
+      );
+      return { success: false, error: "Failed to create API key" };
     }
 
-    logger.info('[API Keys] API key created', {
-      component: 'api-keys',
+    logger.info("[API Keys] API key created", {
+      component: "api-keys",
       shopId,
       keyId: data.id,
-      keyPrefix
+      keyPrefix,
     });
 
     // Return the raw API key only once - it cannot be retrieved again
@@ -118,84 +123,91 @@ export async function createApiKey(
       success: true,
       keyId: data.id,
       apiKey,
-      keyPrefix
+      keyPrefix,
     };
   } catch (error) {
-    logger.error('[API Keys] Error creating API key:', error as Error, {
-      component: 'api-keys'
+    logger.error("[API Keys] Error creating API key:", error as Error, {
+      component: "api-keys",
     });
-    return { success: false, error: 'Internal error' };
+    return { success: false, error: "Internal error" };
   }
 }
 
 /**
  * Validate an API key and return associated data
  */
-export async function validateApiKey(apiKey: string): Promise<ApiKeyValidationResult> {
+export async function validateApiKey(
+  apiKey: string,
+): Promise<ApiKeyValidationResult> {
   try {
-    if (!apiKey || !apiKey.startsWith('tt_live_')) {
-      return { valid: false, error: 'Invalid API key format' };
+    if (!apiKey || !apiKey.startsWith("tt_live_")) {
+      return { valid: false, error: "Invalid API key format" };
     }
 
     const keyHash = hashApiKey(apiKey);
 
     // Look up the key
     const { data: keyData, error } = await supabaseAdmin
-      .from('api_keys')
-      .select('id, shop_id, scopes, is_active, expires_at, rate_limit_per_minute, rate_limit_per_day, usage_count')
-      .eq('key_hash', keyHash)
+      .from("api_keys")
+      .select(
+        "id, shop_id, scopes, is_active, expires_at, rate_limit_per_minute, rate_limit_per_day, usage_count",
+      )
+      .eq("key_hash", keyHash)
       .single();
 
     if (error || !keyData) {
-      logger.warn('[API Keys] Invalid API key attempted', {
-        component: 'api-keys',
-        keyPrefix: getKeyPrefix(apiKey)
+      logger.warn("[API Keys] Invalid API key attempted", {
+        component: "api-keys",
+        keyPrefix: getKeyPrefix(apiKey),
       });
-      return { valid: false, error: 'Invalid API key' };
+      return { valid: false, error: "Invalid API key" };
     }
 
     // Check if key is active
     if (!keyData.is_active) {
-      return { valid: false, error: 'API key has been revoked' };
+      return { valid: false, error: "API key has been revoked" };
     }
 
     // Check expiration
     if (keyData.expires_at && new Date(keyData.expires_at) < new Date()) {
-      return { valid: false, error: 'API key has expired' };
+      return { valid: false, error: "API key has expired" };
     }
 
     // Check rate limits (basic check - could be enhanced with Redis)
     // For now, just increment usage count
     await supabaseAdmin
-      .from('api_keys')
+      .from("api_keys")
       .update({
         last_used_at: new Date().toISOString(),
-        usage_count: (keyData.usage_count || 0) + 1
+        usage_count: (keyData.usage_count || 0) + 1,
       })
-      .eq('id', keyData.id);
+      .eq("id", keyData.id);
 
     return {
       valid: true,
       keyId: keyData.id,
       shopId: keyData.shop_id,
-      scopes: keyData.scopes as ApiKeyScope[]
+      scopes: keyData.scopes as ApiKeyScope[],
     };
   } catch (error) {
-    logger.error('[API Keys] Error validating API key:', error as Error, {
-      component: 'api-keys'
+    logger.error("[API Keys] Error validating API key:", error as Error, {
+      component: "api-keys",
     });
-    return { valid: false, error: 'Validation error' };
+    return { valid: false, error: "Validation error" };
   }
 }
 
 /**
  * Check if an API key has a specific scope
  */
-export function hasScope(scopes: ApiKeyScope[], requiredScope: ApiKeyScope): boolean {
+export function hasScope(
+  scopes: ApiKeyScope[],
+  requiredScope: ApiKeyScope,
+): boolean {
   // Admin scope has all permissions
-  if (scopes.includes('admin')) return true;
+  if (scopes.includes("admin")) return true;
   // Write scope includes read
-  if (requiredScope === 'read' && scopes.includes('write')) return true;
+  if (requiredScope === "read" && scopes.includes("write")) return true;
   return scopes.includes(requiredScope);
 }
 
@@ -205,38 +217,42 @@ export function hasScope(scopes: ApiKeyScope[], requiredScope: ApiKeyScope): boo
 export async function revokeApiKey(
   keyId: string,
   shopId: string,
-  reason?: string
+  reason?: string,
 ): Promise<boolean> {
   try {
     const { error } = await supabaseAdmin
-      .from('api_keys')
+      .from("api_keys")
       .update({
         is_active: false,
         revoked_at: new Date().toISOString(),
-        revoked_reason: reason || 'Revoked by user'
+        revoked_reason: reason || "Revoked by user",
       })
-      .eq('id', keyId)
-      .eq('shop_id', shopId);
+      .eq("id", keyId)
+      .eq("shop_id", shopId);
 
     if (error) {
-      logger.error('[API Keys] Failed to revoke API key:', error as unknown as Error, {
-        component: 'api-keys',
-        keyId
-      });
+      logger.error(
+        "[API Keys] Failed to revoke API key:",
+        error as unknown as Error,
+        {
+          component: "api-keys",
+          keyId,
+        },
+      );
       return false;
     }
 
-    logger.info('[API Keys] API key revoked', {
-      component: 'api-keys',
+    logger.info("[API Keys] API key revoked", {
+      component: "api-keys",
       keyId,
       shopId,
-      reason
+      reason,
     });
 
     return true;
   } catch (error) {
-    logger.error('[API Keys] Error revoking API key:', error as Error, {
-      component: 'api-keys'
+    logger.error("[API Keys] Error revoking API key:", error as Error, {
+      component: "api-keys",
     });
     return false;
   }
@@ -255,26 +271,24 @@ export async function logApiKeyUsage(
     ipAddress?: string;
     userAgent?: string;
     errorMessage?: string;
-  }
+  },
 ): Promise<void> {
   try {
-    await supabaseAdmin
-      .from('api_key_usage_log')
-      .insert({
-        api_key_id: apiKeyId,
-        endpoint,
-        method,
-        status_code: statusCode,
-        response_time_ms: responseTimeMs,
-        ip_address: options?.ipAddress || null,
-        user_agent: options?.userAgent || null,
-        error_message: options?.errorMessage || null
-      });
+    await supabaseAdmin.from("api_key_usage_log").insert({
+      api_key_id: apiKeyId,
+      endpoint,
+      method,
+      status_code: statusCode,
+      response_time_ms: responseTimeMs,
+      ip_address: options?.ipAddress || null,
+      user_agent: options?.userAgent || null,
+      error_message: options?.errorMessage || null,
+    });
   } catch (error) {
     // Don't fail the request if logging fails
-    logger.error('[API Keys] Failed to log usage:', error as Error, {
-      component: 'api-keys',
-      apiKeyId
+    logger.error("[API Keys] Failed to log usage:", error as Error, {
+      component: "api-keys",
+      apiKeyId,
     });
   }
 }
@@ -285,7 +299,7 @@ export async function logApiKeyUsage(
 export async function getApiKeyUsageStats(
   keyId: string,
   shopId: string,
-  days: number = 7
+  days: number = 7,
 ): Promise<{
   totalRequests: number;
   successRate: number;
@@ -298,38 +312,42 @@ export async function getApiKeyUsageStats(
 
     // Verify ownership
     const { data: keyData } = await supabaseAdmin
-      .from('api_keys')
-      .select('id')
-      .eq('id', keyId)
-      .eq('shop_id', shopId)
+      .from("api_keys")
+      .select("id")
+      .eq("id", keyId)
+      .eq("shop_id", shopId)
       .single();
 
     if (!keyData) return null;
 
     // Get usage logs
     const { data: logs } = await supabaseAdmin
-      .from('api_key_usage_log')
-      .select('endpoint, status_code, response_time_ms')
-      .eq('api_key_id', keyId)
-      .gte('created_at', startDate.toISOString());
+      .from("api_key_usage_log")
+      .select("endpoint, status_code, response_time_ms")
+      .eq("api_key_id", keyId)
+      .gte("created_at", startDate.toISOString());
 
     if (!logs || logs.length === 0) {
       return {
         totalRequests: 0,
         successRate: 0,
         avgResponseTime: 0,
-        topEndpoints: []
+        topEndpoints: [],
       };
     }
 
     const totalRequests = logs.length;
-    const successfulRequests = logs.filter(l => l.status_code && l.status_code < 400).length;
+    const successfulRequests = logs.filter(
+      (l) => l.status_code && l.status_code < 400,
+    ).length;
     const successRate = (successfulRequests / totalRequests) * 100;
-    const avgResponseTime = logs.reduce((sum, l) => sum + (l.response_time_ms || 0), 0) / totalRequests;
+    const avgResponseTime =
+      logs.reduce((sum, l) => sum + (l.response_time_ms || 0), 0) /
+      totalRequests;
 
     // Count endpoints
     const endpointCounts: Record<string, number> = {};
-    logs.forEach(l => {
+    logs.forEach((l) => {
       endpointCounts[l.endpoint] = (endpointCounts[l.endpoint] || 0) + 1;
     });
 
@@ -342,11 +360,11 @@ export async function getApiKeyUsageStats(
       totalRequests,
       successRate: Math.round(successRate * 100) / 100,
       avgResponseTime: Math.round(avgResponseTime),
-      topEndpoints
+      topEndpoints,
     };
   } catch (error) {
-    logger.error('[API Keys] Error getting usage stats:', error as Error, {
-      component: 'api-keys'
+    logger.error("[API Keys] Error getting usage stats:", error as Error, {
+      component: "api-keys",
     });
     return null;
   }
@@ -355,33 +373,41 @@ export async function getApiKeyUsageStats(
 /**
  * List all API keys for a shop
  */
-export async function listApiKeys(shopId: string): Promise<{
-  id: string;
-  name: string;
-  keyPrefix: string;
-  scopes: ApiKeyScope[];
-  isActive: boolean;
-  lastUsedAt: string | null;
-  usageCount: number;
-  createdAt: string;
-  expiresAt: string | null;
-}[]> {
+export async function listApiKeys(shopId: string): Promise<
+  {
+    id: string;
+    name: string;
+    keyPrefix: string;
+    scopes: ApiKeyScope[];
+    isActive: boolean;
+    lastUsedAt: string | null;
+    usageCount: number;
+    createdAt: string;
+    expiresAt: string | null;
+  }[]
+> {
   try {
     const { data, error } = await supabaseAdmin
-      .from('api_keys')
-      .select('id, name, key_prefix, scopes, is_active, last_used_at, usage_count, created_at, expires_at')
-      .eq('shop_id', shopId)
-      .order('created_at', { ascending: false });
+      .from("api_keys")
+      .select(
+        "id, name, key_prefix, scopes, is_active, last_used_at, usage_count, created_at, expires_at",
+      )
+      .eq("shop_id", shopId)
+      .order("created_at", { ascending: false });
 
     if (error) {
-      logger.error('[API Keys] Error listing API keys:', error as unknown as Error, {
-        component: 'api-keys',
-        shopId
-      });
+      logger.error(
+        "[API Keys] Error listing API keys:",
+        error as unknown as Error,
+        {
+          component: "api-keys",
+          shopId,
+        },
+      );
       return [];
     }
 
-    return (data || []).map(key => ({
+    return (data || []).map((key) => ({
       id: key.id,
       name: key.name,
       keyPrefix: key.key_prefix,
@@ -390,11 +416,11 @@ export async function listApiKeys(shopId: string): Promise<{
       lastUsedAt: key.last_used_at,
       usageCount: key.usage_count || 0,
       createdAt: key.created_at,
-      expiresAt: key.expires_at
+      expiresAt: key.expires_at,
     }));
   } catch (error) {
-    logger.error('[API Keys] Error listing API keys:', error as Error, {
-      component: 'api-keys'
+    logger.error("[API Keys] Error listing API keys:", error as Error, {
+      component: "api-keys",
     });
     return [];
   }
@@ -409,18 +435,18 @@ export async function listApiKeys(shopId: string): Promise<{
  */
 export function validateEnvironmentVariables(): void {
   const required = [
-    'NEXT_PUBLIC_SUPABASE_URL',
-    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-    'SUPABASE_SERVICE_KEY',
-    'OPENAI_API_KEY'
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_KEY",
+    "OPENAI_API_KEY",
   ];
 
-  const missing = required.filter(key => !process.env[key]);
+  const missing = required.filter((key) => !process.env[key]);
 
   if (missing.length > 0) {
     throw new Error(
-      `Missing required environment variables: ${missing.join(', ')}\n` +
-      'Please check your .env.local file.'
+      `Missing required environment variables: ${missing.join(", ")}\n` +
+        "Please check your .env.local file.",
     );
   }
 }
@@ -432,7 +458,7 @@ export function validateEnvironmentVariables(): void {
 export function logAPIUsage(
   _service: string,
   _operation: string,
-  _metadata?: Record<string, unknown>
+  _metadata?: Record<string, unknown>,
 ): void {
   // Placeholder for future analytics integration
   // In production, you might want to send this to an analytics service
@@ -442,15 +468,15 @@ export function logAPIUsage(
  * Get OpenAI API key securely (server-side only)
  */
 export function getOpenAIKey(): string {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     throw new Error(
-      'Security violation: OpenAI API key accessed from client-side code.'
+      "Security violation: OpenAI API key accessed from client-side code.",
     );
   }
 
   const key = process.env.OPENAI_API_KEY;
   if (!key) {
-    throw new Error('OPENAI_API_KEY not found in environment variables.');
+    throw new Error("OPENAI_API_KEY not found in environment variables.");
   }
 
   return key;
@@ -460,15 +486,15 @@ export function getOpenAIKey(): string {
  * Get Supabase service key securely (server-side only)
  */
 export function getSupabaseServiceKey(): string {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     throw new Error(
-      'Security violation: Supabase service key accessed from client-side code.'
+      "Security violation: Supabase service key accessed from client-side code.",
     );
   }
 
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!key) {
-    throw new Error('SUPABASE_SERVICE_KEY not found in environment variables.');
+    throw new Error("SUPABASE_SERVICE_KEY not found in environment variables.");
   }
 
   return key;
@@ -479,7 +505,7 @@ export function getSupabaseServiceKey(): string {
  */
 export function maskSensitiveData(key: string): string {
   if (!key || key.length < 8) {
-    return '****';
+    return "****";
   }
   return `${key.substring(0, 4)}...${key.substring(key.length - 4)}`;
 }
@@ -495,12 +521,17 @@ export function checkAPIKeyConfiguration(): {
   const missing: string[] = [];
   const warnings: string[] = [];
 
-  if (!process.env.OPENAI_API_KEY) missing.push('OPENAI_API_KEY');
-  if (!process.env.SUPABASE_SERVICE_KEY) missing.push('SUPABASE_SERVICE_KEY');
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) missing.push('NEXT_PUBLIC_SUPABASE_URL');
-  if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) missing.push('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  if (!process.env.OPENAI_API_KEY) missing.push("OPENAI_API_KEY");
+  if (!process.env.SUPABASE_SERVICE_KEY) missing.push("SUPABASE_SERVICE_KEY");
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL)
+    missing.push("NEXT_PUBLIC_SUPABASE_URL");
+  if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+    missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
-  if (process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.startsWith('sk-')) {
+  if (
+    process.env.OPENAI_API_KEY &&
+    !process.env.OPENAI_API_KEY.startsWith("sk-")
+  ) {
     warnings.push('OPENAI_API_KEY should start with "sk-"');
   }
 
@@ -511,21 +542,22 @@ export function checkAPIKeyConfiguration(): {
  * Environment-specific API key management
  */
 export const API_KEY_CONFIG = {
-  development: { rateLimitMultiplier: 2, logLevel: 'debug' },
-  staging: { rateLimitMultiplier: 1.5, logLevel: 'info' },
-  production: { rateLimitMultiplier: 1, logLevel: 'warn' }
+  development: { rateLimitMultiplier: 2, logLevel: "debug" },
+  staging: { rateLimitMultiplier: 1.5, logLevel: "info" },
+  production: { rateLimitMultiplier: 1, logLevel: "warn" },
 } as const;
 
 /**
  * Get current environment
  */
-export function getEnvironment(): 'development' | 'staging' | 'production' {
+export function getEnvironment(): "development" | "staging" | "production" {
   const env = process.env.NODE_ENV;
-  if (env === 'production') {
+  if (env === "production") {
     // Check for staging indicators (Render preview environments)
-    const isStaging = process.env.RENDER_SERVICE_TYPE === 'preview' ||
-                      process.env.IS_PREVIEW === 'true';
-    return isStaging ? 'staging' : 'production';
+    const isStaging =
+      process.env.RENDER_SERVICE_TYPE === "preview" ||
+      process.env.IS_PREVIEW === "true";
+    return isStaging ? "staging" : "production";
   }
-  return 'development';
+  return "development";
 }

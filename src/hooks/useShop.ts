@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-imports -- Hook intentionally wraps app-layer context */
 "use client";
 
 import { useSearchParams } from "next/navigation";
@@ -48,9 +49,9 @@ export function useShop() {
   const shopId = contextValue?.shopId || shopIdFromSession || null;
 
   const shopDomain =
-    contextValue?.shopDomain ||  // From context (UUID route)
-    shopFromParams ||             // From URL params (legacy)
-    shopDomainFromSession ||      // From session
+    contextValue?.shopDomain || // From context (UUID route)
+    shopFromParams || // From URL params (legacy)
+    shopDomainFromSession || // From session
     null;
 
   // `shop` is the best identifier for API calls that expect ?shop= param
@@ -117,7 +118,7 @@ export function useRequiredShop() {
   if (!shopData.isLoading && !shopData.hasShop) {
     throw new Error(
       "Shop information is required but not available. " +
-      "Ensure you're on a shop route or have an authenticated session."
+        "Ensure you're on a shop route or have an authenticated session.",
     );
   }
 

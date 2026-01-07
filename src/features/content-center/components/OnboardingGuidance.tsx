@@ -1,8 +1,15 @@
-'use client'
+/* eslint-disable react/no-unescaped-entities -- Quotes and apostrophes in JSX text are intentional */
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle,
   XCircle,
@@ -10,22 +17,22 @@ import {
   FileText,
   Target,
   TrendingUp,
-  Lightbulb
-} from 'lucide-react'
+  Lightbulb,
+} from "lucide-react";
 
 interface OnboardingGuidanceProps {
-  activeSampleCount: number
-  totalSampleCount: number
-  className?: string
+  activeSampleCount: number;
+  totalSampleCount: number;
+  className?: string;
 }
 
 export function OnboardingGuidance({
   activeSampleCount,
-  totalSampleCount,
-  className = ''
+  totalSampleCount: _totalSampleCount,
+  className = "",
 }: OnboardingGuidanceProps) {
-  const isReady = activeSampleCount >= 3
-  const progressPercentage = Math.min((activeSampleCount / 3) * 100, 100)
+  const isReady = activeSampleCount >= 3;
+  const progressPercentage = Math.min((activeSampleCount / 3) * 100, 100);
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -39,7 +46,7 @@ export function OnboardingGuidance({
           <CardDescription>
             {isReady
               ? "You're ready to generate your voice profile!"
-              : `${3 - activeSampleCount} more sample${3 - activeSampleCount !== 1 ? 's' : ''} needed`}
+              : `${3 - activeSampleCount} more sample${3 - activeSampleCount !== 1 ? "s" : ""} needed`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -53,7 +60,7 @@ export function OnboardingGuidance({
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-500 ${
-                  isReady ? 'bg-green-600' : 'bg-primary'
+                  isReady ? "bg-green-600" : "bg-primary"
                 }`}
                 style={{ width: `${progressPercentage}%` }}
               />
@@ -62,7 +69,9 @@ export function OnboardingGuidance({
               {isReady ? (
                 <>
                   <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-green-600 font-medium">Ready to generate!</span>
+                  <span className="text-green-600 font-medium">
+                    Ready to generate!
+                  </span>
                 </>
               ) : (
                 <>
@@ -94,25 +103,33 @@ export function OnboardingGuidance({
             </div>
             <div className="space-y-2 ml-7">
               <div className="flex items-start gap-2">
-                <Badge variant="outline" className="mt-0.5">Blog</Badge>
+                <Badge variant="outline" className="mt-0.5">
+                  Blog
+                </Badge>
                 <p className="text-sm text-muted-foreground">
                   Personal blog posts that showcase your authentic voice
                 </p>
               </div>
               <div className="flex items-start gap-2">
-                <Badge variant="outline" className="mt-0.5">Email</Badge>
+                <Badge variant="outline" className="mt-0.5">
+                  Email
+                </Badge>
                 <p className="text-sm text-muted-foreground">
                   Newsletters or customer emails you've written
                 </p>
               </div>
               <div className="flex items-start gap-2">
-                <Badge variant="outline" className="mt-0.5">Description</Badge>
+                <Badge variant="outline" className="mt-0.5">
+                  Description
+                </Badge>
                 <p className="text-sm text-muted-foreground">
                   Product descriptions you personally crafted
                 </p>
               </div>
               <div className="flex items-start gap-2">
-                <Badge variant="outline" className="mt-0.5">Social</Badge>
+                <Badge variant="outline" className="mt-0.5">
+                  Social
+                </Badge>
                 <p className="text-sm text-muted-foreground">
                   Longer social media posts that reflect your style
                 </p>
@@ -169,28 +186,33 @@ export function OnboardingGuidance({
             <Alert>
               <FileText className="h-4 w-4" />
               <AlertDescription>
-                <strong>Variety is key:</strong> Upload different types of content (blogs, emails, descriptions) to capture your full range.
+                <strong>Variety is key:</strong> Upload different types of
+                content (blogs, emails, descriptions) to capture your full
+                range.
               </AlertDescription>
             </Alert>
 
             <Alert>
               <FileText className="h-4 w-4" />
               <AlertDescription>
-                <strong>Quality over quantity:</strong> 3-5 excellent samples work better than 10 mediocre ones.
+                <strong>Quality over quantity:</strong> 3-5 excellent samples
+                work better than 10 mediocre ones.
               </AlertDescription>
             </Alert>
 
             <Alert>
               <FileText className="h-4 w-4" />
               <AlertDescription>
-                <strong>Recent is better:</strong> Use your most recent writing to capture your current voice.
+                <strong>Recent is better:</strong> Use your most recent writing
+                to capture your current voice.
               </AlertDescription>
             </Alert>
 
             <Alert>
               <FileText className="h-4 w-4" />
               <AlertDescription>
-                <strong>Original content only:</strong> Only upload content you personally wrote. This ensures authenticity.
+                <strong>Original content only:</strong> Only upload content you
+                personally wrote. This ensures authenticity.
               </AlertDescription>
             </Alert>
           </div>
@@ -205,19 +227,27 @@ export function OnboardingGuidance({
         <CardContent>
           <div className="space-y-3 text-sm">
             <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-muted-foreground">Word count per sample</span>
+              <span className="text-muted-foreground">
+                Word count per sample
+              </span>
               <span className="font-medium">500 - 5,000 words</span>
             </div>
             <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-muted-foreground">Minimum samples needed</span>
+              <span className="text-muted-foreground">
+                Minimum samples needed
+              </span>
               <span className="font-medium">3 active samples</span>
             </div>
             <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-muted-foreground">Maximum samples allowed</span>
+              <span className="text-muted-foreground">
+                Maximum samples allowed
+              </span>
               <span className="font-medium">10 total samples</span>
             </div>
             <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-muted-foreground">File formats supported</span>
+              <span className="text-muted-foreground">
+                File formats supported
+              </span>
               <span className="font-medium">.txt, .doc, .docx, .pdf</span>
             </div>
             <div className="flex items-center justify-between py-2">
@@ -239,13 +269,16 @@ export function OnboardingGuidance({
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-medium text-green-600">Good Sample</span>
+                <span className="text-sm font-medium text-green-600">
+                  Good Sample
+                </span>
               </div>
               <div className="bg-background p-4 rounded-lg border border-green-600/20">
                 <p className="text-sm italic">
-                  "I've been running my boutique for three years now, and let me tell you—finding
-                  the perfect inventory balance is like trying to predict the weather. Some seasons,
-                  florals fly off the shelves. Others, everyone wants black on black..."
+                  "I've been running my boutique for three years now, and let me
+                  tell you—finding the perfect inventory balance is like trying
+                  to predict the weather. Some seasons, florals fly off the
+                  shelves. Others, everyone wants black on black..."
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -259,13 +292,16 @@ export function OnboardingGuidance({
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <XCircle className="h-4 w-4 text-red-600" />
-                <span className="text-sm font-medium text-red-600">Poor Sample</span>
+                <span className="text-sm font-medium text-red-600">
+                  Poor Sample
+                </span>
               </div>
               <div className="bg-background p-4 rounded-lg border border-red-600/20">
                 <p className="text-sm italic">
-                  "Inventory management is crucial for retail success. Proper forecasting and data
-                  analysis enable businesses to optimize stock levels and maximize profitability
-                  through strategic purchasing decisions..."
+                  "Inventory management is crucial for retail success. Proper
+                  forecasting and data analysis enable businesses to optimize
+                  stock levels and maximize profitability through strategic
+                  purchasing decisions..."
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -279,5 +315,5 @@ export function OnboardingGuidance({
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

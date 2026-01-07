@@ -10,7 +10,7 @@ import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import { GET, PUT } from "@/app/api/shop/profile/route";
 import { NextRequest } from "next/server";
 import { createServiceClient } from "../../utils/auth-helpers";
-import { TEST_SHOP, TENANT_A } from "../../utils/test-constants";
+import { _TEST_SHOP, TENANT_A } from "../../utils/test-constants";
 
 describe("/api/shop/profile", () => {
   const BASE_URL = "http://localhost:3050/api/shop/profile";
@@ -184,7 +184,9 @@ describe("/api/shop/profile", () => {
         const request = createGetRequest({ shop: testShopDomain });
         const response = await GET(request);
 
-        expect(response.headers.get("content-type")).toContain("application/json");
+        expect(response.headers.get("content-type")).toContain(
+          "application/json",
+        );
       });
     });
   });
@@ -281,7 +283,7 @@ describe("/api/shop/profile", () => {
         });
 
         const response = await PUT(request);
-        const data = await response.json();
+        const _data = await response.json();
 
         expect(response.status).toBe(200);
 
@@ -303,7 +305,7 @@ describe("/api/shop/profile", () => {
         });
 
         const response = await PUT(request);
-        const data = await response.json();
+        const _data = await response.json();
 
         expect(response.status).toBe(200);
 
@@ -325,7 +327,7 @@ describe("/api/shop/profile", () => {
         });
 
         const response = await PUT(request);
-        const data = await response.json();
+        const _data = await response.json();
 
         expect(response.status).toBe(200);
 
@@ -346,7 +348,7 @@ describe("/api/shop/profile", () => {
         });
 
         const response = await PUT(request);
-        const data = await response.json();
+        const _data = await response.json();
 
         expect(response.status).toBe(200);
 
@@ -368,7 +370,7 @@ describe("/api/shop/profile", () => {
         });
 
         const response = await PUT(request);
-        const data = await response.json();
+        const _data = await response.json();
 
         expect(response.status).toBe(200);
 
@@ -390,7 +392,7 @@ describe("/api/shop/profile", () => {
         });
 
         const response = await PUT(request);
-        const data = await response.json();
+        const _data = await response.json();
 
         expect(response.status).toBe(200);
 
@@ -402,9 +404,10 @@ describe("/api/shop/profile", () => {
           .single();
 
         // advertising_goals may be stored as JSON string or array depending on column type
-        const storedGoals = typeof shopRecord!.advertising_goals === 'string'
-          ? JSON.parse(shopRecord!.advertising_goals)
-          : shopRecord!.advertising_goals;
+        const storedGoals =
+          typeof shopRecord!.advertising_goals === "string"
+            ? JSON.parse(shopRecord!.advertising_goals)
+            : shopRecord!.advertising_goals;
         expect(storedGoals).toEqual(goals);
       });
 
@@ -497,7 +500,9 @@ describe("/api/shop/profile", () => {
 
         const response = await PUT(request);
 
-        expect(response.headers.get("content-type")).toContain("application/json");
+        expect(response.headers.get("content-type")).toContain(
+          "application/json",
+        );
       });
     });
 

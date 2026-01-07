@@ -9,6 +9,7 @@ export { ContentTypeSelector } from "./components/ContentTypeSelector";
 export { GenerationControls } from "./components/GenerationControls";
 export { GenerationResultView } from "./components/GenerationResultView";
 export { OnboardingGuidance } from "./components/OnboardingGuidance";
+export { ProductAnimator } from "./components/product-animator";
 export { RichTextEditor } from "./components/RichTextEditor";
 export { SampleList } from "./components/SampleList";
 export { SampleUpload } from "./components/SampleUpload";

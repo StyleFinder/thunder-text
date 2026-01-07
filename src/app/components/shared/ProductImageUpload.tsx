@@ -1,29 +1,36 @@
-'use client'
+"use client";
 
-import { useState, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Upload, X, Image as ImageIcon, Info } from 'lucide-react'
-import { colors } from '@/lib/design-system/colors'
+import { useState, useCallback } from "react";
+import Image from "next/image";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { _Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Upload, X, Image as ImageIcon, Info } from "lucide-react";
+import { colors } from "@/lib/design-system/colors";
 
 export interface UploadedFile {
-  file: File
-  preview: string
+  file: File;
+  preview: string;
 }
 
 interface ProductImageUploadProps {
-  title?: string
-  description?: string
-  allowMultiple?: boolean
-  maxFiles?: number
-  existingImages?: string[]
-  useExistingImages?: boolean
-  onFilesAdded: (files: UploadedFile[]) => void
-  onExistingImagesToggle?: (useExisting: boolean) => void
+  title?: string;
+  description?: string;
+  allowMultiple?: boolean;
+  maxFiles?: number;
+  existingImages?: string[];
+  useExistingImages?: boolean;
+  onFilesAdded: (files: UploadedFile[]) => void;
+  onExistingImagesToggle?: (useExisting: boolean) => void;
 }
 
 export function ProductImageUpload({
@@ -34,77 +41,86 @@ export function ProductImageUpload({
   existingImages = [],
   useExistingImages = false,
   onFilesAdded,
-  onExistingImagesToggle
+  onExistingImagesToggle,
 }: ProductImageUploadProps) {
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
-  const [rejectedFiles, setRejectedFiles] = useState<File[]>([])
-  const [isDragging, setIsDragging] = useState(false)
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [rejectedFiles, setRejectedFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const validImageTypes = ['image/gif', 'image/jpeg', 'image/png', 'image/webp']
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const validImageTypes = [
+    "image/gif",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+  ];
 
   const handleFiles = useCallback(
     (files: FileList | File[]) => {
-      const fileArray = Array.from(files)
-      const accepted: File[] = []
-      const rejected: File[] = []
+      const fileArray = Array.from(files);
+      const accepted: File[] = [];
+      const rejected: File[] = [];
 
       fileArray.forEach((file) => {
         if (validImageTypes.includes(file.type)) {
-          accepted.push(file)
+          accepted.push(file);
         } else {
-          rejected.push(file)
+          rejected.push(file);
         }
-      })
+      });
 
-      const newFiles = accepted.map(file => ({
+      const newFiles = accepted.map((file) => ({
         file,
-        preview: URL.createObjectURL(file)
-      }))
+        preview: URL.createObjectURL(file),
+      }));
 
-      const updatedFiles = [...uploadedFiles, ...newFiles].slice(0, maxFiles)
-      setUploadedFiles(updatedFiles)
-      setRejectedFiles(rejected)
-      onFilesAdded(updatedFiles)
+      const updatedFiles = [...uploadedFiles, ...newFiles].slice(0, maxFiles);
+      setUploadedFiles(updatedFiles);
+      setRejectedFiles(rejected);
+      onFilesAdded(updatedFiles);
     },
-    [uploadedFiles, maxFiles, onFilesAdded, validImageTypes]
-  )
+    [uploadedFiles, maxFiles, onFilesAdded, validImageTypes],
+  );
 
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault()
-      setIsDragging(false)
+      e.preventDefault();
+      setIsDragging(false);
 
       if (e.dataTransfer.files) {
-        handleFiles(e.dataTransfer.files)
+        handleFiles(e.dataTransfer.files);
       }
     },
-    [handleFiles]
-  )
+    [handleFiles],
+  );
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
-        handleFiles(e.target.files)
+        handleFiles(e.target.files);
       }
     },
-    [handleFiles]
-  )
+    [handleFiles],
+  );
 
-  const removeFile = useCallback((index: number) => {
-    const newFiles = uploadedFiles.filter((_, i) => i !== index)
-    setUploadedFiles(newFiles)
-    onFilesAdded(newFiles)
-  }, [uploadedFiles, onFilesAdded])
+  const removeFile = useCallback(
+    (index: number) => {
+      const newFiles = uploadedFiles.filter((_, i) => i !== index);
+      setUploadedFiles(newFiles);
+      onFilesAdded(newFiles);
+    },
+    [uploadedFiles, onFilesAdded],
+  );
 
   return (
     <Card>
@@ -124,7 +140,9 @@ export function ProductImageUpload({
               <Checkbox
                 id="use-existing"
                 checked={useExistingImages}
-                onCheckedChange={(checked) => onExistingImagesToggle?.(!!checked)}
+                onCheckedChange={(checked) =>
+                  onExistingImagesToggle?.(!!checked)
+                }
               />
               <Label
                 htmlFor="use-existing"
@@ -143,10 +161,12 @@ export function ProductImageUpload({
                     style={{ backgroundColor: colors.backgroundLight }}
                   >
                     <div className="w-24 h-24 relative rounded overflow-hidden">
-                      <img
+                      <Image
                         src={image}
                         alt={`Product image ${index + 1}`}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        unoptimized
                       />
                     </div>
                   </div>
@@ -180,14 +200,14 @@ export function ProductImageUpload({
             className={`
               border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
               transition-colors duration-200
-              ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+              ${isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-gray-400"}
             `}
-            onClick={() => document.getElementById('file-input')?.click()}
+            onClick={() => document.getElementById("file-input")?.click()}
           >
             <input
               id="file-input"
               type="file"
-              accept={validImageTypes.join(',')}
+              accept={validImageTypes.join(",")}
               multiple={allowMultiple}
               onChange={handleFileInput}
               className="hidden"
@@ -195,7 +215,10 @@ export function ProductImageUpload({
 
             {uploadedFiles.length === 0 ? (
               <div className="space-y-2">
-                <ImageIcon className="w-12 h-12 mx-auto" style={{ color: colors.grayText }} />
+                <ImageIcon
+                  className="w-12 h-12 mx-auto"
+                  style={{ color: colors.grayText }}
+                />
                 <div>
                   <p className="text-sm font-medium">Add images</p>
                   <p className="text-xs" style={{ color: colors.grayText }}>
@@ -212,16 +235,18 @@ export function ProductImageUpload({
                       className="relative group"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="w-24 h-24 rounded overflow-hidden">
-                        <img
+                      <div className="w-24 h-24 rounded overflow-hidden relative">
+                        <Image
                           src={file.preview}
                           alt={file.file.name}
-                          className="w-full h-full object-cover"
+                          fill
+                          className="object-cover"
+                          unoptimized
                         />
                       </div>
                       <button
                         onClick={() => removeFile(index)}
-                        className="absolute -top-2 -right-2 rounded-full p-1 shadow-lg transition-opacity"
+                        className="absolute -top-2 -right-2 rounded-full p-1 shadow-lg transition-opacity z-10"
                         style={{
                           backgroundColor: colors.error,
                           color: colors.white,
@@ -233,28 +258,33 @@ export function ProductImageUpload({
                   ))}
                 </div>
                 <p className="text-sm" style={{ color: colors.grayText }}>
-                  {uploadedFiles.length} of {maxFiles} images uploaded. Click an image to remove it.
+                  {uploadedFiles.length} of {maxFiles} images uploaded. Click an
+                  image to remove it.
                 </p>
               </div>
             )}
           </div>
 
-          {!useExistingImages && uploadedFiles.length === 0 && existingImages.length === 0 && (
-            <p className="text-xs" style={{ color: colors.grayText }}>
-              AI works best with product images. Either use existing images or upload new ones for better results.
-            </p>
-          )}
+          {!useExistingImages &&
+            uploadedFiles.length === 0 &&
+            existingImages.length === 0 && (
+              <p className="text-xs" style={{ color: colors.grayText }}>
+                AI works best with product images. Either use existing images or
+                upload new ones for better results.
+              </p>
+            )}
         </div>
 
         {rejectedFiles.length > 0 && (
           <Alert variant="destructive">
             <Info className="h-4 w-4" />
             <AlertDescription>
-              Some files were rejected. Please upload only images (JPG, PNG, GIF, WebP).
+              Some files were rejected. Please upload only images (JPG, PNG,
+              GIF, WebP).
             </AlertDescription>
           </Alert>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

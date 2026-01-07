@@ -6,7 +6,7 @@
  * which later gets merged with a real Shopify store during OAuth callback.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
+import { describe, it, expect, afterAll } from "@jest/globals";
 import { POST } from "@/app/api/auth/signup/route";
 import { NextRequest } from "next/server";
 import { createServiceClient } from "../../utils/auth-helpers";
@@ -352,7 +352,9 @@ describe("POST /api/auth/signup", () => {
       const secondData = await secondResponse.json();
 
       expect(secondResponse.status).toBe(409);
-      expect(secondData.error).toBe("An account with this email already exists");
+      expect(secondData.error).toBe(
+        "An account with this email already exists",
+      );
     });
 
     it("should reject signup with existing email (case insensitive)", async () => {
@@ -378,7 +380,9 @@ describe("POST /api/auth/signup", () => {
       const secondData = await secondResponse.json();
 
       expect(secondResponse.status).toBe(409);
-      expect(secondData.error).toBe("An account with this email already exists");
+      expect(secondData.error).toBe(
+        "An account with this email already exists",
+      );
     });
   });
 
@@ -425,7 +429,9 @@ describe("POST /api/auth/signup", () => {
 
       const response = await POST(request);
 
-      expect(response.headers.get("content-type")).toContain("application/json");
+      expect(response.headers.get("content-type")).toContain(
+        "application/json",
+      );
     });
   });
 });

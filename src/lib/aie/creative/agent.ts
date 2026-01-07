@@ -430,7 +430,6 @@ Examples:
   /**
    * Build icon/emoji usage guidelines
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private buildIconGuidelines(_platform: AiePlatform): string {
     return `
 ═══════════════════════════════════════════════════════════════

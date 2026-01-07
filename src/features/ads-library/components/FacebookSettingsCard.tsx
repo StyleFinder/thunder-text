@@ -9,37 +9,40 @@
  * - Which metrics trigger alerts
  */
 
-'use client'
+/* eslint-disable react/no-unescaped-entities -- Quotes and apostrophes in JSX text are intentional */
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, AlertCircle, CheckCircle2, Trash2, Info } from 'lucide-react'
-import { logger } from '@/lib/logger'
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, AlertCircle, CheckCircle2, Trash2, Info } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface FacebookNotificationSettings {
-  id?: string
-  primary_email: string
-  additional_emails: string[]
-  custom_conversion_benchmark: number
-  custom_roas_benchmark: number
-  alert_threshold_percentage: number
-  notify_on_conversion: boolean
-  notify_on_roas: boolean
-  is_enabled: boolean
+  id?: string;
+  primary_email: string;
+  additional_emails: string[];
+  custom_conversion_benchmark: number;
+  custom_roas_benchmark: number;
+  alert_threshold_percentage: number;
+  notify_on_conversion: boolean;
+  notify_on_roas: boolean;
+  is_enabled: boolean;
 }
 
 interface FacebookSettingsCardProps {
-  shop: string
+  shop: string;
 }
 
-export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps) {
+export default function FacebookSettingsCard({
+  shop,
+}: FacebookSettingsCardProps) {
   const [settings, setSettings] = useState<FacebookNotificationSettings>({
-    primary_email: '',
+    primary_email: "",
     additional_emails: [],
     custom_conversion_benchmark: 3.0,
     custom_roas_benchmark: 3.0,
@@ -47,119 +50,124 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
     notify_on_conversion: true,
     notify_on_roas: true,
     is_enabled: true,
-  })
-  const [newEmail, setNewEmail] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  });
+  const [newEmail, setNewEmail] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     if (shop) {
-      fetchSettings()
+      fetchSettings();
     }
-  }, [shop])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shop]);
 
   const fetchSettings = async () => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
-      const response = await fetch(`/api/facebook/settings?shop=${shop}`)
-      const data = await response.json()
+      const response = await fetch(`/api/facebook/settings?shop=${shop}`);
+      const data = await response.json();
 
       if (data.success && data.data) {
-        setSettings(data.data)
+        setSettings(data.data);
       }
     } catch (err) {
-      logger.error('Error fetching Facebook settings:', err as Error, { component: 'FacebookSettingsCard' })
-      setError('Failed to load settings')
+      logger.error("Error fetching Facebook settings:", err as Error, {
+        component: "FacebookSettingsCard",
+      });
+      setError("Failed to load settings");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleSave = async () => {
     try {
-      setSaving(true)
-      setError(null)
-      setSuccess(false)
+      setSaving(true);
+      setError(null);
+      setSuccess(false);
 
       // Validate primary email
       if (!settings.primary_email || !isValidEmail(settings.primary_email)) {
-        setError('Please enter a valid primary email address')
-        return
+        setError("Please enter a valid primary email address");
+        return;
       }
 
       // Validate benchmarks
       if (settings.custom_conversion_benchmark <= 0) {
-        setError('Conversion rate benchmark must be greater than 0')
-        return
+        setError("Conversion rate benchmark must be greater than 0");
+        return;
       }
 
       if (settings.custom_roas_benchmark <= 0) {
-        setError('ROAS benchmark must be greater than 0')
-        return
+        setError("ROAS benchmark must be greater than 0");
+        return;
       }
 
-      const response = await fetch('/api/facebook/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/facebook/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           shop,
           ...settings,
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to save settings')
+        throw new Error(data.error || "Failed to save settings");
       }
 
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      logger.error('Error saving settings:', err as Error, { component: 'FacebookSettingsCard' })
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
+      logger.error("Error saving settings:", err as Error, {
+        component: "FacebookSettingsCard",
+      });
+      setError(err instanceof Error ? err.message : "Failed to save settings");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const isValidEmail = (email: string): boolean => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  }
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
 
   const handleAddEmail = () => {
-    if (!newEmail) return
+    if (!newEmail) return;
 
     if (!isValidEmail(newEmail)) {
-      setError('Please enter a valid email address')
-      return
+      setError("Please enter a valid email address");
+      return;
     }
 
     if (settings.additional_emails.includes(newEmail)) {
-      setError('This email is already added')
-      return
+      setError("This email is already added");
+      return;
     }
 
     setSettings({
       ...settings,
       additional_emails: [...settings.additional_emails, newEmail],
-    })
-    setNewEmail('')
-    setError(null)
-  }
+    });
+    setNewEmail("");
+    setError(null);
+  };
 
   const handleRemoveEmail = (emailToRemove: string) => {
     setSettings({
       ...settings,
       additional_emails: settings.additional_emails.filter(
-        (email) => email !== emailToRemove
+        (email) => email !== emailToRemove,
       ),
-    })
-  }
+    });
+  };
 
   if (loading) {
     return (
@@ -171,7 +179,7 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
           </p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -179,7 +187,8 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
       <CardHeader>
         <CardTitle>Facebook Ad Alert Settings</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">
-          Receive daily email alerts at 6 AM ET when campaigns fall below your benchmarks
+          Receive daily email alerts at 6 AM ET when campaigns fall below your
+          benchmarks
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -188,7 +197,12 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="flex items-center justify-between">
               <span>{error}</span>
-              <button onClick={() => setError(null)} className="ml-2 text-sm underline">Dismiss</button>
+              <button
+                onClick={() => setError(null)}
+                className="ml-2 text-sm underline"
+              >
+                Dismiss
+              </button>
             </AlertDescription>
           </Alert>
         )}
@@ -197,14 +211,17 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
           <Alert className="border-green-600 bg-green-50">
             <CheckCircle2 className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-700">
-              Settings saved successfully! You'll receive alerts starting tomorrow at 6 AM ET.
+              Settings saved successfully! You'll receive alerts starting
+              tomorrow at 6 AM ET.
             </AlertDescription>
           </Alert>
         )}
 
         {/* Email Configuration */}
         <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-foreground">Email Recipients</h4>
+          <h4 className="text-sm font-semibold text-foreground">
+            Email Recipients
+          </h4>
 
           <div className="space-y-2">
             <Label htmlFor="primary-email">
@@ -248,7 +265,9 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
 
             <div className="flex items-end gap-2">
               <div className="flex-1 space-y-2">
-                <Label htmlFor="new-email" className="sr-only">Additional Email</Label>
+                <Label htmlFor="new-email" className="sr-only">
+                  Additional Email
+                </Label>
                 <Input
                   id="new-email"
                   type="email"
@@ -257,9 +276,9 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
                   placeholder="additional-email@example.com"
                   autoComplete="off"
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      handleAddEmail()
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddEmail();
                     }
                   }}
                 />
@@ -273,11 +292,15 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
 
         {/* Benchmark Configuration */}
         <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-foreground">Performance Benchmarks</h4>
+          <h4 className="text-sm font-semibold text-foreground">
+            Performance Benchmarks
+          </h4>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="conversion-benchmark">Conversion Rate Benchmark (%)</Label>
+              <Label htmlFor="conversion-benchmark">
+                Conversion Rate Benchmark (%)
+              </Label>
               <div className="relative">
                 <Input
                   id="conversion-benchmark"
@@ -286,7 +309,8 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      custom_conversion_benchmark: parseFloat(e.target.value) || 0,
+                      custom_conversion_benchmark:
+                        parseFloat(e.target.value) || 0,
                     })
                   }
                   min={0}
@@ -355,7 +379,9 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
 
         {/* Alert Triggers */}
         <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-foreground">Alert Triggers</h4>
+          <h4 className="text-sm font-semibold text-foreground">
+            Alert Triggers
+          </h4>
 
           <div className="space-y-3">
             <div className="flex items-start space-x-2">
@@ -363,11 +389,17 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
                 id="notify-conversion"
                 checked={settings.notify_on_conversion}
                 onCheckedChange={(checked) =>
-                  setSettings({ ...settings, notify_on_conversion: checked as boolean })
+                  setSettings({
+                    ...settings,
+                    notify_on_conversion: checked as boolean,
+                  })
                 }
               />
               <div className="space-y-1">
-                <Label htmlFor="notify-conversion" className="text-sm font-normal cursor-pointer">
+                <Label
+                  htmlFor="notify-conversion"
+                  className="text-sm font-normal cursor-pointer"
+                >
                   Alert on Conversion Rate
                 </Label>
                 <p className="text-xs text-muted-foreground">
@@ -381,11 +413,17 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
                 id="notify-roas"
                 checked={settings.notify_on_roas}
                 onCheckedChange={(checked) =>
-                  setSettings({ ...settings, notify_on_roas: checked as boolean })
+                  setSettings({
+                    ...settings,
+                    notify_on_roas: checked as boolean,
+                  })
                 }
               />
               <div className="space-y-1">
-                <Label htmlFor="notify-roas" className="text-sm font-normal cursor-pointer">
+                <Label
+                  htmlFor="notify-roas"
+                  className="text-sm font-normal cursor-pointer"
+                >
                   Alert on ROAS
                 </Label>
                 <p className="text-xs text-muted-foreground">
@@ -403,7 +441,10 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
                 }
               />
               <div className="space-y-1">
-                <Label htmlFor="enable-alerts" className="text-sm font-normal cursor-pointer">
+                <Label
+                  htmlFor="enable-alerts"
+                  className="text-sm font-normal cursor-pointer"
+                >
                   Enable Email Alerts
                 </Label>
                 <p className="text-xs text-muted-foreground">
@@ -427,7 +468,7 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
                 Saving...
               </>
             ) : (
-              'Save Settings'
+              "Save Settings"
             )}
           </Button>
         </div>
@@ -439,12 +480,17 @@ export default function FacebookSettingsCard({ shop }: FacebookSettingsCardProps
             <p className="font-semibold text-sm mb-1">How it works:</p>
             <ul className="text-xs space-y-1 list-disc list-inside">
               <li>Alerts run daily at 6 AM Eastern Time</li>
-              <li>You'll receive one email per day for underperforming campaigns</li>
-              <li>Alerts include campaign names, metrics, and direct links to Facebook Ads</li>
+              <li>
+                You'll receive one email per day for underperforming campaigns
+              </li>
+              <li>
+                Alerts include campaign names, metrics, and direct links to
+                Facebook Ads
+              </li>
             </ul>
           </AlertDescription>
         </Alert>
       </CardContent>
     </Card>
-  )
+  );
 }

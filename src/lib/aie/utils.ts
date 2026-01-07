@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 /**
  * AIE Utility Functions
  * Helper functions for the AIE module
@@ -9,14 +10,14 @@ import type {
   AIEVariantType,
   AIEHookTechnique,
   AIETone,
-} from './types';
+} from "./types";
 
 /**
  * Validate platform value
  */
 export function isValidPlatform(platform: string): platform is AIEPlatform {
-  return ['meta', 'instagram', 'google', 'tiktok', 'pinterest'].includes(
-    platform
+  return ["meta", "instagram", "google", "tiktok", "pinterest"].includes(
+    platform,
   );
 }
 
@@ -24,9 +25,13 @@ export function isValidPlatform(platform: string): platform is AIEPlatform {
  * Validate goal value
  */
 export function isValidGoal(goal: string): goal is AIEGoal {
-  return ['awareness', 'engagement', 'conversion', 'traffic', 'app_installs'].includes(
-    goal
-  );
+  return [
+    "awareness",
+    "engagement",
+    "conversion",
+    "traffic",
+    "app_installs",
+  ].includes(goal);
 }
 
 /**
@@ -34,42 +39,42 @@ export function isValidGoal(goal: string): goal is AIEGoal {
  */
 export function determineVariantTypes(
   platform: AIEPlatform,
-  goal: AIEGoal
+  goal: AIEGoal,
 ): AIEVariantType[] {
   // Always generate 3 variants with different approaches
   const variantTypes: AIEVariantType[] = [];
 
   // Strategy 1: Choose primary variant type based on goal
-  if (goal === 'conversion') {
-    variantTypes.push('benefit'); // Lead with clear benefits
-  } else if (goal === 'engagement') {
-    variantTypes.push('emotional'); // Emotional connection
-  } else if (goal === 'awareness') {
-    variantTypes.push('storytelling'); // Brand narrative
+  if (goal === "conversion") {
+    variantTypes.push("benefit"); // Lead with clear benefits
+  } else if (goal === "engagement") {
+    variantTypes.push("emotional"); // Emotional connection
+  } else if (goal === "awareness") {
+    variantTypes.push("storytelling"); // Brand narrative
   } else {
-    variantTypes.push('benefit'); // Default to benefit-driven
+    variantTypes.push("benefit"); // Default to benefit-driven
   }
 
   // Strategy 2: Platform-specific best performer
-  if (platform === 'meta' || platform === 'instagram') {
-    variantTypes.push('ugc'); // UGC performs well on Meta/IG
-  } else if (platform === 'google') {
-    variantTypes.push('urgency'); // Urgency works well for search intent
+  if (platform === "meta" || platform === "instagram") {
+    variantTypes.push("ugc"); // UGC performs well on Meta/IG
+  } else if (platform === "google") {
+    variantTypes.push("urgency"); // Urgency works well for search intent
   } else {
-    variantTypes.push('social_proof'); // Social proof is universal
+    variantTypes.push("social_proof"); // Social proof is universal
   }
 
   // Strategy 3: Alternative approach for testing
   const remainingTypes: AIEVariantType[] = [
-    'emotional',
-    'benefit',
-    'ugc',
-    'storytelling',
-    'urgency',
-    'social_proof',
+    "emotional",
+    "benefit",
+    "ugc",
+    "storytelling",
+    "urgency",
+    "social_proof",
   ];
   const available = remainingTypes.filter((t) => !variantTypes.includes(t));
-  variantTypes.push(available[0] || 'emotional');
+  variantTypes.push(available[0] || "emotional");
 
   return variantTypes.slice(0, 3);
 }
@@ -78,15 +83,15 @@ export function determineVariantTypes(
  * Select hook technique based on variant type
  */
 export function selectHookTechnique(
-  variantType: AIEVariantType
+  variantType: AIEVariantType,
 ): AIEHookTechnique {
   const hookMap: Record<AIEVariantType, AIEHookTechnique> = {
-    emotional: 'pain_point',
-    benefit: 'benefit',
-    ugc: 'testimonial',
-    storytelling: 'question',
-    urgency: 'urgency',
-    social_proof: 'social_proof',
+    emotional: "pain_point",
+    benefit: "benefit",
+    ugc: "testimonial",
+    storytelling: "question",
+    urgency: "urgency",
+    social_proof: "social_proof",
   };
 
   return hookMap[variantType];
@@ -97,25 +102,25 @@ export function selectHookTechnique(
  */
 export function selectTone(
   variantType: AIEVariantType,
-  platform: AIEPlatform
+  platform: AIEPlatform,
 ): AIETone {
   // Platform-specific tone preferences
-  if (platform === 'instagram') {
-    return variantType === 'ugc' ? 'casual' : 'playful';
+  if (platform === "instagram") {
+    return variantType === "ugc" ? "casual" : "playful";
   }
 
-  if (platform === 'google') {
-    return 'professional';
+  if (platform === "google") {
+    return "professional";
   }
 
   // Variant-specific tones
   const toneMap: Record<AIEVariantType, AIETone> = {
-    emotional: 'empathetic',
-    benefit: 'authoritative',
-    ugc: 'casual',
-    storytelling: 'casual',
-    urgency: 'urgent',
-    social_proof: 'professional',
+    emotional: "empathetic",
+    benefit: "authoritative",
+    ugc: "casual",
+    storytelling: "casual",
+    urgency: "urgent",
+    social_proof: "professional",
   };
 
   return toneMap[variantType];
@@ -126,7 +131,7 @@ export function selectTone(
  */
 export function extractCategory(
   imageCategory?: string,
-  productDescription?: string
+  productDescription?: string,
 ): string {
   if (imageCategory) {
     return imageCategory.toLowerCase();
@@ -134,15 +139,23 @@ export function extractCategory(
 
   // Attempt to infer from description
   const categoryKeywords: Record<string, string[]> = {
-    apparel: ['clothing', 'shirt', 'dress', 'pants', 'jacket', 'fashion', 'wear'],
-    beauty: ['skincare', 'makeup', 'beauty', 'cosmetic', 'serum', 'cream'],
-    electronics: ['phone', 'laptop', 'headphones', 'gadget', 'device', 'tech'],
-    home: ['furniture', 'decor', 'kitchen', 'bedroom', 'home'],
-    fitness: ['workout', 'fitness', 'yoga', 'exercise', 'gym'],
-    food: ['food', 'snack', 'meal', 'recipe', 'organic'],
+    apparel: [
+      "clothing",
+      "shirt",
+      "dress",
+      "pants",
+      "jacket",
+      "fashion",
+      "wear",
+    ],
+    beauty: ["skincare", "makeup", "beauty", "cosmetic", "serum", "cream"],
+    electronics: ["phone", "laptop", "headphones", "gadget", "device", "tech"],
+    home: ["furniture", "decor", "kitchen", "bedroom", "home"],
+    fitness: ["workout", "fitness", "yoga", "exercise", "gym"],
+    food: ["food", "snack", "meal", "recipe", "organic"],
   };
 
-  const desc = (productDescription || '').toLowerCase();
+  const desc = (productDescription || "").toLowerCase();
 
   for (const [category, keywords] of Object.entries(categoryKeywords)) {
     if (keywords.some((keyword) => desc.includes(keyword))) {
@@ -150,7 +163,7 @@ export function extractCategory(
     }
   }
 
-  return 'general';
+  return "general";
 }
 
 /**
@@ -185,9 +198,9 @@ export function calculateQualityScore(params: {
  * Format currency for display
  */
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
@@ -205,7 +218,7 @@ export function formatPercentage(value: number, decimals = 2): string {
  */
 export function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength - 3) + '...';
+  return text.substring(0, maxLength - 3) + "...";
 }
 
 /**
@@ -235,13 +248,13 @@ export function validateCharacterLimits(params: {
 
   if (params.headline.length > limit.headline) {
     errors.push(
-      `Headline exceeds ${limit.headline} characters (${params.headline.length})`
+      `Headline exceeds ${limit.headline} characters (${params.headline.length})`,
     );
   }
 
   if (params.primaryText.length > limit.primaryText) {
     errors.push(
-      `Primary text exceeds ${limit.primaryText} characters (${params.primaryText.length})`
+      `Primary text exceeds ${limit.primaryText} characters (${params.primaryText.length})`,
     );
   }
 
@@ -251,7 +264,7 @@ export function validateCharacterLimits(params: {
     params.description.length > limit.description
   ) {
     errors.push(
-      `Description exceeds ${limit.description} characters (${params.description.length})`
+      `Description exceeds ${limit.description} characters (${params.description.length})`,
     );
   }
 

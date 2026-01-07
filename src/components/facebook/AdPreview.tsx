@@ -1,4 +1,5 @@
-'use client'
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
+"use client";
 
 /**
  * Facebook Ad Preview Component
@@ -7,14 +8,15 @@
  * before submitting to the API
  */
 
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useState } from "react";
+import NextImage from "next/image";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -22,27 +24,27 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Image as ImageIcon, AlertCircle, Loader2 } from 'lucide-react'
+} from "@/components/ui/select";
+import { Image as ImageIcon, AlertCircle, Loader2 } from "lucide-react";
 
 interface AdPreviewProps {
-  title: string
-  copy: string
-  imageUrls: string[]
-  selectedImageIndex?: number
-  onTitleChange?: (title: string) => void
-  onCopyChange?: (copy: string) => void
-  onImageSelect?: (index: number) => void
-  onSubmit?: () => void
-  submitting?: boolean
-  readOnly?: boolean
+  title: string;
+  copy: string;
+  imageUrls: string[];
+  selectedImageIndex?: number;
+  onTitleChange?: (title: string) => void;
+  onCopyChange?: (copy: string) => void;
+  onImageSelect?: (index: number) => void;
+  onSubmit?: () => void;
+  submitting?: boolean;
+  readOnly?: boolean;
 }
 
 export default function AdPreview({
@@ -55,27 +57,27 @@ export default function AdPreview({
   onImageSelect,
   onSubmit,
   submitting = false,
-  readOnly = false
+  readOnly = false,
 }: AdPreviewProps) {
-  const [showSubmitModal, setShowSubmitModal] = useState(false)
-  const [localTitle, setLocalTitle] = useState(title)
-  const [localCopy, setLocalCopy] = useState(copy)
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [localTitle, setLocalTitle] = useState(title);
+  const [localCopy, setLocalCopy] = useState(copy);
 
   const handleTitleChange = (value: string) => {
-    setLocalTitle(value)
-    onTitleChange?.(value)
-  }
+    setLocalTitle(value);
+    onTitleChange?.(value);
+  };
 
   const handleCopyChange = (value: string) => {
-    setLocalCopy(value)
-    onCopyChange?.(value)
-  }
+    setLocalCopy(value);
+    onCopyChange?.(value);
+  };
 
-  const selectedImage = imageUrls[selectedImageIndex] || imageUrls[0]
-  const titleLength = localTitle.length
-  const copyLength = localCopy.length
-  const titleValid = titleLength > 0 && titleLength <= 125
-  const copyValid = copyLength > 0 && copyLength <= 125
+  const selectedImage = imageUrls[selectedImageIndex] || imageUrls[0];
+  const titleLength = localTitle.length;
+  const copyLength = localCopy.length;
+  const titleValid = titleLength > 0 && titleLength <= 125;
+  const copyValid = copyLength > 0 && copyLength <= 125;
 
   return (
     <>
@@ -91,7 +93,8 @@ export default function AdPreview({
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Title must be between 1-125 characters (currently: {titleLength})
+                    Title must be between 1-125 characters (currently:{" "}
+                    {titleLength})
                   </AlertDescription>
                 </Alert>
               )}
@@ -99,7 +102,8 @@ export default function AdPreview({
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Copy must be between 1-125 characters (currently: {copyLength})
+                    Copy must be between 1-125 characters (currently:{" "}
+                    {copyLength})
                   </AlertDescription>
                 </Alert>
               )}
@@ -172,34 +176,45 @@ export default function AdPreview({
                   <p className="font-semibold text-sm text-oxford-navy">
                     Your Business Page
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Sponsored
-                  </p>
+                  <p className="text-xs text-muted-foreground">Sponsored</p>
                 </div>
               </div>
 
               <p className="text-sm text-oxford-navy">
-                {localCopy || <span className="text-muted-foreground">Your ad copy will appear here...</span>}
+                {localCopy || (
+                  <span className="text-muted-foreground">
+                    Your ad copy will appear here...
+                  </span>
+                )}
               </p>
 
               {selectedImage ? (
                 <div className="w-full max-w-md border rounded-lg overflow-hidden">
-                  <img
+                  <NextImage
                     src={selectedImage}
                     alt="Ad preview"
                     className="w-full h-auto block"
+                    width={448}
+                    height={448}
+                    unoptimized
                   />
                 </div>
               ) : (
                 <div className="w-full max-w-md h-64 border-2 border-dashed rounded-lg flex flex-col items-center justify-center bg-muted/50">
                   <ImageIcon className="h-12 w-12 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">No image selected</p>
+                  <p className="text-sm text-muted-foreground">
+                    No image selected
+                  </p>
                 </div>
               )}
 
               <div className="space-y-1">
                 <p className="font-semibold text-sm text-oxford-navy">
-                  {localTitle || <span className="text-muted-foreground">Your ad title will appear here...</span>}
+                  {localTitle || (
+                    <span className="text-muted-foreground">
+                      Your ad title will appear here...
+                    </span>
+                  )}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   yourbusiness.com
@@ -225,7 +240,9 @@ export default function AdPreview({
             <div className="flex justify-end">
               <Button
                 onClick={() => setShowSubmitModal(true)}
-                disabled={!titleValid || !copyValid || !selectedImage || submitting}
+                disabled={
+                  !titleValid || !copyValid || !selectedImage || submitting
+                }
                 className="bg-smart-blue-500 hover:bg-smart-blue-600"
               >
                 {submitting ? (
@@ -234,7 +251,7 @@ export default function AdPreview({
                     Submitting...
                   </>
                 ) : (
-                  'Submit to Facebook'
+                  "Submit to Facebook"
                 )}
               </Button>
             </div>
@@ -246,7 +263,9 @@ export default function AdPreview({
       <Dialog open={showSubmitModal} onOpenChange={setShowSubmitModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-oxford-navy">Submit Ad to Facebook?</DialogTitle>
+            <DialogTitle className="text-oxford-navy">
+              Submit Ad to Facebook?
+            </DialogTitle>
             <DialogDescription>
               Review your ad details before submitting
             </DialogDescription>
@@ -254,17 +273,25 @@ export default function AdPreview({
 
           <div className="space-y-4 py-4">
             <p className="text-sm">
-              Your ad will be created in your selected Facebook campaign in{' '}
+              Your ad will be created in your selected Facebook campaign in{" "}
               <Badge variant="secondary">PAUSED</Badge> status.
             </p>
             <p className="text-sm">
               You can review and activate the ad in Facebook Ads Manager.
             </p>
             <div className="space-y-2 bg-muted p-4 rounded-lg">
-              <p className="text-sm font-semibold text-oxford-navy">Ad Details:</p>
-              <p className="text-sm"><span className="font-medium">Title:</span> {localTitle}</p>
-              <p className="text-sm"><span className="font-medium">Copy:</span> {localCopy}</p>
-              <p className="text-sm"><span className="font-medium">Images:</span> {imageUrls.length}</p>
+              <p className="text-sm font-semibold text-oxford-navy">
+                Ad Details:
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">Title:</span> {localTitle}
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">Copy:</span> {localCopy}
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">Images:</span> {imageUrls.length}
+              </p>
             </div>
           </div>
 
@@ -274,8 +301,8 @@ export default function AdPreview({
             </Button>
             <Button
               onClick={() => {
-                setShowSubmitModal(false)
-                onSubmit?.()
+                setShowSubmitModal(false);
+                onSubmit?.();
               }}
               disabled={submitting}
               className="bg-smart-blue-500 hover:bg-smart-blue-600"
@@ -286,12 +313,12 @@ export default function AdPreview({
                   Submitting...
                 </>
               ) : (
-                'Submit Ad'
+                "Submit Ad"
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

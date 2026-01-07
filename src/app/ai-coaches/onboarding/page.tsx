@@ -94,7 +94,7 @@ export default function CoachOnboardingPage() {
 
         if (response.status === 403) {
           setError(
-            "AI Coaches require a Professional or Enterprise plan. Please upgrade to access this feature.",
+            "AI Coaches require a Pro plan. Please upgrade to access this feature.",
           );
         }
       } catch (err) {

@@ -9,7 +9,7 @@
  * - For client-side vars, use `clientEnv`
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Server-side environment variables schema
@@ -17,26 +17,38 @@ import { z } from 'zod';
  */
 const serverEnvSchema = z.object({
   // Node Environment
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
 
   // NextAuth
   NEXTAUTH_URL: z.string().url().optional(),
-  NEXTAUTH_SECRET: z.string().min(32, 'NEXTAUTH_SECRET must be at least 32 characters'),
+  NEXTAUTH_SECRET: z
+    .string()
+    .min(32, "NEXTAUTH_SECRET must be at least 32 characters"),
 
   // Supabase
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url('Invalid Supabase URL'),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, 'Supabase anon key is required'),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'Supabase service role key is required'),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url("Invalid Supabase URL"),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z
+    .string()
+    .min(1, "Supabase anon key is required"),
+  SUPABASE_SERVICE_ROLE_KEY: z
+    .string()
+    .min(1, "Supabase service role key is required"),
 
   // Shopify
-  SHOPIFY_API_KEY: z.string().min(1, 'Shopify API key is required'),
-  SHOPIFY_API_SECRET: z.string().min(1, 'Shopify API secret is required'),
+  SHOPIFY_API_KEY: z.string().min(1, "Shopify API key is required"),
+  SHOPIFY_API_SECRET: z.string().min(1, "Shopify API secret is required"),
 
   // OpenAI
-  OPENAI_API_KEY: z.string().startsWith('sk-', 'OpenAI API key must start with sk-'),
+  OPENAI_API_KEY: z
+    .string()
+    .startsWith("sk-", "OpenAI API key must start with sk-"),
 
   // Encryption
-  ENCRYPTION_KEY: z.string().length(64, 'ENCRYPTION_KEY must be exactly 64 hex characters'),
+  ENCRYPTION_KEY: z
+    .string()
+    .length(64, "ENCRYPTION_KEY must be exactly 64 hex characters"),
 
   // Optional: Database (if using direct connection)
   DATABASE_URL: z.string().url().optional(),
@@ -70,8 +82,8 @@ const serverEnvSchema = z.object({
  * Only NEXT_PUBLIC_ prefixed variables are available on the client
  */
 const clientEnvSchema = z.object({
-  NEXT_PUBLIC_APP_URL: z.string().url('Invalid app URL'),
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url('Invalid Supabase URL'),
+  NEXT_PUBLIC_APP_URL: z.string().url("Invalid app URL"),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url("Invalid Supabase URL"),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
 });
 
@@ -84,8 +96,8 @@ export type ClientEnv = z.infer<typeof clientEnvSchema>;
  */
 function validateServerEnv(): ServerEnv {
   // Skip validation in edge runtime or if explicitly disabled
-  if (typeof window !== 'undefined') {
-    throw new Error('Server env should not be accessed on the client');
+  if (typeof window !== "undefined") {
+    throw new Error("Server env should not be accessed on the client");
   }
 
   const parsed = serverEnvSchema.safeParse(process.env);
@@ -93,18 +105,22 @@ function validateServerEnv(): ServerEnv {
   if (!parsed.success) {
     const errors = parsed.error.flatten().fieldErrors;
     const errorMessages = Object.entries(errors)
-      .map(([key, msgs]) => `  ${key}: ${msgs?.join(', ')}`)
-      .join('\n');
+      .map(([key, msgs]) => `  ${key}: ${msgs?.join(", ")}`)
+      .join("\n");
 
-    console.error('\n❌ Invalid environment variables:\n' + errorMessages + '\n');
+    console.error(
+      "\n❌ Invalid environment variables:\n" + errorMessages + "\n",
+    );
 
     // In production, fail fast
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Invalid environment variables. Check server logs.');
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Invalid environment variables. Check server logs.");
     }
 
     // In development, warn but continue with defaults where possible
-    console.warn('⚠️  Running with invalid environment variables. Some features may not work.\n');
+    console.warn(
+      "⚠️  Running with invalid environment variables. Some features may not work.\n",
+    );
   }
 
   return parsed.success ? parsed.data : (process.env as unknown as ServerEnv);
@@ -123,21 +139,26 @@ function validateClientEnv(): ClientEnv {
   if (!parsed.success) {
     const errors = parsed.error.flatten().fieldErrors;
     const errorMessages = Object.entries(errors)
-      .map(([key, msgs]) => `  ${key}: ${msgs?.join(', ')}`)
-      .join('\n');
+      .map(([key, msgs]) => `  ${key}: ${msgs?.join(", ")}`)
+      .join("\n");
 
-    console.error('\n❌ Invalid client environment variables:\n' + errorMessages + '\n');
+    console.error(
+      "\n❌ Invalid client environment variables:\n" + errorMessages + "\n",
+    );
 
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Invalid client environment variables.');
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Invalid client environment variables.");
     }
   }
 
-  return parsed.success ? parsed.data : ({
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || '',
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-  } as ClientEnv);
+  return parsed.success
+    ? parsed.data
+    : ({
+        NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || "",
+        NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+        NEXT_PUBLIC_SUPABASE_ANON_KEY:
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+      } as ClientEnv);
 }
 
 /**
@@ -155,27 +176,27 @@ export const clientEnv = validateClientEnv();
 /**
  * Helper to check if we're in production
  */
-export const isProduction = env.NODE_ENV === 'production';
+export const isProduction = env.NODE_ENV === "production";
 
 /**
  * Helper to check if we're in development
  */
-export const isDevelopment = env.NODE_ENV === 'development';
+export const isDevelopment = env.NODE_ENV === "development";
 
 /**
  * Helper to check if we're in test
  */
-export const isTest = env.NODE_ENV === 'test';
+export const isTest = env.NODE_ENV === "test";
 
 /**
  * Validate environment at module load time
  * This runs when the module is first imported
  */
-if (typeof window === 'undefined') {
+if (typeof window === "undefined") {
   // Only run server validation on the server
   try {
     validateServerEnv();
-  } catch (error) {
+  } catch (_error) {
     // Error already logged in validateServerEnv
   }
 }

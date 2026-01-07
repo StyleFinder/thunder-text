@@ -1,12 +1,19 @@
-'use client'
+/* eslint-disable react/no-unescaped-entities -- Quotes and apostrophes in JSX text are intentional */
+"use client";
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert } from '@/components/ui/alert'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +21,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
 import {
   Upload,
   FileText,
@@ -22,87 +29,87 @@ import {
   X,
   Download,
   Sparkles,
-  Link as LinkIcon
-} from 'lucide-react'
-import { useShop } from '@/hooks/useShop'
-import { ContentLoader } from '@/components/ui/loading/ContentLoader'
+  Link as LinkIcon,
+} from "lucide-react";
+import { useShop } from "@/hooks/useShop";
+import { ContentLoader } from "@/components/ui/loading/ContentLoader";
 
 interface WritingSample {
-  id: string
-  name: string
-  type: string
-  uploadDate: string
-  size: string
+  id: string;
+  name: string;
+  type: string;
+  uploadDate: string;
+  size: string;
 }
 
 export default function SamplesPage() {
-  const { shop, shopId, isLoading: shopLoading } = useShop()
-  const [samples, setSamples] = useState<WritingSample[]>([])
-  const [isDragging, setIsDragging] = useState(false)
-  const [showPasteDialog, setShowPasteDialog] = useState(false)
-  const [showUrlDialog, setShowUrlDialog] = useState(false)
-  const [pasteText, setPasteText] = useState('')
-  const [pasteName, setPasteName] = useState('')
-  const [urlInput, setUrlInput] = useState('')
+  const { shop: _shop, shopId: _shopId, isLoading: shopLoading } = useShop();
+  const [samples, setSamples] = useState<WritingSample[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showPasteDialog, setShowPasteDialog] = useState(false);
+  const [showUrlDialog, setShowUrlDialog] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteName, setPasteName] = useState("");
+  const [urlInput, setUrlInput] = useState("");
 
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
+    e.preventDefault();
+    setIsDragging(true);
+  };
 
   const handleDragLeave = () => {
-    setIsDragging(false)
-  }
+    setIsDragging(false);
+  };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
+    e.preventDefault();
+    setIsDragging(false);
     // TODO: Handle file upload with shop context
     // Files available at: e.dataTransfer.files
-  }
+  };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (_e: React.ChangeEvent<HTMLInputElement>) => {
     // TODO: Handle file upload with shop context
     // Files available at: e.target.files
-  }
+  };
 
   const removeSample = (id: string) => {
-    setSamples(samples.filter(s => s.id !== id))
-  }
+    setSamples(samples.filter((s) => s.id !== id));
+  };
 
   const handlePasteSubmit = () => {
-    if (!pasteText.trim()) return
+    if (!pasteText.trim()) return;
 
     const newSample: WritingSample = {
       id: Date.now().toString(),
-      name: pasteName.trim() || 'Pasted Text',
-      type: 'Text',
+      name: pasteName.trim() || "Pasted Text",
+      type: "Text",
       uploadDate: new Date().toLocaleDateString(),
-      size: `${Math.round(pasteText.length / 1024)}KB`
-    }
+      size: `${Math.round(pasteText.length / 1024)}KB`,
+    };
 
-    setSamples([...samples, newSample])
-    setPasteText('')
-    setPasteName('')
-    setShowPasteDialog(false)
-  }
+    setSamples([...samples, newSample]);
+    setPasteText("");
+    setPasteName("");
+    setShowPasteDialog(false);
+  };
 
   const handleUrlSubmit = async () => {
-    if (!urlInput.trim()) return
+    if (!urlInput.trim()) return;
 
     // TODO: Implement URL fetching with shop context
     const newSample: WritingSample = {
       id: Date.now().toString(),
-      name: 'Content from URL',
-      type: 'URL',
+      name: "Content from URL",
+      type: "URL",
       uploadDate: new Date().toLocaleDateString(),
-      size: 'Processing...'
-    }
+      size: "Processing...",
+    };
 
-    setSamples([...samples, newSample])
-    setUrlInput('')
-    setShowUrlDialog(false)
-  }
+    setSamples([...samples, newSample]);
+    setUrlInput("");
+    setShowUrlDialog(false);
+  };
 
   if (shopLoading) {
     return (
@@ -111,7 +118,7 @@ export default function SamplesPage() {
           <ContentLoader message="Loading..." />
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -123,7 +130,8 @@ export default function SamplesPage() {
           <h1 className="text-3xl font-bold text-gray-900">Writing Samples</h1>
         </div>
         <p className="text-gray-600">
-          Upload examples of your brand's content to train the AI on your unique style
+          Upload examples of your brand's content to train the AI on your unique
+          style
         </p>
       </div>
 
@@ -131,9 +139,12 @@ export default function SamplesPage() {
       <Alert className="mb-6 border-blue-200 bg-blue-50">
         <Sparkles className="h-4 w-4 text-blue-600" />
         <div className="ml-2">
-          <p className="text-sm font-medium text-blue-900">Why upload samples?</p>
+          <p className="text-sm font-medium text-blue-900">
+            Why upload samples?
+          </p>
           <p className="text-sm text-blue-700 mt-1">
-            The AI learns from your existing content to generate new posts that match your brand's authentic voice and style
+            The AI learns from your existing content to generate new posts that
+            match your brand's authentic voice and style
           </p>
         </div>
       </Alert>
@@ -144,20 +155,21 @@ export default function SamplesPage() {
           <CardHeader>
             <CardTitle>Upload Samples</CardTitle>
             <CardDescription>
-              Drag and drop files or click to browse (PDF, DOC, TXT, or paste text)
+              Drag and drop files or click to browse (PDF, DOC, TXT, or paste
+              text)
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div
               className={`
                 border-2 border-dashed rounded-lg p-12 text-center transition-colors
-                ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white'}
+                ${isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white"}
                 hover:border-blue-400 hover:bg-blue-50 cursor-pointer
               `}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={() => document.getElementById('file-upload')?.click()}
+              onClick={() => document.getElementById("file-upload")?.click()}
             >
               <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-lg font-medium text-gray-900 mb-2">
@@ -188,8 +200,8 @@ export default function SamplesPage() {
                 variant="outline"
                 className="flex-1"
                 onClick={(e) => {
-                  e.stopPropagation()
-                  setShowPasteDialog(true)
+                  e.stopPropagation();
+                  setShowPasteDialog(true);
                 }}
               >
                 <FileText className="h-4 w-4 mr-2" />
@@ -199,8 +211,8 @@ export default function SamplesPage() {
                 variant="outline"
                 className="flex-1"
                 onClick={(e) => {
-                  e.stopPropagation()
-                  setShowUrlDialog(true)
+                  e.stopPropagation();
+                  setShowUrlDialog(true);
                 }}
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -221,7 +233,7 @@ export default function SamplesPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {samples.map(sample => (
+                {samples.map((sample) => (
                   <div
                     key={sample.id}
                     className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50"
@@ -229,9 +241,12 @@ export default function SamplesPage() {
                     <div className="flex items-center gap-3">
                       <FileText className="h-5 w-5 text-blue-600" />
                       <div>
-                        <p className="font-medium text-gray-900">{sample.name}</p>
+                        <p className="font-medium text-gray-900">
+                          {sample.name}
+                        </p>
                         <p className="text-sm text-gray-500">
-                          {sample.type} • {sample.size} • Uploaded {sample.uploadDate}
+                          {sample.type} • {sample.size} • Uploaded{" "}
+                          {sample.uploadDate}
                         </p>
                       </div>
                     </div>
@@ -262,15 +277,22 @@ export default function SamplesPage() {
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                <span>Include different content types (social posts, emails, product descriptions)</span>
+                <span>
+                  Include different content types (social posts, emails, product
+                  descriptions)
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                <span>Choose content that truly represents your brand voice</span>
+                <span>
+                  Choose content that truly represents your brand voice
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                <span>More samples = better AI understanding of your style</span>
+                <span>
+                  More samples = better AI understanding of your style
+                </span>
               </li>
             </ul>
           </CardContent>
@@ -359,5 +381,5 @@ export default function SamplesPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

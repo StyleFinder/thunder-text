@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 "use client";
 
 import React from "react";
@@ -43,9 +44,7 @@ export function StatCard({
     neutral: "text-gray-500 bg-gray-100",
   };
 
-  /* eslint-disable security/detect-object-injection -- Safe: trend is validated by TypeScript enum */
   const TrendIcon = trend ? trendIcons[trend] : null;
-  /* eslint-enable security/detect-object-injection */
 
   return (
     <div
@@ -81,7 +80,6 @@ export function StatCard({
         </div>
 
         {/* Value */}
-        {/* eslint-disable-next-line security/detect-object-injection -- Safe: valueColor is validated by TypeScript */}
         <div className={`text-3xl font-bold ${valueColors[valueColor]} mb-1`}>
           {value}
         </div>
@@ -91,7 +89,6 @@ export function StatCard({
           {subtext && <div className="text-sm text-gray-500">{subtext}</div>}
 
           {trend && trendValue && TrendIcon && (
-            /* eslint-disable-next-line security/detect-object-injection -- Safe: trend is validated by TypeScript */
             <div
               className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${trendColors[trend]}`}
             >

@@ -1,41 +1,45 @@
-'use client';
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { ChevronDown, ChevronUp, ArrowLeft, Loader2 } from 'lucide-react';
-import type { BusinessProfileResponse, InterviewPrompt } from '@/types/business-profile';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { logger } from '@/lib/logger'
-import { useShop } from '@/hooks/useShop';
-import { ContentLoader } from '@/components/ui/loading/ContentLoader';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronDown, ChevronUp, ArrowLeft, Loader2 } from "lucide-react";
+import type {
+  BusinessProfileResponse,
+  InterviewPrompt,
+} from "@/types/business-profile";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { logger } from "@/lib/logger";
+import { useShop } from "@/hooks/useShop";
+import { ContentLoader } from "@/components/ui/loading/ContentLoader";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+} from "@/components/ui/collapsible";
 
 // Quick Start prompt keys - these are the 12 essential questions for ad generation & AI coaches
 // AI Coaching questions come FIRST (1-5), then brand voice questions (6-12)
 const QUICK_START_PROMPT_KEYS = [
   // AI Coaching questions (1-5)
-  'discount_comfort',
-  'inventory_size',
-  'time_availability',
-  'quarterly_goal',
-  'policies_summary',
+  "discount_comfort",
+  "inventory_size",
+  "time_availability",
+  "quarterly_goal",
+  "policies_summary",
   // Brand Voice questions (6-12)
-  'business_description',
-  'ideal_customer',
-  'customer_pain_points',
-  'brand_reputation',
-  'competitors_differentiation',
-  'client_results',
-  'communication_style',
+  "business_description",
+  "ideal_customer",
+  "customer_pain_points",
+  "brand_reputation",
+  "competitors_differentiation",
+  "client_results",
+  "communication_style",
 ];
 
 interface QuestionWithAnswer {
@@ -57,9 +61,12 @@ export default function EditQuickStartAnswersPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Helper for dynamic routes
-  const getBrandVoiceUrl = () => shopId ? `/stores/${shopId}/brand-voice` : '/brand-voice';
-  const getEditUrl = () => shopId ? `/stores/${shopId}/brand-voice/edit` : '/brand-voice/edit';
-  const getProfileUrl = () => shopId ? `/stores/${shopId}/brand-voice/profile` : '/brand-voice/profile';
+  const getBrandVoiceUrl = () =>
+    shopId ? `/stores/${shopId}/brand-voice` : "/brand-voice";
+  const getEditUrl = () =>
+    shopId ? `/stores/${shopId}/brand-voice/edit` : "/brand-voice/edit";
+  const getProfileUrl = () =>
+    shopId ? `/stores/${shopId}/brand-voice/profile` : "/brand-voice/profile";
 
   // Load questions and answers
   useEffect(() => {
@@ -69,22 +76,23 @@ export default function EditQuickStartAnswersPage() {
       try {
         // Fetch prompts and responses
         const [profileRes, promptsRes] = await Promise.all([
-          fetch('/api/business-profile', {
-            headers: { 'Authorization': `Bearer ${shop}` },
+          fetch("/api/business-profile", {
+            headers: { Authorization: `Bearer ${shop}` },
           }),
-          fetch('/api/business-profile/prompts', {
-            headers: { 'Authorization': `Bearer ${shop}` },
+          fetch("/api/business-profile/prompts", {
+            headers: { Authorization: `Bearer ${shop}` },
           }),
         ]);
 
         if (!profileRes.ok) {
-          setError('Failed to load profile');
+          setError("Failed to load profile");
           setLoading(false);
           return;
         }
 
         const profileData = await profileRes.json();
-        const responses: BusinessProfileResponse[] = profileData.data?.responses || [];
+        const responses: BusinessProfileResponse[] =
+          profileData.data?.responses || [];
 
         // Get prompts
         let prompts: InterviewPrompt[] = [];
@@ -95,9 +103,12 @@ export default function EditQuickStartAnswersPage() {
 
         // If no prompts endpoint, fetch from all-prompts
         if (prompts.length === 0 && responses.length > 0) {
-          const allPromptsRes = await fetch('/api/business-profile/all-prompts', {
-            headers: { 'Authorization': `Bearer ${shop}` },
-          });
+          const allPromptsRes = await fetch(
+            "/api/business-profile/all-prompts",
+            {
+              headers: { Authorization: `Bearer ${shop}` },
+            },
+          );
           if (allPromptsRes.ok) {
             const allPromptsData = await allPromptsRes.json();
             prompts = allPromptsData.data?.prompts || [];
@@ -106,21 +117,23 @@ export default function EditQuickStartAnswersPage() {
 
         // Filter to only Quick Start questions
         const quickStartPrompts = prompts.filter((p) =>
-          QUICK_START_PROMPT_KEYS.includes(p.prompt_key)
+          QUICK_START_PROMPT_KEYS.includes(p.prompt_key),
         );
 
         // Match responses to prompts
-        const questionsWithAnswers: QuestionWithAnswer[] = quickStartPrompts.map((prompt) => {
-          const response = responses.find((r) => r.prompt_key === prompt.prompt_key) || null;
-          return {
-            prompt,
-            response,
-            isEditing: false,
-            editedText: response?.response_text || '',
-            isSaving: false,
-            isExpanded: false,
-          };
-        });
+        const questionsWithAnswers: QuestionWithAnswer[] =
+          quickStartPrompts.map((prompt) => {
+            const response =
+              responses.find((r) => r.prompt_key === prompt.prompt_key) || null;
+            return {
+              prompt,
+              response,
+              isEditing: false,
+              editedText: response?.response_text || "",
+              isSaving: false,
+              isExpanded: false,
+            };
+          });
 
         // Sort by quick_start_order
         questionsWithAnswers.sort((a, b) => {
@@ -131,8 +144,10 @@ export default function EditQuickStartAnswersPage() {
 
         setQuestions(questionsWithAnswers);
       } catch (err) {
-        logger.error('Error loading data:', err as Error, { component: 'quick-start' });
-        setError('Failed to load data');
+        logger.error("Error loading data:", err as Error, {
+          component: "quick-start",
+        });
+        setError("Failed to load data");
       } finally {
         setLoading(false);
       }
@@ -143,15 +158,17 @@ export default function EditQuickStartAnswersPage() {
 
   const toggleExpand = (index: number) => {
     setQuestions((prev) =>
-      prev.map((q, i) => (i === index ? { ...q, isExpanded: !q.isExpanded } : q))
+      prev.map((q, i) =>
+        i === index ? { ...q, isExpanded: !q.isExpanded } : q,
+      ),
     );
   };
 
   const startEditing = (index: number) => {
     setQuestions((prev) =>
       prev.map((q, i) =>
-        i === index ? { ...q, isEditing: true, isExpanded: true } : q
-      )
+        i === index ? { ...q, isEditing: true, isExpanded: true } : q,
+      ),
     );
   };
 
@@ -159,15 +176,19 @@ export default function EditQuickStartAnswersPage() {
     setQuestions((prev) =>
       prev.map((q, i) =>
         i === index
-          ? { ...q, isEditing: false, editedText: q.response?.response_text || '' }
-          : q
-      )
+          ? {
+              ...q,
+              isEditing: false,
+              editedText: q.response?.response_text || "",
+            }
+          : q,
+      ),
     );
   };
 
   const updateEditedText = (index: number, text: string) => {
     setQuestions((prev) =>
-      prev.map((q, i) => (i === index ? { ...q, editedText: text } : q))
+      prev.map((q, i) => (i === index ? { ...q, editedText: text } : q)),
     );
     setHasChanges(true);
   };
@@ -177,15 +198,15 @@ export default function EditQuickStartAnswersPage() {
     if (!question || !shop) return;
 
     setQuestions((prev) =>
-      prev.map((q, i) => (i === index ? { ...q, isSaving: true } : q))
+      prev.map((q, i) => (i === index ? { ...q, isSaving: true } : q)),
     );
 
     try {
-      const response = await fetch('/api/business-profile/answer', {
-        method: 'POST',
+      const response = await fetch("/api/business-profile/answer", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${shop}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${shop}`,
         },
         body: JSON.stringify({
           prompt_key: question.prompt.prompt_key,
@@ -206,30 +227,32 @@ export default function EditQuickStartAnswersPage() {
                   isEditing: false,
                   isSaving: false,
                 }
-              : q
-          )
+              : q,
+          ),
         );
         setSuccessMessage(`Answer saved successfully`);
         setTimeout(() => setSuccessMessage(null), 3000);
       } else {
-        setError(data.error || 'Failed to save answer');
+        setError(data.error || "Failed to save answer");
       }
     } catch (err) {
-      logger.error('Error saving answer:', err as Error, { component: 'quick-start' });
-      setError('Failed to save answer');
+      logger.error("Error saving answer:", err as Error, {
+        component: "quick-start",
+      });
+      setError("Failed to save answer");
     } finally {
       setQuestions((prev) =>
-        prev.map((q, i) => (i === index ? { ...q, isSaving: false } : q))
+        prev.map((q, i) => (i === index ? { ...q, isSaving: false } : q)),
       );
     }
   };
 
   const regenerateProfile = async () => {
     try {
-      const response = await fetch('/api/business-profile/generate', {
-        method: 'POST',
+      const response = await fetch("/api/business-profile/generate", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${shop}`,
+          Authorization: `Bearer ${shop}`,
         },
       });
 
@@ -238,24 +261,26 @@ export default function EditQuickStartAnswersPage() {
       if (data.success) {
         router.push(getProfileUrl());
       } else {
-        setError(data.error || 'Failed to regenerate profile');
+        setError(data.error || "Failed to regenerate profile");
       }
     } catch (err) {
-      logger.error('Error regenerating profile:', err as Error, { component: 'quick-start' });
-      setError('Failed to regenerate profile');
+      logger.error("Error regenerating profile:", err as Error, {
+        component: "quick-start",
+      });
+      setError("Failed to regenerate profile");
     }
   };
 
   // Get friendly name for prompt key
   const getQuestionLabel = (promptKey: string): string => {
     const labels: Record<string, string> = {
-      business_description: 'What You Do',
-      ideal_customer: 'Your Ideal Customer',
-      customer_pain_points: 'Customer Pain Points',
-      brand_reputation: 'Desired Reputation',
-      competitors_differentiation: 'What Makes You Different',
-      client_results: 'Results & Proof',
-      communication_style: 'Your Voice & Style',
+      business_description: "What You Do",
+      ideal_customer: "Your Ideal Customer",
+      customer_pain_points: "Customer Pain Points",
+      brand_reputation: "Desired Reputation",
+      competitors_differentiation: "What Makes You Different",
+      client_results: "Results & Proof",
+      communication_style: "Your Voice & Style",
     };
     return labels[promptKey] || promptKey;
   };
@@ -294,19 +319,16 @@ export default function EditQuickStartAnswersPage() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold">Quick Start Answers</h1>
-            <p className="text-muted-foreground mt-1">The 12 essential questions for ad generation & AI coaches</p>
+            <p className="text-muted-foreground mt-1">
+              The 12 essential questions for ad generation & AI coaches
+            </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => router.push(getEditUrl())}
-            >
+            <Button variant="outline" onClick={() => router.push(getEditUrl())}>
               Edit All Answers
             </Button>
             {hasChanges && (
-              <Button onClick={regenerateProfile}>
-                Regenerate Profile
-              </Button>
+              <Button onClick={regenerateProfile}>Regenerate Profile</Button>
             )}
           </div>
         </div>
@@ -333,12 +355,15 @@ export default function EditQuickStartAnswersPage() {
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-lg mb-1">Quick Start Progress</h3>
+              <h3 className="font-semibold text-lg mb-1">
+                Quick Start Progress
+              </h3>
               <p className="text-sm text-muted-foreground">
-                These 12 questions capture the essential information for generating effective ads and enabling AI coaches.
+                These 12 questions capture the essential information for
+                generating effective ads and enabling AI coaches.
               </p>
             </div>
-            <Badge variant={answeredCount === 12 ? 'default' : 'secondary'}>
+            <Badge variant={answeredCount === 12 ? "default" : "secondary"}>
               {answeredCount} of 12 answered
             </Badge>
           </div>
@@ -349,16 +374,22 @@ export default function EditQuickStartAnswersPage() {
       <div className="space-y-4">
         {questions.map((question, index) => (
           <Card key={question.prompt.prompt_key}>
-            <Collapsible open={question.isExpanded} onOpenChange={() => toggleExpand(index)}>
+            <Collapsible
+              open={question.isExpanded}
+              onOpenChange={() => toggleExpand(index)}
+            >
               <CardHeader className="cursor-pointer">
                 <CollapsibleTrigger className="w-full">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Badge variant={question.response ? 'default' : 'secondary'}>
-                        {question.response ? 'Answered' : 'Not Answered'}
+                      <Badge
+                        variant={question.response ? "default" : "secondary"}
+                      >
+                        {question.response ? "Answered" : "Not Answered"}
                       </Badge>
                       <CardTitle className="text-lg">
-                        {index + 1}. {getQuestionLabel(question.prompt.prompt_key)}
+                        {index + 1}.{" "}
+                        {getQuestionLabel(question.prompt.prompt_key)}
                       </CardTitle>
                     </div>
                     {question.isExpanded ? (
@@ -385,21 +416,32 @@ export default function EditQuickStartAnswersPage() {
                         <Textarea
                           id={`answer-${index}`}
                           value={question.editedText}
-                          onChange={(e) => updateEditedText(index, e.target.value)}
+                          onChange={(e) =>
+                            updateEditedText(index, e.target.value)
+                          }
                           rows={6}
                           className="mt-1"
                         />
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {question.editedText.trim().split(/\s+/).filter((w) => w.length > 0).length} words
-                        {question.prompt.min_words && ` (minimum ${question.prompt.min_words})`}
+                        {
+                          question.editedText
+                            .trim()
+                            .split(/\s+/)
+                            .filter((w) => w.length > 0).length
+                        }{" "}
+                        words
+                        {question.prompt.min_words &&
+                          ` (minimum ${question.prompt.min_words})`}
                       </p>
                       <div className="flex gap-2">
                         <Button
                           onClick={() => saveAnswer(index)}
                           disabled={question.isSaving}
                         >
-                          {question.isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          {question.isSaving && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
                           Save
                         </Button>
                         <Button
@@ -414,16 +456,20 @@ export default function EditQuickStartAnswersPage() {
                     <div className="space-y-3">
                       {question.response ? (
                         <div className="p-4 border rounded-lg">
-                          <p className="text-sm">{question.response.response_text}</p>
+                          <p className="text-sm">
+                            {question.response.response_text}
+                          </p>
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">No answer provided yet</p>
+                        <p className="text-sm text-muted-foreground">
+                          No answer provided yet
+                        </p>
                       )}
                       <Button
                         variant="outline"
                         onClick={() => startEditing(index)}
                       >
-                        {question.response ? 'Edit Answer' : 'Add Answer'}
+                        {question.response ? "Edit Answer" : "Add Answer"}
                       </Button>
                     </div>
                   )}

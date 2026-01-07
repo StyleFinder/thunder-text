@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,9 +21,9 @@ import {
   MapPin,
   Building2,
   Calendar,
-  BarChart3,
-  Gift,
+  Zap,
   User,
+  Bot,
 } from "lucide-react";
 import {
   Select,
@@ -700,19 +701,21 @@ export default function WelcomePage() {
           <div className="flex items-center gap-3 mb-2">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: "#000000" }}
+              style={{
+                background: "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+              }}
             >
-              <BarChart3 className="w-6 h-6" style={{ color: "#ffffff" }} />
+              <Zap className="w-6 h-6" style={{ color: "#ffffff" }} />
             </div>
             <span className="text-xl font-bold" style={{ color: "#ffffff" }}>
-              BoutiqueHub Black
+              Thunder Text
             </span>
           </div>
           <p
             className="text-sm ml-[52px]"
             style={{ color: "rgba(255,255,255,0.7)" }}
           >
-            Powered by Thunder Text
+            AI-Powered Product Descriptions
           </p>
         </div>
 
@@ -720,24 +723,43 @@ export default function WelcomePage() {
         <div className="relative z-10 mt-12">
           <StepIndicator currentStep={currentStep} steps={steps} />
         </div>
+
+        {/* Sign In Link - Bottom of left nav */}
+        <div className="relative z-10 mt-auto">
+          <Link
+            href="/auth/login"
+            className="text-sm hover:underline"
+            style={{ color: "rgba(255,255,255,0.9)" }}
+          >
+            Already have an account? Sign in
+          </Link>
+        </div>
       </div>
 
       {/* Right Panel - Content */}
       <div className="flex-1 bg-gray-50 flex flex-col">
         {/* Mobile Header */}
         <div
-          className="lg:hidden px-6 py-4 flex items-center gap-3"
+          className="lg:hidden px-6 py-4 flex items-center justify-between"
           style={{ backgroundColor: "#002952" }}
         >
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ backgroundColor: "#000000" }}
-          >
-            <BarChart3 className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-3">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{
+                background: "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+              }}
+            >
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-lg font-bold text-white">Thunder Text</span>
           </div>
-          <span className="text-lg font-bold text-white">
-            BoutiqueHub Black
-          </span>
+          <Link
+            href="/auth/login"
+            className="text-sm text-white/90 hover:text-white hover:underline"
+          >
+            Sign in
+          </Link>
         </div>
 
         {/* Content Area */}
@@ -748,51 +770,45 @@ export default function WelcomePage() {
             {/* Step 1: Welcome */}
             {currentStep === "welcome" && (
               <div className="animate-welcome-fade-in-up">
-                {/* BHB Badge - Primary */}
+                {/* Thunder Text Badge */}
                 <div
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-4"
-                  style={{ backgroundColor: "#000000", color: "#ffffff" }}
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+                    color: "#000000",
+                  }}
                 >
-                  <BarChart3 className="w-4 h-4" />
-                  BoutiqueHub Black Member
+                  <Zap className="w-4 h-4" />
+                  Thunder Text
                 </div>
 
                 <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
-                  Welcome to BoutiqueHub Black
+                  Welcome to Thunder Text
                 </h1>
-                <p className="text-gray-600 mb-2">
-                  Connect your store and ad accounts to power your BHB coaching
-                  dashboard.
+                <p className="text-gray-600 mb-6">
+                  Connect your store and start creating AI-powered product
+                  descriptions and ad copy.
                 </p>
 
-                {/* Thunder Text Trial Badge - Secondary */}
-                <div
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-6"
-                  style={{ backgroundColor: "#dbeafe", color: "#1e40af" }}
-                >
-                  <Gift className="w-3.5 h-3.5" />
-                  Plus: Free Thunder Text trial included — no credit card
-                  required
-                </div>
-
-                {/* Feature Cards - 3 items: BHB Dashboard, Thunder Text, ACE */}
+                {/* Feature Cards - 3 items: Thunder Text, ACE, AI Coach */}
                 <div className="grid md:grid-cols-3 gap-3 mb-8">
-                  <FeatureCard
-                    icon={BarChart3}
-                    title="BHB Dashboard"
-                    description="Store insights for your coach"
-                    delay={100}
-                  />
                   <FeatureCard
                     icon={FileText}
                     title="Thunder Text"
                     description="AI product descriptions"
-                    delay={200}
+                    delay={100}
                   />
                   <FeatureCard
                     icon={Target}
                     title="ACE Engine"
                     description="AI-powered ad copy"
+                    delay={200}
+                  />
+                  <FeatureCard
+                    icon={Bot}
+                    title="AI Coach"
+                    description="Strategic business guidance"
                     delay={300}
                   />
                 </div>
@@ -1158,7 +1174,7 @@ export default function WelcomePage() {
                           {[
                             "Your product catalog and images",
                             "Product descriptions and metadata",
-                            "Store analytics for your BHB Coach",
+                            "Store settings and preferences",
                           ].map((item, i) => (
                             <li
                               key={i}

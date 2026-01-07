@@ -8,8 +8,11 @@
 import { describe, it, expect } from "@jest/globals";
 import { GET, POST } from "@/app/api/content-center/samples/route";
 import { NextRequest } from "next/server";
-import { TEST_SHOP, API_URLS } from "../../utils/test-constants";
-import { createAuthenticatedRequest, createAuthenticatedGetRequest } from "../../utils/auth-helpers";
+import { _TEST_SHOP, API_URLS } from "../../utils/test-constants";
+import {
+  createAuthenticatedRequest,
+  createAuthenticatedGetRequest,
+} from "../../utils/auth-helpers";
 
 describe("GET /api/content-center/samples", () => {
   const BASE_URL = "http://localhost:3050/api/content-center/samples";
@@ -27,7 +30,7 @@ describe("GET /api/content-center/samples", () => {
 
     it("should return 404 for non-existent shop", async () => {
       const request = new NextRequest(
-        `${BASE_URL}?shop=non-existent-shop-xyz.myshopify.com`
+        `${BASE_URL}?shop=non-existent-shop-xyz.myshopify.com`,
       );
       const response = await GET(request);
       const data = await response.json();
@@ -113,14 +116,18 @@ describe("POST /api/content-center/samples", () => {
     });
 
     it("should return 404 for non-existent shop", async () => {
-      const request = new NextRequest(`${BASE_URL}?shop=fake-shop.myshopify.com`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sample_text: "Test sample content for the shop with enough words to pass validation",
-          sample_type: "product_description",
-        }),
-      });
+      const request = new NextRequest(
+        `${BASE_URL}?shop=fake-shop.myshopify.com`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sample_text:
+              "Test sample content for the shop with enough words to pass validation",
+            sample_type: "product_description",
+          }),
+        },
+      );
 
       const response = await POST(request);
       const data = await response.json();
@@ -210,7 +217,7 @@ describe("POST /api/content-center/samples", () => {
 
     it("should sanitize script tags from sample_text", async () => {
       const maliciousText = generateLongText(
-        "This is legitimate content. <script>alert('xss')</script> More content here."
+        "This is legitimate content. <script>alert('xss')</script> More content here.",
       );
 
       const request = createAuthenticatedRequest(API_URLS.CONTENT_SAMPLES, {
@@ -276,7 +283,9 @@ describe("POST /api/content-center/samples", () => {
     // Actual valid types from input-sanitization.ts: blog, email, description, other
     const validTypes = ["blog", "email", "description", "other"];
     const generateLongText = (type: string) =>
-      `This is a ${type} sample content that needs to be long enough to pass the 500 word minimum validation requirement. `.repeat(60);
+      `This is a ${type} sample content that needs to be long enough to pass the 500 word minimum validation requirement. `.repeat(
+        60,
+      );
 
     validTypes.forEach((type) => {
       it(`should accept sample_type: ${type}`, async () => {
@@ -301,7 +310,12 @@ describe("POST /api/content-center/samples", () => {
   });
 
   describe("Sample Types - Invalid Types", () => {
-    const invalidTypes = ["product_description", "social_post", "ad_copy", "random"];
+    const invalidTypes = [
+      "product_description",
+      "social_post",
+      "ad_copy",
+      "random",
+    ];
     const generateLongText = () =>
       "This is sample content for testing invalid types. ".repeat(60);
 

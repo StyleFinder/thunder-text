@@ -105,7 +105,7 @@ export default function CoachChatPage({ params }: PageProps) {
 
         if (!response.ok) {
           if (response.status === 403) {
-            setError("AI Coaches require a Professional or Enterprise plan.");
+            setError("AI Coaches require a Pro plan.");
           } else if (data.code === "PROFILE_INCOMPLETE") {
             // Redirect to onboarding - use store-based URL if available
             const onboardingUrl =

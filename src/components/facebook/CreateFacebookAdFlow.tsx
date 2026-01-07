@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, AlertCircle, Image as ImageIcon } from "lucide-react";
 import AdPreview from "./AdPreview";
 import { authenticatedFetch } from "@/lib/shopify/api-client";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
 
 interface ShopifyProduct {
   id: string;
@@ -102,10 +103,8 @@ export default function CreateFacebookAdFlow({
       );
       const data = await response.json();
 
-
       if (data.success) {
         const productList = data.data?.products || data.products || [];
-
 
         // Products are already in the correct format from getProducts()
         // Just ensure they match our interface
@@ -127,11 +126,15 @@ export default function CreateFacebookAdFlow({
 
         setProducts(transformedProducts);
       } else {
-        logger.error(`❌ Products API error: ${data.error}`, undefined, { component: 'CreateFacebookAdFlow' });
+        logger.error(`❌ Products API error: ${data.error}`, undefined, {
+          component: "CreateFacebookAdFlow",
+        });
         setError(data.error || "Failed to load products from Shopify");
       }
     } catch (err) {
-      logger.error("❌ Error fetching products:", err as Error, { component: 'CreateFacebookAdFlow' });
+      logger.error("❌ Error fetching products:", err as Error, {
+        component: "CreateFacebookAdFlow",
+      });
       setError(err instanceof Error ? err.message : "Failed to load products");
     } finally {
       setLoadingProducts(false);
@@ -242,7 +245,9 @@ export default function CreateFacebookAdFlow({
         setStep("select-images");
       }
     } catch (err) {
-      logger.error("Error generating ad content:", err as Error, { component: 'CreateFacebookAdFlow' });
+      logger.error("Error generating ad content:", err as Error, {
+        component: "CreateFacebookAdFlow",
+      });
       // Fallback: use product data directly
       setAdTitle(selectedProduct.title.substring(0, 125));
       setAdCopy(selectedProduct.description.substring(0, 125));
@@ -306,7 +311,9 @@ export default function CreateFacebookAdFlow({
       const submitData = await submitResponse.json();
 
       if (!submitData.success) {
-        logger.error("❌ Submit error:", submitData as Error, { component: 'CreateFacebookAdFlow' });
+        logger.error("❌ Submit error:", submitData as Error, {
+          component: "CreateFacebookAdFlow",
+        });
         throw new Error(submitData.error || "Failed to submit ad to Facebook");
       }
 
@@ -317,7 +324,9 @@ export default function CreateFacebookAdFlow({
       onClose();
       resetFlow();
     } catch (err) {
-      logger.error("Error submitting ad:", err as Error, { component: 'CreateFacebookAdFlow' });
+      logger.error("Error submitting ad:", err as Error, {
+        component: "CreateFacebookAdFlow",
+      });
       setError(err instanceof Error ? err.message : "Failed to create ad");
     } finally {
       setSubmitting(false);
@@ -370,10 +379,13 @@ export default function CreateFacebookAdFlow({
                     className="p-3 cursor-pointer border-b border-ace-gray-100 flex gap-3 items-center hover:bg-ace-gray-50 transition-colors"
                   >
                     {product.images.length > 0 ? (
-                      <img
+                      <Image
                         src={product.images[0].url}
                         alt={product.title}
+                        width={48}
+                        height={48}
                         className="w-12 h-12 object-cover rounded"
+                        unoptimized
                       />
                     ) : (
                       <div className="w-12 h-12 bg-ace-gray-100 rounded flex items-center justify-center">
@@ -403,7 +415,8 @@ export default function CreateFacebookAdFlow({
             !loadingProducts && (
               <div className="absolute top-full left-0 right-0 p-3 bg-white border border-ace-gray-200 rounded-lg mt-1 z-50 shadow-lg">
                 <p className="text-sm text-ace-gray-500 text-center">
-                  No products found matching &ldquo;{debouncedSearchQuery}&rdquo;
+                  No products found matching &ldquo;{debouncedSearchQuery}
+                  &rdquo;
                 </p>
               </div>
             )}
@@ -425,8 +438,8 @@ export default function CreateFacebookAdFlow({
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            No products found matching &ldquo;{debouncedSearchQuery}&rdquo;. Try a
-            different search term.
+            No products found matching &ldquo;{debouncedSearchQuery}&rdquo;. Try
+            a different search term.
           </AlertDescription>
         </Alert>
       )}
@@ -440,10 +453,13 @@ export default function CreateFacebookAdFlow({
             </p>
             <div className="flex gap-3 items-center">
               {selectedProduct.images.length > 0 ? (
-                <img
+                <Image
                   src={selectedProduct.images[0].url}
                   alt={selectedProduct.title}
+                  width={80}
+                  height={80}
                   className="w-20 h-20 object-cover rounded"
+                  unoptimized
                 />
               ) : (
                 <div className="w-20 h-20 bg-ace-gray-100 rounded flex items-center justify-center">
@@ -494,13 +510,17 @@ export default function CreateFacebookAdFlow({
         {selectedProduct?.images.map((image, index) => (
           <Card key={index} className="border-ace-gray-200">
             <CardContent className="p-3 space-y-2">
-              <div className="relative">
-                <img
+              <div className="relative h-36">
+                <Image
                   src={image.url}
                   alt={image.altText || `Product image ${index + 1}`}
-                  className={`w-full h-36 object-cover rounded transition-opacity ${
-                    selectedImageUrls.includes(image.url) ? 'opacity-100' : 'opacity-50'
+                  fill
+                  className={`object-cover rounded transition-opacity ${
+                    selectedImageUrls.includes(image.url)
+                      ? "opacity-100"
+                      : "opacity-50"
                   }`}
+                  unoptimized
                 />
               </div>
               <div className="flex items-center space-x-2">
@@ -522,9 +542,23 @@ export default function CreateFacebookAdFlow({
         ))}
       </div>
 
-      <Alert className={selectedImageUrls.length === 0 ? "border-yellow-200 bg-yellow-50" : "border-ace-gray-200"}>
-        <AlertCircle className={`h-4 w-4 ${selectedImageUrls.length === 0 ? 'text-yellow-600' : 'text-ace-gray-600'}`} />
-        <AlertDescription className={selectedImageUrls.length === 0 ? "text-yellow-800" : "text-ace-gray-700"}>
+      <Alert
+        className={
+          selectedImageUrls.length === 0
+            ? "border-yellow-200 bg-yellow-50"
+            : "border-ace-gray-200"
+        }
+      >
+        <AlertCircle
+          className={`h-4 w-4 ${selectedImageUrls.length === 0 ? "text-yellow-600" : "text-ace-gray-600"}`}
+        />
+        <AlertDescription
+          className={
+            selectedImageUrls.length === 0
+              ? "text-yellow-800"
+              : "text-ace-gray-700"
+          }
+        >
           {selectedImageUrls.length === 0
             ? "Please select at least one image"
             : `${selectedImageUrls.length} image(s) selected`}

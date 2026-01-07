@@ -1,27 +1,36 @@
-import React from 'react';
-import { colors } from '@/lib/design-system/colors';
-import { typography } from '@/lib/design-system/typography';
-import { layout } from '@/lib/design-system/layout';
+import React from "react";
+import { colors } from "@/lib/design-system/colors";
+import { typography } from "@/lib/design-system/typography";
 
 interface TableColumn {
   header: string;
   key: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
   width?: string;
 }
 
 interface TableProps {
   columns: TableColumn[];
   data: any[];
-  renderCell?: (column: TableColumn, row: any, rowIndex: number) => React.ReactNode;
+  renderCell?: (
+    column: TableColumn,
+    row: any,
+    rowIndex: number,
+  ) => React.ReactNode;
   className?: string;
   hoverable?: boolean;
 }
 
-export function Table({ columns, data, renderCell, className = '', hoverable = true }: TableProps) {
+export function Table({
+  columns,
+  data,
+  renderCell,
+  className = "",
+  hoverable = true,
+}: TableProps) {
   const tableStyles: React.CSSProperties = {
-    width: '100%',
-    borderCollapse: 'collapse',
+    width: "100%",
+    borderCollapse: "collapse",
     fontFamily: typography.fontFamily,
   };
 
@@ -30,12 +39,12 @@ export function Table({ columns, data, renderCell, className = '', hoverable = t
     color: typography.tableHeader.color,
     fontSize: typography.tableHeader.fontSize,
     fontWeight: typography.tableHeader.fontWeight,
-    textAlign: 'left',
-    padding: '16px',
+    textAlign: "left",
+    padding: "16px",
   };
 
   const cellStyles: React.CSSProperties = {
-    padding: '16px',
+    padding: "16px",
     fontSize: typography.tableCell.fontSize,
     fontWeight: typography.tableCell.fontWeight,
     color: typography.tableCell.color,
@@ -44,11 +53,11 @@ export function Table({ columns, data, renderCell, className = '', hoverable = t
 
   const rowStyles: React.CSSProperties = {
     backgroundColor: colors.white,
-    transition: hoverable ? 'background-color 0.2s ease' : 'none',
+    transition: hoverable ? "background-color 0.2s ease" : "none",
   };
 
   return (
-    <div style={{ overflowX: 'auto' }} className={className}>
+    <div style={{ overflowX: "auto" }} className={className}>
       <table style={tableStyles}>
         <thead>
           <tr>
@@ -57,7 +66,7 @@ export function Table({ columns, data, renderCell, className = '', hoverable = t
                 key={index}
                 style={{
                   ...headerStyles,
-                  textAlign: column.align || 'left',
+                  textAlign: column.align || "left",
                   width: column.width,
                 }}
               >
@@ -71,18 +80,26 @@ export function Table({ columns, data, renderCell, className = '', hoverable = t
             <tr
               key={rowIndex}
               style={rowStyles}
-              onMouseEnter={(e) => hoverable && (e.currentTarget.style.backgroundColor = colors.backgroundLight)}
-              onMouseLeave={(e) => hoverable && (e.currentTarget.style.backgroundColor = colors.white)}
+              onMouseEnter={(e) =>
+                hoverable &&
+                (e.currentTarget.style.backgroundColor = colors.backgroundLight)
+              }
+              onMouseLeave={(e) =>
+                hoverable &&
+                (e.currentTarget.style.backgroundColor = colors.white)
+              }
             >
               {columns.map((column, colIndex) => (
                 <td
                   key={colIndex}
                   style={{
                     ...cellStyles,
-                    textAlign: column.align || 'left',
+                    textAlign: column.align || "left",
                   }}
                 >
-                  {renderCell ? renderCell(column, row, rowIndex) : row[column.key]}
+                  {renderCell
+                    ? renderCell(column, row, rowIndex)
+                    : row[column.key]}
                 </td>
               ))}
             </tr>

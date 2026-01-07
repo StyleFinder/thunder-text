@@ -1,221 +1,234 @@
-'use client'
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+} from "@/components/ui/collapsible";
 import {
   RefreshCw,
   Save,
   Edit3,
-  Eye,
   History,
   ChevronDown,
   ChevronUp,
   CheckCircle,
   AlertCircle,
-  Sparkles
-} from 'lucide-react'
-import type { BrandVoiceProfile } from '@/types/content-center'
-import { logger } from '@/lib/logger'
+  Sparkles,
+} from "lucide-react";
+import type { BrandVoiceProfile } from "@/types/content-center";
+import { logger } from "@/lib/logger";
 
 interface VoiceProfileProps {
-  onProfileUpdate?: () => void
+  onProfileUpdate?: () => void;
 }
 
 export function VoiceProfile({ onProfileUpdate }: VoiceProfileProps) {
-  const [profile, setProfile] = useState<BrandVoiceProfile | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isEditing, setIsEditing] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [isRegenerating, setIsRegenerating] = useState(false)
-  const [editedProfile, setEditedProfile] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [versionHistory, setVersionHistory] = useState<BrandVoiceProfile[]>([])
-  const [showHistory, setShowHistory] = useState(false)
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
+  const [profile, setProfile] = useState<BrandVoiceProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [editedProfile, setEditedProfile] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [versionHistory, setVersionHistory] = useState<BrandVoiceProfile[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    fetchProfile()
-    fetchVersionHistory()
-  }, [])
+    fetchProfile();
+    fetchVersionHistory();
+  }, []);
 
   const fetchProfile = async () => {
-    setIsLoading(true)
-    setError(null)
+    setIsLoading(true);
+    setError(null);
     try {
-      const response = await fetch('/api/content-center/voice', {
+      const response = await fetch("/api/content-center/voice", {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-        }
-      })
+          Authorization: `Bearer ${localStorage.getItem("supabase_token")}`,
+        },
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.success && data.data.profile) {
-        setProfile(data.data.profile)
-        setEditedProfile(data.data.profile.profile_text)
+        setProfile(data.data.profile);
+        setEditedProfile(data.data.profile.profile_text);
       } else {
-        setProfile(null)
+        setProfile(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load profile')
+      setError(err instanceof Error ? err.message : "Failed to load profile");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const fetchVersionHistory = async () => {
     try {
-      const response = await fetch('/api/content-center/voice/history', {
+      const response = await fetch("/api/content-center/voice/history", {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-        }
-      })
+          Authorization: `Bearer ${localStorage.getItem("supabase_token")}`,
+        },
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.success) {
-        setVersionHistory(data.data.profiles)
+        setVersionHistory(data.data.profiles);
       }
     } catch (err) {
-      logger.error('Failed to fetch version history:', err as Error, { component: 'VoiceProfile' })
+      logger.error("Failed to fetch version history:", err as Error, {
+        component: "VoiceProfile",
+      });
     }
-  }
+  };
 
   const handleSave = async () => {
-    if (!profile) return
+    if (!profile) return;
 
-    setIsSaving(true)
-    setError(null)
-    setSuccessMessage(null)
+    setIsSaving(true);
+    setError(null);
+    setSuccessMessage(null);
 
     try {
       const response = await fetch(`/api/content-center/voice/${profile.id}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("supabase_token")}`,
         },
         body: JSON.stringify({
-          profile_text: editedProfile
-        })
-      })
+          profile_text: editedProfile,
+        }),
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.success) {
-        setProfile(data.data)
-        setIsEditing(false)
-        setSuccessMessage('Profile saved successfully')
-        setTimeout(() => setSuccessMessage(null), 3000)
-        onProfileUpdate?.()
+        setProfile(data.data);
+        setIsEditing(false);
+        setSuccessMessage("Profile saved successfully");
+        setTimeout(() => setSuccessMessage(null), 3000);
+        onProfileUpdate?.();
       } else {
-        throw new Error(data.error || 'Failed to save profile')
+        throw new Error(data.error || "Failed to save profile");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save profile')
+      setError(err instanceof Error ? err.message : "Failed to save profile");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleRegenerate = async () => {
-    if (!confirm('This will regenerate your voice profile from your current samples. Continue?')) {
-      return
+    if (
+      !confirm(
+        "This will regenerate your voice profile from your current samples. Continue?",
+      )
+    ) {
+      return;
     }
 
-    setIsRegenerating(true)
-    setError(null)
-    setSuccessMessage(null)
+    setIsRegenerating(true);
+    setError(null);
+    setSuccessMessage(null);
 
     try {
-      const response = await fetch('/api/content-center/voice/generate', {
-        method: 'POST',
+      const response = await fetch("/api/content-center/voice/generate", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-        }
-      })
+          Authorization: `Bearer ${localStorage.getItem("supabase_token")}`,
+        },
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.success) {
-        setProfile(data.data.profile)
-        setEditedProfile(data.data.profile.profile_text)
-        setSuccessMessage('Profile regenerated successfully')
-        setTimeout(() => setSuccessMessage(null), 3000)
-        fetchVersionHistory()
-        onProfileUpdate?.()
+        setProfile(data.data.profile);
+        setEditedProfile(data.data.profile.profile_text);
+        setSuccessMessage("Profile regenerated successfully");
+        setTimeout(() => setSuccessMessage(null), 3000);
+        fetchVersionHistory();
+        onProfileUpdate?.();
       } else {
-        throw new Error(data.error || 'Failed to regenerate profile')
+        throw new Error(data.error || "Failed to regenerate profile");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to regenerate profile')
+      setError(
+        err instanceof Error ? err.message : "Failed to regenerate profile",
+      );
     } finally {
-      setIsRegenerating(false)
+      setIsRegenerating(false);
     }
-  }
+  };
 
   const toggleSection = (section: string) => {
-    setOpenSections(prev => ({
+    setOpenSections((prev) => ({
       ...prev,
-      [section]: !prev[section]
-    }))
-  }
+      [section]: !prev[section],
+    }));
+  };
 
   const parseProfileSections = (profileText: string) => {
-    const sections: { title: string; content: string }[] = []
-    const lines = profileText.split('\n')
-    let currentSection: { title: string; content: string } | null = null
+    const sections: { title: string; content: string }[] = [];
+    const lines = profileText.split("\n");
+    let currentSection: { title: string; content: string } | null = null;
 
     for (const line of lines) {
-      const trimmed = line.trim()
+      const trimmed = line.trim();
 
       // Check if line is a section header (all caps or ends with :)
-      if (trimmed.match(/^[A-Z\s]+:?$/) && trimmed.length > 0 && trimmed.length < 50) {
+      if (
+        trimmed.match(/^[A-Z\s]+:?$/) &&
+        trimmed.length > 0 &&
+        trimmed.length < 50
+      ) {
         if (currentSection) {
-          sections.push(currentSection)
+          sections.push(currentSection);
         }
         currentSection = {
-          title: trimmed.replace(':', ''),
-          content: ''
-        }
+          title: trimmed.replace(":", ""),
+          content: "",
+        };
       } else if (currentSection && trimmed) {
-        currentSection.content += line + '\n'
+        currentSection.content += line + "\n";
       }
     }
 
     if (currentSection) {
-      sections.push(currentSection)
+      sections.push(currentSection);
     }
 
-    return sections
-  }
+    return sections;
+  };
 
   if (isLoading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
           <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-muted-foreground">Loading voice profile...</span>
+          <span className="ml-2 text-muted-foreground">
+            Loading voice profile...
+          </span>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (!profile) {
@@ -225,18 +238,21 @@ export function VoiceProfile({ onProfileUpdate }: VoiceProfileProps) {
           <div className="text-center space-y-4">
             <Sparkles className="mx-auto h-12 w-12 text-muted-foreground" />
             <div>
-              <h3 className="text-lg font-semibold mb-2">No Voice Profile Yet</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                No Voice Profile Yet
+              </h3>
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Upload at least 3 writing samples to generate your personalized voice profile.
+                Upload at least 3 writing samples to generate your personalized
+                voice profile.
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
-  const sections = parseProfileSections(profile.profile_text)
+  const sections = parseProfileSections(profile.profile_text);
 
   return (
     <div className="space-y-6">
@@ -248,7 +264,7 @@ export function VoiceProfile({ onProfileUpdate }: VoiceProfileProps) {
               <CardTitle>Your Brand Voice Profile</CardTitle>
               <CardDescription>
                 Version {profile.profile_version} •
-                {profile.user_edited ? ' Edited by you' : ' AI Generated'} •
+                {profile.user_edited ? " Edited by you" : " AI Generated"} •
                 Updated {new Date(profile.generated_at).toLocaleDateString()}
               </CardDescription>
             </div>
@@ -268,7 +284,11 @@ export function VoiceProfile({ onProfileUpdate }: VoiceProfileProps) {
                   <Edit3 className="mr-2 h-4 w-4" />
                   Edit Profile
                 </Button>
-                <Button onClick={handleRegenerate} variant="outline" disabled={isRegenerating}>
+                <Button
+                  onClick={handleRegenerate}
+                  variant="outline"
+                  disabled={isRegenerating}
+                >
                   {isRegenerating ? (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -281,7 +301,10 @@ export function VoiceProfile({ onProfileUpdate }: VoiceProfileProps) {
                     </>
                   )}
                 </Button>
-                <Button onClick={() => setShowHistory(!showHistory)} variant="outline">
+                <Button
+                  onClick={() => setShowHistory(!showHistory)}
+                  variant="outline"
+                >
                   <History className="mr-2 h-4 w-4" />
                   History ({versionHistory.length})
                 </Button>
@@ -303,8 +326,8 @@ export function VoiceProfile({ onProfileUpdate }: VoiceProfileProps) {
                 </Button>
                 <Button
                   onClick={() => {
-                    setIsEditing(false)
-                    setEditedProfile(profile.profile_text)
+                    setIsEditing(false);
+                    setEditedProfile(profile.profile_text);
                   }}
                   variant="outline"
                 >
@@ -320,7 +343,9 @@ export function VoiceProfile({ onProfileUpdate }: VoiceProfileProps) {
       {successMessage && (
         <Alert className="border-green-600 bg-green-50">
           <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-600">{successMessage}</AlertDescription>
+          <AlertDescription className="text-green-600">
+            {successMessage}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -336,7 +361,9 @@ export function VoiceProfile({ onProfileUpdate }: VoiceProfileProps) {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Version History</CardTitle>
-            <CardDescription>Previous versions of your voice profile</CardDescription>
+            <CardDescription>
+              Previous versions of your voice profile
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -344,17 +371,25 @@ export function VoiceProfile({ onProfileUpdate }: VoiceProfileProps) {
                 <div
                   key={version.id}
                   className={`p-3 rounded-lg border ${
-                    version.is_current ? 'border-primary bg-primary/5' : 'border-border'
+                    version.is_current
+                      ? "border-primary bg-primary/5"
+                      : "border-border"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="font-medium">Version {version.profile_version}</span>
+                      <span className="font-medium">
+                        Version {version.profile_version}
+                      </span>
                       {version.is_current && (
-                        <Badge variant="default" className="ml-2">Current</Badge>
+                        <Badge variant="default" className="ml-2">
+                          Current
+                        </Badge>
                       )}
                       {version.user_edited && (
-                        <Badge variant="outline" className="ml-2">Edited</Badge>
+                        <Badge variant="outline" className="ml-2">
+                          Edited
+                        </Badge>
                       )}
                     </div>
                     <span className="text-sm text-muted-foreground">
@@ -411,5 +446,5 @@ export function VoiceProfile({ onProfileUpdate }: VoiceProfileProps) {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

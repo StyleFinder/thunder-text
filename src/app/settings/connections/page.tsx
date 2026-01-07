@@ -104,7 +104,7 @@ const PROVIDER_INFO: Record<
 
 export default function ConnectionsPage() {
   const searchParams = useSearchParams();
-  const { data: session, status: sessionStatus } = useSession();
+  const { data: _session, status: sessionStatus } = useSession();
   const { shop } = useShop();
 
   const [loading, setLoading] = useState(true);

@@ -1,4 +1,5 @@
-import { logger } from '@/lib/logger'
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
+import { logger } from "@/lib/logger";
 
 /**
  * Resend Email Service
@@ -8,20 +9,21 @@ import { logger } from '@/lib/logger'
  */
 
 interface SendEmailParams {
-  to: string[]
-  subject: string
-  html: string
-  from?: string
+  to: string[];
+  subject: string;
+  html: string;
+  from?: string;
 }
 
 interface SendEmailResponse {
-  success: boolean
-  messageId?: string
-  error?: string
+  success: boolean;
+  messageId?: string;
+  error?: string;
 }
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Thunder Text <alerts@thundertext.app>'
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const FROM_EMAIL =
+  process.env.RESEND_FROM_EMAIL || "Thunder Text <alerts@thundertext.app>";
 
 /**
  * Send email via Resend API
@@ -34,13 +36,13 @@ export async function sendEmail({
 }: SendEmailParams): Promise<SendEmailResponse> {
   try {
     if (!RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY environment variable is not set')
+      throw new Error("RESEND_API_KEY environment variable is not set");
     }
 
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
@@ -49,24 +51,26 @@ export async function sendEmail({
         subject,
         html,
       }),
-    })
+    });
 
-    const data = await response.json()
+    const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || `Resend API error: ${response.status}`)
+      throw new Error(data.message || `Resend API error: ${response.status}`);
     }
 
     return {
       success: true,
       messageId: data.id,
-    }
+    };
   } catch (error) {
-    logger.error('Error sending email via Resend:', error as Error, { component: 'resend-service' })
+    logger.error("Error sending email via Resend:", error as Error, {
+      component: "resend-service",
+    });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
 
@@ -74,51 +78,51 @@ export async function sendEmail({
  * Send Facebook campaign alert email
  */
 export async function sendFacebookAlertEmail(params: {
-  to: string[]
-  storeName: string
+  to: string[];
+  storeName: string;
   campaigns: Array<{
-    name: string
-    conversion_rate: number
-    conversion_benchmark: number
-    roas: number
-    roas_benchmark: number
-    spend: number
-    failed_metrics: ('conversion_rate' | 'roas')[]
-  }>
-  dashboardUrl: string
+    name: string;
+    conversion_rate: number;
+    conversion_benchmark: number;
+    roas: number;
+    roas_benchmark: number;
+    spend: number;
+    failed_metrics: ("conversion_rate" | "roas")[];
+  }>;
+  dashboardUrl: string;
 }): Promise<SendEmailResponse> {
-  const { to, storeName, campaigns, dashboardUrl } = params
+  const { to, storeName, campaigns, dashboardUrl } = params;
 
   const html = generateFacebookAlertEmailHTML({
     storeName,
     campaigns,
     dashboardUrl,
-  })
+  });
 
   return sendEmail({
     to,
-    subject: '🚨 Facebook Ad Campaign Below Benchmark',
+    subject: "🚨 Facebook Ad Campaign Below Benchmark",
     html,
-  })
+  });
 }
 
 /**
  * Generate HTML email template for Facebook alerts
  */
 function generateFacebookAlertEmailHTML(params: {
-  storeName: string
+  storeName: string;
   campaigns: Array<{
-    name: string
-    conversion_rate: number
-    conversion_benchmark: number
-    roas: number
-    roas_benchmark: number
-    spend: number
-    failed_metrics: ('conversion_rate' | 'roas')[]
-  }>
-  dashboardUrl: string
+    name: string;
+    conversion_rate: number;
+    conversion_benchmark: number;
+    roas: number;
+    roas_benchmark: number;
+    spend: number;
+    failed_metrics: ("conversion_rate" | "roas")[];
+  }>;
+  dashboardUrl: string;
 }): string {
-  const { storeName, campaigns, dashboardUrl } = params
+  const { storeName, campaigns, dashboardUrl } = params;
 
   const campaignRows = campaigns
     .map(
@@ -129,7 +133,7 @@ function generateFacebookAlertEmailHTML(params: {
       </h3>
       <div style="display: flex; flex-direction: column; gap: 8px;">
         ${
-          campaign.failed_metrics.includes('conversion_rate')
+          campaign.failed_metrics.includes("conversion_rate")
             ? `
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="color: #D72C0D; font-size: 20px;">❌</span>
@@ -139,10 +143,10 @@ function generateFacebookAlertEmailHTML(params: {
           </span>
         </div>
         `
-            : ''
+            : ""
         }
         ${
-          campaign.failed_metrics.includes('roas')
+          campaign.failed_metrics.includes("roas")
             ? `
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="color: #D72C0D; font-size: 20px;">❌</span>
@@ -152,16 +156,16 @@ function generateFacebookAlertEmailHTML(params: {
           </span>
         </div>
         `
-            : ''
+            : ""
         }
         <div style="color: #6D7175;">
           Spend: $${campaign.spend.toFixed(2)}
         </div>
       </div>
     </div>
-  `
+  `,
     )
-    .join('')
+    .join("");
 
   return `
 <!DOCTYPE html>
@@ -227,7 +231,7 @@ function generateFacebookAlertEmailHTML(params: {
   </div>
 </body>
 </html>
-  `
+  `;
 }
 
 /**
@@ -235,51 +239,51 @@ function generateFacebookAlertEmailHTML(params: {
  */
 function escapeHtml(text: string): string {
   const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  }
-  return text.replace(/[&<>"']/g, (char) => map[char])
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char]);
 }
 
 /**
  * Send staff invitation email
  */
 export async function sendStaffInvitationEmail(params: {
-  to: string
-  storeName: string
-  inviterName: string
-  inviteUrl: string
-  expiresInDays: number
+  to: string;
+  storeName: string;
+  inviterName: string;
+  inviteUrl: string;
+  expiresInDays: number;
 }): Promise<SendEmailResponse> {
-  const { to, storeName, inviterName, inviteUrl, expiresInDays } = params
+  const { to, storeName, inviterName, inviteUrl, expiresInDays } = params;
 
   const html = generateStaffInvitationEmailHTML({
     storeName,
     inviterName,
     inviteUrl,
     expiresInDays,
-  })
+  });
 
   return sendEmail({
     to: [to],
     subject: `You've been invited to join ${storeName} on Thunder Text`,
     html,
-  })
+  });
 }
 
 /**
  * Generate HTML email template for staff invitations
  */
 function generateStaffInvitationEmailHTML(params: {
-  storeName: string
-  inviterName: string
-  inviteUrl: string
-  expiresInDays: number
+  storeName: string;
+  inviterName: string;
+  inviteUrl: string;
+  expiresInDays: number;
 }): string {
-  const { storeName, inviterName, inviteUrl, expiresInDays } = params
+  const { storeName, inviterName, inviteUrl, expiresInDays } = params;
 
   return `
 <!DOCTYPE html>
@@ -349,5 +353,5 @@ function generateStaffInvitationEmailHTML(params: {
   </div>
 </body>
 </html>
-  `
+  `;
 }

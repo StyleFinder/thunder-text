@@ -1,4 +1,5 @@
-import React from 'react';
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
+import React from "react";
 import {
   Home,
   LayoutDashboard,
@@ -36,45 +37,45 @@ import {
   XCircle,
   CheckCircle,
   type LucideIcon,
-} from 'lucide-react';
-import { colors } from '@/lib/design-system/colors';
+} from "lucide-react";
+import { colors } from "@/lib/design-system/colors";
 
 export type IconName =
-  | 'home'
-  | 'dashboard'
-  | 'chart'
-  | 'archive'
-  | 'book'
-  | 'settings'
-  | 'user'
-  | 'search'
-  | 'filter'
-  | 'edit'
-  | 'delete'
-  | 'add'
-  | 'check'
-  | 'close'
-  | 'arrow-right'
-  | 'arrow-left'
-  | 'arrow-up'
-  | 'arrow-down'
-  | 'chevron-right'
-  | 'chevron-left'
-  | 'chevron-up'
-  | 'chevron-down'
-  | 'calendar'
-  | 'clock'
-  | 'dollar'
-  | 'eye'
-  | 'link'
-  | 'external'
-  | 'refresh'
-  | 'download'
-  | 'upload'
-  | 'info'
-  | 'warning'
-  | 'error'
-  | 'success';
+  | "home"
+  | "dashboard"
+  | "chart"
+  | "archive"
+  | "book"
+  | "settings"
+  | "user"
+  | "search"
+  | "filter"
+  | "edit"
+  | "delete"
+  | "add"
+  | "check"
+  | "close"
+  | "arrow-right"
+  | "arrow-left"
+  | "arrow-up"
+  | "arrow-down"
+  | "chevron-right"
+  | "chevron-left"
+  | "chevron-up"
+  | "chevron-down"
+  | "calendar"
+  | "clock"
+  | "dollar"
+  | "eye"
+  | "link"
+  | "external"
+  | "refresh"
+  | "download"
+  | "upload"
+  | "info"
+  | "warning"
+  | "error"
+  | "success";
 
 export interface IconProps {
   name: IconName;
@@ -100,14 +101,14 @@ const iconMap: Record<IconName, LucideIcon> = {
   add: Plus,
   check: Check,
   close: X,
-  'arrow-right': ArrowRight,
-  'arrow-left': ArrowLeft,
-  'arrow-up': ArrowUp,
-  'arrow-down': ArrowDown,
-  'chevron-right': ChevronRight,
-  'chevron-left': ChevronLeft,
-  'chevron-up': ChevronUp,
-  'chevron-down': ChevronDown,
+  "arrow-right": ArrowRight,
+  "arrow-left": ArrowLeft,
+  "arrow-up": ArrowUp,
+  "arrow-down": ArrowDown,
+  "chevron-right": ChevronRight,
+  "chevron-left": ChevronLeft,
+  "chevron-up": ChevronUp,
+  "chevron-down": ChevronDown,
   calendar: Calendar,
   clock: Clock,
   dollar: DollarSign,
@@ -127,7 +128,7 @@ export function Icon({
   name,
   size = 24,
   color = colors.oxfordNavy,
-  className = '',
+  className = "",
   style = {},
   strokeWidth = 2,
 }: IconProps) {
@@ -145,8 +146,8 @@ export function Icon({
       strokeWidth={strokeWidth}
       className={className}
       style={{
-        display: 'inline-block',
-        verticalAlign: 'middle',
+        display: "inline-block",
+        verticalAlign: "middle",
         ...style,
       }}
     />

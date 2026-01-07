@@ -1,11 +1,12 @@
-import { callChatCompletion } from '@/lib/services/openai-client';
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
+import { callChatCompletion } from "@/lib/services/openai-client";
 import {
   ContentExtractionResult,
   AnalysisResult,
   AgentContext,
-} from '../../../../types/best-practices';
-import { AiePlatform, AieGoal } from '../../../../types/aie';
-import { logger } from '@/lib/logger'
+} from "../../../../types/best-practices";
+import { AiePlatform, AieGoal } from "../../../../types/aie";
+import { logger } from "@/lib/logger";
 
 export class AnalysisAgent {
   /**
@@ -13,50 +14,50 @@ export class AnalysisAgent {
    */
   async analyze(
     extractionResult: ContentExtractionResult,
-    context: AgentContext
+    context: AgentContext,
   ): Promise<AnalysisResult> {
     const { extracted_text, word_count } = extractionResult;
 
     // Validate minimum content length
     if (word_count < 50) {
       throw new Error(
-        `Content too short for analysis (${word_count} words, minimum 50 required)`
+        `Content too short for analysis (${word_count} words, minimum 50 required)`,
       );
     }
 
-    console.log(
-      `[AnalysisAgent] Analyzing content (${word_count} words)...`
-    );
+    console.log(`[AnalysisAgent] Analyzing content (${word_count} words)...`);
 
     try {
       const systemPrompt = this.buildSystemPrompt();
       const userPrompt = this.buildUserPrompt(
         extracted_text,
-        context.original_input
+        context.original_input,
       );
 
       const response = await callChatCompletion(
         [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
         ],
         {
-          model: process.env.OPENAI_MODEL_ANALYSIS || 'gpt-4o-mini',
+          model: process.env.OPENAI_MODEL_ANALYSIS || "gpt-4o-mini",
           temperature: 0.3,
-          response_format: { type: 'json_object' },
-        }
+          response_format: { type: "json_object" },
+        },
       );
 
       const analysis = this.parseResponse(response);
       console.log(
-        `[AnalysisAgent] Analysis complete: "${analysis.title}" (${analysis.platform}, ${analysis.category})`
+        `[AnalysisAgent] Analysis complete: "${analysis.title}" (${analysis.platform}, ${analysis.category})`,
       );
 
       return analysis;
     } catch (error) {
-      logger.error('[AnalysisAgent] Analysis failed:', error as Error, { component: 'analysis' });
+      logger.error("[AnalysisAgent] Analysis failed:", error as Error, {
+        component: "analysis",
+      });
       throw new Error(
-        `Failed to analyze content: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to analyze content: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
   }
@@ -86,7 +87,7 @@ Focus on extracting practical, actionable information that can be used to improv
       category: string;
       goal: string;
       tags: string[];
-    }>
+    }>,
   ): string {
     // Include any hints from the original input
     const hints: string[] = [];
@@ -100,10 +101,11 @@ Focus on extracting practical, actionable information that can be used to improv
       hints.push(`Expected goal: ${originalInput.goal}`);
     }
     if (originalInput.tags && originalInput.tags.length > 0) {
-      hints.push(`Suggested tags: ${originalInput.tags.join(', ')}`);
+      hints.push(`Suggested tags: ${originalInput.tags.join(", ")}`);
     }
 
-    const hintsSection = hints.length > 0 ? `\n\nHints from uploader:\n${hints.join('\n')}` : '';
+    const hintsSection =
+      hints.length > 0 ? `\n\nHints from uploader:\n${hints.join("\n")}` : "";
 
     return `
 Analyze the following content and extract structured metadata.
@@ -139,20 +141,20 @@ Guidelines:
   private parseResponse(response: string): AnalysisResult {
     try {
       const cleanJson = response
-        .replace(/```json/g, '')
-        .replace(/```/g, '')
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
         .trim();
       const parsed = JSON.parse(cleanJson);
 
       // Validate required fields
       const required = [
-        'title',
-        'platform',
-        'category',
-        'goal',
-        'description',
-        'key_insights',
-        'tags',
+        "title",
+        "platform",
+        "category",
+        "goal",
+        "description",
+        "key_insights",
+        "tags",
       ];
       for (const field of required) {
         if (!parsed[field]) {
@@ -161,33 +163,36 @@ Guidelines:
       }
 
       // Validate platform enum
-      const validPlatforms: (AiePlatform | 'multi')[] = [
-        'meta',
-        'google',
-        'tiktok',
-        'pinterest',
-        'multi',
+      const validPlatforms: (AiePlatform | "multi")[] = [
+        "meta",
+        "google",
+        "tiktok",
+        "pinterest",
+        "multi",
       ];
       if (!validPlatforms.includes(parsed.platform)) {
         throw new Error(
-          `Invalid platform: ${parsed.platform}. Must be one of: ${validPlatforms.join(', ')}`
+          `Invalid platform: ${parsed.platform}. Must be one of: ${validPlatforms.join(", ")}`,
         );
       }
 
       // Validate goal enum
-      const validGoals: AieGoal[] = ['awareness', 'engagement', 'conversion'];
+      const validGoals: AieGoal[] = ["awareness", "engagement", "conversion"];
       if (!validGoals.includes(parsed.goal)) {
         throw new Error(
-          `Invalid goal: ${parsed.goal}. Must be one of: ${validGoals.join(', ')}`
+          `Invalid goal: ${parsed.goal}. Must be one of: ${validGoals.join(", ")}`,
         );
       }
 
       // Validate arrays
-      if (!Array.isArray(parsed.key_insights) || parsed.key_insights.length === 0) {
-        throw new Error('key_insights must be a non-empty array');
+      if (
+        !Array.isArray(parsed.key_insights) ||
+        parsed.key_insights.length === 0
+      ) {
+        throw new Error("key_insights must be a non-empty array");
       }
       if (!Array.isArray(parsed.tags) || parsed.tags.length === 0) {
-        throw new Error('tags must be a non-empty array');
+        throw new Error("tags must be a non-empty array");
       }
 
       return {
@@ -204,10 +209,16 @@ Guidelines:
         difficulty_level: parsed.difficulty_level,
       };
     } catch (error) {
-      logger.error('[AnalysisAgent] Failed to parse response:', error as Error, { component: 'analysis' });
-      logger.error(`Raw response: ${response}`, undefined, { component: 'analysis' });
+      logger.error(
+        "[AnalysisAgent] Failed to parse response:",
+        error as Error,
+        { component: "analysis" },
+      );
+      logger.error(`Raw response: ${response}`, undefined, {
+        component: "analysis",
+      });
       throw new Error(
-        `Failed to parse analysis response: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to parse analysis response: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
   }

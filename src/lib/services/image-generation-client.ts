@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 /**
  * Unified Image Generation Client
  *
@@ -12,10 +13,18 @@
  * Note: DALL-E 3 was removed - it doesn't support reference images.
  */
 
-import * as openaiImage from './openai-image-client';
-import { parsePrompt, buildEnhancedPrompt, type QuestionnaireAnswerInput } from './image-prompt-parser';
-import { canRequest, getCircuitStatus, CircuitState } from '@/lib/resilience/circuit-breaker';
-import { logger } from '@/lib/logger';
+import * as openaiImage from "./openai-image-client";
+import {
+  parsePrompt as _parsePrompt,
+  buildEnhancedPrompt as _buildEnhancedPrompt,
+  type QuestionnaireAnswerInput,
+} from "./image-prompt-parser";
+import {
+  canRequest,
+  getCircuitStatus,
+  CircuitState,
+} from "@/lib/resilience/circuit-breaker";
+import { logger } from "@/lib/logger";
 import type {
   ImageProvider,
   ImageModel,
@@ -24,10 +33,10 @@ import type {
   ImageGenerationResult,
   ImageProviderHealth,
   ImageSystemHealth,
-  PromptDebugInfo,
-} from '@/types/image-generation';
+  PromptDebugInfo as _PromptDebugInfo,
+} from "@/types/image-generation";
 
-export type { ImageProvider } from '@/types/image-generation';
+export type { ImageProvider } from "@/types/image-generation";
 
 /**
  * Image generation options
@@ -60,13 +69,13 @@ export interface ImageGenerationOptions {
 export async function generateImage(
   prompt: string,
   referenceImage: string | undefined,
-  options: ImageGenerationOptions
+  options: ImageGenerationOptions,
 ): Promise<ImageGenerationResult> {
   const {
     provider,
     model,
-    aspectRatio = '1:1',
-    quality = 'standard',
+    aspectRatio = "1:1",
+    quality = "standard",
     shopId,
     conversationId = generateConversationId(),
     questionnaireAnswers,
@@ -78,14 +87,14 @@ export async function generateImage(
   if (!health.openai.available) {
     throw new ImageGenerationError(
       `OpenAI Image is unavailable. ${getUnavailableReason(health.openai)}`,
-      provider
+      provider,
     );
   }
 
-  logger.info('Starting image generation', {
-    component: 'image-generation-client',
-    provider: 'openai',
-    model: model || 'default',
+  logger.info("Starting image generation", {
+    component: "image-generation-client",
+    provider: "openai",
+    model: model || "default",
     aspectRatio,
     quality,
     shopId,
@@ -95,18 +104,18 @@ export async function generateImage(
 
   try {
     const result = await openaiImage.generateImage(prompt, referenceImage, {
-      model: model as openaiImage.OpenAIImageOptions['model'],
+      model: model as openaiImage.OpenAIImageOptions["model"],
       aspectRatio,
       quality,
       shopId,
-      operationType: 'image_generation',
+      operationType: "image_generation",
       questionnaireAnswers,
     });
 
     return {
       imageUrl: result.imageData, // Base64 data URL
       conversationId,
-      provider: 'openai',
+      provider: "openai",
       model: result.model,
       costCents: result.costCents,
       usedFallback: false,
@@ -115,9 +124,9 @@ export async function generateImage(
       promptDebug: result.promptDebug,
     };
   } catch (error) {
-    logger.error('Image generation failed', {
-      component: 'image-generation-client',
-      provider: 'openai',
+    logger.error("Image generation failed", {
+      component: "image-generation-client",
+      provider: "openai",
       error: (error as Error).message,
       shopId,
     });
@@ -131,12 +140,12 @@ export async function generateImage(
  */
 function getUnavailableReason(health: ImageProviderHealth): string {
   if (!health.configured) {
-    return 'API key not configured.';
+    return "API key not configured.";
   }
   if (health.circuitOpen) {
     return `Circuit breaker is open due to ${health.failureCount} recent failures. Please try again later.`;
   }
-  return 'Service is currently unavailable.';
+  return "Service is currently unavailable.";
 }
 
 /**
@@ -149,7 +158,7 @@ function generateConversationId(): string {
 /**
  * Check provider health status
  */
-export function getProviderHealth(): ImageSystemHealth['providers'] {
+export function getProviderHealth(): ImageSystemHealth["providers"] {
   const openaiConfigured = openaiImage.isOpenAIImageConfigured();
 
   // Try to get circuit status, use defaults if circuit doesn't exist yet
@@ -157,7 +166,7 @@ export function getProviderHealth(): ImageSystemHealth['providers'] {
   let openaiFailureCount = 0;
 
   try {
-    const openaiStatus = getCircuitStatus('openai-image');
+    const openaiStatus = getCircuitStatus("openai-image");
     openaiState = openaiStatus.state;
     openaiFailureCount = openaiStatus.failureCount;
   } catch {
@@ -166,7 +175,7 @@ export function getProviderHealth(): ImageSystemHealth['providers'] {
 
   return {
     openai: {
-      available: openaiConfigured && canRequest('openai-image'),
+      available: openaiConfigured && canRequest("openai-image"),
       circuitOpen: openaiState === CircuitState.OPEN,
       failureCount: openaiFailureCount,
       configured: openaiConfigured,
@@ -206,7 +215,7 @@ export function getAvailableProviders(): ImageProvider[] {
   const health = getProviderHealth();
   const available: ImageProvider[] = [];
 
-  if (health.openai.available) available.push('openai');
+  if (health.openai.available) available.push("openai");
 
   return available;
 }
@@ -214,14 +223,14 @@ export function getAvailableProviders(): ImageProvider[] {
 /**
  * Get default model for the provider
  */
-export function getDefaultModel(provider: ImageProvider): ImageModel {
-  return 'gpt-image-1';
+export function getDefaultModel(_provider: ImageProvider): ImageModel {
+  return "gpt-image-1";
 }
 
 /**
  * Get available models for the provider
  */
-export function getModelsForProvider(provider: ImageProvider): ImageModel[] {
+export function getModelsForProvider(_provider: ImageProvider): ImageModel[] {
   return openaiImage.getAvailableOpenAIModels();
 }
 
@@ -231,14 +240,14 @@ export function getModelsForProvider(provider: ImageProvider): ImageModel[] {
 export function estimateCost(
   provider: ImageProvider,
   model?: ImageModel,
-  quality: ImageQuality = 'standard'
+  quality: ImageQuality = "standard",
 ): number {
   const actualModel = model || getDefaultModel(provider);
 
   // Cost lookup table (in cents)
   // Note: Only gpt-image-1 supported - DALL-E 3 removed (doesn't support reference images)
   const costs: Record<string, number> = {
-    'gpt-image-1': quality === 'hd' ? 2 : 1,
+    "gpt-image-1": quality === "hd" ? 2 : 1,
   };
 
   return costs[actualModel] || 1;
@@ -251,9 +260,13 @@ export class ImageGenerationError extends Error {
   provider: ImageProvider;
   originalError: Error | null;
 
-  constructor(message: string, provider: ImageProvider, originalError: Error | null = null) {
+  constructor(
+    message: string,
+    provider: ImageProvider,
+    originalError: Error | null = null,
+  ) {
     super(message);
-    this.name = 'ImageGenerationError';
+    this.name = "ImageGenerationError";
     this.provider = provider;
     this.originalError = originalError;
   }

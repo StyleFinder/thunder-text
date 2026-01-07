@@ -1,24 +1,30 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { useRouter } from 'next/navigation';
-import { useShopifyAuth } from '../components/UnifiedShopifyAuth';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Zap, AlertCircle } from 'lucide-react';
+import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useShopifyAuth } from "../components/UnifiedShopifyAuth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Zap, AlertCircle } from "lucide-react";
 
 export default function EmbeddedApp() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { isAuthenticated, isEmbedded, shop, isLoading, error } = useShopifyAuth();
+  const {
+    isAuthenticated,
+    isEmbedded: _isEmbedded,
+    shop,
+    isLoading,
+    error,
+  } = useShopifyAuth();
 
   useEffect(() => {
     if (isAuthenticated && shop) {
       const params = new URLSearchParams({
         shop,
-        authenticated: 'true',
-        host: searchParams?.get('host') || '',
-        embedded: '1'
+        authenticated: "true",
+        host: searchParams?.get("host") || "",
+        embedded: "1",
       });
       router.push(`/products?${params.toString()}`);
     }
@@ -33,7 +39,7 @@ export default function EmbeddedApp() {
             <div className="text-center">
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
-                style={{ background: 'rgba(220, 38, 38, 0.1)' }}
+                style={{ background: "rgba(220, 38, 38, 0.1)" }}
               >
                 <AlertCircle className="w-7 h-7 text-red-500" />
               </div>
@@ -59,7 +65,10 @@ export default function EmbeddedApp() {
             <div className="flex flex-col items-center gap-5">
               <div
                 className="w-14 h-14 rounded-xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+                }}
               >
                 <Zap className="w-7 h-7 text-white" />
               </div>
@@ -71,7 +80,10 @@ export default function EmbeddedApp() {
                   Please wait while we establish a secure connection...
                 </p>
               </div>
-              <Loader2 className="h-6 w-6 animate-spin" style={{ color: '#0066cc' }} />
+              <Loader2
+                className="h-6 w-6 animate-spin"
+                style={{ color: "#0066cc" }}
+              />
             </div>
           </div>
         </div>
@@ -88,7 +100,7 @@ export default function EmbeddedApp() {
             <div className="text-center">
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
-                style={{ background: 'rgba(220, 38, 38, 0.1)' }}
+                style={{ background: "rgba(220, 38, 38, 0.1)" }}
               >
                 <AlertCircle className="w-7 h-7 text-red-500" />
               </div>
@@ -114,7 +126,10 @@ export default function EmbeddedApp() {
             <div className="flex flex-col items-center gap-5">
               <div
                 className="w-14 h-14 rounded-xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+                }}
               >
                 <Zap className="w-7 h-7 text-white" />
               </div>
@@ -126,7 +141,10 @@ export default function EmbeddedApp() {
                   Redirecting you to your products...
                 </p>
               </div>
-              <Loader2 className="h-6 w-6 animate-spin" style={{ color: '#0066cc' }} />
+              <Loader2
+                className="h-6 w-6 animate-spin"
+                style={{ color: "#0066cc" }}
+              />
             </div>
           </div>
         </div>
@@ -142,7 +160,9 @@ export default function EmbeddedApp() {
           <div className="flex flex-col items-center gap-5">
             <div
               className="w-14 h-14 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+              style={{
+                background: "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+              }}
             >
               <Zap className="w-7 h-7 text-white" />
             </div>
@@ -154,7 +174,10 @@ export default function EmbeddedApp() {
                 Please wait while we connect to Shopify...
               </p>
             </div>
-            <Loader2 className="h-6 w-6 animate-spin" style={{ color: '#0066cc' }} />
+            <Loader2
+              className="h-6 w-6 animate-spin"
+              style={{ color: "#0066cc" }}
+            />
           </div>
         </div>
       </div>

@@ -22,8 +22,13 @@ import {
   Package,
   Sparkles,
   Bot,
+  Video,
 } from "lucide-react";
 import { useNavigation } from "../hooks/useNavigation";
+import {
+  isImageGenerationEnabled,
+  isVideoGenerationEnabled,
+} from "@/lib/feature-flags";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -231,19 +236,42 @@ function NavigationContent({ children }: AppNavigationProps) {
       }),
       allowedRoles: ["user", "admin"],
     },
-    {
-      url: buildUrl("/image-generation"),
-      label: "Image Generation",
-      icon: Sparkles,
-      onClick: () => navigateTo("/image-generation"),
-      matches: isActive({
-        label: "Image Generation",
-        url: buildUrl("/image-generation"),
-        matchPaths: ["/image-generation"],
-        exactMatch: false,
-      }),
-      allowedRoles: ["user", "admin"],
-    },
+    // Image Generation - only shown when feature flag is enabled
+    ...(isImageGenerationEnabled()
+      ? [
+          {
+            url: buildUrl("/image-generation"),
+            label: "Image Generation",
+            icon: Sparkles,
+            onClick: () => navigateTo("/image-generation"),
+            matches: isActive({
+              label: "Image Generation",
+              url: buildUrl("/image-generation"),
+              matchPaths: ["/image-generation"],
+              exactMatch: false,
+            }),
+            allowedRoles: ["user", "admin"],
+          },
+        ]
+      : []),
+    // Video Generation - only shown when feature flag is enabled
+    ...(isVideoGenerationEnabled()
+      ? [
+          {
+            url: buildUrl("/content-center/animator"),
+            label: "Video Generation",
+            icon: Video,
+            onClick: () => navigateTo("/content-center/animator"),
+            matches: isActive({
+              label: "Video Generation",
+              url: buildUrl("/content-center/animator"),
+              matchPaths: ["/content-center/animator"],
+              exactMatch: false,
+            }),
+            allowedRoles: ["user", "admin"],
+          },
+        ]
+      : []),
     {
       url: buildUrl("/business-profile"),
       label: "Business Profile",

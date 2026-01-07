@@ -10,10 +10,10 @@
  * expected behavior and test against the primary test store.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
+import { describe, it, expect } from "@jest/globals";
 import { GET } from "@/app/api/onboarding/status/route";
 import { NextRequest } from "next/server";
-import { createServiceClient } from "../../utils/auth-helpers";
+import { _createServiceClient } from "../../utils/auth-helpers";
 import { TEST_SHOP } from "../../utils/test-constants";
 
 describe("GET /api/onboarding/status", () => {
@@ -94,7 +94,9 @@ describe("GET /api/onboarding/status", () => {
       const request = createAuthRequest(TEST_SHOP.domain);
       const response = await GET(request);
 
-      expect(response.headers.get("content-type")).toContain("application/json");
+      expect(response.headers.get("content-type")).toContain(
+        "application/json",
+      );
     });
   });
 

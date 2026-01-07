@@ -342,7 +342,7 @@ export class ConversationNotFoundError extends AICoachError {
 export class PremiumRequiredError extends AICoachError {
   constructor() {
     super(
-      "AI Coaches require a Professional or Enterprise plan. Please upgrade to access this feature.",
+      "AI Coaches require a Pro plan. Please upgrade to access this feature.",
       "PREMIUM_REQUIRED",
       403,
     );

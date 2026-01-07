@@ -12,7 +12,6 @@
  */
 
 import { describe, it, expect } from "@jest/globals";
-import { NextResponse } from "next/server";
 
 describe("GET /api/bhb/insights", () => {
   describe("Endpoint Behavior Documentation", () => {

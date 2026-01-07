@@ -363,7 +363,6 @@ export class ShopifyAPI {
     return result;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async createProductVariants(
     _productId: string,
     _variants: ShopifyVariantInput[],
@@ -831,7 +830,6 @@ export class ShopifyAPI {
   }
 
   // Helper to recreate media from staging (for retry scenarios)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async recreateMediaFromStaging(
     _originalMediaId: string,
     _productId: string,

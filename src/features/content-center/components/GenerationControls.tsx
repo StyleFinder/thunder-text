@@ -1,98 +1,100 @@
-'use client'
+/* eslint-disable react/no-unescaped-entities -- Quotes and apostrophes in JSX text are intentional */
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
+"use client";
 
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Slider } from '@/components/ui/slider'
-import { Button } from '@/components/ui/button'
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Sparkles, Info, AlertCircle } from 'lucide-react'
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Sparkles, Info, AlertCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { ContentType, CTAType } from '@/types/content-center'
+} from "@/components/ui/tooltip";
+import { ContentType, CTAType } from "@/types/content-center";
 import {
   WORD_COUNT_RANGES,
   getToneIntensityLabel,
-  getCTATypeLabel,
-  estimateGenerationTime
-} from '@/lib/services/parameter-handler'
+  estimateGenerationTime,
+} from "@/lib/services/parameter-handler";
 
 interface GenerationControlsProps {
-  contentType: ContentType
-  onGenerate: (params: GenerationParams) => void
-  isGenerating?: boolean
-  className?: string
+  contentType: ContentType;
+  onGenerate: (params: GenerationParams) => void;
+  isGenerating?: boolean;
+  className?: string;
 }
 
 export interface GenerationParams {
-  topic: string
-  wordCount: number
-  toneIntensity: number
-  ctaType: CTAType
-  customCTA?: string
-  additionalContext?: string
+  topic: string;
+  wordCount: number;
+  toneIntensity: number;
+  ctaType: CTAType;
+  customCTA?: string;
+  additionalContext?: string;
 }
 
 const CTA_TYPES: { value: CTAType; label: string }[] = [
-  { value: 'shop_now', label: 'Shop Now' },
-  { value: 'learn_more', label: 'Learn More' },
-  { value: 'sign_up', label: 'Sign Up' },
-  { value: 'contact_us', label: 'Contact Us' },
-  { value: 'limited_time', label: 'Limited Time Offer' },
-  { value: 'custom', label: 'Custom CTA' },
-  { value: 'none', label: 'No CTA' }
-]
+  { value: "shop_now", label: "Shop Now" },
+  { value: "learn_more", label: "Learn More" },
+  { value: "sign_up", label: "Sign Up" },
+  { value: "contact_us", label: "Contact Us" },
+  { value: "limited_time", label: "Limited Time Offer" },
+  { value: "custom", label: "Custom CTA" },
+  { value: "none", label: "No CTA" },
+];
 
 export function GenerationControls({
   contentType,
   onGenerate,
   isGenerating = false,
-  className = ''
+  className = "",
 }: GenerationControlsProps) {
-  const wordCountRange = WORD_COUNT_RANGES[contentType]
+  const wordCountRange = WORD_COUNT_RANGES[contentType];
 
-  const [topic, setTopic] = useState('')
-  const [wordCount, setWordCount] = useState(wordCountRange.recommended)
-  const [toneIntensity, setToneIntensity] = useState(3)
-  const [ctaType, setCtaType] = useState<CTAType>('learn_more')
-  const [customCTA, setCustomCTA] = useState('')
-  const [additionalContext, setAdditionalContext] = useState('')
+  const [topic, setTopic] = useState("");
+  const [wordCount, setWordCount] = useState(wordCountRange.recommended);
+  const [toneIntensity, setToneIntensity] = useState(3);
+  const [ctaType, setCtaType] = useState<CTAType>("learn_more");
+  const [customCTA, setCustomCTA] = useState("");
+  const [additionalContext, setAdditionalContext] = useState("");
 
   const handleGenerate = () => {
-    if (!topic.trim()) return
+    if (!topic.trim()) return;
 
     onGenerate({
       topic: topic.trim(),
       wordCount,
       toneIntensity,
       ctaType,
-      customCTA: ctaType === 'custom' ? customCTA : undefined,
-      additionalContext: additionalContext.trim() || undefined
-    })
-  }
+      customCTA: ctaType === "custom" ? customCTA : undefined,
+      additionalContext: additionalContext.trim() || undefined,
+    });
+  };
 
-  const estimatedTime = estimateGenerationTime(contentType, wordCount)
-  const canGenerate = topic.trim().length > 0 && !isGenerating
+  const estimatedTime = estimateGenerationTime(contentType, wordCount);
+  const canGenerate = topic.trim().length > 0 && !isGenerating;
 
   return (
     <div className={`space-y-6 ${className}`}>
       <div>
         <h2 className="text-2xl font-bold mb-2">Generation Settings</h2>
         <p className="text-muted-foreground">
-          Configure your content parameters. All content will match your brand voice profile.
+          Configure your content parameters. All content will match your brand
+          voice profile.
         </p>
       </div>
 
@@ -113,7 +115,8 @@ export function GenerationControls({
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="max-w-xs">
-                      What should this content be about? Be specific for best results.
+                      What should this content be about? Be specific for best
+                      results.
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -162,7 +165,9 @@ export function GenerationControls({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Label>Tone Intensity</Label>
-                <Badge variant="secondary">{getToneIntensityLabel(toneIntensity)}</Badge>
+                <Badge variant="secondary">
+                  {getToneIntensityLabel(toneIntensity)}
+                </Badge>
               </div>
               <TooltipProvider>
                 <Tooltip>
@@ -171,11 +176,23 @@ export function GenerationControls({
                   </TooltipTrigger>
                   <TooltipContent className="max-w-sm">
                     <div className="space-y-2">
-                      <p className="font-semibold">How strongly should your brand personality shine through?</p>
+                      <p className="font-semibold">
+                        How strongly should your brand personality shine
+                        through?
+                      </p>
                       <ul className="space-y-1 text-xs">
-                        <li><strong>Gentle (1-2):</strong> Subtle brand voice, mostly neutral and professional tone</li>
-                        <li><strong>Moderate (3):</strong> Balanced mix of your brand personality with clear messaging</li>
-                        <li><strong>Strong (4-5):</strong> Bold, distinctive voice that fully embraces your brand's unique character</li>
+                        <li>
+                          <strong>Gentle (1-2):</strong> Subtle brand voice,
+                          mostly neutral and professional tone
+                        </li>
+                        <li>
+                          <strong>Moderate (3):</strong> Balanced mix of your
+                          brand personality with clear messaging
+                        </li>
+                        <li>
+                          <strong>Strong (4-5):</strong> Bold, distinctive voice
+                          that fully embraces your brand's unique character
+                        </li>
                       </ul>
                     </div>
                   </TooltipContent>
@@ -236,7 +253,7 @@ export function GenerationControls({
           </div>
 
           {/* Custom CTA */}
-          {ctaType === 'custom' && (
+          {ctaType === "custom" && (
             <div className="space-y-2">
               <Label htmlFor="custom-cta">Custom CTA Text</Label>
               <Input
@@ -260,7 +277,8 @@ export function GenerationControls({
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="max-w-xs">
-                      Add specific details, keywords, or requirements to guide the generation
+                      Add specific details, keywords, or requirements to guide
+                      the generation
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -292,7 +310,8 @@ export function GenerationControls({
             <div className="flex-1 space-y-1">
               <p className="text-sm font-medium">Ready to generate</p>
               <p className="text-xs text-muted-foreground">
-                Estimated time: ~{estimatedTime} seconds • Content will match your brand voice profile
+                Estimated time: ~{estimatedTime} seconds • Content will match
+                your brand voice profile
               </p>
             </div>
           </div>
@@ -331,5 +350,5 @@ export function GenerationControls({
         </div>
       )}
     </div>
-  )
+  );
 }

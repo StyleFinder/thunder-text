@@ -828,6 +828,7 @@ function UsageLimitBanner({
 
 // Stats interface
 interface DashboardStats {
+  storeName?: string | null;
   productsGenerated: number;
   adsCreated: number;
   timeSavedMinutes: number;
@@ -861,9 +862,12 @@ function DashboardContent() {
     redirectOnDisconnect: !!shopDomain,
   });
 
-  const storeName = shopDomain
-    ? decodeURIComponent(shopDomain).replace(".myshopify.com", "")
-    : "Your Store";
+  // Prefer display name from API (database), fall back to domain
+  const storeName =
+    stats.storeName ||
+    (shopDomain
+      ? decodeURIComponent(shopDomain).replace(".myshopify.com", "")
+      : "Your Store");
 
   // Fetch subscription status
   useEffect(() => {
@@ -908,6 +912,7 @@ function DashboardContent() {
 
         if (data.success && data.data) {
           setStats({
+            storeName: data.data.storeName || null,
             productsGenerated: data.data.productsGenerated || 0,
             adsCreated: data.data.adsCreated || 0,
             timeSavedMinutes: data.data.timeSavedMinutes || 0,

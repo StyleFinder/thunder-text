@@ -28,7 +28,7 @@ export default function RootPage() {
         const shop = searchParams?.get("shop");
         const hmac = searchParams?.get("hmac");
         const timestamp = searchParams?.get("timestamp");
-        const host = searchParams?.get("host");
+        const _host = searchParams?.get("host");
 
         // SHOPIFY HOSTED INSTALL FLOW DETECTION
         // When Shopify redirects after install via hosted OAuth, it sends these params to application_url
@@ -37,7 +37,9 @@ export default function RootPage() {
           // Redirect to our OAuth initiation endpoint
           // This will generate proper state, store it, and redirect to Shopify OAuth
           // IMPORTANT: Use window.location.href for API routes - router.replace can't handle them
-          const normalizedShop = shop.includes(".myshopify.com") ? shop : `${shop}.myshopify.com`;
+          const normalizedShop = shop.includes(".myshopify.com")
+            ? shop
+            : `${shop}.myshopify.com`;
           window.location.href = `/api/auth/shopify?shop=${normalizedShop}`;
           return;
         }

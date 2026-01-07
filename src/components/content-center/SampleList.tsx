@@ -1,10 +1,18 @@
-'use client'
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
+/* eslint-disable react/no-unescaped-entities -- Quotes and apostrophes in JSX text are intentional */
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   FileText,
   Trash2,
@@ -12,140 +20,147 @@ import {
   EyeOff,
   AlertCircle,
   RefreshCw,
-  CheckCircle2
-} from 'lucide-react'
-import type { ContentSample } from '@/types/content-center'
+  CheckCircle2,
+} from "lucide-react";
+import type { ContentSample } from "@/types/content-center";
 
 interface SampleListProps {
-  refreshTrigger?: number
+  refreshTrigger?: number;
 }
 
 export function SampleList({ refreshTrigger }: SampleListProps) {
-  const [samples, setSamples] = useState<ContentSample[]>([])
-  const [activeCount, setActiveCount] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [updatingSampleId, setUpdatingSampleId] = useState<string | null>(null)
-  const [deletingSampleId, setDeletingSampleId] = useState<string | null>(null)
+  const [samples, setSamples] = useState<ContentSample[]>([]);
+  const [activeCount, setActiveCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [updatingSampleId, setUpdatingSampleId] = useState<string | null>(null);
+  const [deletingSampleId, setDeletingSampleId] = useState<string | null>(null);
 
   const fetchSamples = async () => {
-    setIsLoading(true)
-    setError(null)
+    setIsLoading(true);
+    setError(null);
 
     try {
-      const response = await fetch('/api/content-center/samples', {
+      const response = await fetch("/api/content-center/samples", {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-        }
-      })
+          Authorization: `Bearer ${localStorage.getItem("supabase_token")}`,
+        },
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch samples')
+        throw new Error(data.error || "Failed to fetch samples");
       }
 
-      setSamples(data.data.samples)
-      setActiveCount(data.data.active_count)
+      setSamples(data.data.samples);
+      setActiveCount(data.data.active_count);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load samples')
+      setError(err instanceof Error ? err.message : "Failed to load samples");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchSamples()
-  }, [refreshTrigger])
+    fetchSamples();
+  }, [refreshTrigger]);
 
-  const toggleSampleActive = async (sampleId: string, currentState: boolean) => {
-    setUpdatingSampleId(sampleId)
-    setError(null)
+  const toggleSampleActive = async (
+    sampleId: string,
+    currentState: boolean,
+  ) => {
+    setUpdatingSampleId(sampleId);
+    setError(null);
 
     try {
       const response = await fetch(`/api/content-center/samples/${sampleId}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("supabase_token")}`,
         },
         body: JSON.stringify({
-          is_active: !currentState
-        })
-      })
+          is_active: !currentState,
+        }),
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to update sample')
+        throw new Error(data.error || "Failed to update sample");
       }
 
       // Update local state
-      setSamples(samples.map(s =>
-        s.id === sampleId ? { ...s, is_active: !currentState } : s
-      ))
-      setActiveCount(prev => currentState ? prev - 1 : prev + 1)
-
+      setSamples(
+        samples.map((s) =>
+          s.id === sampleId ? { ...s, is_active: !currentState } : s,
+        ),
+      );
+      setActiveCount((prev) => (currentState ? prev - 1 : prev + 1));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update sample')
+      setError(err instanceof Error ? err.message : "Failed to update sample");
     } finally {
-      setUpdatingSampleId(null)
+      setUpdatingSampleId(null);
     }
-  }
+  };
 
   const deleteSample = async (sampleId: string) => {
-    if (!confirm('Are you sure you want to delete this sample? This action cannot be undone.')) {
-      return
+    if (
+      !confirm(
+        "Are you sure you want to delete this sample? This action cannot be undone.",
+      )
+    ) {
+      return;
     }
 
-    setDeletingSampleId(sampleId)
-    setError(null)
+    setDeletingSampleId(sampleId);
+    setError(null);
 
     try {
       const response = await fetch(`/api/content-center/samples/${sampleId}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-        }
-      })
+          Authorization: `Bearer ${localStorage.getItem("supabase_token")}`,
+        },
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to delete sample')
+        throw new Error(data.error || "Failed to delete sample");
       }
 
       // Update local state
-      const deletedSample = samples.find(s => s.id === sampleId)
-      setSamples(samples.filter(s => s.id !== sampleId))
+      const deletedSample = samples.find((s) => s.id === sampleId);
+      setSamples(samples.filter((s) => s.id !== sampleId));
       if (deletedSample?.is_active) {
-        setActiveCount(prev => prev - 1)
+        setActiveCount((prev) => prev - 1);
       }
-
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete sample')
+      setError(err instanceof Error ? err.message : "Failed to delete sample");
     } finally {
-      setDeletingSampleId(null)
+      setDeletingSampleId(null);
     }
-  }
+  };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   const getSampleTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      blog: 'Blog Post',
-      email: 'Email',
-      description: 'Product Description',
-      other: 'Other'
-    }
-    return labels[type] || type
-  }
+      blog: "Blog Post",
+      email: "Email",
+      description: "Product Description",
+      other: "Other",
+    };
+    return labels[type] || type;
+  };
 
   if (isLoading) {
     return (
@@ -155,7 +170,7 @@ export function SampleList({ refreshTrigger }: SampleListProps) {
           <span className="ml-2 text-muted-foreground">Loading samples...</span>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -165,7 +180,8 @@ export function SampleList({ refreshTrigger }: SampleListProps) {
           <div>
             <CardTitle>Your Content Samples</CardTitle>
             <CardDescription>
-              {activeCount} active sample{activeCount !== 1 ? 's' : ''} • {samples.length} total (10 max)
+              {activeCount} active sample{activeCount !== 1 ? "s" : ""} •{" "}
+              {samples.length} total (10 max)
             </CardDescription>
           </div>
           <Button
@@ -185,7 +201,9 @@ export function SampleList({ refreshTrigger }: SampleListProps) {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               You need at least 3 active samples to generate a voice profile.
-              {activeCount === 0 ? ' Upload your first sample to get started.' : ` You have ${activeCount} active sample${activeCount !== 1 ? 's' : ''}.`}
+              {activeCount === 0
+                ? " Upload your first sample to get started."
+                : ` You have ${activeCount} active sample${activeCount !== 1 ? "s" : ""}.`}
             </AlertDescription>
           </Alert>
         )}
@@ -213,7 +231,8 @@ export function SampleList({ refreshTrigger }: SampleListProps) {
             <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">No samples yet</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Upload your first content sample to start building your voice profile
+              Upload your first content sample to start building your voice
+              profile
             </p>
           </div>
         ) : (
@@ -222,20 +241,25 @@ export function SampleList({ refreshTrigger }: SampleListProps) {
               <div
                 key={sample.id}
                 className={`border rounded-lg p-4 transition-all ${
-                  sample.is_active ? 'border-primary/20 bg-primary/5' : 'border-border bg-muted/30'
+                  sample.is_active
+                    ? "border-primary/20 bg-primary/5"
+                    : "border-border bg-muted/30"
                 }`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <Badge variant={sample.is_active ? 'default' : 'secondary'}>
+                      <Badge
+                        variant={sample.is_active ? "default" : "secondary"}
+                      >
                         {getSampleTypeLabel(sample.sample_type)}
                       </Badge>
-                      <Badge variant="outline">
-                        {sample.word_count} words
-                      </Badge>
+                      <Badge variant="outline">{sample.word_count} words</Badge>
                       {sample.is_active && (
-                        <Badge variant="outline" className="border-green-600 text-green-600">
+                        <Badge
+                          variant="outline"
+                          className="border-green-600 text-green-600"
+                        >
                           Active
                         </Badge>
                       )}
@@ -252,7 +276,9 @@ export function SampleList({ refreshTrigger }: SampleListProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => toggleSampleActive(sample.id, sample.is_active)}
+                      onClick={() =>
+                        toggleSampleActive(sample.id, sample.is_active)
+                      }
                       disabled={updatingSampleId === sample.id}
                     >
                       {updatingSampleId === sample.id ? (
@@ -287,11 +313,12 @@ export function SampleList({ refreshTrigger }: SampleListProps) {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              You've reached the maximum of 10 samples. Delete a sample to upload a new one.
+              You've reached the maximum of 10 samples. Delete a sample to
+              upload a new one.
             </AlertDescription>
           </Alert>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

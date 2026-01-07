@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 /**
  * Circuit Breaker Pattern Implementation
  *
@@ -10,14 +11,18 @@
  * - HALF_OPEN: Testing recovery, limited requests allowed
  */
 
-import { logger } from '@/lib/logger';
-import { triggerAlert, AlertSeverity, AlertType } from '@/lib/monitoring/alerting';
+import { logger } from "@/lib/logger";
+import {
+  triggerAlert,
+  AlertSeverity,
+  AlertType,
+} from "@/lib/monitoring/alerting";
 
 // Circuit breaker states
 export enum CircuitState {
-  CLOSED = 'CLOSED',     // Normal operation
-  OPEN = 'OPEN',         // Blocking requests
-  HALF_OPEN = 'HALF_OPEN', // Testing recovery
+  CLOSED = "CLOSED", // Normal operation
+  OPEN = "OPEN", // Blocking requests
+  HALF_OPEN = "HALF_OPEN", // Testing recovery
 }
 
 // Configuration for circuit breaker behavior
@@ -39,35 +44,35 @@ export interface CircuitBreakerConfig {
 // Service-specific configurations
 export const CIRCUIT_BREAKER_CONFIGS: Record<string, CircuitBreakerConfig> = {
   openai: {
-    failureThreshold: 5,          // Open after 5 failures
-    resetTimeoutMs: 30_000,       // Try recovery after 30s
-    successThreshold: 2,          // 2 successes to close
-    halfOpenRequests: 2,          // Allow 2 test requests
-    failureWindowMs: 60_000,      // Count failures in last minute
+    failureThreshold: 5, // Open after 5 failures
+    resetTimeoutMs: 30_000, // Try recovery after 30s
+    successThreshold: 2, // 2 successes to close
+    halfOpenRequests: 2, // Allow 2 test requests
+    failureWindowMs: 60_000, // Count failures in last minute
     alertOnStateChange: true,
   },
   shopify: {
-    failureThreshold: 10,         // Higher threshold (more tolerant)
-    resetTimeoutMs: 60_000,       // Try recovery after 60s
-    successThreshold: 3,          // 3 successes to close
-    halfOpenRequests: 1,          // 1 test request
-    failureWindowMs: 120_000,     // Count failures in 2 minutes
+    failureThreshold: 10, // Higher threshold (more tolerant)
+    resetTimeoutMs: 60_000, // Try recovery after 60s
+    successThreshold: 3, // 3 successes to close
+    halfOpenRequests: 1, // 1 test request
+    failureWindowMs: 120_000, // Count failures in 2 minutes
     alertOnStateChange: true,
   },
   facebook: {
-    failureThreshold: 5,          // Moderate threshold
-    resetTimeoutMs: 120_000,      // Longer recovery for rate limits
+    failureThreshold: 5, // Moderate threshold
+    resetTimeoutMs: 120_000, // Longer recovery for rate limits
     successThreshold: 2,
     halfOpenRequests: 1,
-    failureWindowMs: 180_000,     // Longer window (3 min)
+    failureWindowMs: 180_000, // Longer window (3 min)
     alertOnStateChange: true,
   },
   anthropic: {
-    failureThreshold: 5,          // Same as OpenAI (fallback provider)
-    resetTimeoutMs: 30_000,       // Try recovery after 30s
-    successThreshold: 2,          // 2 successes to close
-    halfOpenRequests: 2,          // Allow 2 test requests
-    failureWindowMs: 60_000,      // Count failures in last minute
+    failureThreshold: 5, // Same as OpenAI (fallback provider)
+    resetTimeoutMs: 30_000, // Try recovery after 30s
+    successThreshold: 2, // 2 successes to close
+    halfOpenRequests: 2, // Allow 2 test requests
+    failureWindowMs: 60_000, // Count failures in last minute
     alertOnStateChange: true,
   },
 };
@@ -130,9 +135,12 @@ function getConfig(serviceName: string): CircuitBreakerConfig {
 /**
  * Clean up old failures outside the sliding window
  */
-function cleanupOldFailures(state: CircuitBreakerState, windowMs: number): void {
+function cleanupOldFailures(
+  state: CircuitBreakerState,
+  windowMs: number,
+): void {
   const cutoff = Date.now() - windowMs;
-  state.failures = state.failures.filter(f => f.timestamp > cutoff);
+  state.failures = state.failures.filter((f) => f.timestamp > cutoff);
 }
 
 /**
@@ -141,7 +149,7 @@ function cleanupOldFailures(state: CircuitBreakerState, windowMs: number): void 
 async function transitionState(
   serviceName: string,
   newState: CircuitState,
-  reason: string
+  reason: string,
 ): Promise<void> {
   const state = getCircuitState(serviceName);
   const oldState = state.state;
@@ -153,7 +161,7 @@ async function transitionState(
   state.lastStateChange = Date.now();
 
   logger.info(`Circuit breaker [${serviceName}]: ${oldState} → ${newState}`, {
-    component: 'circuit-breaker',
+    component: "circuit-breaker",
     serviceName,
     reason,
   });
@@ -189,15 +197,25 @@ async function transitionState(
           affectedComponent: serviceName,
         });
       } catch (alertError) {
-        const wrappedError = alertError instanceof Error ? alertError : new Error(String(alertError));
-        logger.warn(`Failed to emit alert for ${serviceName} circuit breaker`, wrappedError, {
-          component: 'circuit-breaker',
-          serviceName,
-        });
+        const wrappedError =
+          alertError instanceof Error
+            ? alertError
+            : new Error(String(alertError));
+        logger.warn(
+          `Failed to emit alert for ${serviceName} circuit breaker`,
+          wrappedError,
+          {
+            component: "circuit-breaker",
+            serviceName,
+          },
+        );
       }
-    } else if (newState === CircuitState.CLOSED && oldState === CircuitState.HALF_OPEN) {
+    } else if (
+      newState === CircuitState.CLOSED &&
+      oldState === CircuitState.HALF_OPEN
+    ) {
       logger.info(`Circuit breaker [${serviceName}] recovered`, {
-        component: 'circuit-breaker',
+        component: "circuit-breaker",
         serviceName,
       });
     }
@@ -220,7 +238,11 @@ export function canRequest(serviceName: string): boolean {
       const timeSinceOpen = Date.now() - (state.openedAt || 0);
       if (timeSinceOpen >= config.resetTimeoutMs) {
         // Transition to HALF_OPEN
-        transitionState(serviceName, CircuitState.HALF_OPEN, 'Reset timeout elapsed');
+        transitionState(
+          serviceName,
+          CircuitState.HALF_OPEN,
+          "Reset timeout elapsed",
+        );
         return state.halfOpenRequestsAllowed > 0;
       }
       return false;
@@ -245,7 +267,11 @@ export async function recordSuccess(serviceName: string): Promise<void> {
     state.successCount++;
 
     if (state.successCount >= config.successThreshold) {
-      await transitionState(serviceName, CircuitState.CLOSED, 'Success threshold reached');
+      await transitionState(
+        serviceName,
+        CircuitState.CLOSED,
+        "Success threshold reached",
+      );
     }
   }
 }
@@ -255,11 +281,11 @@ export async function recordSuccess(serviceName: string): Promise<void> {
  */
 export async function recordFailure(
   serviceName: string,
-  error: Error | string
+  error: Error | string,
 ): Promise<void> {
   const state = getCircuitState(serviceName);
   const config = getConfig(serviceName);
-  const errorMessage = typeof error === 'string' ? error : error.message;
+  const errorMessage = typeof error === "string" ? error : error.message;
 
   // Add failure record
   state.failures.push({
@@ -273,14 +299,18 @@ export async function recordFailure(
 
   if (state.state === CircuitState.HALF_OPEN) {
     // Any failure in HALF_OPEN goes back to OPEN
-    await transitionState(serviceName, CircuitState.OPEN, 'Failure in HALF_OPEN state');
+    await transitionState(
+      serviceName,
+      CircuitState.OPEN,
+      "Failure in HALF_OPEN state",
+    );
   } else if (state.state === CircuitState.CLOSED) {
     // Check if we've hit the failure threshold
     if (state.failures.length >= config.failureThreshold) {
       await transitionState(
         serviceName,
         CircuitState.OPEN,
-        `Failure threshold reached (${state.failures.length}/${config.failureThreshold})`
+        `Failure threshold reached (${state.failures.length}/${config.failureThreshold})`,
       );
     }
   }
@@ -318,7 +348,10 @@ export function getCircuitStatus(serviceName: string): {
 /**
  * Get status of all circuits
  */
-export function getAllCircuitStatuses(): Record<string, ReturnType<typeof getCircuitStatus>> {
+export function getAllCircuitStatuses(): Record<
+  string,
+  ReturnType<typeof getCircuitStatus>
+> {
   const statuses: Record<string, ReturnType<typeof getCircuitStatus>> = {};
 
   // Include all configured services
@@ -340,13 +373,16 @@ export function getAllCircuitStatuses(): Record<string, ReturnType<typeof getCir
  * Manually reset a circuit (for testing or manual intervention)
  */
 export async function resetCircuit(serviceName: string): Promise<void> {
-  await transitionState(serviceName, CircuitState.CLOSED, 'Manual reset');
+  await transitionState(serviceName, CircuitState.CLOSED, "Manual reset");
 }
 
 /**
  * Manually trip a circuit (for maintenance or known outages)
  */
-export async function tripCircuit(serviceName: string, reason: string): Promise<void> {
+export async function tripCircuit(
+  serviceName: string,
+  reason: string,
+): Promise<void> {
   await transitionState(serviceName, CircuitState.OPEN, reason);
 }
 
@@ -359,8 +395,10 @@ export class CircuitBreakerOpenError extends Error {
   retryAfterMs: number;
 
   constructor(serviceName: string, openSince: Date, retryAfterMs: number) {
-    super(`Circuit breaker is OPEN for ${serviceName}. Service is temporarily unavailable.`);
-    this.name = 'CircuitBreakerOpenError';
+    super(
+      `Circuit breaker is OPEN for ${serviceName}. Service is temporarily unavailable.`,
+    );
+    this.name = "CircuitBreakerOpenError";
     this.serviceName = serviceName;
     this.openSince = openSince;
     this.retryAfterMs = retryAfterMs;
@@ -378,19 +416,20 @@ export async function withCircuitBreaker<T>(
     fallback?: () => Promise<T>;
     /** Whether to throw specific errors without circuit breaking */
     isNonRetryableError?: (error: Error) => boolean;
-  }
+  },
 ): Promise<T> {
   const state = getCircuitState(serviceName);
   const config = getConfig(serviceName);
 
   // Check if request is allowed
   if (!canRequest(serviceName)) {
-    const retryAfterMs = config.resetTimeoutMs - (Date.now() - (state.openedAt || 0));
+    const retryAfterMs =
+      config.resetTimeoutMs - (Date.now() - (state.openedAt || 0));
 
     // Use fallback if provided
     if (options?.fallback) {
       logger.debug(`Circuit open for ${serviceName}, using fallback`, {
-        component: 'circuit-breaker',
+        component: "circuit-breaker",
       });
       return options.fallback();
     }
@@ -398,7 +437,7 @@ export async function withCircuitBreaker<T>(
     throw new CircuitBreakerOpenError(
       serviceName,
       new Date(state.openedAt || Date.now()),
-      Math.max(0, retryAfterMs)
+      Math.max(0, retryAfterMs),
     );
   }
 
@@ -429,7 +468,10 @@ export async function withCircuitBreaker<T>(
  */
 export function consumeHalfOpenRequest(serviceName: string): void {
   const state = getCircuitState(serviceName);
-  if (state.state === CircuitState.HALF_OPEN && state.halfOpenRequestsAllowed > 0) {
+  if (
+    state.state === CircuitState.HALF_OPEN &&
+    state.halfOpenRequestsAllowed > 0
+  ) {
     state.halfOpenRequestsAllowed--;
   }
 }

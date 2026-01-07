@@ -1,20 +1,21 @@
-'use client';
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
 import {
   Lightbulb,
   Sparkles,
@@ -30,13 +31,13 @@ import {
   Frame,
   Eye,
   type LucideIcon,
-} from 'lucide-react';
-import { colors } from '@/lib/design-system/colors';
+} from "lucide-react";
+import { colors } from "@/lib/design-system/colors";
 import {
   getCategories,
   getPromptsForCategory,
   type PromptTemplate,
-} from '@/lib/services/prompt-library';
+} from "@/lib/services/prompt-library";
 
 /**
  * Map icon names to Lucide components
@@ -59,10 +60,15 @@ interface PromptLibraryProps {
   disabled?: boolean;
 }
 
-export function PromptLibrary({ onSelectPrompt, disabled = false }: PromptLibraryProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedPromptId, setSelectedPromptId] = useState<string>('');
-  const [availablePrompts, setAvailablePrompts] = useState<PromptTemplate[]>([]);
+export function PromptLibrary({
+  onSelectPrompt,
+  disabled = false,
+}: PromptLibraryProps) {
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedPromptId, setSelectedPromptId] = useState<string>("");
+  const [availablePrompts, setAvailablePrompts] = useState<PromptTemplate[]>(
+    [],
+  );
   const [isExpanded, setIsExpanded] = useState(false);
 
   const categories = getCategories();
@@ -72,7 +78,7 @@ export function PromptLibrary({ onSelectPrompt, disabled = false }: PromptLibrar
     if (selectedCategory) {
       const prompts = getPromptsForCategory(selectedCategory);
       setAvailablePrompts(prompts);
-      setSelectedPromptId(''); // Reset prompt selection
+      setSelectedPromptId(""); // Reset prompt selection
     } else {
       setAvailablePrompts([]);
     }
@@ -83,19 +89,26 @@ export function PromptLibrary({ onSelectPrompt, disabled = false }: PromptLibrar
     if (prompt) {
       onSelectPrompt(prompt.prompt);
       // Reset selections after use
-      setSelectedCategory('');
-      setSelectedPromptId('');
+      setSelectedCategory("");
+      setSelectedPromptId("");
       setIsExpanded(false);
     }
   };
 
-  const selectedPrompt = availablePrompts.find((p) => p.id === selectedPromptId);
+  const selectedPrompt = availablePrompts.find(
+    (p) => p.id === selectedPromptId,
+  );
 
   // Helper to render icon from name
   const renderIcon = (iconName: string, className?: string) => {
     const IconComponent = ICON_MAP[iconName];
     if (IconComponent) {
-      return <IconComponent className={className || 'w-4 h-4'} style={{ color: colors.smartBlue }} />;
+      return (
+        <IconComponent
+          className={className || "w-4 h-4"}
+          style={{ color: colors.smartBlue }}
+        />
+      );
     }
     return null;
   };
@@ -132,15 +145,18 @@ export function PromptLibrary({ onSelectPrompt, disabled = false }: PromptLibrar
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4" style={{ color: colors.smartBlue }} />
-            <span className="text-sm font-medium" style={{ color: colors.oxfordNavy }}>
+            <span
+              className="text-sm font-medium"
+              style={{ color: colors.oxfordNavy }}
+            >
               Prompt Library
             </span>
           </div>
           <button
             onClick={() => {
               setIsExpanded(false);
-              setSelectedCategory('');
-              setSelectedPromptId('');
+              setSelectedCategory("");
+              setSelectedPromptId("");
             }}
             className="text-xs hover:underline"
             style={{ color: colors.grayText }}
@@ -151,7 +167,10 @@ export function PromptLibrary({ onSelectPrompt, disabled = false }: PromptLibrar
 
         {/* Category Selector */}
         <div className="space-y-2">
-          <label className="text-xs font-medium" style={{ color: colors.grayText }}>
+          <label
+            className="text-xs font-medium"
+            style={{ color: colors.grayText }}
+          >
             1. Choose a category
           </label>
           <Select
@@ -178,9 +197,15 @@ export function PromptLibrary({ onSelectPrompt, disabled = false }: PromptLibrar
         {/* Prompt Selector - only shown after category is selected */}
         {selectedCategory && (
           <div className="space-y-2">
-            <label className="text-xs font-medium" style={{ color: colors.grayText }}>
+            <label
+              className="text-xs font-medium"
+              style={{ color: colors.grayText }}
+            >
               2. Choose a prompt template
-              <span className="ml-2 text-[10px] font-normal" style={{ color: colors.grayText }}>
+              <span
+                className="ml-2 text-[10px] font-normal"
+                style={{ color: colors.grayText }}
+              >
                 (hover to preview)
               </span>
             </label>
@@ -211,7 +236,10 @@ export function PromptLibrary({ onSelectPrompt, disabled = false }: PromptLibrar
                       sideOffset={5}
                     >
                       <div className="space-y-2">
-                        <p className="font-medium text-xs" style={{ color: colors.white }}>
+                        <p
+                          className="font-medium text-xs"
+                          style={{ color: colors.white }}
+                        >
                           {prompt.label}
                         </p>
                         <p className="text-xs leading-relaxed opacity-90">
@@ -230,12 +258,21 @@ export function PromptLibrary({ onSelectPrompt, disabled = false }: PromptLibrar
         {selectedPrompt && (
           <div
             className="rounded-md p-3 space-y-2"
-            style={{ backgroundColor: colors.white, border: `1px solid ${colors.border}` }}
+            style={{
+              backgroundColor: colors.white,
+              border: `1px solid ${colors.border}`,
+            }}
           >
-            <p className="text-xs font-medium" style={{ color: colors.grayText }}>
+            <p
+              className="text-xs font-medium"
+              style={{ color: colors.grayText }}
+            >
               Selected prompt:
             </p>
-            <p className="text-sm leading-relaxed" style={{ color: colors.oxfordNavy }}>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: colors.oxfordNavy }}
+            >
               {selectedPrompt.prompt}
             </p>
           </div>

@@ -1,88 +1,117 @@
-'use client'
+/* eslint-disable react/no-unescaped-entities -- Quotes and apostrophes in JSX text are intentional */
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import { SampleUpload, SampleList } from '@/features/content-center'
-import { VoiceAnalysisLoader } from '@/components/ui/loading/VoiceAnalysisLoader'
-import { Sparkles, FileText, Wand2, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react'
-import { logger } from '@/lib/logger'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { SampleUpload, SampleList } from "@/features/content-center";
+import { VoiceAnalysisLoader } from "@/components/ui/loading/VoiceAnalysisLoader";
+import {
+  Sparkles,
+  FileText,
+  Wand2,
+  CheckCircle2,
+  ArrowRight,
+  ArrowLeft,
+} from "lucide-react";
+import { logger } from "@/lib/logger";
 
-type OnboardingStep = 'welcome' | 'upload' | 'generating' | 'review' | 'complete'
+type OnboardingStep =
+  | "welcome"
+  | "upload"
+  | "generating"
+  | "review"
+  | "complete";
 
 interface VoiceProfile {
   profile: {
-    profile_text: string
-  }
-  samples_analyzed: number
-  generation_time_ms: number
+    profile_text: string;
+  };
+  samples_analyzed: number;
+  generation_time_ms: number;
 }
 
 export default function OnboardingPage() {
-  const router = useRouter()
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome')
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [generatedProfile, setGeneratedProfile] = useState<VoiceProfile | null>(null)
+  const router = useRouter();
+  const [currentStep, setCurrentStep] = useState<OnboardingStep>("welcome");
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedProfile, setGeneratedProfile] = useState<VoiceProfile | null>(
+    null,
+  );
 
   const handleNext = () => {
-    if (currentStep === 'welcome') {
-      setCurrentStep('upload')
-    } else if (currentStep === 'upload') {
-      setCurrentStep('generating')
-      generateProfile()
-    } else if (currentStep === 'review') {
-      setCurrentStep('complete')
+    if (currentStep === "welcome") {
+      setCurrentStep("upload");
+    } else if (currentStep === "upload") {
+      setCurrentStep("generating");
+      generateProfile();
+    } else if (currentStep === "review") {
+      setCurrentStep("complete");
     }
-  }
+  };
 
   const handleBack = () => {
-    if (currentStep === 'upload') {
-      setCurrentStep('welcome')
+    if (currentStep === "upload") {
+      setCurrentStep("welcome");
     }
-  }
+  };
 
   const generateProfile = async () => {
-    setIsGenerating(true)
+    setIsGenerating(true);
     try {
-      const response = await fetch('/api/content-center/voice/generate', {
-        method: 'POST',
+      const response = await fetch("/api/content-center/voice/generate", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-        }
-      })
+          Authorization: `Bearer ${localStorage.getItem("supabase_token")}`,
+        },
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.success) {
-        setGeneratedProfile(data.data)
-        setCurrentStep('review')
+        setGeneratedProfile(data.data);
+        setCurrentStep("review");
       } else {
-        throw new Error(data.error || 'Failed to generate profile')
+        throw new Error(data.error || "Failed to generate profile");
       }
     } catch (error) {
-      logger.error('Profile generation error:', error as Error, { component: 'onboarding' })
-      alert('Failed to generate voice profile. Please try again.')
-      setCurrentStep('upload')
+      logger.error("Profile generation error:", error as Error, {
+        component: "onboarding",
+      });
+      alert("Failed to generate voice profile. Please try again.");
+      setCurrentStep("upload");
     } finally {
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
-  }
+  };
 
   const handleComplete = () => {
-    router.push('/content-center/create')
-  }
+    router.push("/content-center/create");
+  };
 
   const getStepNumber = () => {
-    const steps: OnboardingStep[] = ['welcome', 'upload', 'generating', 'review', 'complete']
-    return steps.indexOf(currentStep) + 1
-  }
+    const steps: OnboardingStep[] = [
+      "welcome",
+      "upload",
+      "generating",
+      "review",
+      "complete",
+    ];
+    return steps.indexOf(currentStep) + 1;
+  };
 
   const getProgress = () => {
-    return (getStepNumber() / 5) * 100
-  }
+    return (getStepNumber() / 5) * 100;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -90,20 +119,26 @@ export default function OnboardingPage() {
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Step {getStepNumber()} of 5</span>
-            <span className="text-sm text-muted-foreground">{Math.round(getProgress())}% Complete</span>
+            <span className="text-sm font-medium">
+              Step {getStepNumber()} of 5
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {Math.round(getProgress())}% Complete
+            </span>
           </div>
           <Progress value={getProgress()} className="h-2" />
         </div>
 
         {/* Welcome Step */}
-        {currentStep === 'welcome' && (
+        {currentStep === "welcome" && (
           <Card>
             <CardHeader className="text-center pb-4">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                 <Sparkles className="h-8 w-8 text-primary" />
               </div>
-              <CardTitle className="text-3xl">Welcome to Content Creation Center</CardTitle>
+              <CardTitle className="text-3xl">
+                Welcome to Content Creation Center
+              </CardTitle>
               <CardDescription className="text-base mt-2">
                 Let's create your personalized brand voice profile
               </CardDescription>
@@ -117,9 +152,12 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-1">Upload Your Writing Samples</h3>
+                    <h3 className="font-semibold mb-1">
+                      Upload Your Writing Samples
+                    </h3>
                     <p className="text-sm text-muted-foreground">
-                      Share 3-10 examples of your best writing. We'll analyze your unique style, tone, and voice.
+                      Share 3-10 examples of your best writing. We'll analyze
+                      your unique style, tone, and voice.
                     </p>
                   </div>
                 </div>
@@ -131,9 +169,12 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-1">AI Analyzes Your Voice</h3>
+                    <h3 className="font-semibold mb-1">
+                      AI Analyzes Your Voice
+                    </h3>
                     <p className="text-sm text-muted-foreground">
-                      Our AI identifies patterns in your writing - from sentence structure to vocabulary choices.
+                      Our AI identifies patterns in your writing - from sentence
+                      structure to vocabulary choices.
                     </p>
                   </div>
                 </div>
@@ -145,20 +186,27 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-1">Generate On-Brand Content</h3>
+                    <h3 className="font-semibold mb-1">
+                      Generate On-Brand Content
+                    </h3>
                     <p className="text-sm text-muted-foreground">
-                      Create blogs, ads, and product descriptions that sound authentically like you.
+                      Create blogs, ads, and product descriptions that sound
+                      authentically like you.
                     </p>
                   </div>
                 </div>
               </div>
 
               <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                <p className="text-sm font-medium">What makes a good writing sample?</p>
+                <p className="text-sm font-medium">
+                  What makes a good writing sample?
+                </p>
                 <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                   <li>500-5000 words of original content you wrote</li>
                   <li>Examples that represent your authentic voice</li>
-                  <li>Blog posts, emails, or product descriptions work great</li>
+                  <li>
+                    Blog posts, emails, or product descriptions work great
+                  </li>
                   <li>Avoid AI-generated or heavily edited content</li>
                 </ul>
               </div>
@@ -172,17 +220,20 @@ export default function OnboardingPage() {
         )}
 
         {/* Upload Step */}
-        {currentStep === 'upload' && (
+        {currentStep === "upload" && (
           <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Upload Your Writing Samples</CardTitle>
                 <CardDescription>
-                  Upload at least 3 samples (500-5000 words each) to create your voice profile
+                  Upload at least 3 samples (500-5000 words each) to create your
+                  voice profile
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <SampleUpload onUploadSuccess={() => setRefreshTrigger(prev => prev + 1)} />
+                <SampleUpload
+                  onUploadSuccess={() => setRefreshTrigger((prev) => prev + 1)}
+                />
               </CardContent>
             </Card>
 
@@ -202,18 +253,22 @@ export default function OnboardingPage() {
         )}
 
         {/* Generating Step */}
-        {currentStep === 'generating' && (
-          <VoiceAnalysisLoader isLoading={isGenerating} estimatedTimeSeconds={30} />
+        {currentStep === "generating" && (
+          <VoiceAnalysisLoader
+            isLoading={isGenerating}
+            estimatedTimeSeconds={30}
+          />
         )}
 
         {/* Review Step */}
-        {currentStep === 'review' && generatedProfile && (
+        {currentStep === "review" && generatedProfile && (
           <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Your Voice Profile is Ready!</CardTitle>
                 <CardDescription>
-                  Review your brand voice profile below. You can edit it anytime from your settings.
+                  Review your brand voice profile below. You can edit it anytime
+                  from your settings.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -223,9 +278,14 @@ export default function OnboardingPage() {
                   </pre>
                 </div>
                 <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
-                  <span>Generated from {generatedProfile.samples_analyzed} samples</span>
+                  <span>
+                    Generated from {generatedProfile.samples_analyzed} samples
+                  </span>
                   <span>•</span>
-                  <span>{Math.round(generatedProfile.generation_time_ms / 1000)}s generation time</span>
+                  <span>
+                    {Math.round(generatedProfile.generation_time_ms / 1000)}s
+                    generation time
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -238,7 +298,7 @@ export default function OnboardingPage() {
         )}
 
         {/* Complete Step */}
-        {currentStep === 'complete' && (
+        {currentStep === "complete" && (
           <Card>
             <CardContent className="py-16">
               <div className="text-center space-y-6">
@@ -248,7 +308,8 @@ export default function OnboardingPage() {
                 <div>
                   <h2 className="text-3xl font-bold mb-2">You're All Set!</h2>
                   <p className="text-muted-foreground max-w-md mx-auto">
-                    Your voice profile is ready. Start creating on-brand content that sounds authentically like you.
+                    Your voice profile is ready. Start creating on-brand content
+                    that sounds authentically like you.
                   </p>
                 </div>
                 <Button onClick={handleComplete} size="lg">
@@ -261,5 +322,5 @@ export default function OnboardingPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

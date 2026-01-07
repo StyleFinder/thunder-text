@@ -1,10 +1,11 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { useState } from "react";
+import Image from "next/image";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Download,
   RefreshCw,
@@ -13,10 +14,10 @@ import {
   Sparkles,
   Clock,
   ImageIcon,
-  Send,
-} from 'lucide-react';
-import { colors } from '@/lib/design-system/colors';
-import type { GeneratedImage } from '@/types/image-generation';
+  _Send,
+} from "lucide-react";
+import { colors } from "@/lib/design-system/colors";
+import type { GeneratedImage } from "@/types/image-generation";
 
 interface GeneratedImagePreviewProps {
   image: GeneratedImage | null;
@@ -37,17 +38,17 @@ export function GeneratedImagePreview({
   onExport,
   iterationDisabled = false,
 }: GeneratedImagePreviewProps) {
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState("");
 
   const handleIterate = () => {
     if (feedback.trim()) {
       onIterate(feedback.trim());
-      setFeedback('');
+      setFeedback("");
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleIterate();
     }
@@ -63,10 +64,16 @@ export function GeneratedImagePreview({
           >
             <ImageIcon className="w-8 h-8" style={{ color: colors.grayText }} />
           </div>
-          <p className="text-sm font-medium" style={{ color: colors.oxfordNavy }}>
+          <p
+            className="text-sm font-medium"
+            style={{ color: colors.oxfordNavy }}
+          >
             No image generated yet
           </p>
-          <p className="text-xs mt-1 text-center max-w-xs" style={{ color: colors.grayText }}>
+          <p
+            className="text-xs mt-1 text-center max-w-xs"
+            style={{ color: colors.grayText }}
+          >
             Upload a product image and describe the scene you want to create
           </p>
         </CardContent>
@@ -89,12 +96,15 @@ export function GeneratedImagePreview({
                 className="text-xs"
                 style={{ borderColor: colors.border, color: colors.grayText }}
               >
-                OpenAI - {image.model.split('-').slice(0, 2).join(' ')}
+                OpenAI - {image.model.split("-").slice(0, 2).join(" ")}
               </Badge>
               <Badge
                 variant="outline"
                 className="text-xs"
-                style={{ borderColor: colors.brightAmber, color: colors.oxfordNavy }}
+                style={{
+                  borderColor: colors.brightAmber,
+                  color: colors.oxfordNavy,
+                }}
               >
                 ${(image.costCents / 100).toFixed(2)}
               </Badge>
@@ -113,7 +123,9 @@ export function GeneratedImagePreview({
               <div className="relative">
                 <div
                   className="w-16 h-16 rounded-full border-4 border-t-transparent animate-spin"
-                  style={{ borderColor: `${colors.smartBlue} transparent ${colors.smartBlue} ${colors.smartBlue}` }}
+                  style={{
+                    borderColor: `${colors.smartBlue} transparent ${colors.smartBlue} ${colors.smartBlue}`,
+                  }}
                 />
                 <Sparkles
                   className="w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -128,17 +140,22 @@ export function GeneratedImagePreview({
               </p>
             </div>
           ) : image ? (
-            <div className="relative h-full">
-              <img
+            <div className="relative h-full min-h-[300px]">
+              <Image
                 src={image.imageUrl}
                 alt="Generated"
-                className="w-full h-full object-contain rounded-lg"
+                fill
+                className="object-contain rounded-lg"
                 style={{ backgroundColor: colors.backgroundLight }}
+                unoptimized
               />
               {image.isFinal && (
                 <Badge
-                  className="absolute top-2 right-2"
-                  style={{ backgroundColor: colors.success, color: colors.white }}
+                  className="absolute top-2 right-2 z-10"
+                  style={{
+                    backgroundColor: colors.success,
+                    color: colors.white,
+                  }}
                 >
                   <Save className="w-3 h-3 mr-1" />
                   Saved
@@ -170,7 +187,7 @@ export function GeneratedImagePreview({
                 disabled={image.isFinal}
               >
                 <Save className="w-4 h-4 mr-2" />
-                {image.isFinal ? 'Saved' : 'Save to Library'}
+                {image.isFinal ? "Saved" : "Save to Library"}
               </Button>
               <Button
                 size="sm"
@@ -201,8 +218,14 @@ export function GeneratedImagePreview({
                   onClick={handleIterate}
                   disabled={!feedback.trim() || iterationDisabled}
                   style={{
-                    backgroundColor: feedback.trim() && !iterationDisabled ? colors.smartBlue : colors.backgroundLight,
-                    color: feedback.trim() && !iterationDisabled ? colors.white : colors.grayText,
+                    backgroundColor:
+                      feedback.trim() && !iterationDisabled
+                        ? colors.smartBlue
+                        : colors.backgroundLight,
+                    color:
+                      feedback.trim() && !iterationDisabled
+                        ? colors.white
+                        : colors.grayText,
                   }}
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
@@ -212,7 +235,10 @@ export function GeneratedImagePreview({
             )}
 
             {/* Metadata */}
-            <div className="flex items-center gap-4 text-xs" style={{ color: colors.grayText }}>
+            <div
+              className="flex items-center gap-4 text-xs"
+              style={{ color: colors.grayText }}
+            >
               <div className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {new Date(image.createdAt).toLocaleTimeString()}

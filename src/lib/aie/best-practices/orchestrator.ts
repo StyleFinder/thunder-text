@@ -1,9 +1,10 @@
-import { v4 as uuidv4 } from 'uuid';
-import { ContentExtractionAgent } from './agents/content-extraction';
-import { AnalysisAgent } from './agents/analysis';
-import { QualityAgent } from './agents/quality';
-import { StorageAgent } from './agents/storage';
-import { logger } from '@/lib/logger'
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
+import { v4 as uuidv4 } from "uuid";
+import { ContentExtractionAgent } from "./agents/content-extraction";
+import { AnalysisAgent } from "./agents/analysis";
+import { QualityAgent } from "./agents/quality";
+import { StorageAgent } from "./agents/storage";
+import { logger } from "@/lib/logger";
 import {
   ProcessBestPracticeRequest,
   ProcessBestPracticeResponse,
@@ -11,7 +12,7 @@ import {
   WorkflowState,
   WorkflowStep,
   BestPracticeMetadata,
-} from '../../../types/best-practices';
+} from "../../../types/best-practices";
 
 export class BestPracticesOrchestrator {
   private extractionAgent: ContentExtractionAgent;
@@ -30,14 +31,14 @@ export class BestPracticesOrchestrator {
    * Process a best practice request through the full agent pipeline
    */
   async process(
-    request: ProcessBestPracticeRequest
+    request: ProcessBestPracticeRequest,
   ): Promise<ProcessBestPracticeResponse> {
     // Initialize workflow context
     const context: AgentContext = {
       request_id: uuidv4(),
       source_type: request.source_type,
       original_input: request,
-      stage: 'extraction',
+      stage: "extraction",
       metadata: {},
       warnings: [],
       errors: [],
@@ -45,53 +46,56 @@ export class BestPracticesOrchestrator {
 
     const workflow: WorkflowState = {
       request_id: context.request_id,
-      status: 'running',
-      current_stage: 'extraction',
+      status: "running",
+      current_stage: "extraction",
       progress_percentage: 0,
       started_at: new Date().toISOString(),
       context,
     };
 
     console.log(
-      `\n${'='.repeat(60)}\n[Orchestrator] Starting workflow: ${context.request_id}\n${'='.repeat(60)}`
+      `\n${"=".repeat(60)}\n[Orchestrator] Starting workflow: ${context.request_id}\n${"=".repeat(60)}`,
     );
 
     try {
       // STAGE 1: Content Extraction
-      const extractionStep = this.createStep('Content Extraction', 'extraction');
-      workflow.current_stage = 'extraction';
+      const extractionStep = this.createStep(
+        "Content Extraction",
+        "extraction",
+      );
+      workflow.current_stage = "extraction";
       workflow.progress_percentage = 10;
 
-      console.log('\n[Stage 1/4] Content Extraction');
+      console.log("\n[Stage 1/4] Content Extraction");
       const extractionResult = await this.extractionAgent.extract(context);
-      extractionStep.status = 'completed';
+      extractionStep.status = "completed";
       extractionStep.completed_at = new Date().toISOString();
       extractionStep.duration_ms =
         new Date(extractionStep.completed_at).getTime() -
         new Date(extractionStep.started_at!).getTime();
 
       console.log(
-        `✓ Extracted ${extractionResult.word_count} words using ${extractionResult.extraction_method}`
+        `✓ Extracted ${extractionResult.word_count} words using ${extractionResult.extraction_method}`,
       );
       workflow.progress_percentage = 35;
 
       // STAGE 2: Analysis
-      const analysisStep = this.createStep('Content Analysis', 'analysis');
-      workflow.current_stage = 'analysis';
+      const analysisStep = this.createStep("Content Analysis", "analysis");
+      workflow.current_stage = "analysis";
 
-      console.log('\n[Stage 2/4] Content Analysis');
+      console.log("\n[Stage 2/4] Content Analysis");
       const analysisResult = await this.analysisAgent.analyze(
         extractionResult,
-        context
+        context,
       );
-      analysisStep.status = 'completed';
+      analysisStep.status = "completed";
       analysisStep.completed_at = new Date().toISOString();
       analysisStep.duration_ms =
         new Date(analysisStep.completed_at).getTime() -
         new Date(analysisStep.started_at!).getTime();
 
       console.log(
-        `✓ Analyzed as: ${analysisResult.platform} → ${analysisResult.category} → ${analysisResult.goal}`
+        `✓ Analyzed as: ${analysisResult.platform} → ${analysisResult.category} → ${analysisResult.goal}`,
       );
       console.log(`  Title: "${analysisResult.title}"`);
       console.log(`  Insights: ${analysisResult.key_insights.length}`);
@@ -99,37 +103,37 @@ export class BestPracticesOrchestrator {
       workflow.progress_percentage = 60;
 
       // STAGE 3: Quality Assessment
-      const qualityStep = this.createStep('Quality Assessment', 'quality');
-      workflow.current_stage = 'quality';
+      const qualityStep = this.createStep("Quality Assessment", "quality");
+      workflow.current_stage = "quality";
 
-      console.log('\n[Stage 3/4] Quality Assessment');
+      console.log("\n[Stage 3/4] Quality Assessment");
       const qualityAssessment = await this.qualityAgent.assess(
         extractionResult,
         analysisResult,
-        context
+        context,
       );
-      qualityStep.status = 'completed';
+      qualityStep.status = "completed";
       qualityStep.completed_at = new Date().toISOString();
       qualityStep.duration_ms =
         new Date(qualityStep.completed_at).getTime() -
         new Date(qualityStep.started_at!).getTime();
 
       console.log(
-        `✓ Quality Score: ${qualityAssessment.overall_score.toFixed(1)}/10`
+        `✓ Quality Score: ${qualityAssessment.overall_score.toFixed(1)}/10`,
       );
       console.log(
-        `  Status: ${qualityAssessment.is_approved ? '✅ APPROVED' : '❌ REJECTED'}`
+        `  Status: ${qualityAssessment.is_approved ? "✅ APPROVED" : "❌ REJECTED"}`,
       );
 
       if (qualityAssessment.issues.length > 0) {
-        console.log('  Issues:');
+        console.log("  Issues:");
         qualityAssessment.issues.forEach((issue) => {
           const icon =
-            issue.severity === 'critical'
-              ? '🔴'
-              : issue.severity === 'warning'
-                ? '⚠️'
-                : 'ℹ️';
+            issue.severity === "critical"
+              ? "🔴"
+              : issue.severity === "warning"
+                ? "⚠️"
+                : "ℹ️";
           console.log(`    ${icon} ${issue.message}`);
           context.warnings.push(issue.message);
         });
@@ -137,7 +141,7 @@ export class BestPracticesOrchestrator {
 
       if (qualityAssessment.duplicate_of) {
         console.log(
-          `  🔄 Duplicate of: ${qualityAssessment.duplicate_of} (${(qualityAssessment.duplicate_similarity! * 100).toFixed(1)}% similar)`
+          `  🔄 Duplicate of: ${qualityAssessment.duplicate_of} (${(qualityAssessment.duplicate_similarity! * 100).toFixed(1)}% similar)`,
         );
       }
 
@@ -148,17 +152,17 @@ export class BestPracticesOrchestrator {
       let best_practice_id: string | undefined;
 
       if (qualityAssessment.is_approved || request.skip_quality_check) {
-        const storageStep = this.createStep('Storage', 'storage');
-        workflow.current_stage = 'storage';
+        const storageStep = this.createStep("Storage", "storage");
+        workflow.current_stage = "storage";
 
-        console.log('\n[Stage 4/4] Storage');
+        console.log("\n[Stage 4/4] Storage");
         storageResult = await this.storageAgent.store(
           extractionResult,
           analysisResult,
           qualityAssessment,
-          context
+          context,
         );
-        storageStep.status = 'completed';
+        storageStep.status = "completed";
         storageStep.completed_at = new Date().toISOString();
         storageStep.duration_ms =
           new Date(storageStep.completed_at).getTime() -
@@ -166,17 +170,17 @@ export class BestPracticesOrchestrator {
 
         best_practice_id = storageResult.best_practice_id;
         console.log(
-          `✓ ${storageResult.updated_existing ? 'Updated' : 'Inserted'}: ${best_practice_id}`
+          `✓ ${storageResult.updated_existing ? "Updated" : "Inserted"}: ${best_practice_id}`,
         );
         console.log(`  Embedding: ✓ Vector indexed: ✓`);
       } else {
-        console.log('\n[Stage 4/4] Storage - SKIPPED (not approved)');
-        context.errors.push('Content did not pass quality assessment');
+        console.log("\n[Stage 4/4] Storage - SKIPPED (not approved)");
+        context.errors.push("Content did not pass quality assessment");
       }
 
       workflow.progress_percentage = 100;
-      workflow.status = 'completed';
-      workflow.current_stage = 'completed';
+      workflow.status = "completed";
+      workflow.current_stage = "completed";
       workflow.completed_at = new Date().toISOString();
 
       // Build metadata response
@@ -204,28 +208,32 @@ export class BestPracticesOrchestrator {
         errors: context.errors,
       };
 
-      console.log(`\n${'='.repeat(60)}`);
+      console.log(`\n${"=".repeat(60)}`);
       console.log(
-        `[Orchestrator] Workflow Complete: ${response.success ? '✅ SUCCESS' : '❌ FAILED'}`
+        `[Orchestrator] Workflow Complete: ${response.success ? "✅ SUCCESS" : "❌ FAILED"}`,
       );
-      console.log(`${'='.repeat(60)}\n`);
+      console.log(`${"=".repeat(60)}\n`);
 
       return response;
     } catch (error) {
-      workflow.status = 'failed';
+      workflow.status = "failed";
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+        error instanceof Error ? error.message : "Unknown error";
 
-      logger.error(`\n❌ [Orchestrator] Workflow Failed: ${errorMessage}\n`, undefined, { component: 'orchestrator' });
+      logger.error(
+        `\n❌ [Orchestrator] Workflow Failed: ${errorMessage}\n`,
+        undefined,
+        { component: "orchestrator" },
+      );
 
       return {
         success: false,
         metadata: {
-          title: 'Failed to process',
-          platform: request.platform || 'meta',
-          category: request.category || 'unknown',
-          goal: request.goal || 'conversion',
-          description: 'Processing failed',
+          title: "Failed to process",
+          platform: request.platform || "meta",
+          category: request.category || "unknown",
+          goal: request.goal || "conversion",
+          description: "Processing failed",
           quality_score: 0,
           priority_score: 0,
           extracted_insights: [],
@@ -241,10 +249,10 @@ export class BestPracticesOrchestrator {
    * Process multiple best practices in batch
    */
   async processBatch(
-    requests: ProcessBestPracticeRequest[]
+    requests: ProcessBestPracticeRequest[],
   ): Promise<ProcessBestPracticeResponse[]> {
     console.log(
-      `\n[Orchestrator] Starting batch processing: ${requests.length} requests`
+      `\n[Orchestrator] Starting batch processing: ${requests.length} requests`,
     );
 
     const results: ProcessBestPracticeResponse[] = [];
@@ -255,21 +263,23 @@ export class BestPracticesOrchestrator {
         const result = await this.process(requests[i]);
         results.push(result);
       } catch (error) {
-        logger.error(`Failed to process request ${i + 1}:`, error as Error, { component: 'orchestrator' });
+        logger.error(`Failed to process request ${i + 1}:`, error as Error, {
+          component: "orchestrator",
+        });
         results.push({
           success: false,
           metadata: {
-            title: 'Batch processing failed',
-            platform: 'meta',
-            category: 'unknown',
-            goal: 'conversion',
-            description: 'Failed in batch processing',
+            title: "Batch processing failed",
+            platform: "meta",
+            category: "unknown",
+            goal: "conversion",
+            description: "Failed in batch processing",
             quality_score: 0,
             priority_score: 0,
             extracted_insights: [],
             tags: [],
           },
-          errors: [error instanceof Error ? error.message : 'Unknown error'],
+          errors: [error instanceof Error ? error.message : "Unknown error"],
         });
       }
 
@@ -281,7 +291,7 @@ export class BestPracticesOrchestrator {
 
     const successCount = results.filter((r) => r.success).length;
     console.log(
-      `\n[Orchestrator] Batch complete: ${successCount}/${requests.length} succeeded`
+      `\n[Orchestrator] Batch complete: ${successCount}/${requests.length} succeeded`,
     );
 
     return results;
@@ -292,12 +302,12 @@ export class BestPracticesOrchestrator {
    */
   private createStep(
     name: string,
-    agent: 'extraction' | 'analysis' | 'quality' | 'storage'
+    agent: "extraction" | "analysis" | "quality" | "storage",
   ): WorkflowStep {
     return {
       name,
       agent,
-      status: 'running',
+      status: "running",
       started_at: new Date().toISOString(),
     };
   }
@@ -305,7 +315,9 @@ export class BestPracticesOrchestrator {
   /**
    * Calculate priority score from quality assessment
    */
-  private calculatePriorityFromQuality(quality: { overall_score: number }): number {
+  private calculatePriorityFromQuality(quality: {
+    overall_score: number;
+  }): number {
     return Math.round(quality.overall_score);
   }
 }

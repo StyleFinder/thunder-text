@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getUserId } from "@/lib/auth/content-center-auth";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
 import type {
   ApiResponse,
   GetBusinessProfileResponse,
   BusinessProfile,
-  BusinessProfileResponse,
+  _BusinessProfileResponse,
   ProfileProgress,
   InterviewPrompt,
 } from "@/types/business-profile";
@@ -17,7 +17,7 @@ import type {
  * - 30s timeout
  */
 export const maxDuration = 30;
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/business-profile
@@ -57,7 +57,9 @@ export async function GET(
         .single();
 
       if (createError) {
-        logger.error("Error creating profile:", createError as Error, { component: 'business-profile' });
+        logger.error("Error creating profile:", createError as Error, {
+          component: "business-profile",
+        });
         return NextResponse.json(
           { success: false, error: "Failed to create business profile" },
           { status: 500 },
@@ -70,7 +72,9 @@ export async function GET(
     }
 
     if (profileError || !profile) {
-      logger.error("Error fetching business profile:", profileError as Error, { component: 'business-profile' });
+      logger.error("Error fetching business profile:", profileError as Error, {
+        component: "business-profile",
+      });
       return NextResponse.json(
         { success: false, error: "Failed to fetch business profile" },
         { status: 500 },
@@ -101,7 +105,7 @@ export async function GET(
               ...resp,
               prompt: promptData,
             };
-          })
+          }),
         );
         responses = enrichedResponses;
       }
@@ -138,7 +142,9 @@ export async function GET(
 
       // Filter by quick_start if in quick_start mode
       if (profile.interview_mode === "quick_start") {
-        query = query.eq("is_quick_start", true).order("quick_start_order", { ascending: true });
+        query = query
+          .eq("is_quick_start", true)
+          .order("quick_start_order", { ascending: true });
       } else {
         query = query.order("display_order", { ascending: true });
       }
@@ -167,7 +173,9 @@ export async function GET(
       },
     });
   } catch (error) {
-    logger.error("Error in GET /api/business-profile:", error as Error, { component: 'business-profile' });
+    logger.error("Error in GET /api/business-profile:", error as Error, {
+      component: "business-profile",
+    });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

@@ -46,7 +46,7 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
-          error: "AI Coaches require a Professional or Enterprise plan",
+          error: "AI Coaches require a Pro plan",
         },
         { status: 403 },
       );
