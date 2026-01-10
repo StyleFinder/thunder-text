@@ -4,6 +4,7 @@
  * Generates brand voice profiles from content samples using OpenAI
  */
 
+import { logger } from "@/lib/logger";
 import {
   callChatCompletion,
   truncateToTokenLimit,
@@ -121,9 +122,10 @@ ${sample.sample_text}
   // Check if we need to truncate
   const estimatedTokens = estimateTokenCount(samplesText);
   if (estimatedTokens > MAX_SAMPLE_TOKENS) {
-    console.warn(
-      `Samples exceed token limit (${estimatedTokens} > ${MAX_SAMPLE_TOKENS}). ` +
-        `Truncating to fit...`,
+    logger.warn(
+      `Samples exceed token limit (${estimatedTokens} > ${MAX_SAMPLE_TOKENS}). Truncating to fit...`,
+      undefined,
+      { component: "voice-profile-generator" },
     );
     samplesText = truncateToTokenLimit(samplesText, MAX_SAMPLE_TOKENS);
   }

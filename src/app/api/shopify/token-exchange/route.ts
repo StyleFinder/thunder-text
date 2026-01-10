@@ -207,11 +207,11 @@ export async function POST(request: NextRequest) {
       component: "shopify-token-exchange",
       operation: "POST",
     });
+    // SECURITY M2: Never expose stack traces in error responses
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Token exchange failed",
-        details: error instanceof Error ? error.stack : undefined,
+        error: "Token exchange failed",
       },
       { status: 500, headers: corsHeaders },
     );

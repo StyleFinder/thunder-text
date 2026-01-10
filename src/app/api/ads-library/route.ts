@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
+import { toError } from "@/lib/api/route-config";
 
 /**
  * GET /api/ads-library
@@ -66,12 +67,13 @@ export async function GET(_req: NextRequest) {
     }
 
     return NextResponse.json({ ads: ads || [] });
-  } catch (error: any) {
-    logger.error("Error in ads library endpoint:", error as Error, {
+  } catch (error) {
+    const err = toError(error);
+    logger.error("Error in ads library endpoint:", err, {
       component: "ads-library",
     });
     return NextResponse.json(
-      { error: error.message || "Internal Server Error" },
+      { error: err.message || "Internal Server Error" },
       { status: 500 },
     );
   }

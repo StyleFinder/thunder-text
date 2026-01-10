@@ -53,7 +53,7 @@ export default function LoginPage() {
         redirect: false,
       });
 
-      console.log("[Login] signIn result:", JSON.stringify(result, null, 2));
+      // Debug: signIn result is logged to help diagnose auth issues
 
       // Check if login actually failed (ok: false means auth failed)
       // Note: result.error may contain URL query params like "session_expired" even on success

@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
+import { encryptToken, decryptToken } from "@/lib/services/encryption";
 
 // Lazy-initialized Supabase client to avoid build-time initialization
 let supabase: SupabaseClient | null = null;
@@ -130,13 +131,26 @@ export async function storeShopToken(
       ? shopDomain
       : `${shopDomain}.myshopify.com`;
 
+    // SECURITY M5: Encrypt access token before storing in database
+    let encryptedToken: string;
+    try {
+      encryptedToken = await encryptToken(accessToken);
+    } catch (encryptError) {
+      logger.error("Failed to encrypt access token", encryptError as Error, {
+        component: "token-manager",
+        operation: "storeShopToken",
+        shopDomain: fullShopDomain,
+      });
+      return { success: false, error: "Failed to encrypt access token" };
+    }
+
     // Upsert directly to the shops table
     const { data, error } = await getSupabaseClient()
       .from("shops")
       .upsert(
         {
           shop_domain: fullShopDomain,
-          shopify_access_token: accessToken,
+          shopify_access_token: encryptedToken, // SECURITY M5: Store encrypted token
           shopify_scope: scope || null,
           is_active: true,
         },
@@ -156,7 +170,7 @@ export async function storeShopToken(
       return { success: false, error: error.message };
     }
 
-    // Update cache with the new token
+    // Update cache with the DECRYPTED token (for API calls)
     setCachedToken(fullShopDomain, accessToken, scope);
 
     return { success: true, shopId: data?.id };
@@ -176,6 +190,7 @@ export async function storeShopToken(
 /**
  * Retrieve a shop's access token from cache or database
  * Implements caching as recommended in the guide (line 321-336)
+ * SECURITY M5: Tokens are stored encrypted - decrypted on retrieval
  */
 export async function getShopToken(
   shopDomain: string,
@@ -186,7 +201,7 @@ export async function getShopToken(
       ? shopDomain
       : `${shopDomain}.myshopify.com`;
 
-    // Check cache first
+    // Check cache first (cache stores decrypted tokens)
     const cachedToken = getCachedToken(fullShopDomain);
     if (cachedToken) {
       return { success: true, accessToken: cachedToken };
@@ -240,10 +255,25 @@ export async function getShopToken(
       };
     }
 
-    // Cache the token for future use
-    setCachedToken(fullShopDomain, shopData.access_token, shopData.scope);
+    // SECURITY M5: Decrypt the token retrieved from database
+    let decryptedToken: string;
+    try {
+      decryptedToken = await decryptToken(shopData.access_token);
+    } catch (decryptError) {
+      // Token might be stored in plaintext (legacy) - use as-is
+      // This provides backward compatibility during migration
+      logger.warn("Token decryption failed, using as-is (may be legacy plaintext)", {
+        component: "token-manager",
+        operation: "getShopToken",
+        shopDomain: fullShopDomain,
+      });
+      decryptedToken = shopData.access_token;
+    }
 
-    return { success: true, accessToken: shopData.access_token };
+    // Cache the DECRYPTED token for future use
+    setCachedToken(fullShopDomain, decryptedToken, shopData.scope);
+
+    return { success: true, accessToken: decryptedToken };
   } catch (error) {
     logger.error("Unexpected error retrieving token", error as Error, {
       component: "token-manager",

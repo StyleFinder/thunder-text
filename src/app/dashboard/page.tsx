@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useNavigation } from "../hooks/useNavigation";
 import { useShopStatus } from "@/hooks/useShopStatus";
 import { useShop } from "@/hooks/useShop";
+import { logger } from "@/lib/logger";
 import {
   Loader2,
   Sparkles,
@@ -697,7 +698,7 @@ function DashboardContent() {
           setSubscription(data.subscription);
         }
       } catch (error) {
-        console.error("Error fetching subscription:", error);
+        logger.error("Error fetching subscription", error, { component: "dashboard", shop });
       } finally {
         setSubscriptionLoading(false);
       }
@@ -731,7 +732,7 @@ function DashboardContent() {
           });
         }
       } catch (error) {
-        console.error("Error fetching stats:", error);
+        logger.error("Error fetching stats", error, { component: "dashboard", shop });
       } finally {
         setStatsLoading(false);
       }

@@ -4,7 +4,6 @@ import {
   fetchProductDataForEnhancement,
   updateProductWithEnhancement,
   validateProductForEnhancement,
-  type _EnhancementProductData,
 } from "@/lib/shopify/product-enhancement";
 
 // GET /api/shopify/products/[productId]/enhance?shop={shop}

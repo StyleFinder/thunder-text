@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { logger } from "@/lib/logger";
 
 /**
  * PATCH /api/hot-takes/:id
@@ -81,7 +82,7 @@ export async function PATCH(
         );
       }
 
-      console.error("[Hot Takes API] Error updating hot take:", error);
+      logger.error("Error updating hot take", error, { component: "hot-takes-api", operation: "update", hotTakeId: id });
       return NextResponse.json(
         {
           success: false,
@@ -96,7 +97,7 @@ export async function PATCH(
       data: hotTake,
     });
   } catch (error) {
-    console.error("[Hot Takes API] Unexpected error:", error);
+    logger.error("Unexpected error updating hot take", error, { component: "hot-takes-api", operation: "update" });
     return NextResponse.json(
       {
         success: false,
@@ -153,7 +154,7 @@ export async function DELETE(
       .eq("id", id);
 
     if (error) {
-      console.error("[Hot Takes API] Error deleting hot take:", error);
+      logger.error("Error deleting hot take", error, { component: "hot-takes-api", operation: "delete", hotTakeId: id });
       return NextResponse.json(
         {
           success: false,
@@ -168,7 +169,7 @@ export async function DELETE(
       message: "Hot take deleted successfully",
     });
   } catch (error) {
-    console.error("[Hot Takes API] Unexpected error:", error);
+    logger.error("Unexpected error deleting hot take", error, { component: "hot-takes-api", operation: "delete" });
     return NextResponse.json(
       {
         success: false,

@@ -6,7 +6,7 @@
 import { describe, it, expect } from "@jest/globals";
 import { GET } from "@/app/api/business-profile/route";
 import { NextRequest } from "next/server";
-import { _TEST_SHOP, API_URLS } from "../../utils/test-constants";
+import { TEST_SHOP as _TEST_SHOP, API_URLS } from "../../utils/test-constants";
 import { createAuthenticatedRequest } from "../../utils/auth-helpers";
 
 describe("GET /api/business-profile", () => {

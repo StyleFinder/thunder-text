@@ -53,8 +53,9 @@ export class BestPracticesOrchestrator {
       context,
     };
 
-    console.log(
-      `\n${"=".repeat(60)}\n[Orchestrator] Starting workflow: ${context.request_id}\n${"=".repeat(60)}`,
+    logger.info(
+      `[Orchestrator] Starting workflow: ${context.request_id}`,
+      { component: "orchestrator", request_id: context.request_id },
     );
 
     try {
@@ -66,7 +67,7 @@ export class BestPracticesOrchestrator {
       workflow.current_stage = "extraction";
       workflow.progress_percentage = 10;
 
-      console.log("\n[Stage 1/4] Content Extraction");
+      logger.debug("[Stage 1/4] Content Extraction", { component: "orchestrator" });
       const extractionResult = await this.extractionAgent.extract(context);
       extractionStep.status = "completed";
       extractionStep.completed_at = new Date().toISOString();
@@ -74,8 +75,9 @@ export class BestPracticesOrchestrator {
         new Date(extractionStep.completed_at).getTime() -
         new Date(extractionStep.started_at!).getTime();
 
-      console.log(
-        `✓ Extracted ${extractionResult.word_count} words using ${extractionResult.extraction_method}`,
+      logger.debug(
+        `Extracted ${extractionResult.word_count} words using ${extractionResult.extraction_method}`,
+        { component: "orchestrator" },
       );
       workflow.progress_percentage = 35;
 
@@ -83,7 +85,7 @@ export class BestPracticesOrchestrator {
       const analysisStep = this.createStep("Content Analysis", "analysis");
       workflow.current_stage = "analysis";
 
-      console.log("\n[Stage 2/4] Content Analysis");
+      logger.debug("[Stage 2/4] Content Analysis", { component: "orchestrator" });
       const analysisResult = await this.analysisAgent.analyze(
         extractionResult,
         context,
@@ -94,19 +96,22 @@ export class BestPracticesOrchestrator {
         new Date(analysisStep.completed_at).getTime() -
         new Date(analysisStep.started_at!).getTime();
 
-      console.log(
-        `✓ Analyzed as: ${analysisResult.platform} → ${analysisResult.category} → ${analysisResult.goal}`,
+      logger.debug(
+        `Analyzed as: ${analysisResult.platform} → ${analysisResult.category} → ${analysisResult.goal}`,
+        {
+          component: "orchestrator",
+          title: analysisResult.title,
+          insights_count: analysisResult.key_insights.length,
+          tags_count: analysisResult.tags.length,
+        },
       );
-      console.log(`  Title: "${analysisResult.title}"`);
-      console.log(`  Insights: ${analysisResult.key_insights.length}`);
-      console.log(`  Tags: ${analysisResult.tags.length}`);
       workflow.progress_percentage = 60;
 
       // STAGE 3: Quality Assessment
       const qualityStep = this.createStep("Quality Assessment", "quality");
       workflow.current_stage = "quality";
 
-      console.log("\n[Stage 3/4] Quality Assessment");
+      logger.debug("[Stage 3/4] Quality Assessment", { component: "orchestrator" });
       const qualityAssessment = await this.qualityAgent.assess(
         extractionResult,
         analysisResult,
@@ -118,30 +123,26 @@ export class BestPracticesOrchestrator {
         new Date(qualityStep.completed_at).getTime() -
         new Date(qualityStep.started_at!).getTime();
 
-      console.log(
-        `✓ Quality Score: ${qualityAssessment.overall_score.toFixed(1)}/10`,
-      );
-      console.log(
-        `  Status: ${qualityAssessment.is_approved ? "✅ APPROVED" : "❌ REJECTED"}`,
+      logger.debug(
+        `Quality Score: ${qualityAssessment.overall_score.toFixed(1)}/10 - ${qualityAssessment.is_approved ? "APPROVED" : "REJECTED"}`,
+        { component: "orchestrator" },
       );
 
       if (qualityAssessment.issues.length > 0) {
-        console.log("  Issues:");
         qualityAssessment.issues.forEach((issue) => {
-          const icon =
-            issue.severity === "critical"
-              ? "🔴"
-              : issue.severity === "warning"
-                ? "⚠️"
-                : "ℹ️";
-          console.log(`    ${icon} ${issue.message}`);
+          const logFn = issue.severity === "critical" ? logger.warn : logger.debug;
+          logFn.call(logger, `Quality issue: ${issue.message}`, {
+            component: "orchestrator",
+            severity: issue.severity,
+          });
           context.warnings.push(issue.message);
         });
       }
 
       if (qualityAssessment.duplicate_of) {
-        console.log(
-          `  🔄 Duplicate of: ${qualityAssessment.duplicate_of} (${(qualityAssessment.duplicate_similarity! * 100).toFixed(1)}% similar)`,
+        logger.debug(
+          `Duplicate of: ${qualityAssessment.duplicate_of} (${(qualityAssessment.duplicate_similarity! * 100).toFixed(1)}% similar)`,
+          { component: "orchestrator" },
         );
       }
 
@@ -155,7 +156,7 @@ export class BestPracticesOrchestrator {
         const storageStep = this.createStep("Storage", "storage");
         workflow.current_stage = "storage";
 
-        console.log("\n[Stage 4/4] Storage");
+        logger.debug("[Stage 4/4] Storage", { component: "orchestrator" });
         storageResult = await this.storageAgent.store(
           extractionResult,
           analysisResult,
@@ -169,12 +170,12 @@ export class BestPracticesOrchestrator {
           new Date(storageStep.started_at!).getTime();
 
         best_practice_id = storageResult.best_practice_id;
-        console.log(
-          `✓ ${storageResult.updated_existing ? "Updated" : "Inserted"}: ${best_practice_id}`,
+        logger.debug(
+          `${storageResult.updated_existing ? "Updated" : "Inserted"}: ${best_practice_id}`,
+          { component: "orchestrator", embedding: true, vector_indexed: true },
         );
-        console.log(`  Embedding: ✓ Vector indexed: ✓`);
       } else {
-        console.log("\n[Stage 4/4] Storage - SKIPPED (not approved)");
+        logger.debug("[Stage 4/4] Storage - SKIPPED (not approved)", { component: "orchestrator" });
         context.errors.push("Content did not pass quality assessment");
       }
 
@@ -208,11 +209,10 @@ export class BestPracticesOrchestrator {
         errors: context.errors,
       };
 
-      console.log(`\n${"=".repeat(60)}`);
-      console.log(
-        `[Orchestrator] Workflow Complete: ${response.success ? "✅ SUCCESS" : "❌ FAILED"}`,
+      logger.info(
+        `[Orchestrator] Workflow Complete: ${response.success ? "SUCCESS" : "FAILED"}`,
+        { component: "orchestrator", success: response.success, request_id: context.request_id },
       );
-      console.log(`${"=".repeat(60)}\n`);
 
       return response;
     } catch (error) {
@@ -251,14 +251,15 @@ export class BestPracticesOrchestrator {
   async processBatch(
     requests: ProcessBestPracticeRequest[],
   ): Promise<ProcessBestPracticeResponse[]> {
-    console.log(
-      `\n[Orchestrator] Starting batch processing: ${requests.length} requests`,
+    logger.info(
+      `[Orchestrator] Starting batch processing: ${requests.length} requests`,
+      { component: "orchestrator", batch_size: requests.length },
     );
 
     const results: ProcessBestPracticeResponse[] = [];
 
     for (let i = 0; i < requests.length; i++) {
-      console.log(`\n--- Processing ${i + 1}/${requests.length} ---`);
+      logger.debug(`Processing ${i + 1}/${requests.length}`, { component: "orchestrator" });
       try {
         const result = await this.process(requests[i]);
         results.push(result);
@@ -290,8 +291,9 @@ export class BestPracticesOrchestrator {
     }
 
     const successCount = results.filter((r) => r.success).length;
-    console.log(
-      `\n[Orchestrator] Batch complete: ${successCount}/${requests.length} succeeded`,
+    logger.info(
+      `[Orchestrator] Batch complete: ${successCount}/${requests.length} succeeded`,
+      { component: "orchestrator", success_count: successCount, total: requests.length },
     );
 
     return results;

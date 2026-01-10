@@ -14,17 +14,58 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { logger } from "@/lib/logger";
+import type { AIEAdVariant } from "@/lib/aie/types";
+
+/**
+ * Minimal product data for ad mockup display
+ */
+interface ProductData {
+  id?: string;
+  title?: string;
+  description?: string;
+  image?: string | { url?: string; src?: string };
+  images?: Array<{ src?: string; alt?: string }>;
+  vendor?: string;
+  price?: string | number;
+  currency?: string;
+}
+
+/**
+ * Selected product reference
+ */
+interface SelectedProduct {
+  id: string;
+  title: string;
+  image?: string;
+  price?: string;
+  description?: string;
+}
 
 interface AdMockupModalProps {
   open: boolean;
   onClose: () => void;
-  variant: any;
+  variant: AIEAdVariant | {
+    headline?: string;
+    primary_text?: string;
+    description?: string;
+    cta?: string;
+    variant_type?: string;
+    predicted_score?: number;
+    selected_length?: string;
+  };
   platform: string;
   goal: string;
   shopId?: string;
-  productData?: any;
-  selectedProduct?: any;
+  productData?: ProductData;
+  selectedProduct?: SelectedProduct;
   previewOnly?: boolean; // If true, hide save button
+}
+
+// Helper to extract image URL from various formats
+function getImageUrl(image: string | { url?: string; src?: string } | undefined): string | undefined {
+  if (!image) return undefined;
+  if (typeof image === "string") return image;
+  return image.url || image.src;
 }
 
 export function AdMockupModal({
@@ -40,6 +81,9 @@ export function AdMockupModal({
 }: AdMockupModalProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Extract image URL safely
+  const productImageUrl = productData?.images?.[0]?.src || getImageUrl(productData?.image);
 
   const handleSaveCampaign = async () => {
     setIsSaving(true);
@@ -59,10 +103,10 @@ export function AdMockupModal({
           variant_type: variant.variant_type,
           product_id: selectedProduct?.id || productData?.id,
           product_title: selectedProduct?.title || productData?.title,
-          product_image: productData?.images?.[0]?.src || productData?.image,
+          product_image: productImageUrl,
           product_data: productData,
-          predicted_score: variant.predicted_score,
-          selected_length: variant.selected_length,
+          predicted_score: "predicted_score" in variant ? variant.predicted_score : undefined,
+          selected_length: "selected_length" in variant ? variant.selected_length : undefined,
         }),
       });
 
@@ -74,11 +118,12 @@ export function AdMockupModal({
 
       // Success - close modal
       onClose();
-    } catch (err: any) {
-      logger.error("Error saving ad:", err as Error, {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to save ad to library";
+      logger.error("Error saving ad:", err instanceof Error ? err : new Error(errorMessage), {
         component: "AdMockupModal",
       });
-      setError(err.message || "Failed to save ad to library");
+      setError(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -155,7 +200,7 @@ export function AdMockupModal({
           }}
         >
           <Image
-            src={productData?.images?.[0]?.src || productData?.image}
+            src={productImageUrl || "/placeholder-product.png"}
             alt={
               productData?.images?.[0]?.alt ||
               productData?.title ||
@@ -307,7 +352,7 @@ export function AdMockupModal({
               }}
             >
               <Image
-                src={productData?.images?.[0]?.src || productData?.image}
+                src={productImageUrl || "/placeholder-product.png"}
                 alt={
                   productData?.images?.[0]?.alt ||
                   productData?.title ||
@@ -422,7 +467,7 @@ export function AdMockupModal({
           }}
         >
           <Image
-            src={productData?.images?.[0]?.src || productData?.image}
+            src={productImageUrl || "/placeholder-product.png"}
             alt={
               productData?.images?.[0]?.alt ||
               productData?.title ||
@@ -626,7 +671,7 @@ export function AdMockupModal({
           }}
         >
           <Image
-            src={productData?.images?.[0]?.src || productData?.image}
+            src={productImageUrl || "/placeholder-product.png"}
             alt={
               productData?.images?.[0]?.alt ||
               productData?.title ||

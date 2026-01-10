@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import _ReactMarkdown from "react-markdown";
 import { CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
 import type {
   ChatMessage,
@@ -186,10 +185,10 @@ export default function BrandVoicePage() {
     }
   }, [authLoading, isAuthenticated, shopDomain]);
 
-  // Profile completed - redirect to settings page
+  // Profile completed - redirect to brand voice page
   useEffect(() => {
     if (interviewStatus === "completed" && profile?.master_profile_text) {
-      router.replace("/brand-voice/settings");
+      router.replace("/brand-voice");
     }
   }, [interviewStatus, profile, router]);
 

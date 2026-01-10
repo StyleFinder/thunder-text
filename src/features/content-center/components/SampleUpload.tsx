@@ -19,8 +19,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, FileText, AlertCircle, CheckCircle } from "lucide-react";
+import { Upload, FileText, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { logger } from "@/lib/logger";
+import { useShop } from "@/hooks/useShop";
 
 interface SampleUploadProps {
   onUploadSuccess?: () => void;
@@ -29,9 +30,11 @@ interface SampleUploadProps {
 type SampleType = "blog" | "email" | "description" | "other";
 
 export function SampleUpload({ onUploadSuccess }: SampleUploadProps) {
+  const { shop, shopDomain } = useShop();
   const [sampleText, setSampleText] = useState("");
   const [sampleType, setSampleType] = useState<SampleType>("blog");
   const [isUploading, setIsUploading] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,31 +63,70 @@ export function SampleUpload({ onUploadSuccess }: SampleUploadProps) {
     const validTypes = [
       "text/plain",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/pdf",
     ];
     if (
       !validTypes.includes(file.type) &&
       !file.name.endsWith(".txt") &&
-      !file.name.endsWith(".docx")
+      !file.name.endsWith(".docx") &&
+      !file.name.endsWith(".pdf")
     ) {
-      setError("Please upload a .txt or .docx file");
+      setError("Please upload a .txt, .docx, or .pdf file");
       return;
     }
 
-    // Check file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      setError("File size must be less than 5MB");
+    // Check file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      setError("File size must be less than 10MB");
       return;
     }
 
     setError(null);
+    setIsParsing(true);
 
     try {
+      // Handle PDF files - use server-side parsing
+      if (file.name.endsWith(".pdf")) {
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          const response = await fetch("/api/parse-pdf", {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            throw new Error(data.error || "Failed to parse PDF");
+          }
+
+          setSampleText(data.text);
+        } catch (pdfError) {
+          logger.error("PDF parsing error", pdfError as Error, {
+            component: "SampleUpload",
+          });
+          setError("Failed to extract text from PDF. Please try copying and pasting the text instead.");
+        } finally {
+          setIsParsing(false);
+        }
+        return;
+      }
+
       // Handle DOCX files
       if (file.name.endsWith(".docx")) {
-        const mammoth = await import("mammoth");
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        setSampleText(result.value);
+        try {
+          const mammoth = await import("mammoth");
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          setSampleText(result.value);
+        } catch (docxError) {
+          logger.error("DOCX parsing error", docxError as Error, { component: "SampleUpload" });
+          setError("Failed to extract text from DOCX. Please try copying and pasting the text instead.");
+        } finally {
+          setIsParsing(false);
+        }
         return;
       }
 
@@ -94,19 +136,23 @@ export function SampleUpload({ onUploadSuccess }: SampleUploadProps) {
         reader.onload = (e) => {
           const text = e.target?.result as string;
           setSampleText(text);
+          setIsParsing(false);
         };
         reader.onerror = () => {
           setError("Failed to read file");
+          setIsParsing(false);
         };
         reader.readAsText(file);
         return;
       }
 
       // Unsupported format
+      setIsParsing(false);
       setError(
-        "Only .txt and .docx files are currently supported. Please convert your file or copy/paste the text.",
+        "Only .txt, .docx, and .pdf files are supported. Please convert your file or copy/paste the text.",
       );
     } catch (err) {
+      setIsParsing(false);
       setError(
         "Failed to parse file. Please try a different file or copy/paste the text.",
       );
@@ -129,11 +175,17 @@ export function SampleUpload({ onUploadSuccess }: SampleUploadProps) {
     setSuccess(false);
 
     try {
+      // Use shopDomain if available, otherwise fall back to shop
+      const shopIdentifier = shopDomain || shop;
+      if (!shopIdentifier) {
+        throw new Error("Shop not found");
+      }
+
       const response = await fetch("/api/content-center/samples", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("supabase_token")}`,
+          Authorization: `Bearer ${shopIdentifier}`,
         },
         body: JSON.stringify({
           sample_text: sampleText,
@@ -192,9 +244,19 @@ export function SampleUpload({ onUploadSuccess }: SampleUploadProps) {
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full sm:w-auto"
+                disabled={isParsing}
               >
-                <Upload className="mr-2 h-4 w-4" />
-                Choose File
+                {isParsing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Parsing File...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Choose File
+                  </>
+                )}
               </Button>
               <span className="text-sm text-muted-foreground">
                 .txt, .doc, .docx, or .pdf

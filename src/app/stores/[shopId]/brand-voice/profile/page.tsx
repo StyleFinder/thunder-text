@@ -32,9 +32,9 @@ export default function FullProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState('summary');
 
-  // Helper for dynamic routes
+  // Helper for dynamic routes - all point to unified brand voice page
   const getBrandVoiceUrl = () => shopId ? `/stores/${shopId}/brand-voice` : '/brand-voice';
-  const getSettingsUrl = () => shopId ? `/stores/${shopId}/brand-voice/settings` : '/brand-voice/settings';
+  const getSettingsUrl = () => shopId ? `/stores/${shopId}/brand-voice` : '/brand-voice'; // Settings merged into main page
   const getEditUrl = () => shopId ? `/stores/${shopId}/brand-voice/edit` : '/brand-voice/edit';
 
   // Load profile

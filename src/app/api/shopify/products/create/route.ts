@@ -7,6 +7,8 @@ import {
 } from "@/lib/google-metafields";
 import { logger } from "@/lib/logger";
 import { sanitizeDescriptionForShopify } from "@/lib/security/input-sanitization";
+import { appendDiscoverMoreSection } from "@/lib/templates/discover-more-template";
+import type { DiscoverMoreSection } from "@/types/blog-linking";
 
 export async function POST(request: NextRequest) {
   // Check if we're in a build environment without proper configuration
@@ -74,7 +76,43 @@ export async function POST(request: NextRequest) {
       : `${shop}.myshopify.com`;
 
     const body = await request.json();
-    const { generatedContent, productData, uploadedImages } = body;
+    const { generatedContent, productData, uploadedImages, blogLink } = body as {
+      generatedContent: {
+        title?: string;
+        description?: string;
+        keywords?: string[];
+        metaDescription?: string;
+        bulletPoints?: string[];
+        imageAltTexts?: string[];
+      };
+      productData?: {
+        category?: string;
+        productType?: string;
+        vendor?: string;
+        price?: string;
+        compareAtPrice?: string;
+        sku?: string;
+        barcode?: string;
+        inventoryQuantity?: number;
+        weight?: number;
+        weightUnit?: string;
+        variantOptions?: Array<{
+          name: string;
+          values: string[];
+        }>;
+        googleProductCategory?: string;
+        googleAdditionalFields?: Record<string, string>;
+        colorVariants?: Array<{
+          userOverride?: string;
+          standardizedColor: string;
+        }>;
+        sizing?: string;
+        color?: string;
+        fabricMaterial?: string;
+      };
+      uploadedImages: Array<{ dataUrl: string; name: string; altText: string }>;
+      blogLink?: DiscoverMoreSection;
+    };
 
     if (!generatedContent) {
       return NextResponse.json(
@@ -95,9 +133,9 @@ export async function POST(request: NextRequest) {
     ) {
       const { inferProductCategory } = await import("@/lib/category-inference");
       const inference = inferProductCategory(
-        generatedContent.title,
-        generatedContent.description,
-        generatedContent.keywords,
+        generatedContent.title || "",
+        generatedContent.description || "",
+        generatedContent.keywords || [],
         productData?.category,
       );
 
@@ -177,12 +215,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Sanitize description to remove &nbsp; and other HTML entities
-    const sanitizedDescription = sanitizeDescriptionForShopify(
-      generatedContent.description || "",
+    let sanitizedDescription = sanitizeDescriptionForShopify(
+      (generatedContent.description as string) || "",
     );
 
+    // Append "Discover More" section if blog link is provided
+    if (blogLink && blogLink.title && blogLink.summary && blogLink.url) {
+      sanitizedDescription = appendDiscoverMoreSection(sanitizedDescription, {
+        blogTitle: blogLink.title,
+        summary: blogLink.summary,
+        blogUrl: blogLink.url,
+      });
+
+      logger.debug("Blog link appended to product description", {
+        component: "product-create",
+        operation: "append-blog-link",
+        blogId: blogLink.blogId,
+        blogSource: blogLink.blogSource,
+      });
+    }
+
     const productInput = {
-      title: generatedContent.title,
+      title: generatedContent.title || "Untitled Product",
       descriptionHtml: sanitizedDescription,
       status: "DRAFT",
       productType: shopifyProductType,
@@ -272,12 +326,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create metafields for additional data
+    // Create metafields for additional data (filter out undefined values)
     const thunderTextMetafields = [
       {
         namespace: "thunder_text",
         key: "meta_description",
-        value: generatedContent.metaDescription,
+        value: generatedContent.metaDescription || "",
         type: "single_line_text_field",
       },
       {
@@ -295,10 +349,10 @@ export async function POST(request: NextRequest) {
       {
         namespace: "seo",
         key: "meta_description",
-        value: generatedContent.metaDescription,
+        value: generatedContent.metaDescription || "",
         type: "single_line_text_field",
       },
-    ];
+    ].filter((m) => m.value !== "");
 
     // Generate Google Shopping metafields
 
@@ -309,8 +363,8 @@ export async function POST(request: NextRequest) {
       {
         product_highlights:
           generatedContent.bulletPoints || generatedContent.keywords,
-        color: productData.color,
-        material: productData.fabricMaterial,
+        color: productData?.color,
+        material: productData?.fabricMaterial,
       },
     );
 
@@ -445,7 +499,7 @@ export async function POST(request: NextRequest) {
                   const googleVariantMetafields =
                     generateGoogleVariantMetafields(
                       variantTitle,
-                      colorOption?.value || productData.color, // Use variant color or fallback to product color
+                      colorOption?.value || productData?.color, // Use variant color or fallback to product color
                       sizeOption?.value, // Use variant size
                       undefined, // Material will be inherited from product
                     );
@@ -522,6 +576,53 @@ export async function POST(request: NextRequest) {
 
     // Store the generated data in our database
     // Note: This feature is optional - product creation in Shopify is the primary goal
+
+    // Store blog link relationship in database if provided
+    if (blogLink && createdProduct.id) {
+      try {
+        const { supabaseAdmin } = await import("@/lib/supabase");
+
+        // Get the store ID from the shops table
+        const { data: shopData } = await supabaseAdmin
+          .from("shops")
+          .select("id")
+          .eq("shop_domain", shopDomain)
+          .single();
+
+        if (shopData?.id) {
+          // Extract product ID from Shopify GID (e.g., "gid://shopify/Product/12345" -> "12345")
+          const productIdNumeric = createdProduct.id.split("/").pop();
+
+          await supabaseAdmin.from("product_blog_links").upsert(
+            {
+              store_id: shopData.id,
+              product_id: productIdNumeric,
+              blog_id: blogLink.blogSource === "library" ? blogLink.blogId : null,
+              shopify_blog_id: blogLink.blogSource === "shopify" ? blogLink.blogId.split("/")[0] : null,
+              shopify_article_id: blogLink.blogSource === "shopify" ? blogLink.blogId.split("/")[1] || blogLink.blogId : null,
+              blog_source: blogLink.blogSource,
+              blog_title: blogLink.title,
+              summary: blogLink.summary,
+              blog_url: blogLink.url,
+            },
+            { onConflict: "store_id,product_id" }
+          );
+
+          logger.info("Blog link stored in database", {
+            component: "product-create",
+            operation: "store-blog-link",
+            productId: productIdNumeric,
+            blogId: blogLink.blogId,
+          });
+        }
+      } catch (blogLinkError) {
+        logger.error("Error storing blog link (product still created)", blogLinkError as Error, {
+          component: "product-create",
+          operation: "store-blog-link",
+        });
+        // Continue anyway, the product was created successfully
+      }
+    }
 
     return NextResponse.json({
       success: true,

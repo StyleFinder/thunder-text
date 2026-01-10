@@ -1,9 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { _Button } from "@/components/ui/button";
-import { _Input } from "@/components/ui/input";
-import { _Badge } from "@/components/ui/badge";
+import { useState, useEffect, useMemo } from "react";
 import {
   Select,
   SelectContent,
@@ -14,7 +11,6 @@ import {
 import { ContentLoader } from "@/components/ui/loading/ContentLoader";
 import Link from "next/link";
 import {
-  _Search,
   Filter,
   FileText,
   Calendar,
@@ -196,16 +192,19 @@ export default function LibraryPage() {
     }
   };
 
-  const filteredContent = content.filter((item) => {
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        item.topic.toLowerCase().includes(query) ||
-        item.generated_text.toLowerCase().includes(query)
-      );
-    }
-    return true;
-  });
+  // Q8: Memoize filtered content to avoid recomputation on every render
+  const filteredContent = useMemo(() => {
+    return content.filter((item) => {
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return (
+          item.topic.toLowerCase().includes(query) ||
+          item.generated_text.toLowerCase().includes(query)
+        );
+      }
+      return true;
+    });
+  }, [content, searchQuery]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

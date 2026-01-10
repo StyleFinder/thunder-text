@@ -25,7 +25,7 @@ export class AnalysisAgent {
       );
     }
 
-    console.log(`[AnalysisAgent] Analyzing content (${word_count} words)...`);
+    logger.debug(`[AnalysisAgent] Analyzing content (${word_count} words)...`, { component: "analysis" });
 
     try {
       const systemPrompt = this.buildSystemPrompt();
@@ -47,8 +47,9 @@ export class AnalysisAgent {
       );
 
       const analysis = this.parseResponse(response);
-      console.log(
+      logger.debug(
         `[AnalysisAgent] Analysis complete: "${analysis.title}" (${analysis.platform}, ${analysis.category})`,
+        { component: "analysis", platform: analysis.platform, category: analysis.category },
       );
 
       return analysis;

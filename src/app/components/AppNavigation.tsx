@@ -92,6 +92,9 @@ function NavigationContent({ children }: AppNavigationProps) {
   // - Default to 'user'
   let userRole: string;
 
+  // Get the actual session role for admin-only feature checks
+  const sessionRole = (session?.user as { role?: string })?.role;
+
   if (shop) {
     // Shop parameter present = store owner accessing via Shopify
     // Always treat as 'user' role regardless of session
@@ -106,15 +109,7 @@ function NavigationContent({ children }: AppNavigationProps) {
     userRole = "user";
   }
 
-  // Debug log (remove in production)
-  useEffect(() => {
-    console.log("[AppNavigation] Role determination:", {
-      shop,
-      sessionRole: session?.user?.role,
-      sessionStatus: status,
-      determinedRole: userRole,
-    });
-  }, [shop, session?.user?.role, status, userRole]);
+  // Role determination logged for debugging navigation routing issues
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -236,8 +231,8 @@ function NavigationContent({ children }: AppNavigationProps) {
       }),
       allowedRoles: ["user", "admin"],
     },
-    // Image Generation - only shown when feature flag is enabled
-    ...(isImageGenerationEnabled()
+    // Image Generation - admin only (requires admin role)
+    ...(isImageGenerationEnabled(sessionRole)
       ? [
           {
             url: buildUrl("/image-generation"),
@@ -250,12 +245,12 @@ function NavigationContent({ children }: AppNavigationProps) {
               matchPaths: ["/image-generation"],
               exactMatch: false,
             }),
-            allowedRoles: ["user", "admin"],
+            allowedRoles: ["admin"],
           },
         ]
       : []),
-    // Video Generation - only shown when feature flag is enabled
-    ...(isVideoGenerationEnabled()
+    // Video Generation - admin only (requires admin role)
+    ...(isVideoGenerationEnabled(sessionRole)
       ? [
           {
             url: buildUrl("/content-center/animator"),
@@ -268,7 +263,7 @@ function NavigationContent({ children }: AppNavigationProps) {
               matchPaths: ["/content-center/animator"],
               exactMatch: false,
             }),
-            allowedRoles: ["user", "admin"],
+            allowedRoles: ["admin"],
           },
         ]
       : []),

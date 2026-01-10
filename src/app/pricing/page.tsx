@@ -3,11 +3,11 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 import {
   Loader2,
   Zap,
   FileText,
-  _Languages,
   Sparkles,
   MessageSquare,
   Image,
@@ -145,7 +145,7 @@ export default function PricingPage() {
 
   const handleSelectPlan = async (planId: string) => {
     if (!shopDomain) {
-      console.error("No shop domain found");
+      logger.warn("No shop domain found", { component: "pricing-page" });
       return;
     }
 
@@ -177,12 +177,12 @@ export default function PricingPage() {
           router.push(data.dashboardUrl);
         }
       } else {
-        console.error("Failed to select plan:", data.error);
+        logger.error("Failed to select plan", new Error(data.error), { component: "pricing-page", planId });
         setIsLoading(false);
         setSelectedPlan(null);
       }
     } catch (error) {
-      console.error("Error selecting plan:", error);
+      logger.error("Error selecting plan", error, { component: "pricing-page", planId });
       setIsLoading(false);
       setSelectedPlan(null);
     }
@@ -190,7 +190,7 @@ export default function PricingPage() {
 
   const handleFreeTrial = async () => {
     if (!shopDomain) {
-      console.error("No shop domain found");
+      logger.warn("No shop domain found", { component: "pricing-page" });
       return;
     }
 
@@ -214,12 +214,12 @@ export default function PricingPage() {
       if (data.success && data.dashboardUrl) {
         router.push(data.dashboardUrl);
       } else {
-        console.error("Failed to start free trial:", data.error);
+        logger.error("Failed to start free trial", new Error(data.error), { component: "pricing-page" });
         setIsLoading(false);
         setSelectedPlan(null);
       }
     } catch (error) {
-      console.error("Error starting free trial:", error);
+      logger.error("Error starting free trial", error, { component: "pricing-page" });
       setIsLoading(false);
       setSelectedPlan(null);
     }

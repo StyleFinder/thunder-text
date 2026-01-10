@@ -2,7 +2,7 @@
 
 import dynamicImport from "next/dynamic";
 import "react-quill-new/dist/quill.snow.css";
-import { Loader2 } from "lucide-react";
+import { Loader2, BookOpen } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import type { BlogSelection, DiscoverMoreSection } from "@/types/blog-linking";
 
 // Dynamically import ReactQuill to avoid SSR issues
 const ReactQuill = dynamicImport(() => import("react-quill-new"), {
@@ -36,6 +37,11 @@ interface GeneratedContentModalProps {
   onRegenerate: () => void;
   onCreateInShopify: () => void;
   creatingProduct: boolean;
+  // Blog linking props
+  blogLinkEnabled?: boolean;
+  selectedBlog?: BlogSelection | null;
+  blogSummary?: string;
+  shopDomain?: string;
 }
 
 export function GeneratedContentModal({
@@ -45,8 +51,29 @@ export function GeneratedContentModal({
   onRegenerate,
   onCreateInShopify,
   creatingProduct,
+  blogLinkEnabled = false,
+  selectedBlog,
+  blogSummary,
+  shopDomain,
 }: GeneratedContentModalProps) {
   if (!content) return null;
+
+  // Generate blog URL for display
+  const getBlogUrl = (): string => {
+    if (!selectedBlog) return "";
+
+    if (selectedBlog.source === "shopify" && shopDomain) {
+      const blogHandle = selectedBlog.blogHandle || "news";
+      const articleHandle = selectedBlog.handle || selectedBlog.id;
+      return `https://${shopDomain}/blogs/${blogHandle}/${articleHandle}`;
+    }
+
+    // For library blogs, placeholder URL
+    return `#blog-${selectedBlog.id}`;
+  };
+
+  // Check if we have a valid blog link to display
+  const showBlogPreview = blogLinkEnabled && selectedBlog && blogSummary;
 
   const updateField = (field: string, value: unknown) => {
     onContentChange({ ...content, [field]: value });
@@ -235,6 +262,91 @@ export function GeneratedContentModal({
               style={{ backgroundColor: "#ffffff", borderColor: "#e5e7eb" }}
             />
           </div>
+
+          {/* Blog Link Preview */}
+          {showBlogPreview && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <Label
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: "#003366",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <BookOpen style={{ width: "16px", height: "16px" }} />
+                Blog Link Preview
+              </Label>
+              <div
+                style={{
+                  marginTop: "8px",
+                  padding: "16px",
+                  backgroundColor: "#f8f9fa",
+                  borderRadius: "8px",
+                  borderLeft: "4px solid #0066cc",
+                }}
+              >
+                <p
+                  style={{
+                    margin: "0 0 8px 0",
+                    fontSize: "12px",
+                    color: "#6b7280",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    fontWeight: 500,
+                  }}
+                >
+                  Discover More
+                </p>
+                <h4
+                  style={{
+                    margin: "0 0 8px 0",
+                    fontSize: "15px",
+                    fontWeight: 500,
+                    color: "#0066cc",
+                  }}
+                >
+                  {selectedBlog?.title}
+                </h4>
+                <p
+                  style={{
+                    margin: "0 0 12px 0",
+                    fontSize: "13px",
+                    color: "#4a4a4a",
+                    lineHeight: "1.5",
+                  }}
+                >
+                  {blogSummary}
+                </p>
+                <span
+                  style={{
+                    color: "#0066cc",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  Read more →
+                </span>
+              </div>
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: "#6b7280",
+                  marginTop: "4px",
+                  fontStyle: "italic",
+                }}
+              >
+                This &quot;Discover More&quot; section will be appended to your product description.
+              </p>
+            </div>
+          )}
         </div>
 
         <DialogFooter style={{ marginTop: "32px", gap: "8px" }}>

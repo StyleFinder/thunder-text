@@ -145,6 +145,49 @@ interface FileAcknowledgeResponse {
   };
 }
 
+interface ProductMediaResponse {
+  product: {
+    id: string;
+    title: string;
+    media: {
+      edges: Array<{
+        node: {
+          id: string;
+          alt: string | null;
+          mediaContentType: string;
+          status: string;
+          image?: {
+            url: string;
+            altText: string | null;
+          } | null;
+        };
+      }>;
+    };
+  } | null;
+}
+
+interface FileUpdateResponse {
+  fileUpdate: {
+    files: Array<{
+      id: string;
+      alt: string | null;
+    }>;
+    userErrors: Array<{ field: string[]; message: string; code?: string }>;
+  };
+}
+
+export interface ProductMediaImage {
+  id: string;
+  alt: string | null;
+  url: string | null;
+  status: string;
+}
+
+export interface AltTextUpdate {
+  fileId: string;
+  altText: string;
+}
+
 interface GetProductByIdResponse {
   product: {
     id: string;
@@ -840,5 +883,170 @@ export class ShopifyAPI {
       "Note: In production, this would use stored staging URL to recreate media",
       { component: "shopify" },
     );
+  }
+
+  /**
+   * Get all media (images) for a product with their alt text status
+   */
+  async getProductMedia(productId: string): Promise<{
+    productTitle: string;
+    images: ProductMediaImage[];
+  }> {
+    const query = `
+      query getProductMedia($id: ID!) {
+        product(id: $id) {
+          id
+          title
+          media(first: 50) {
+            edges {
+              node {
+                id
+                alt
+                mediaContentType
+                status
+                ... on MediaImage {
+                  image {
+                    url
+                    altText
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await this.client.request<ProductMediaResponse>(query, {
+      id: productId,
+    });
+
+    if (!response.product) {
+      throw new Error(`Product not found: ${productId}`);
+    }
+
+    // Filter to only images and extract relevant data
+    const images: ProductMediaImage[] = response.product.media.edges
+      .filter(edge => edge.node.mediaContentType === 'IMAGE')
+      .map(edge => ({
+        id: edge.node.id,
+        alt: edge.node.alt || edge.node.image?.altText || null,
+        url: edge.node.image?.url || null,
+        status: edge.node.status,
+      }));
+
+    return {
+      productTitle: response.product.title,
+      images,
+    };
+  }
+
+  /**
+   * Update alt text for a single image file
+   */
+  async updateImageAltText(fileId: string, altText: string): Promise<void> {
+    const mutation = `
+      mutation fileUpdate($files: [FileUpdateInput!]!) {
+        fileUpdate(files: $files) {
+          files {
+            ... on MediaImage {
+              id
+              alt
+            }
+          }
+          userErrors {
+            field
+            message
+            code
+          }
+        }
+      }
+    `;
+
+    const response = await this.client.request<FileUpdateResponse>(mutation, {
+      files: [{ id: fileId, alt: altText }],
+    });
+
+    if (response.fileUpdate.userErrors?.length > 0) {
+      const errorMessages = response.fileUpdate.userErrors
+        .map(e => e.message)
+        .join(', ');
+      logger.error('Error updating image alt text:', new Error(errorMessages), {
+        component: 'shopify',
+        fileId,
+      });
+      throw new Error(`Failed to update alt text: ${errorMessages}`);
+    }
+
+    logger.debug(`Updated alt text for file ${fileId}`, {
+      component: 'shopify',
+      altText: altText.substring(0, 50) + '...',
+    });
+  }
+
+  /**
+   * Batch update alt text for multiple images
+   */
+  async batchUpdateImageAltText(
+    updates: AltTextUpdate[]
+  ): Promise<{ success: number; failed: number; errors: string[] }> {
+    const mutation = `
+      mutation fileUpdate($files: [FileUpdateInput!]!) {
+        fileUpdate(files: $files) {
+          files {
+            ... on MediaImage {
+              id
+              alt
+            }
+          }
+          userErrors {
+            field
+            message
+            code
+          }
+        }
+      }
+    `;
+
+    // Shopify recommends batches of 10 for fileUpdate
+    const batchSize = 10;
+    let success = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < updates.length; i += batchSize) {
+      const batch = updates.slice(i, i + batchSize);
+      const fileInputs = batch.map(u => ({ id: u.fileId, alt: u.altText }));
+
+      try {
+        const response = await this.client.request<FileUpdateResponse>(mutation, {
+          files: fileInputs,
+        });
+
+        if (response.fileUpdate.userErrors?.length > 0) {
+          const batchErrors = response.fileUpdate.userErrors.map(e => e.message);
+          errors.push(...batchErrors);
+          failed += batch.length;
+        } else {
+          success += response.fileUpdate.files.length;
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        errors.push(`Batch ${Math.floor(i / batchSize) + 1} failed: ${errorMessage}`);
+        failed += batch.length;
+      }
+
+      // Rate limiting between batches
+      if (i + batchSize < updates.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    logger.info(`Batch alt text update complete: ${success} success, ${failed} failed`, {
+      component: 'shopify',
+      totalUpdates: updates.length,
+    });
+
+    return { success, failed, errors };
   }
 }

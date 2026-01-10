@@ -361,6 +361,21 @@ export async function POST(
       // The audit failure is logged and alerted for investigation
     }
 
+    // Mark business profile step as completed in shops table
+    const { error: shopUpdateError } = await supabaseAdmin
+      .from("shops")
+      .update({ business_profile_completed: true })
+      .eq("id", userId);
+
+    if (shopUpdateError) {
+      logger.warn("Failed to update shop business_profile_completed flag:", {
+        component: "business-profile-generate",
+        error: shopUpdateError.message,
+        userId,
+      });
+      // Don't fail the request, just log the warning
+    }
+
     return NextResponse.json(
       {
         success: true,

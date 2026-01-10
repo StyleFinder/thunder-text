@@ -6,7 +6,7 @@ import type {
   ApiResponse,
   GetBusinessProfileResponse,
   BusinessProfile,
-  _BusinessProfileResponse,
+  BusinessProfileResponse,
   ProfileProgress,
   InterviewPrompt,
 } from "@/types/business-profile";
@@ -82,7 +82,7 @@ export async function GET(
     }
 
     // Get responses with prompt details if profile exists
-    let responses: any[] = [];
+    let responses: (BusinessProfileResponse & { prompt?: { question_text: string; question_number: number; prompt_key: string } | null })[] = [];
     if (profile) {
       const { data: responsesData, error: responsesError } = await supabaseAdmin
         .from("business_profile_responses")
@@ -94,7 +94,7 @@ export async function GET(
       if (!responsesError && responsesData) {
         // Fetch prompt details for each response
         const enrichedResponses = await Promise.all(
-          responsesData.map(async (resp: any) => {
+          responsesData.map(async (resp: BusinessProfileResponse) => {
             const { data: promptData } = await supabaseAdmin
               .from("interview_prompts")
               .select("question_text, question_number, prompt_key")

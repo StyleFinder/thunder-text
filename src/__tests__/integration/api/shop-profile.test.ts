@@ -10,7 +10,7 @@ import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import { GET, PUT } from "@/app/api/shop/profile/route";
 import { NextRequest } from "next/server";
 import { createServiceClient } from "../../utils/auth-helpers";
-import { _TEST_SHOP, TENANT_A } from "../../utils/test-constants";
+import { TEST_SHOP as _TEST_SHOP, TENANT_A } from "../../utils/test-constants";
 
 describe("/api/shop/profile", () => {
   const BASE_URL = "http://localhost:3050/api/shop/profile";

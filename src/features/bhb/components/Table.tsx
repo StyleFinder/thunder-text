@@ -2,34 +2,35 @@ import React from "react";
 import { colors } from "@/lib/design-system/colors";
 import { typography } from "@/lib/design-system/typography";
 
-interface TableColumn {
+export interface TableColumn {
   header: string;
   key: string;
   align?: "left" | "center" | "right";
   width?: string;
 }
 
-interface TableProps {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type TableRowData = Record<string, any>;
+
+export interface TableProps<T extends TableRowData = TableRowData> {
   columns: TableColumn[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: T[];
   renderCell?: (
     column: TableColumn,
-    row: any,
+    row: T,
     rowIndex: number,
   ) => React.ReactNode;
   className?: string;
   hoverable?: boolean;
 }
 
-export function Table({
+export function Table<T extends TableRowData = TableRowData>({
   columns,
   data,
   renderCell,
   className = "",
   hoverable = true,
-}: TableProps) {
+}: TableProps<T>) {
   const tableStyles: React.CSSProperties = {
     width: "100%",
     borderCollapse: "collapse",
@@ -101,7 +102,7 @@ export function Table({
                 >
                   {renderCell
                     ? renderCell(column, row, rowIndex)
-                    : row[column.key]}
+                    : (row[column.key] as React.ReactNode)}
                 </td>
               ))}
             </tr>

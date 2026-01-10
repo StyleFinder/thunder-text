@@ -13,7 +13,7 @@
 import { describe, it, expect } from "@jest/globals";
 import { GET } from "@/app/api/onboarding/status/route";
 import { NextRequest } from "next/server";
-import { _createServiceClient } from "../../utils/auth-helpers";
+import { createServiceClient as _createServiceClient } from "../../utils/auth-helpers";
 import { TEST_SHOP } from "../../utils/test-constants";
 
 describe("GET /api/onboarding/status", () => {

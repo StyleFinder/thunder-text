@@ -5,6 +5,7 @@ import { aieEngine } from "@/lib/aie/engine";
 import { AiePlatform, AieGoal } from "@/types/aie";
 import { logger } from "@/lib/logger";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { toError } from "@/lib/api/route-config";
 
 /**
  * POST /api/aie/save
@@ -83,10 +84,11 @@ export async function POST(req: NextRequest) {
     );
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    logger.error("AIE Save Error:", error as Error, { component: "save" });
+  } catch (error) {
+    const err = toError(error);
+    logger.error("AIE Save Error:", err, { component: "save" });
     return NextResponse.json(
-      { error: error.message || "Internal Server Error" },
+      { error: err.message || "Internal Server Error" },
       { status: 500 },
     );
   }

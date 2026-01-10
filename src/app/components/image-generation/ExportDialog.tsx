@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { colors } from "@/lib/design-system/colors";
 import type { GeneratedImage } from "@/types/image-generation";
+import { logger } from "@/lib/logger";
 
 interface ExportDialogProps {
   open: boolean;
@@ -91,7 +92,7 @@ export function ExportDialog({
           break;
       }
     } catch (error) {
-      console.error("Export error:", error);
+      logger.error("Export error", error as Error, { component: "export-dialog" });
     } finally {
       setIsLoading(false);
     }

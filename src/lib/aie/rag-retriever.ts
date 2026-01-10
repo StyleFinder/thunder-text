@@ -3,6 +3,7 @@
  * Retrieves relevant best practices and ad examples using pgvector similarity search
  */
 
+import { logger } from "@/lib/logger";
 import { aieSupabase, generateEmbeddingWithCache } from "./clients";
 import type {
   AIEPlatform,
@@ -12,7 +13,6 @@ import type {
   AIERAGContext,
 } from "./types";
 import { AIERAGRetrievalError } from "./types";
-import { logger } from "@/lib/logger";
 
 /**
  * Retrieve relevant context for ad generation using RAG
@@ -123,9 +123,12 @@ async function retrieveBestPractices(params: {
   }
 
   if (!data || data.length === 0) {
-    console.warn(
-      `⚠️  No best practices found for ${params.platform}/${params.category}/${params.goal}`,
-    );
+    logger.warn("No best practices found", undefined, {
+      component: "rag-retriever",
+      platform: params.platform,
+      category: params.category,
+      goal: params.goal,
+    });
     return [];
   }
 

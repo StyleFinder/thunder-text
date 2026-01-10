@@ -3,6 +3,7 @@ import { z } from "zod";
 import crypto from "crypto";
 import { logger } from "@/lib/logger";
 import { sendEmail } from "@/lib/services/resend-service";
+import { checkRateLimitAsync, RATE_LIMITS } from "@/lib/middleware/rate-limit";
 
 // Lazy import supabaseAdmin to avoid module load failures
 async function getSupabaseAdmin() {
@@ -23,6 +24,27 @@ const forgotPasswordSchema = z.object({
  */
 export async function POST(req: NextRequest) {
   try {
+    // SECURITY H2: Rate limit password reset by IP to prevent email bombing
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+                     req.headers.get("x-real-ip") ||
+                     "unknown";
+
+    const { allowed, headers: rateLimitHeaders } = await checkRateLimitAsync(
+      `password-reset:${clientIp}`,
+      RATE_LIMITS.AUTH_PASSWORD_RESET
+    );
+
+    if (!allowed) {
+      logger.warn("[ForgotPassword] Rate limit exceeded", {
+        component: "forgot-password",
+        ip: clientIp,
+      });
+      return NextResponse.json(
+        { error: RATE_LIMITS.AUTH_PASSWORD_RESET.message },
+        { status: 429, headers: rateLimitHeaders }
+      );
+    }
+
     const body = await req.json();
 
     // Validate input

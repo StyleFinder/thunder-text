@@ -14,7 +14,6 @@ import {
   Sparkles,
   Clock,
   ImageIcon,
-  _Send,
 } from "lucide-react";
 import { colors } from "@/lib/design-system/colors";
 import type { GeneratedImage } from "@/types/image-generation";

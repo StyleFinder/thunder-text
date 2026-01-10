@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
-import { getCombinedPrompt, type ProductCategory } from "@/lib/prompts";
+import type { ProductCategory } from "@/lib/prompts-types";
+import {
+  buildUnifiedPrompt,
+  type ProductContext,
+} from "@/lib/prompts/unified-prompt-builder";
 import { logger } from "@/lib/logger";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { canGenerateProductDescriptionByDomain } from "@/lib/usage/limits";
+import { generateFAQHTML } from "@/lib/templates/faq-template";
 
 interface CreateProductRequest {
   images: string[]; // base64 encoded images
@@ -162,214 +167,36 @@ export async function POST(request: NextRequest) {
     // Get store ID from shop domain
     const storeId = shopDomain;
 
-    // Frontend already sends the correct backend category key (e.g. 'womens_clothing')
+    // Frontend already sends the correct backend category key (e.g. 'clothing')
     // No mapping needed - use the template value directly
     const productCategory = (template as ProductCategory) || "general";
 
-    // Get custom prompts for the store and category
-    let customPrompts = null;
-    let systemPrompt = "";
+    // Build unified prompt using the new layered architecture
+    const productContext: ProductContext = {
+      category,
+      productType,
+      sizing,
+      fabricMaterial,
+      occasionUse,
+      targetAudience,
+      keyFeatures,
+      additionalNotes,
+    };
 
-    try {
-      customPrompts = await getCombinedPrompt(storeId, productCategory);
+    const {
+      systemPrompt,
+      usedBrandVoice,
+      voiceProfileVersion,
+      voiceProfileId,
+    } = await buildUnifiedPrompt(storeId, productCategory, productContext);
 
-      if (customPrompts?.combined) {
-        // Add primary product focus if productType is specified
-        const primaryProductGuidance = productType
-          ? `
-
-🎯 PRIMARY PRODUCT FOCUS: "${productType}"
-
-CRITICAL INSTRUCTIONS FOR MULTI-ITEM IMAGES:
-- The product being sold is: "${productType}"
-- Images may show this product styled with other items (e.g., jacket with shirt underneath, shoes with pants, watch with sleeve visible)
-- Your description must focus ONLY on the "${productType}"
-- IGNORE any secondary/styling items visible in the images
-- DO NOT mention or describe items that are only shown for styling context
-- Focus all feature descriptions, measurements, and details on the "${productType}" only
-
-EXAMPLES OF WHAT TO IGNORE:
-- If selling "Jacket" → ignore any shirt/top worn underneath
-- If selling "Shoes" → ignore pants, socks, or other clothing items
-- If selling "Watch" → ignore shirt sleeves or other clothing visible
-- If selling "Handbag" → ignore the model's clothing/outfit
-`
-          : "";
-
-        systemPrompt = `${customPrompts.combined}
-
-=== TASK INSTRUCTIONS ===
-${primaryProductGuidance}
-
-Analyze the provided product images and generate compelling content based on the custom guidelines above.
-
-PRODUCT DETAILS:
-- Category: ${category}
-${productType ? `- Product Type: ${productType}` : ""}
-- Available Sizing: ${sizing || "Not specified"}
-- Template Style: ${template}
-${fabricMaterial ? `- Materials: ${fabricMaterial}` : ""}
-${occasionUse ? `- Occasion/Use: ${occasionUse}` : ""}
-${targetAudience ? `- Target Audience: ${targetAudience}` : ""}
-${keyFeatures ? `- Key Features (MUST INCLUDE): ${keyFeatures}` : ""}
-${additionalNotes ? `- Additional Notes: ${additionalNotes}` : ""}
-${
-  keyFeatures
-    ? `
-⚠️ CRITICAL REQUIREMENT - KEY FEATURES:
-The merchant has specified these key features that MUST be prominently mentioned in the description:
-"${keyFeatures}"
-You MUST include this information clearly and explicitly in the product description. Do not paraphrase or dilute this messaging - incorporate it prominently in the Key Features section.`
-    : ""
-}
-
-OUTPUT FORMAT - Return a JSON object with these exact fields:
-{
-  "title": "Product title (max 70 characters)",
-  "description": "Detailed product description following the custom prompt guidelines above (200-400 words)",
-  "bulletPoints": ["Array of 5-7 key benefit bullet points"],
-  "metaDescription": "SEO meta description (max 160 characters)", 
-  "keywords": ["Array of 8-12 relevant SEO keywords"],
-  "suggestedPrice": "Suggested price range based on category and features",
-  "tags": ["Array of product tags for organization"]
-}
-
-CRITICAL: The "description" field must EXACTLY follow the section structure from the category template above. This is non-negotiable.
-
-MANDATORY SECTION STRUCTURE:
-You MUST use the EXACT section headers specified in the category template above. For Women's Clothing, use:
-1. Opening paragraph (NO HEADER - start directly with compelling content)
-2. <b>Product Details</b> - NOT "Product Details Section" or any variation
-3. <b>Styling Tips</b> - NOT "Styling" or "Perfect For" or any variation
-4. <b>Care and Sizing</b> - NOT "Materials & Details" or any variation
-5. <b>Why You'll Love It</b> - NOT "Why Choose This" or any variation
-
-FORMATTING REQUIREMENTS:
-- The "description" field in your JSON response MUST contain HTML tags
-- Use HTML formatting for the description, not Markdown
-- ONLY section headers should be bold using <b>Header Name</b> tags
-- Body text and paragraphs must be plain text (NOT bold, no HTML tags)
-- Never use **markdown bold** or asterisks for formatting
-- Use <br><br> for line breaks between sections (these HTML tags must be in the JSON string)
-- Do NOT wrap paragraphs in <p> tags or any other HTML tags
-- NEVER use "Opening Hook" as a section label - start directly with engaging content
-- Include ALL required sections: Product Details, Styling Tips, Care and Sizing, Why You'll Love It
-- IMPORTANT: The <b> and <br> tags are part of the description text and must be included in the JSON
-
-EXAMPLE FORMAT:
-Opening paragraph goes here as plain text without any tags.
-
-<b>Product Details</b>
-This section has plain text describing product details. No bold tags on this text.
-
-<b>Styling Tips</b>
-More plain text here describing styling suggestions.
-
-<b>Care and Sizing</b>
-Care instructions and sizing information in plain text. Available in: XS, S, M, L, XL, XXL.
-
-<b>Why You'll Love It</b>
-Closing content in plain text highlighting key benefits.`;
-      } else {
-        throw new Error("No custom prompts available");
-      }
-    } catch (error) {
-      logger.error(
-        "Failed to load custom prompts, using fallback",
-        error as Error,
-        { component: "create" },
-      );
-
-      // Add primary product focus for fallback prompt too
-      const primaryProductGuidance = productType
-        ? `
-
-🎯 PRIMARY PRODUCT FOCUS: "${productType}"
-
-CRITICAL INSTRUCTIONS:
-- The product being sold is: "${productType}"
-- Images may show this product with other styling items
-- Focus ONLY on the "${productType}" in your description
-- Ignore secondary items visible for styling purposes
-`
-        : "";
-
-      // Fallback to basic prompt if custom prompts fail
-      systemPrompt = `You are a professional e-commerce copywriter tasked with creating compelling product descriptions for a new product.
-
-REQUIREMENTS:
-- Create engaging, SEO-optimized content that converts browsers to buyers
-- Use the provided product details and images to generate accurate descriptions
-- Match the specified template style and target the right audience
-- Include relevant keywords naturally throughout the content
-- Generate content that's appropriate for the product category: ${category}
-${primaryProductGuidance}
-
-PRODUCT DETAILS:
-- Category: ${category}
-${productType ? `- Product Type: ${productType}` : ""}
-- Available Sizing: ${sizing || "Not specified"}
-- Template Style: ${template}
-${fabricMaterial ? `- Materials: ${fabricMaterial}` : ""}
-${occasionUse ? `- Occasion/Use: ${occasionUse}` : ""}
-${targetAudience ? `- Target Audience: ${targetAudience}` : ""}
-${keyFeatures ? `- Key Features (MUST INCLUDE): ${keyFeatures}` : ""}
-${additionalNotes ? `- Additional Notes: ${additionalNotes}` : ""}
-${
-  keyFeatures
-    ? `
-⚠️ CRITICAL REQUIREMENT - KEY FEATURES:
-The merchant has specified these key features that MUST be prominently mentioned in the description:
-"${keyFeatures}"
-You MUST include this information clearly and explicitly in the product description. Do not paraphrase or dilute this messaging - incorporate it prominently in the Key Features section.`
-    : ""
-}
-
-OUTPUT FORMAT - Return a JSON object with these exact fields:
-{
-  "title": "Product title (max 70 characters)",
-  "description": "Detailed product description (200-400 words)",
-  "bulletPoints": ["Array of 5-7 key benefit bullet points"],
-  "metaDescription": "SEO meta description (max 160 characters)",
-  "keywords": ["Array of 8-12 relevant SEO keywords"],
-  "suggestedPrice": "Suggested price range based on category and features",
-  "tags": ["Array of product tags for organization"]
-}
-
-MANDATORY SECTION STRUCTURE FOR DESCRIPTION (General Products):
-Use these EXACT section headers in order:
-1. Opening paragraph (NO HEADER - start directly with compelling content)
-2. <b>What Makes It Special</b>
-3. <b>How You'll Use It</b>
-4. <b>Details and Care</b>
-5. <b>Why You'll Love It</b>
-
-FORMATTING REQUIREMENTS:
-- The "description" field in your JSON response MUST contain HTML tags
-- Use HTML formatting for the description, not Markdown
-- ONLY section headers should be bold using <b>Header Name</b> tags
-- Body text and paragraphs must be plain text (NOT bold, no HTML tags)
-- Never use **markdown bold** or asterisks for formatting
-- Use <br><br> for line breaks between sections (these HTML tags must be in the JSON string)
-- Do NOT wrap paragraphs in <p> tags or any other HTML tags
-- Include ALL required sections: What Makes It Special, How You'll Use It, Details and Care, Why You'll Love It
-- IMPORTANT: The <b> and <br> tags are part of the description text and must be included in the JSON
-
-EXAMPLE FORMAT:
-Opening paragraph goes here as plain text without any tags.
-
-<b>What Makes It Special</b>
-This section has plain text describing key features and what makes the product unique.
-
-<b>How You'll Use It</b>
-More plain text here describing how to use the product.
-
-<b>Details and Care</b>
-Technical details and care instructions in plain text.
-
-<b>Why You'll Love It</b>
-Closing content in plain text explaining the benefits of owning this product.`;
-    }
+    logger.info("[Generate Create] Built unified prompt", {
+      component: "create",
+      storeId,
+      category: productCategory,
+      usedBrandVoice,
+      voiceProfileVersion,
+    });
 
     const userPrompt = `Analyze these product images and create compelling e-commerce content. Focus on what makes this product unique and valuable to customers.
 
@@ -404,7 +231,7 @@ ${additionalNotes ? `Special Instructions: ${additionalNotes}` : ""}`;
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages,
-      max_tokens: 1500,
+      max_tokens: 2500, // Increased to accommodate FAQ generation
       temperature: 0.7,
       response_format: { type: "json_object" },
     });
@@ -493,6 +320,9 @@ ${additionalNotes ? `Special Instructions: ${additionalNotes}` : ""}`;
             tokens_used: tokenUsage.total,
             prompt_tokens: tokenUsage.prompt,
             completion_tokens: tokenUsage.completion,
+            used_brand_voice: usedBrandVoice,
+            voice_profile_id: voiceProfileId,
+            voice_profile_version: voiceProfileVersion,
           },
           is_saved: false,
         });
@@ -519,17 +349,22 @@ ${additionalNotes ? `Special Instructions: ${additionalNotes}` : ""}`;
       plan: usageCheck.plan,
     };
 
+    // Generate FAQ section and append to description
+    const faqSection = generateFAQHTML(parsedContent.faqs || []);
+    const descriptionWithFaqs = parsedContent.description + faqSection;
+
     return NextResponse.json({
       success: true,
       data: {
         generatedContent: {
           title: parsedContent.title,
-          description: parsedContent.description,
+          description: descriptionWithFaqs,
           bulletPoints: parsedContent.bulletPoints || [],
           metaDescription: parsedContent.metaDescription,
           keywords: parsedContent.keywords || [],
           suggestedPrice: parsedContent.suggestedPrice || null,
           tags: parsedContent.tags || [],
+          faqs: parsedContent.faqs || [], // Customer FAQs for AI discoverability
         },
         tokenUsage,
         productData: {

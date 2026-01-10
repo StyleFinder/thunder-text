@@ -54,6 +54,7 @@ import {
   getAutoSize,
 } from "@/lib/services/questionnaire-config";
 import { authenticatedFetch } from "@/lib/shopify/api-client";
+import { logger } from "@/lib/logger";
 
 // Message types for chat interface
 interface ChatMessage {
@@ -621,7 +622,7 @@ export function ImageGenerationChat({
           isLoading: false,
         });
       } else {
-        console.error("Generation error:", error);
+        logger.error("Generation error", error as Error, { component: "ImageGenerationChat" });
 
         updateLastAssistantMessage({
           type: "error",
@@ -735,7 +736,7 @@ export function ImageGenerationChat({
       // Reset after 2 seconds
       setTimeout(() => setCopiedToClipboard(false), 2000);
     } catch (err) {
-      console.error("Failed to copy to clipboard:", err);
+      logger.error("Failed to copy to clipboard", err as Error, { component: "ImageGenerationChat" });
       // Fallback: create a temporary textarea
       const textarea = document.createElement("textarea");
       textarea.value = jsonString;

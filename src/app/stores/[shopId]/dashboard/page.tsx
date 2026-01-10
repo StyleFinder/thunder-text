@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useShopContext } from "../ShopContext";
 import { useShopStatus } from "@/hooks/useShopStatus";
+import { logger } from "@/lib/logger";
 import {
   Loader2,
   Sparkles,
@@ -22,6 +23,10 @@ import {
   HourglassIcon,
   XCircle,
   AlertTriangle,
+  Rocket,
+  Building2,
+  MessageSquare,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -826,6 +831,166 @@ function UsageLimitBanner({
   );
 }
 
+// Onboarding progress interface
+interface OnboardingProgress {
+  currentStep: string;
+  shopProfileCompleted: boolean;
+  voiceProfileCompleted: boolean;
+  businessProfileCompleted: boolean;
+  onboardingCompleted: boolean;
+}
+
+// Onboarding Card Component
+function OnboardingCard({ shopId }: { shopId: string }) {
+  const [progress, setProgress] = useState<OnboardingProgress | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const response = await fetch("/api/onboarding/progress");
+        const data = await response.json();
+        if (data.success && data.data) {
+          setProgress(data.data);
+        } else {
+          // API returned but no data - show onboarding card with defaults
+          setError(true);
+        }
+      } catch (err) {
+        logger.error("Error fetching onboarding progress", err, { component: "dashboard-onboarding" });
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProgress();
+  }, []);
+
+  // Don't show card while loading
+  if (loading) {
+    return null;
+  }
+
+  // Don't show if onboarding is fully completed
+  if (progress?.onboardingCompleted) {
+    return null;
+  }
+
+  // Show card if: no progress data, error, or onboarding not complete
+  // This ensures new users see the card even if API has issues
+
+  // Calculate completion percentage
+  const steps = [
+    { key: "profile", completed: progress?.shopProfileCompleted ?? false, label: "Shop Profile", icon: Building2 },
+    { key: "voice", completed: progress?.voiceProfileCompleted ?? false, label: "Brand Voice", icon: MessageSquare },
+    { key: "interview", completed: progress?.businessProfileCompleted ?? false, label: "Business Interview", icon: Users },
+  ];
+
+  const completedCount = steps.filter((s) => s.completed).length;
+  const progressPercent = Math.round((completedCount / steps.length) * 100);
+
+  // Determine next step
+  const nextStep = steps.find((s) => !s.completed);
+  const nextStepUrl = nextStep
+    ? `/stores/${shopId}/onboarding/${nextStep.key === "profile" ? "profile" : nextStep.key === "voice" ? "voice" : "interview"}`
+    : `/stores/${shopId}/onboarding/complete`;
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden shadow-lg mb-8"
+      style={{
+        background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%)",
+        border: "2px solid #0ea5e9",
+      }}
+    >
+      <div className="p-6 bg-white/90 backdrop-blur-sm">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600">
+              <Rocket className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg text-gray-900">Complete Your Setup</h3>
+              <p className="text-sm text-gray-600">
+                Personalize Thunder Text for better results
+              </p>
+            </div>
+          </div>
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-sky-100 text-sky-800 border border-sky-300">
+            {progressPercent}% Complete
+          </span>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mb-5">
+          <div className="w-full h-2 bg-sky-100 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-sky-500 to-blue-600"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Steps */}
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          {steps.map((step) => (
+            <div
+              key={step.key}
+              className={`flex items-center gap-2 p-3 rounded-lg border ${
+                step.completed
+                  ? "bg-green-50 border-green-200"
+                  : "bg-gray-50 border-gray-200"
+              }`}
+            >
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  step.completed
+                    ? "bg-green-100"
+                    : "bg-gray-100"
+                }`}
+              >
+                {step.completed ? (
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                ) : (
+                  <step.icon className="w-4 h-4 text-gray-400" />
+                )}
+              </div>
+              <span
+                className={`text-sm font-medium ${
+                  step.completed ? "text-green-700" : "text-gray-600"
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            {completedCount === 0
+              ? "Get started to unlock personalized AI content"
+              : completedCount === steps.length
+                ? "Almost there! Complete your setup"
+                : `${steps.length - completedCount} step${steps.length - completedCount > 1 ? "s" : ""} remaining`}
+          </p>
+          <Link href={nextStepUrl}>
+            <Button
+              className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-medium shadow-md"
+            >
+              {completedCount === 0 ? "Start Setup" : "Continue Setup"}
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Stats interface
 interface DashboardStats {
   storeName?: string | null;
@@ -887,7 +1052,7 @@ function DashboardContent() {
           setSubscription(data.subscription);
         }
       } catch (error) {
-        console.error("Error fetching subscription:", error);
+        logger.error("Error fetching subscription", error, { component: "dashboard", shop });
       } finally {
         setSubscriptionLoading(false);
       }
@@ -922,7 +1087,7 @@ function DashboardContent() {
           });
         }
       } catch (error) {
-        console.error("Error fetching stats:", error);
+        logger.error("Error fetching stats", error, { component: "dashboard", shop });
       } finally {
         setStatsLoading(false);
       }
@@ -930,13 +1095,6 @@ function DashboardContent() {
 
     fetchStats();
   }, [shop]);
-
-  // Determine if user is on a paid plan
-  const isPaidPlan =
-    subscription?.plan === "starter" || subscription?.plan === "pro";
-  const isActivePaid = isPaidPlan && subscription?.status === "active";
-  const isPendingPaid = isPaidPlan && subscription?.status === "pending";
-  const isCancelledPaid = isPaidPlan && subscription?.status === "cancelled";
 
   // Show loading while session is being fetched
   if (status === "loading") {
@@ -1034,6 +1192,9 @@ function DashboardContent() {
           </div>
         </div>
 
+        {/* Onboarding Card */}
+        <OnboardingCard shopId={shopId} />
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
@@ -1115,28 +1276,6 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Plan Card */}
-        {!subscriptionLoading && (
-          <div className="mt-8">
-            {isActivePaid && subscription ? (
-              <ActivePlanCard
-                shopId={shopId}
-                subscription={subscription}
-                usage={stats.usage}
-              />
-            ) : isPendingPaid && subscription ? (
-              <PendingPlanCard shopId={shopId} subscription={subscription} />
-            ) : isCancelledPaid && subscription ? (
-              <CancelledPlanCard shopId={shopId} subscription={subscription} />
-            ) : (
-              <PlanUsageCard
-                shopId={shopId}
-                subscription={subscription}
-                usage={stats.usage}
-              />
-            )}
-          </div>
-        )}
       </main>
     </div>
   );

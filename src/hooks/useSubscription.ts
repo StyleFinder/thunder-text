@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { logger } from "@/lib/logger";
 
 export interface SubscriptionStatus {
   hasActiveSubscription: boolean;
@@ -65,7 +66,7 @@ export function useSubscription(): UseSubscriptionResult {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
-      console.error("Failed to fetch subscription:", errorMessage);
+      logger.error("Failed to fetch subscription", err as Error, { hook: "useSubscription" });
     } finally {
       setIsLoading(false);
     }

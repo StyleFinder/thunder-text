@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Zap, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -85,7 +86,7 @@ export default function RootPage() {
           router.replace(`/welcome?shop=${shop}`);
         }
       } catch (error) {
-        console.error("[Root] Error determining route:", error);
+        logger.error("Error determining route", error, { component: "root-page" });
         setError("Failed to load. Please try again.");
         setIsLoading(false);
       }

@@ -36,6 +36,7 @@ import type {
   InventorySize,
   OwnerTimeConstraint,
 } from "@/types/ai-coaches";
+import { logger } from "@/lib/logger";
 
 interface BrandProfileFormProps {
   shopDomain: string;
@@ -165,7 +166,7 @@ export function BrandProfileForm({
           }
         }
       } catch (err) {
-        console.error("Failed to load profile:", err);
+        logger.error("Failed to load profile", err as Error, { component: "brand-profile-form", shopDomain });
       } finally {
         setIsLoading(false);
       }

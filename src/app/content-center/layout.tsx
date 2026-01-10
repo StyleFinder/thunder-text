@@ -1,8 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { Sparkles, FileText, User, Home, Video } from "lucide-react";
+import { Sparkles, FileText, User, Home, Video, ImageIcon } from "lucide-react";
 import { useShop } from "@/hooks/useShop";
 import { isVideoGenerationEnabled } from "@/lib/feature-flags";
 
@@ -13,8 +14,8 @@ interface NavItem {
   description: string;
 }
 
-// Build nav items dynamically based on feature flags
-const getNavItems = (): NavItem[] => {
+// Build nav items dynamically based on feature flags and user role
+const getNavItems = (userRole?: string | null): NavItem[] => {
   const items: NavItem[] = [
     {
       basePath: "",
@@ -28,19 +29,6 @@ const getNavItems = (): NavItem[] => {
       icon: Sparkles,
       description: "Create new content",
     },
-  ];
-
-  // Only show Product Animator if video generation is enabled
-  if (isVideoGenerationEnabled()) {
-    items.push({
-      basePath: "/animator",
-      label: "Product Animator",
-      icon: Video,
-      description: "AI video from images",
-    });
-  }
-
-  items.push(
     {
       basePath: "/library",
       label: "Library",
@@ -48,12 +36,28 @@ const getNavItems = (): NavItem[] => {
       description: "Saved content",
     },
     {
+      basePath: "/alt-text",
+      label: "Alt Text",
+      icon: ImageIcon,
+      description: "Image accessibility",
+    },
+    {
       basePath: "/voice",
       label: "Brand Voice",
       icon: User,
       description: "Voice settings & samples",
     },
-  );
+  ];
+
+  // Only show Product Animator if video generation is enabled (admin only)
+  if (isVideoGenerationEnabled(userRole)) {
+    items.push({
+      basePath: "/animator",
+      label: "Product Animator",
+      icon: Video,
+      description: "AI video from images",
+    });
+  }
 
   return items;
 };
@@ -65,6 +69,10 @@ export default function ContentCenterLayout({
 }) {
   const pathname = usePathname();
   const { shopId } = useShop();
+  const { data: session } = useSession();
+
+  // Get user role from session
+  const userRole = (session?.user as { role?: string })?.role;
 
   // Determine base path based on whether we're in UUID routing or legacy routing
   const isUuidRouting = pathname?.includes("/stores/") && shopId;
@@ -138,7 +146,7 @@ export default function ContentCenterLayout({
 
           {/* Navigation Tabs */}
           <nav className="flex gap-1 overflow-x-auto pb-px -mb-px">
-            {getNavItems().map((item) => {
+            {getNavItems(userRole).map((item) => {
               const Icon = item.icon;
               const active = isActive(item.basePath);
               const href = getHref(item.basePath);

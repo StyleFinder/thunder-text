@@ -108,3 +108,47 @@ export function createRouteConfig(options: {
     maxDuration: options.maxDuration || 30,
   };
 }
+
+/**
+ * Q3: Standardized error handling utility
+ *
+ * Safely extracts an Error object from unknown catch parameter.
+ * Use this in catch blocks for type-safe error handling.
+ *
+ * @example
+ * try {
+ *   // ... api logic
+ * } catch (error) {
+ *   const err = toError(error);
+ *   logger.error("Failed:", err, { component: "my-route" });
+ *   return NextResponse.json({ error: err.message }, { status: 500 });
+ * }
+ */
+export function toError(error: unknown): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+  return new Error(String(error));
+}
+
+/**
+ * Standard API error response structure
+ */
+export interface ApiErrorResponse {
+  error: string;
+  message?: string;
+  code?: string;
+}
+
+/**
+ * Create a standardized API error response
+ */
+export function createErrorResponse(
+  error: unknown,
+  defaultMessage = "Internal Server Error"
+): ApiErrorResponse {
+  const err = toError(error);
+  return {
+    error: err.message || defaultMessage,
+  };
+}

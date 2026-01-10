@@ -3,7 +3,6 @@ import {
   ApiResponse,
   ListContentResponse,
   GeneratedContent,
-  _ContentFilterParams,
 } from "@/types/content-center";
 import { getUserId } from "@/lib/auth/content-center-auth";
 import { supabaseAdmin } from "@/lib/supabase";

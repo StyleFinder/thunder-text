@@ -8,6 +8,7 @@ import { getShopToken } from "@/lib/shopify/token-manager";
 import { logger } from "@/lib/logger";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { sanitizeDescriptionForShopify } from "@/lib/security/input-sanitization";
+import type { DiscoverMoreSection } from "@/types/blog-linking";
 
 // Lazy-initialized Supabase client
 let supabaseClient: SupabaseClient | null = null;
@@ -94,7 +95,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { shop, productId, updates } = body;
+    const { shop, productId, updates, blogLink } = body as {
+      shop: string;
+      productId: string;
+      updates: {
+        title?: string;
+        description?: string;
+        seoTitle?: string;
+        seoDescription?: string;
+        bulletPoints?: string[];
+      };
+      blogLink?: DiscoverMoreSection;
+    };
 
     logger.info("📥 Update request received", {
       component: "update",
@@ -220,6 +232,24 @@ export async function POST(request: NextRequest) {
     const fullShopDomain = shop.includes(".myshopify.com")
       ? shop
       : `${shop}.myshopify.com`;
+
+    // M4 SECURITY: Verify the authenticated shop matches the requested shop
+    // This prevents attackers from using one shop's credentials to modify another shop's products
+    if (shopRecord && shopRecord.shop_domain !== fullShopDomain) {
+      logger.warn("Shop ownership mismatch detected", {
+        component: "update",
+        requestedShop: fullShopDomain,
+        authenticatedShop: shopRecord.shop_domain,
+      });
+      return NextResponse.json(
+        {
+          error: "Forbidden",
+          details: "You can only update products for your own shop",
+        },
+        { status: 403, headers: corsHeaders },
+      );
+    }
+
     logger.info("🔐 Initializing Shopify API client", {
       component: "update",
       shop: fullShopDomain,
@@ -357,6 +387,55 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Store blog link in database if provided
+    if (blogLink && blogLink.title && blogLink.summary && blogLink.url) {
+      try {
+        const supabase = getSupabaseClient();
+
+        // Get the shop ID from the shops table
+        const { data: shopData } = await supabase
+          .from("shops")
+          .select("id")
+          .eq("shop_domain", fullShopDomain)
+          .single();
+
+        if (shopData?.id) {
+          // Extract numeric product ID from GID
+          const productIdNumeric = formattedProductId
+            .replace("gid://shopify/Product/", "")
+            .split("/")[0];
+
+          await supabase.from("product_blog_links").upsert(
+            {
+              store_id: shopData.id,
+              product_id: productIdNumeric,
+              blog_id: blogLink.blogSource === "library" ? blogLink.blogId : null,
+              shopify_blog_id:
+                blogLink.blogSource === "shopify" ? blogLink.blogId : null,
+              blog_source: blogLink.blogSource,
+              blog_title: blogLink.title,
+              summary: blogLink.summary,
+              blog_url: blogLink.url,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "store_id,product_id" },
+          );
+
+          logger.info("✅ Blog link stored in database", {
+            component: "update",
+            productId: productIdNumeric,
+            blogId: blogLink.blogId,
+            blogSource: blogLink.blogSource,
+          });
+        }
+      } catch (blogLinkError) {
+        // Log but don't fail the request if blog link storage fails
+        logger.error("⚠️ Error storing blog link:", blogLinkError as Error, {
+          component: "update",
+        });
+      }
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -376,22 +455,14 @@ export async function POST(request: NextRequest) {
       { headers: corsHeaders },
     );
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    const errorStack = error instanceof Error ? error.stack : undefined;
-
+    // SECURITY M2: Log full error details server-side, but never expose to client
     logger.error("Error in update endpoint:", error as Error, {
       component: "update",
-      errorMessage,
-      errorStack,
     });
 
     return NextResponse.json(
       {
         error: "Internal server error",
-        details: errorMessage,
-        // Include stack trace in development for debugging
-        ...(process.env.NODE_ENV === "development" && { stack: errorStack }),
       },
       { status: 500, headers: corsHeaders },
     );

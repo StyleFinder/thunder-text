@@ -122,6 +122,165 @@ RETURNING id, shop_domain;
 - `/src/lib/auth/content-center-auth.ts` - `getUserId()` returns shops.id
 - `/src/app/api/*/route.ts` - All API routes use `getUserId()` for store_id
 - `/supabase/migrations/*` - All tables reference shops(id) as store_id
+- `/src/hooks/useShop.ts` - Client-side hook for shop context
+
+---
+
+## 🔴 CRITICAL: Client-Side API Calls Pattern
+
+**THE RECURRING ISSUE**: Client components incorrectly use `localStorage.getItem("supabase_token")` or other values instead of the shop domain when calling APIs.
+
+### The Pattern: useShop() Hook
+
+**ALL client components that make API calls MUST use the `useShop()` hook to get shop context.**
+
+```tsx
+// ✅ CORRECT: Using useShop() hook
+import { useShop } from "@/hooks/useShop";
+
+export function MyComponent() {
+  const { shop, shopDomain } = useShop();
+
+  const handleApiCall = async () => {
+    const shopIdentifier = shopDomain || shop;
+    if (!shopIdentifier) {
+      setError("Shop not found");
+      return;
+    }
+
+    const response = await fetch("/api/content-center/samples", {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${shopIdentifier}`,  // ← Shop domain, NOT token
+      },
+      // ...
+    });
+  };
+}
+```
+
+```tsx
+// ❌ WRONG: Using localStorage token
+const response = await fetch("/api/content-center/samples", {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem("supabase_token")}`,  // ❌ WRONG
+  },
+});
+
+// ❌ WRONG: Hardcoding or guessing shop domain
+Authorization: `Bearer some-shop.myshopify.com`  // ❌ WRONG
+
+// ❌ WRONG: Not checking if shop exists
+const { shop } = useShop();
+// Missing: if (!shop) return;  // ❌ Will cause "Shop not found" error
+```
+
+### API Authorization Header Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ CLIENT COMPONENT                                                │
+│                                                                 │
+│  const { shop, shopDomain } = useShop();                       │
+│  const shopIdentifier = shopDomain || shop;                     │
+│                                                                 │
+│  Authorization: `Bearer ${shopIdentifier}`                      │
+│         ↓                                                       │
+│  "Bearer zunosai-staging-test-store.myshopify.com"             │
+└─────────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ API ROUTE                                                       │
+│                                                                 │
+│  const shop = getShopDomain(request);                          │
+│  // Extracts: "zunosai-staging-test-store.myshopify.com"       │
+│                                                                 │
+│  const { data: shopData } = await supabaseAdmin                │
+│    .from("shops")                                               │
+│    .select("id")                                                │
+│    .eq("shop_domain", shop)                                     │
+│    .single();                                                   │
+│                                                                 │
+│  // Use shopData.id as store_id for all queries                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Checklist for New Client Components with API Calls
+
+When creating any component that makes fetch() calls to Thunder Text APIs:
+
+- [ ] Import `useShop` hook: `import { useShop } from "@/hooks/useShop";`
+- [ ] Destructure shop values: `const { shop, shopDomain } = useShop();`
+- [ ] Create shopIdentifier: `const shopIdentifier = shopDomain || shop;`
+- [ ] Check for missing shop before API calls: `if (!shopIdentifier) { setError("Shop not found"); return; }`
+- [ ] Use shopIdentifier in Authorization header: `Authorization: \`Bearer ${shopIdentifier}\``
+- [ ] NEVER use `localStorage.getItem("supabase_token")` for Authorization
+- [ ] NEVER use session tokens or JWT tokens for shop identification
+
+### Why This Pattern Exists
+
+1. **UUID-based routing** (`/stores/[shopId]/...`) provides `shopId` via ShopContext
+2. **Legacy routing** (`?shop=domain`) provides shop domain via query params
+3. **Session-based auth** provides shop domain via NextAuth session
+4. **The `useShop()` hook** unifies all three sources into a single interface
+5. **API routes** expect shop domain in Authorization header, NOT tokens
+
+### Example: Full Component Pattern
+
+```tsx
+"use client";
+
+import { useState } from "react";
+import { useShop } from "@/hooks/useShop";
+
+export function MySampleComponent() {
+  const { shop, shopDomain } = useShop();
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (data: FormData) => {
+    // 1. Get shop identifier
+    const shopIdentifier = shopDomain || shop;
+
+    // 2. Check if shop exists
+    if (!shopIdentifier) {
+      setError("Shop not found");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // 3. Use shop identifier in Authorization header
+      const response = await fetch("/api/my-endpoint", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${shopIdentifier}`,
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to submit");
+      }
+
+      // Handle success
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (/* UI */);
+}
+```
+
+---
 
 ### When Creating New Features
 

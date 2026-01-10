@@ -23,15 +23,27 @@ export function isDevelopment(): boolean {
 }
 
 /**
- * Feature flag for video generation (Product Animator)
+ * Check if user has admin role
+ * Used to gate admin-only features like Product Animator, Image Generation, etc.
  */
-export function isVideoGenerationEnabled(): boolean {
-  return isExperimentalFeaturesEnabled() || isDevelopment();
+export function isAdminUser(userRole?: string | null): boolean {
+  return userRole === "admin";
+}
+
+/**
+ * Feature flag for video generation (Product Animator)
+ * Requires admin role in addition to experimental features being enabled
+ */
+export function isVideoGenerationEnabled(userRole?: string | null): boolean {
+  const featureEnabled = isExperimentalFeaturesEnabled() || isDevelopment();
+  return featureEnabled && isAdminUser(userRole);
 }
 
 /**
  * Feature flag for image generation
+ * Requires admin role in addition to experimental features being enabled
  */
-export function isImageGenerationEnabled(): boolean {
-  return isExperimentalFeaturesEnabled() || isDevelopment();
+export function isImageGenerationEnabled(userRole?: string | null): boolean {
+  const featureEnabled = isExperimentalFeaturesEnabled() || isDevelopment();
+  return featureEnabled && isAdminUser(userRole);
 }

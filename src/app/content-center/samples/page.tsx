@@ -186,7 +186,7 @@ export default function SamplesPage() {
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={(_e) => {
+                onClick={(e) => {
                   e.stopPropagation();
                   setShowPasteDialog(true);
                 }}
@@ -197,7 +197,7 @@ export default function SamplesPage() {
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={(_e) => {
+                onClick={(e) => {
                   e.stopPropagation();
                   setShowUrlDialog(true);
                 }}
@@ -302,7 +302,7 @@ export default function SamplesPage() {
                 id="sample-name"
                 placeholder="e.g., Instagram caption for summer collection"
                 value={pasteName}
-                onChange={(_e) => setPasteName(e.target.value)}
+                onChange={(e) => setPasteName(e.target.value)}
               />
             </div>
             <div>
@@ -312,7 +312,7 @@ export default function SamplesPage() {
                 placeholder="Paste your content here..."
                 rows={10}
                 value={pasteText}
-                onChange={(_e) => setPasteText(e.target.value)}
+                onChange={(e) => setPasteText(e.target.value)}
               />
               <p className="text-xs text-gray-500 mt-1">
                 {pasteText.length} characters
@@ -349,7 +349,7 @@ export default function SamplesPage() {
                   type="url"
                   placeholder="https://example.com/blog-post"
                   value={urlInput}
-                  onChange={(_e) => setUrlInput(e.target.value)}
+                  onChange={(e) => setUrlInput(e.target.value)}
                 />
               </div>
               <p className="text-xs text-gray-500 mt-2">

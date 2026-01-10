@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  _ApiResponse,
-  CreateSampleRequest,
-  _CreateSampleResponse,
-  _ListSamplesResponse,
-  ContentSample,
-  _InvalidWordCountError,
-  _SampleLimitError,
-} from "@/types/content-center";
+import { CreateSampleRequest, ContentSample } from "@/types/content-center";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
   createCorsHeaders,
   handleCorsPreflightRequest,
 } from "@/lib/middleware/cors";
 import { sanitizeAndValidateSample } from "@/lib/security/input-sanitization";
+import { authenticateRequest } from "@/lib/auth/content-center-auth";
 import { logger } from "@/lib/logger";
 
 // Helper function to calculate word count
@@ -25,63 +18,36 @@ function calculateWordCount(text: string): number {
 }
 
 /**
- * Extract shop domain from Authorization header or query parameter
- * Supports both embedded app (Authorization header) and external calls (query param)
- */
-function getShopDomain(request: NextRequest): string | null {
-  // Try Authorization header first (embedded app pattern)
-  const authHeader = request.headers.get("authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    return authHeader.replace("Bearer ", "");
-  }
-
-  // Fallback to query parameter
-  return request.nextUrl.searchParams.get("shop");
-}
-
-/**
  * GET /api/content-center/samples
  * List all samples for the authenticated shop
- * PATTERN MATCHES: shop-sizes/route.ts (WORKING MODULE)
+ *
+ * M2 SECURITY FIX: Replaced legacy shop-domain-as-token auth with proper
+ * Shopify session token validation via authenticateRequest()
  */
 export async function GET(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request);
 
   try {
-    const shop = getShopDomain(request);
+    // M2: Use proper authentication instead of shop-domain-as-token
+    const authResult = await authenticateRequest(request);
 
-    if (!shop) {
+    if (!authResult.authenticated || !authResult.userId) {
       return NextResponse.json(
         {
           success: false,
-          error: "Missing shop parameter or Authorization header",
+          error: authResult.error || "Authentication required",
         },
-        { status: 400, headers: corsHeaders },
+        { status: 401, headers: corsHeaders },
       );
     }
 
-    // Get shop ID from shop domain
-    const fullShopDomain = shop.includes(".myshopify.com")
-      ? shop
-      : `${shop}.myshopify.com`;
-    const { data: shopData, error: shopError } = await supabaseAdmin
-      .from("shops")
-      .select("id")
-      .eq("shop_domain", fullShopDomain)
-      .single();
+    const storeId = authResult.userId;
 
-    if (shopError || !shopData) {
-      return NextResponse.json(
-        { success: false, error: "Shop not found" },
-        { status: 404, headers: corsHeaders },
-      );
-    }
-
-    // Fetch all samples for shop
+    // Fetch all samples for authenticated shop
     const { data: samples, error } = await supabaseAdmin
       .from("content_samples")
       .select("*")
-      .eq("store_id", shopData.id)
+      .eq("store_id", storeId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -121,23 +87,28 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/content-center/samples
  * Upload a new content sample
- * PATTERN MATCHES: shop-sizes/route.ts (WORKING MODULE)
+ *
+ * M2 SECURITY FIX: Replaced legacy shop-domain-as-token auth with proper
+ * Shopify session token validation via authenticateRequest()
  */
 export async function POST(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request);
 
   try {
-    const shop = getShopDomain(request);
+    // M2: Use proper authentication instead of shop-domain-as-token
+    const authResult = await authenticateRequest(request);
 
-    if (!shop) {
+    if (!authResult.authenticated || !authResult.userId) {
       return NextResponse.json(
         {
           success: false,
-          error: "Missing shop parameter or Authorization header",
+          error: authResult.error || "Authentication required",
         },
-        { status: 400, headers: corsHeaders },
+        { status: 401, headers: corsHeaders },
       );
     }
+
+    const storeId = authResult.userId;
 
     const body: CreateSampleRequest = await request.json();
     const { sample_text, sample_type } = body;
@@ -149,23 +120,6 @@ export async function POST(request: NextRequest) {
           error: "Missing required fields: sample_text, sample_type",
         },
         { status: 400, headers: corsHeaders },
-      );
-    }
-
-    // Get shop ID from shop domain
-    const fullShopDomain = shop.includes(".myshopify.com")
-      ? shop
-      : `${shop}.myshopify.com`;
-    const { data: shopData, error: shopError } = await supabaseAdmin
-      .from("shops")
-      .select("id")
-      .eq("shop_domain", fullShopDomain)
-      .single();
-
-    if (shopError || !shopData) {
-      return NextResponse.json(
-        { success: false, error: "Shop not found" },
-        { status: 404, headers: corsHeaders },
       );
     }
 
@@ -186,7 +140,7 @@ export async function POST(request: NextRequest) {
     const { data: existingSamples } = await supabaseAdmin
       .from("content_samples")
       .select("id")
-      .eq("store_id", shopData.id);
+      .eq("store_id", storeId);
 
     if (existingSamples && existingSamples.length >= 10) {
       return NextResponse.json(
@@ -199,7 +153,7 @@ export async function POST(request: NextRequest) {
     const { data: sample, error } = await supabaseAdmin
       .from("content_samples")
       .insert({
-        store_id: shopData.id,
+        store_id: storeId,
         sample_text: sanitizedText,
         sample_type: sanitizedType,
         word_count: wordCount,

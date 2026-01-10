@@ -2,7 +2,7 @@
 /* eslint-disable react/no-unescaped-entities -- Quotes and apostrophes in JSX text are intentional */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,12 +23,14 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import type { ContentSample } from "@/types/content-center";
+import { useShop } from "@/hooks/useShop";
 
 interface SampleListProps {
   refreshTrigger?: number;
 }
 
 export function SampleList({ refreshTrigger }: SampleListProps) {
+  const { shop, shopDomain } = useShop();
   const [samples, setSamples] = useState<ContentSample[]>([]);
   const [activeCount, setActiveCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,14 +38,22 @@ export function SampleList({ refreshTrigger }: SampleListProps) {
   const [updatingSampleId, setUpdatingSampleId] = useState<string | null>(null);
   const [deletingSampleId, setDeletingSampleId] = useState<string | null>(null);
 
-  const fetchSamples = async () => {
+  const shopIdentifier = shopDomain || shop;
+
+  const fetchSamples = useCallback(async () => {
+    if (!shopIdentifier) {
+      setError("Shop not found");
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await fetch("/api/content-center/samples", {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("supabase_token")}`,
+          Authorization: `Bearer ${shopIdentifier}`,
         },
       });
 
@@ -60,16 +70,21 @@ export function SampleList({ refreshTrigger }: SampleListProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [shopIdentifier]);
 
   useEffect(() => {
     fetchSamples();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, fetchSamples]);
 
   const toggleSampleActive = async (
     sampleId: string,
     currentState: boolean,
   ) => {
+    if (!shopIdentifier) {
+      setError("Shop not found");
+      return;
+    }
+
     setUpdatingSampleId(sampleId);
     setError(null);
 
@@ -78,7 +93,7 @@ export function SampleList({ refreshTrigger }: SampleListProps) {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("supabase_token")}`,
+          Authorization: `Bearer ${shopIdentifier}`,
         },
         body: JSON.stringify({
           is_active: !currentState,
@@ -106,6 +121,11 @@ export function SampleList({ refreshTrigger }: SampleListProps) {
   };
 
   const deleteSample = async (sampleId: string) => {
+    if (!shopIdentifier) {
+      setError("Shop not found");
+      return;
+    }
+
     if (
       !confirm(
         "Are you sure you want to delete this sample? This action cannot be undone.",
@@ -121,7 +141,7 @@ export function SampleList({ refreshTrigger }: SampleListProps) {
       const response = await fetch(`/api/content-center/samples/${sampleId}`, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("supabase_token")}`,
+          Authorization: `Bearer ${shopIdentifier}`,
         },
       });
 

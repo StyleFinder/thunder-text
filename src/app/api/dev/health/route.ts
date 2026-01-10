@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isDevAuthenticated, createUnauthorizedResponse } from '@/lib/auth/dev-auth';
 import { getApiHealthMetrics } from '@/lib/monitoring/metrics';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   // Check authentication
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       },
     });
   } catch (error) {
-    console.error('Failed to fetch API health:', error);
+    logger.error('Failed to fetch API health', error, { component: 'dev-health-api' });
     return new NextResponse(
       JSON.stringify({
         error: 'Failed to fetch API health',

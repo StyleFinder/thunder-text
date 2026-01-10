@@ -55,8 +55,11 @@ function isAllowedOrigin(origin: string): boolean {
       return true;
     }
 
-    // Allow ngrok domains for development tunneling
-    if (origin.endsWith(".ngrok.app") || origin.endsWith(".ngrok-free.app")) {
+    // SECURITY M4: ngrok only allowed in development AND with explicit env var
+    if (
+      process.env.ALLOW_NGROK_TUNNEL === "true" &&
+      (origin.endsWith(".ngrok.app") || origin.endsWith(".ngrok-free.app"))
+    ) {
       return true;
     }
   }
@@ -234,10 +237,12 @@ export async function middleware(request: NextRequest) {
         referer.startsWith("https://app.zunosai.com") ||
         (process.env.RENDER_EXTERNAL_URL &&
           referer.startsWith(process.env.RENDER_EXTERNAL_URL)) ||
+        // SECURITY M4: ngrok only allowed in development AND with explicit env var
         (process.env.NODE_ENV === "development" &&
           (referer.startsWith("http://localhost:") ||
-            referer.includes(".ngrok.app") ||
-            referer.includes(".ngrok-free.app"))));
+            (process.env.ALLOW_NGROK_TUNNEL === "true" &&
+              (referer.includes(".ngrok.app") ||
+                referer.includes(".ngrok-free.app"))))));
 
     // For same-origin requests, let browser handle it
     if (!origin && isOwnDomainReferer) {

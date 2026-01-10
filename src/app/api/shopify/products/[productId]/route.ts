@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { _getShopToken } from "@/lib/shopify/token-manager";
 import { shopifyGraphQL } from "@/lib/shopify/client";
 import { logger } from "@/lib/logger";
 

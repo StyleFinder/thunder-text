@@ -58,6 +58,10 @@ import {
 import { CategoryTemplateSelector } from "@/app/components/CategoryTemplateSelector";
 import { ProductTypeSelector } from "@/app/components/ProductTypeSelector";
 
+// Blog linking components
+import { BlogLinkingSection } from "@/app/components/shared/blog-linking";
+import type { BlogSelection } from "@/types/blog-linking";
+
 interface GeneratedContent {
   title?: string;
   description?: string;
@@ -359,6 +363,11 @@ function CreateProductContent() {
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isLoadingDraftRef = useRef(false);
 
+  // Blog linking state
+  const [blogLinkEnabled, setBlogLinkEnabled] = useState(false);
+  const [selectedBlog, setSelectedBlog] = useState<BlogSelection | null>(null);
+  const [blogSummary, setBlogSummary] = useState("");
+
   // Clear draft from localStorage
   const clearDraft = useCallback(() => {
     try {
@@ -397,6 +406,11 @@ function CreateProductContent() {
     setCreatingProduct(false);
     setProductCreated(null);
     setProgress(0);
+
+    // Reset blog linking state
+    setBlogLinkEnabled(false);
+    setSelectedBlog(null);
+    setBlogSummary("");
 
     // Clear saved draft
     clearDraft();
@@ -880,6 +894,19 @@ function CreateProductContent() {
           ? suggestedCategory.category
           : selectedTemplate;
 
+      // Prepare blog link data if enabled
+      const blogLink = blogLinkEnabled && selectedBlog && blogSummary
+        ? {
+            blogId: selectedBlog.id,
+            blogSource: selectedBlog.source,
+            title: selectedBlog.title,
+            summary: blogSummary,
+            url: selectedBlog.source === "shopify" && shop
+              ? `https://${shop}/blogs/${selectedBlog.blogHandle || "news"}/${selectedBlog.handle || selectedBlog.id}`
+              : `#blog-${selectedBlog.id}`,
+          }
+        : undefined;
+
       const response = await fetch(url.toString(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -898,6 +925,7 @@ function CreateProductContent() {
             colorVariants: detectedVariants,
           },
           uploadedImages: uploadedImagesData,
+          blogLink,
         }),
       });
 
@@ -1245,6 +1273,21 @@ function CreateProductContent() {
           </div>
         </div>
 
+        {/* Step 7: Blog Linking (Optional) */}
+        <div className="mb-6">
+          <BlogLinkingSection
+            enabled={blogLinkEnabled}
+            onEnabledChange={setBlogLinkEnabled}
+            selectedBlog={selectedBlog}
+            onBlogSelect={setSelectedBlog}
+            summary={blogSummary}
+            onSummaryChange={setBlogSummary}
+            storeId={shop || ""}
+            shopDomain={shop || undefined}
+            loading={generating}
+          />
+        </div>
+
         {/* Error Display */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
@@ -1317,6 +1360,10 @@ function CreateProductContent() {
         }}
         onCreateInShopify={handleCreateInShopify}
         creatingProduct={creatingProduct}
+        blogLinkEnabled={blogLinkEnabled}
+        selectedBlog={selectedBlog}
+        blogSummary={blogSummary}
+        shopDomain={shop || undefined}
       />
 
       <ProductCreatedModal data={productCreated} onClose={resetForm} />

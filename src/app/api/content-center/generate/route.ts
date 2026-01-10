@@ -14,6 +14,15 @@ import { validateWordCountForType } from "@/lib/services/parameter-handler";
 import { logger } from "@/lib/logger";
 
 /**
+ * BRAND VOICE SHARING NOTE:
+ * This route reads from `brand_voice_profiles` table - the SAME table used by
+ * Product Description generation. This ensures consistent brand voice across
+ * all content types. The shared retrieval function in @/lib/prompts/brand-voice-integration
+ * is used by Product Descriptions; Content Center queries directly because it
+ * requires the full profile object for generation.
+ */
+
+/**
  * Route segment config - content generation limits
  * - 2MB body size limit for larger prompts/context
  * - 120s timeout for OpenAI API calls

@@ -44,8 +44,8 @@ function SetPasswordForm() {
 
       setTokenValid(true);
       setCoachEmail(data.email);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid token");
       setTokenValid(false);
     } finally {
       setValidating(false);
@@ -87,8 +87,8 @@ function SetPasswordForm() {
       router.push(
         "/coach/login?message=Password set successfully. Please log in.",
       );
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to set password");
       setLoading(false);
     }
   };

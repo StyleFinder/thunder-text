@@ -147,7 +147,7 @@ function EmptyState() {
 }
 
 function ProductsContent() {
-  const _searchParams = useSearchParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { shop, isAuthenticated, sessionToken } = useShopifyAuth();
 

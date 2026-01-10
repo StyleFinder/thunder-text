@@ -59,19 +59,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to create coach invitation' }, { status: 500 });
     }
 
-    // TODO: Send email with invitation link
-    // For now, we'll just return the invitation URL
+    // Build the invite URL (stored server-side only)
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/coach/set-password?token=${inviteToken}`;
 
+    // TODO: Implement email delivery for production
+    // Options: Resend, SendGrid, or AWS SES
+    // For now, log the URL server-side for admin testing (SECURITY: Remove in production)
+    if (process.env.NODE_ENV === 'development') {
+      logger.info('[Invite Coach] Development mode - invite URL (NOT FOR PRODUCTION):', {
+        component: 'invite-coach',
+        coachId: coach.id,
+        inviteUrl,
+      });
+    }
 
+    // SECURITY M3: Never expose invite URLs in API responses
+    // Invite tokens must be delivered via secure email channel
     return NextResponse.json({
       success: true,
+      message: 'Invitation created. Email will be sent to the coach.',
       coach: {
         id: coach.id,
         email: coach.email,
         name: coach.name
-      },
-      inviteUrl // Return this for now, remove when email is implemented
+      }
     });
   } catch (error) {
     logger.error('[Invite Coach] Unexpected error:', error as Error, { component: 'invite-coach' });

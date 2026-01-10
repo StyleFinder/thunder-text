@@ -87,8 +87,7 @@ export default function AICoachesPage() {
   }, [shopContext]);
 
   // Build the base path for navigation (store-based or legacy)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const getBasePath = () => {
+  const _getBasePath = () => {
     if (shopId && pathname?.startsWith("/stores/")) {
       return `/stores/${shopId}/ai-coaches`;
     }

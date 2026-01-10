@@ -8,6 +8,11 @@
  *
  * GPT-4o pricing (for vision tasks):
  * - Input: $2.50 per 1M tokens
+ */
+
+import { logger } from "@/lib/logger";
+
+/*
  * - Output: $10.00 per 1M tokens
  */
 
@@ -51,7 +56,10 @@ export function calculateTokenCost(
 ): number {
   const pricing = MODEL_PRICING[model];
   if (!pricing) {
-    console.warn(`Unknown model: ${model}, using gpt-4o-mini pricing`);
+    logger.warn(`Unknown model: ${model}, using gpt-4o-mini pricing`, undefined, {
+      component: "models",
+      model,
+    });
     return calculateTokenCost("gpt-4o-mini", inputTokens, outputTokens);
   }
 

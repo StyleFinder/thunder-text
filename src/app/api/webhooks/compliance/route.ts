@@ -69,9 +69,10 @@ export async function POST(request: NextRequest) {
 
     if (!validation.valid) {
       // IMPORTANT: Must return 401 for invalid HMAC - this is what Shopify checks
-      console.error(
-        `[GDPR] Compliance webhook validation failed: ${validation.error}`,
-      );
+      logger.error("Compliance webhook validation failed", undefined, {
+        component: "gdpr-compliance",
+        validationError: validation.error,
+      });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Unknown topic" }, { status: 400 });
     }
   } catch (error) {
-    console.error("[GDPR] Compliance webhook processing error:", error);
+    logger.error("Compliance webhook processing error", error as Error, { component: "gdpr-compliance" });
 
     // If validation hasn't passed yet, return 401 (HMAC failure case)
     // This ensures Shopify's test for "returns 401 on invalid HMAC" passes

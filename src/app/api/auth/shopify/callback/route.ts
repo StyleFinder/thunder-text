@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth-options";
 import { logger } from "@/lib/logger";
+import { encryptToken } from "@/lib/services/encryption";
 
 /**
  * Shopify OAuth Callback Handler
@@ -189,6 +190,20 @@ export async function GET(req: NextRequest) {
     }
 
     const { access_token, scope } = await tokenResponse.json();
+
+    // SECURITY M5: Encrypt access token before storing in database
+    let encryptedAccessToken: string;
+    try {
+      encryptedAccessToken = await encryptToken(access_token);
+    } catch (encryptError) {
+      logger.error("[Shopify Callback] Failed to encrypt access token", encryptError as Error, {
+        component: "callback",
+        shop,
+      });
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=encryption_failed`,
+      );
+    }
 
     // Normalize shop domain
     const fullShopDomain = shop.includes(".myshopify.com")
@@ -410,7 +425,7 @@ export async function GET(req: NextRequest) {
       // Only update fields that are missing in the existing shop
       // IMPORTANT: Mark onboarding complete since Shopify is now connected
       const mergeData: Record<string, unknown> = {
-        shopify_access_token: access_token,
+        shopify_access_token: encryptedAccessToken, // SECURITY M5: Store encrypted token
         shopify_scope: scope || "",
         shop_type: "shopify",
         is_active: true,
@@ -511,7 +526,7 @@ export async function GET(req: NextRequest) {
       await supabaseAdmin
         .from("shops")
         .update({
-          shopify_access_token: access_token,
+          shopify_access_token: encryptedAccessToken, // SECURITY M5: Store encrypted token
           shopify_scope: scope || "",
           shop_type: "shopify",
           is_active: true,
@@ -546,7 +561,7 @@ export async function GET(req: NextRequest) {
         .from("shops")
         .update({
           shop_domain: fullShopDomain,
-          shopify_access_token: access_token,
+          shopify_access_token: encryptedAccessToken, // SECURITY M5: Store encrypted token
           shopify_scope: scope || "",
           shop_type: "shopify",
           is_active: true,
@@ -577,7 +592,7 @@ export async function GET(req: NextRequest) {
         .from("shops")
         .insert({
           shop_domain: fullShopDomain,
-          shopify_access_token: access_token,
+          shopify_access_token: encryptedAccessToken, // SECURITY M5: Store encrypted token
           shopify_scope: scope || "",
           shop_type: "shopify",
           is_active: true,

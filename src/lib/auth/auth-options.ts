@@ -310,7 +310,7 @@ export const authOptions: NextAuthOptions = {
       name: "next-auth.session-token",
       options: {
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: "strict", // SECURITY M1: Use strict to prevent CSRF attacks
         path: "/",
         secure: process.env.NODE_ENV === "production",
       },

@@ -121,6 +121,21 @@ export async function POST(
       );
     }
 
+    // Mark voice profile step as completed in shops table
+    const { error: shopUpdateError } = await supabaseAdmin
+      .from("shops")
+      .update({ voice_profile_completed: true })
+      .eq("id", userId);
+
+    if (shopUpdateError) {
+      logger.warn("Failed to update shop voice_profile_completed flag:", {
+        component: "generate",
+        error: shopUpdateError.message,
+        userId,
+      });
+      // Don't fail the request, just log the warning
+    }
+
     return NextResponse.json(
       {
         success: true,

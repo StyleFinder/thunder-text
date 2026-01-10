@@ -8,7 +8,7 @@
 import { describe, it, expect } from "@jest/globals";
 import { GET, POST } from "@/app/api/content-center/samples/route";
 import { NextRequest } from "next/server";
-import { _TEST_SHOP, API_URLS } from "../../utils/test-constants";
+import { TEST_SHOP as _TEST_SHOP, API_URLS } from "../../utils/test-constants";
 import {
   createAuthenticatedRequest,
   createAuthenticatedGetRequest,

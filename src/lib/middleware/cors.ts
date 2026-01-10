@@ -20,16 +20,20 @@ export function createCorsHeaders(request: Request): HeadersInit {
     "https://app.zunosai.com",
     process.env.NEXT_PUBLIC_APP_URL ? process.env.NEXT_PUBLIC_APP_URL : null,
     process.env.RENDER_EXTERNAL_URL ? process.env.RENDER_EXTERNAL_URL : null,
-    // Development (allow localhost on any port and ngrok tunnels)
+    // Development (allow localhost on any port)
     process.env.NODE_ENV === "development" ? "http://localhost:3000" : null,
     process.env.NODE_ENV === "development" ? "http://localhost:3050" : null,
-    process.env.NODE_ENV === "development"
+    // SECURITY M4: ngrok only allowed in development AND with explicit env var
+    process.env.NODE_ENV === "development" &&
+    process.env.ALLOW_NGROK_TUNNEL === "true"
       ? /^https:\/\/[a-zA-Z0-9-]+\.ngrok\.io$/
       : null,
-    process.env.NODE_ENV === "development"
+    process.env.NODE_ENV === "development" &&
+    process.env.ALLOW_NGROK_TUNNEL === "true"
       ? /^https:\/\/[a-zA-Z0-9-]+\.ngrok-free\.app$/
       : null,
-    process.env.NODE_ENV === "development"
+    process.env.NODE_ENV === "development" &&
+    process.env.ALLOW_NGROK_TUNNEL === "true"
       ? /^https:\/\/[a-zA-Z0-9-]+\.ngrok\.app$/
       : null,
   ].filter(Boolean);

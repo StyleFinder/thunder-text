@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Flame, ChevronUp, ChevronDown } from "lucide-react";
 import { useShop } from "@/hooks/useShop";
+import { logger } from "@/lib/logger";
 
 interface HotTake {
   id: string;
@@ -46,7 +47,7 @@ export function HotTakesCard() {
         const data = await response.json();
         setIsBHB(data.success && data.isBHB === true);
       } catch (err) {
-        console.error("[HotTakesCard] Error checking BHB status:", err);
+        logger.error("Error checking BHB status", err, { component: "hot-takes-card", shop });
         setIsBHB(false);
       }
     };
@@ -72,7 +73,7 @@ export function HotTakesCard() {
           setError("Failed to load hot takes");
         }
       } catch (err) {
-        console.error("[HotTakesCard] Error fetching hot takes:", err);
+        logger.error("Error fetching hot takes", err, { component: "hot-takes-card" });
         setError("Failed to load hot takes");
       } finally {
         setLoading(false);

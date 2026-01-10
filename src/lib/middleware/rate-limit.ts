@@ -32,8 +32,20 @@ interface RateLimitEntry {
 
 /**
  * In-memory rate limit store (fallback for local dev without Redis)
+ *
+ * M5 SECURITY WARNING: In-memory fallback does NOT work in multi-instance deployments.
+ * Each instance maintains its own independent rate limit counters, effectively
+ * multiplying the allowed rate by the number of instances.
+ *
+ * For production multi-instance deployments:
+ * 1. Always configure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN
+ * 2. If Redis is unavailable, consider temporarily reducing rate limits
+ * 3. Monitor for rate limit bypass attempts
  */
 const rateLimitStore = new Map<string, RateLimitEntry>();
+
+// Track whether we've logged the multi-instance warning
+let multiInstanceWarningLogged = false;
 
 /**
  * Clean up expired entries every 5 minutes (for in-memory fallback)
@@ -149,6 +161,32 @@ export const RATE_LIMITS = {
     message:
       "Voice profile generation rate limit exceeded. Maximum 10 profiles per hour.",
   },
+
+  // ============================================================================
+  // Authentication Rate Limits
+  // @security H2 - Critical for preventing brute force and credential stuffing
+  // ============================================================================
+
+  // Login attempts - strict limit to prevent credential stuffing
+  AUTH_LOGIN: {
+    maxRequests: 10,
+    windowMs: 60 * 1000, // 1 minute window
+    message: "Too many login attempts. Please try again in a minute.",
+  },
+
+  // Signup - prevent account creation spam
+  AUTH_SIGNUP: {
+    maxRequests: 5,
+    windowMs: 60 * 60 * 1000, // 1 hour per IP
+    message: "Too many signup attempts. Please try again later.",
+  },
+
+  // Password reset - prevent email bombing
+  AUTH_PASSWORD_RESET: {
+    maxRequests: 3,
+    windowMs: 60 * 60 * 1000, // 1 hour
+    message: "Too many password reset requests. Please try again later.",
+  },
 } as const;
 
 /**
@@ -214,6 +252,9 @@ export async function checkRateLimitAsync(
 
 /**
  * In-memory rate limit check (fallback)
+ *
+ * M5 SECURITY: This fallback is per-instance only. In multi-instance deployments,
+ * rate limits are not shared across instances. Use Redis in production.
  */
 function checkRateLimitInMemory(
   userId: string,
@@ -223,6 +264,15 @@ function checkRateLimitInMemory(
   headers: Record<string, string>;
   remainingRequests?: number;
 } {
+  // M5: Log warning once about in-memory fallback in production
+  if (process.env.NODE_ENV === "production" && !multiInstanceWarningLogged) {
+    logger.warn("Rate limiting using in-memory fallback - NOT distributed", {
+      component: "rate-limit",
+      warning: "Rate limits are per-instance only. Configure Redis for production.",
+    });
+    multiInstanceWarningLogged = true;
+  }
+
   const key = `${userId}:${config.maxRequests}:${config.windowMs}`;
   const now = Date.now();
 

@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  _Loader2,
   Search,
   Package,
   Zap,
@@ -44,13 +43,20 @@ export function ProductSelector({
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
+    // Q5: AbortController for cleanup to prevent memory leaks
+    const abortController = new AbortController();
+    let isMounted = true;
+
     const fetchProducts = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        if (isMounted) {
+          setLoading(true);
+          setError(null);
+        }
 
         const response = await fetch(
           `/api/shopify/products?shop=${encodeURIComponent(shop)}`,
+          { signal: abortController.signal },
         );
 
         if (!response.ok) {
@@ -58,24 +64,41 @@ export function ProductSelector({
         }
 
         const data = await response.json();
-        setProducts(data.products || []);
+        if (isMounted) {
+          setProducts(data.products || []);
+        }
       } catch (err) {
-        logger.error("Failed to fetch products for selector", err as Error, {
-          component: "ProductSelector",
-        });
-        setError("Failed to load products. Please try again.");
+        // Don't update state if aborted
+        if (err instanceof Error && err.name === "AbortError") return;
+        if (isMounted) {
+          logger.error("Failed to fetch products for selector", err as Error, {
+            component: "ProductSelector",
+          });
+          setError("Failed to load products. Please try again.");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchProducts();
+
+    // Cleanup: abort fetch and mark as unmounted
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, [shop]);
 
-  const filteredProducts = products.filter(
-    (product) =>
-      product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.handle.toLowerCase().includes(searchQuery.toLowerCase()),
+  // Q8: Memoize filtered products to avoid recomputation on every render
+  const filteredProducts = useMemo(
+    () =>
+      products.filter(
+        (product) =>
+          product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.handle.toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
+    [products, searchQuery],
   );
 
   // Loading state

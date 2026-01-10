@@ -1,16 +1,15 @@
 /* eslint-disable react/no-unescaped-entities -- Quotes and apostrophes in JSX text are intentional */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import ReactMarkdown from "react-markdown"; // eslint-disable-line @typescript-eslint/no-unused-vars
 import { CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
-import type {
-  ChatMessage,
-  InterviewPrompt,
-  BusinessProfile,
-  InterviewStatus,
-} from "@/types/business-profile";
+// Q1: logger import removed - now handled in hooks
+
+// Q1: Custom hooks extracted for cleaner state management
+import { useBusinessInterview } from "@/hooks/useBusinessInterview";
+import { useBusinessProfile } from "@/hooks/useBusinessProfile";
+import { usePolicySummary } from "@/hooks/usePolicySummary";
 
 // Quick answer options for AI coaching questions (all answers must be 20+ words to meet min_words requirement)
 const QUICK_ANSWER_OPTIONS: Record<string, { label: string; value: string }[]> =
@@ -112,8 +111,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import styles from "./page.module.css"; // eslint-disable-line @typescript-eslint/no-unused-vars
-import { logger } from "@/lib/logger";
 import { useShop } from "@/hooks/useShop";
 
 export default function BrandVoicePage() {
@@ -130,222 +127,106 @@ export default function BrandVoicePage() {
     return path;
   };
 
-  // State
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [currentInput, setCurrentInput] = useState("");
-  const [currentPrompt, setCurrentPrompt] = useState<InterviewPrompt | null>(
-    null,
+  // Q1: Use extracted custom hooks for cleaner state management
+  const {
+    profile,
+    profileLoading,
+    isGeneratingProfile,
+    isRegenerating,
+    showProfileSuccess,
+    setProfile,
+    setProfileLoading,
+    setShowProfileSuccess: _setShowProfileSuccess,
+    loadProfile,
+    generateProfile,
+    regenerateProfile,
+  } = useBusinessProfile({ shopDomain });
+
+  const {
+    messages,
+    currentInput,
+    currentPrompt,
+    interviewStatus,
+    progress,
+    totalQuestions,
+    currentQuestionNumber,
+    isSubmitting,
+    error,
+    messagesEndRef,
+    hasLoadedProfile,
+    setCurrentInput,
+    setMessages: _setMessages,
+    setInterviewStatus,
+    setProgress: _setProgress,
+    setCurrentPrompt: _setCurrentPrompt,
+    setError,
+    addAIMessage: _addAIMessage,
+    addUserMessage: _addUserMessage,
+    startInterview,
+    submitAnswer: submitInterviewAnswer,
+    resetInterview,
+  } = useBusinessInterview({
+    shopDomain,
+    onProfileUpdate: setProfile,
+  });
+
+  // Callback for handling policy summary - needs to update currentInput
+  const handlePolicySummary = useCallback(
+    (summary: string, type: "return" | "shipping") => {
+      const prefix = type === "return" ? "Return Policy:" : "Shipping Policy:";
+      const newSummary = `${prefix} ${summary}`;
+
+      if (currentInput.trim()) {
+        setCurrentInput(`${currentInput}\n\n${newSummary}`);
+      } else {
+        setCurrentInput(newSummary);
+      }
+    },
+    [currentInput, setCurrentInput]
   );
-  const [profile, setProfile] = useState<BusinessProfile | null>(null);
-  const [interviewStatus, setInterviewStatus] =
-    useState<InterviewStatus>("not_started");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGeneratingProfile, setIsGeneratingProfile] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
-  const [profileLoading, setProfileLoading] = useState(true);
 
-  // Policy URL fields for policies_summary question
-  const [returnPolicyUrl, setReturnPolicyUrl] = useState("");
-  const [shippingPolicyUrl, setShippingPolicyUrl] = useState("");
-  const [isSummarizingReturn, setIsSummarizingReturn] = useState(false);
-  const [isSummarizingShipping, setIsSummarizingShipping] = useState(false);
+  const {
+    returnPolicyUrl,
+    shippingPolicyUrl,
+    isSummarizingReturn,
+    isSummarizingShipping,
+    setReturnPolicyUrl,
+    setShippingPolicyUrl,
+    summarizePolicy,
+    clearPolicyUrls,
+  } = usePolicySummary({
+    shopDomain,
+    onSummaryReceived: handlePolicySummary,
+    setError,
+  });
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const hasLoadedProfile = useRef(false);
-  const [isResetting, setIsResetting] = useState(false);
+  // UI-only state that doesn't need a hook
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [showProfileSuccess, setShowProfileSuccess] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, messagesEndRef]);
 
-  const _showCompletionState = () => {
-    setMessages([]);
-    setInterviewStatus("completed");
-  };
-
-  const loadProfile = async () => {
-    try {
-      const response = await fetch("/api/business-profile", {
-        headers: {
-          Authorization: `Bearer ${shopDomain}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data.profile) {
-          setProfile(data.data.profile);
-
-          // Don't auto-load responses - let user choose mode first
-          // Just store the profile data for when they start
-          setInterviewStatus(
-            data.data.profile.interview_status || "not_started",
-          );
-        }
-      }
-    } catch (error) {
-      logger.error("Failed to load profile:", error as Error, {
-        component: "business-profile",
-      });
-    } finally {
-      setProfileLoading(false);
-    }
-  };
-
+  // Load profile on mount
   useEffect(() => {
     if (hasShop && shopDomain && !hasLoadedProfile.current) {
       hasLoadedProfile.current = true;
-      loadProfile();
+      loadProfile().then(({ status }) => {
+        setInterviewStatus(status);
+      });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shopDomain, hasShop]);
+  }, [shopDomain, hasShop, loadProfile, hasLoadedProfile, setInterviewStatus]);
 
   // If not authenticated, set profileLoading to false
   useEffect(() => {
     if (!authLoading && !hasShop) {
       setProfileLoading(false);
     }
-  }, [authLoading, hasShop]);
+  }, [authLoading, hasShop, setProfileLoading]);
 
-  // Profile completed - show completion UI (no auto-redirect, let user choose where to go)
-
-  // Track interview mode and total questions
-  const [_interviewMode, setInterviewMode] = useState<"full" | "quick_start">(
-    "full",
-  );
-  const [totalQuestions, setTotalQuestions] = useState(19);
-  const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
-
-  const startInterview = async (mode: "full" | "quick_start" = "full") => {
-    if (!shopDomain) {
-      setError(
-        "Shop domain not found. Please reload the page from Shopify Admin.",
-      );
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-    setInterviewMode(mode);
-
-    try {
-      // First, start/update the interview with selected mode
-      const response = await fetch("/api/business-profile/start", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${shopDomain}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ mode }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setProfile(data.data.profile);
-        setInterviewStatus("in_progress");
-        setTotalQuestions(
-          data.data.total_questions || (mode === "quick_start" ? 12 : 21),
-        );
-
-        // Now load any existing responses for this mode
-        const profileResponse = await fetch("/api/business-profile", {
-          headers: {
-            Authorization: `Bearer ${shopDomain}`,
-          },
-        });
-
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json();
-
-          if (
-            profileData.success &&
-            profileData.data.responses &&
-            profileData.data.responses.length > 0
-          ) {
-            // User has existing responses - load chat history
-            const chatHistory: ChatMessage[] = [];
-
-            const timeEstimate =
-              mode === "quick_start" ? "5-7 minutes" : "15-20 minutes";
-            chatHistory.push({
-              id: "welcome",
-              type: "ai",
-              content: `Hi! I'm here to learn about your business so we can create content that truly represents your brand. This ${mode === "quick_start" ? "quick" : ""} conversation will take about ${timeEstimate}. Ready to get started?`,
-              timestamp: new Date(
-                profileData.data.profile.interview_started_at || Date.now(),
-              ),
-            });
-
-            // Add question-answer pairs from existing responses
-            profileData.data.responses.forEach((resp: any) => {
-              chatHistory.push({
-                id: `q-${resp.id}`,
-                type: "ai",
-                content: resp.prompt?.question_text || resp.prompt_key,
-                timestamp: new Date(resp.created_at),
-                prompt_key: resp.prompt_key,
-              });
-
-              chatHistory.push({
-                id: `a-${resp.id}`,
-                type: "user",
-                content: resp.response_text,
-                timestamp: new Date(resp.created_at),
-              });
-            });
-
-            setMessages(chatHistory);
-            setProgress(profileData.data.progress.percentage_complete);
-            setCurrentQuestionNumber(
-              profileData.data.progress.current_question,
-            );
-
-            // If there's a next prompt, show it
-            if (profileData.data.progress.next_prompt) {
-              setCurrentPrompt(profileData.data.progress.next_prompt);
-              setTimeout(() => {
-                addAIMessage(
-                  profileData.data.progress.next_prompt.question_text,
-                  profileData.data.progress.next_prompt.prompt_key,
-                );
-              }, 500);
-            }
-          } else {
-            // No existing responses - start fresh
-            setCurrentPrompt(data.data.first_prompt);
-            const timeEstimate =
-              mode === "quick_start" ? "5-7 minutes" : "15-20 minutes";
-            addAIMessage(
-              `Hi! I'm here to learn about your business so we can create content that truly represents your brand. This ${mode === "quick_start" ? "quick" : ""} conversation will take about ${timeEstimate}. Ready to get started?`,
-            );
-
-            setTimeout(() => {
-              addAIMessage(
-                data.data.first_prompt.question_text,
-                data.data.first_prompt.prompt_key,
-              );
-            }, 1500);
-          }
-        }
-      } else {
-        setError(data.error || "Failed to start interview");
-      }
-    } catch (error) {
-      logger.error("Failed to start interview:", error as Error, {
-        component: "business-profile",
-      });
-      setError("Failed to start interview. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
+  // Q1: Submit answer with policy URL handling
   const submitAnswer = async () => {
     if (!currentInput.trim() || !currentPrompt) return;
 
@@ -365,223 +246,23 @@ export default function BrandVoicePage() {
       finalAnswer = parts.join("\n\n");
     }
 
-    const wordCount = finalAnswer.trim().split(/\s+/).length;
-    if (currentPrompt.min_words && wordCount < currentPrompt.min_words) {
-      setError(
-        `Please provide at least ${currentPrompt.min_words} words (current: ${wordCount})`,
-      );
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-
-    addUserMessage(finalAnswer);
-    const userAnswer = finalAnswer;
-    setCurrentInput("");
-    // Clear policy URLs after submitting
-    if (currentPrompt.prompt_key === "policies_summary") {
-      setReturnPolicyUrl("");
-      setShippingPolicyUrl("");
-    }
-
-    try {
-      const response = await fetch("/api/business-profile/answer", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${shopDomain}`,
-        },
-        body: JSON.stringify({
-          prompt_key: currentPrompt.prompt_key,
-          question_number: currentPrompt.question_number,
-          response_text: userAnswer,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setProgress(data.data.progress.percentage_complete);
-        setCurrentQuestionNumber(data.data.progress.current_question);
-
-        if (data.data.interview_complete) {
-          setTimeout(() => {
-            addAIMessage("Excellent! You've completed all questions. 🎉");
-          }, 800);
-        } else if (data.data.next_prompt) {
-          setCurrentPrompt(data.data.next_prompt);
-
-          setTimeout(() => {
-            addAIMessage(
-              data.data.next_prompt.question_text,
-              data.data.next_prompt.prompt_key,
-            );
-          }, 1000);
-        }
-      } else {
-        setError(data.error || "Failed to submit answer");
+    // Submit using the hook function, and clear policy URLs on completion
+    await submitInterviewAnswer(finalAnswer, () => {
+      if (currentPrompt.prompt_key === "policies_summary") {
+        clearPolicyUrls();
       }
-    } catch (error) {
-      logger.error("Failed to submit answer:", error as Error, {
-        component: "business-profile",
-      });
-      setError("Failed to submit answer. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   };
 
-  const generateProfile = async () => {
-    setIsGeneratingProfile(true);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/business-profile/generate", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${shopDomain}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setProfile(data.data.profile);
-        setInterviewStatus("completed");
-        setShowProfileSuccess(true);
-      } else {
-        setError(data.error || "Failed to generate profile");
-      }
-    } catch (error) {
-      logger.error("Failed to generate profile:", error as Error, {
-        component: "business-profile",
-      });
-      setError("Failed to generate profile. Please try again.");
-    } finally {
-      setIsGeneratingProfile(false);
-    }
-  };
-
-  const addAIMessage = (content: string, promptKey?: string) => {
-    const message: ChatMessage = {
-      id: Date.now().toString() + Math.random(),
-      type: "ai",
-      content,
-      timestamp: new Date(),
-      prompt_key: promptKey,
-    };
-    setMessages((prev) => [...prev, message]);
-  };
-
-  const addUserMessage = (content: string) => {
-    const message: ChatMessage = {
-      id: Date.now().toString() + Math.random(),
-      type: "user",
-      content,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, message]);
-  };
-
+  // Q1: Handle reset using hook function
   const handleReset = async () => {
     setIsResetting(true);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/business-profile/reset", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${shopDomain}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setMessages([]);
-        setInterviewStatus("not_started");
-        setProgress(0);
-        setCurrentPrompt(null);
-        setProfile(null);
-        setCurrentInput("");
-        setShowResetConfirm(false);
-
-        hasLoadedProfile.current = false;
-        await loadProfile();
-      } else {
-        setError(data.error || "Failed to reset interview");
-      }
-    } catch (error) {
-      logger.error("Failed to reset interview:", error as Error, {
-        component: "business-profile",
-      });
-      setError("Failed to reset interview. Please try again.");
-    } finally {
-      setIsResetting(false);
+    const success = await resetInterview();
+    if (success) {
+      setProfile(null);
+      setShowResetConfirm(false);
     }
-  };
-
-  // Summarize a policy URL
-  const summarizePolicy = async (type: "return" | "shipping") => {
-    const url = type === "return" ? returnPolicyUrl : shippingPolicyUrl;
-
-    if (!url.trim()) {
-      setError(`Please enter a ${type} policy URL first`);
-      return;
-    }
-
-    // Validate URL format
-    try {
-      new URL(url);
-    } catch {
-      setError(
-        "Please enter a valid URL (e.g., https://yourstore.com/policies/...)",
-      );
-      return;
-    }
-
-    const setLoading =
-      type === "return" ? setIsSummarizingReturn : setIsSummarizingShipping;
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/business-profile/summarize-policy", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${shopDomain}`,
-        },
-        body: JSON.stringify({ url, type }),
-      });
-
-      const data = await response.json();
-
-      if (data.success && data.data?.summary) {
-        // Append the summary to the current input
-        const prefix =
-          type === "return" ? "Return Policy:" : "Shipping Policy:";
-        const newSummary = `${prefix} ${data.data.summary}`;
-
-        if (currentInput.trim()) {
-          setCurrentInput((prev) => `${prev}\n\n${newSummary}`);
-        } else {
-          setCurrentInput(newSummary);
-        }
-      } else {
-        setError(data.error || `Failed to summarize ${type} policy`);
-      }
-    } catch (error) {
-      logger.error(`Failed to summarize ${type} policy:`, error as Error, {
-        component: "business-profile",
-      });
-      setError(
-        `Failed to summarize ${type} policy. Please try again or enter details manually.`,
-      );
-    } finally {
-      setLoading(false);
-    }
+    setIsResetting(false);
   };
 
   // Calculate word count (include policy URLs for policies_summary question)
@@ -861,7 +542,7 @@ export default function BrandVoicePage() {
                   <Button
                     variant="outline"
                     onClick={() =>
-                      router.push(buildUrl("/brand-voice/settings"))
+                      router.push(buildUrl("/brand-voice"))
                     }
                     className="w-full"
                     style={{
@@ -877,55 +558,15 @@ export default function BrandVoicePage() {
                       cursor: "pointer",
                     }}
                   >
-                    View Brand Voice Settings
+                    View Brand Voice
                   </Button>
                   <Button
                     variant="outline"
                     onClick={async () => {
-                      setIsRegenerating(true);
                       setError(null);
-                      try {
-                        const response = await fetch(
-                          "/api/business-profile/generate",
-                          {
-                            method: "POST",
-                            headers: {
-                              Authorization: `Bearer ${shopDomain}`,
-                              "Content-Type": "application/json",
-                            },
-                          },
-                        );
-                        const data = await response.json();
-                        if (response.ok && data.success && data.data?.profile) {
-                          setProfile(data.data.profile);
-                          // Show a success message briefly, then reload the page to refresh AI Coaches state
-                          setShowProfileSuccess(true);
-                          setTimeout(() => {
-                            setShowProfileSuccess(false);
-                            // Reload profile data
-                            loadProfile();
-                          }, 2000);
-                        } else {
-                          const errorMessage =
-                            data.error || "Failed to regenerate profile";
-                          setError(errorMessage);
-                          logger.error(
-                            "Failed to regenerate profile:",
-                            new Error(errorMessage),
-                            { component: "business-profile" },
-                          );
-                        }
-                      } catch (error) {
-                        setError(
-                          "Failed to regenerate profile. Please try again.",
-                        );
-                        logger.error(
-                          "Failed to regenerate profile:",
-                          error as Error,
-                          { component: "business-profile" },
-                        );
-                      } finally {
-                        setIsRegenerating(false);
+                      const result = await regenerateProfile();
+                      if (!result) {
+                        setError("Failed to regenerate profile. Please try again.");
                       }
                     }}
                     disabled={isRegenerating}
@@ -1021,32 +662,7 @@ export default function BrandVoicePage() {
                 Cancel
               </Button>
               <Button
-                onClick={async () => {
-                  setIsResetting(true);
-                  try {
-                    const response = await fetch(
-                      "/api/business-profile/reset",
-                      {
-                        method: "POST",
-                        headers: { Authorization: `Bearer ${shopDomain}` },
-                      },
-                    );
-                    if (response.ok) {
-                      setShowResetConfirm(false);
-                      setInterviewStatus("not_started");
-                      setProfile(null);
-                      setMessages([]);
-                      setCurrentPrompt(null);
-                      setProgress(0);
-                    }
-                  } catch (error) {
-                    logger.error("Failed to reset:", error as Error, {
-                      component: "business-profile",
-                    });
-                  } finally {
-                    setIsResetting(false);
-                  }
-                }}
+                onClick={handleReset}
                 disabled={isResetting}
                 style={{
                   background: "#dc2626",
@@ -1875,7 +1491,7 @@ export default function BrandVoicePage() {
                     <Button
                       variant="outline"
                       onClick={() =>
-                        router.push(buildUrl("/brand-voice/settings"))
+                        router.push(buildUrl("/brand-voice"))
                       }
                       className="w-full"
                       style={{
@@ -1891,7 +1507,7 @@ export default function BrandVoicePage() {
                         cursor: "pointer",
                       }}
                     >
-                      View Brand Voice Settings
+                      View Brand Voice
                     </Button>
                   </div>
                 </div>

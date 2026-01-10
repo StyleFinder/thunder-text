@@ -15,7 +15,6 @@ import {
   Clock,
   ChevronRight,
   TrendingUp,
-  User,
 } from "lucide-react";
 import { ContentType, GeneratedContent } from "@/types/content-center";
 import { useShop } from "@/hooks/useShop";
@@ -48,7 +47,6 @@ export default function ContentCenterPage() {
     totalContent: 0,
     thisMonth: 0,
     savedDrafts: 0,
-    hasVoiceProfile: false,
   });
 
   // Fetch recent content and stats on mount
@@ -134,27 +132,6 @@ export default function ContentCenterPage() {
           if (data.success) {
             newStats.savedDrafts = data.data?.total_count || 0;
           }
-        }
-
-        // Check for voice profile
-        try {
-          const voiceParams = new URLSearchParams();
-          if (shopId) {
-            voiceParams.append("shopId", shopId);
-          }
-          const voiceRes = await fetch(
-            `/api/content-center/voice?${voiceParams.toString()}`,
-            {
-              headers: { "Content-Type": "application/json" },
-            },
-          );
-          if (voiceRes.ok) {
-            const voiceData = await voiceRes.json();
-            newStats.hasVoiceProfile =
-              voiceData.success && voiceData.data?.voice_profile;
-          }
-        } catch {
-          // Voice profile check failed, leave as false
         }
 
         setStats(newStats);
@@ -366,15 +343,6 @@ export default function ContentCenterPage() {
       return `/stores/${shopId}/content-center/library`;
     }
     return "/content-center/library";
-  };
-
-  // Build the voice profile URL based on current path
-  const getVoiceUrl = () => {
-    // If we're on a shop-scoped route, use it
-    if (pathname?.includes("/stores/") && shopId) {
-      return `/stores/${shopId}/content-center/voice`;
-    }
-    return "/content-center/voice";
   };
 
   // Show loading state while shop is initializing
@@ -644,168 +612,6 @@ export default function ContentCenterPage() {
                     Ready to edit
                   </span>
                 </div>
-              </div>
-
-              {/* Voice Profile Card */}
-              <Link href={getVoiceUrl()} style={{ textDecoration: "none" }}>
-                <div
-                  style={{
-                    background: "#ffffff",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
-                    padding: "20px",
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow =
-                      "0 4px 12px rgba(0, 102, 204, 0.15)";
-                    e.currentTarget.style.borderColor = "#0066cc";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow =
-                      "0 2px 8px rgba(0, 0, 0, 0.08)";
-                    e.currentTarget.style.borderColor = "#e5e7eb";
-                  }}
-                >
-                  <p
-                    style={{
-                      fontSize: "13px",
-                      color: "#6b7280",
-                      margin: "0 0 8px",
-                      fontFamily:
-                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                    }}
-                  >
-                    Voice Profile
-                  </p>
-                  <div style={{ margin: "8px 0 12px" }}>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        background: stats.hasVoiceProfile
-                          ? "#dcfce7"
-                          : "#fef3c7",
-                        color: stats.hasVoiceProfile ? "#166534" : "#92400e",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        padding: "4px 12px",
-                        borderRadius: "9999px",
-                        fontFamily:
-                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                      }}
-                    >
-                      {stats.hasVoiceProfile ? "Active" : "Not Set"}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      fontSize: "13px",
-                      color: "#6b7280",
-                    }}
-                  >
-                    <User style={{ width: "14px", height: "14px" }} />
-                    <span
-                      style={{
-                        fontFamily:
-                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                      }}
-                    >
-                      {stats.hasVoiceProfile
-                        ? "Brand voice ready"
-                        : "Set up your voice"}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            </div>
-
-            {/* Progress Indicator - always shows step 1 as active since this block only renders for select-type */}
-            <div
-              style={{
-                marginBottom: "32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <div
-                  style={{
-                    height: "8px",
-                    width: "8px",
-                    borderRadius: "50%",
-                    background: "#0066cc",
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    color: "#003366",
-                    fontFamily:
-                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                  }}
-                >
-                  Select Type
-                </span>
-              </div>
-
-              <div
-                style={{ height: "1px", width: "48px", background: "#e5e7eb" }}
-              />
-
-              <div className="flex items-center gap-2">
-                <div
-                  style={{
-                    height: "8px",
-                    width: "8px",
-                    borderRadius: "50%",
-                    background: "#e5e7eb",
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 400,
-                    color: "#6b7280",
-                    fontFamily:
-                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                  }}
-                >
-                  Configure
-                </span>
-              </div>
-
-              <div
-                style={{ height: "1px", width: "48px", background: "#e5e7eb" }}
-              />
-
-              <div className="flex items-center gap-2">
-                <div
-                  style={{
-                    height: "8px",
-                    width: "8px",
-                    borderRadius: "50%",
-                    background: "#e5e7eb",
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 400,
-                    color: "#6b7280",
-                    fontFamily:
-                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                  }}
-                >
-                  Review
-                </span>
               </div>
             </div>
 

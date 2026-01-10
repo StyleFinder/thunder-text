@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -79,7 +80,7 @@ export default function AdminSettingsPage() {
           setTwoFactorEnabled(data.enabled);
         }
       } catch (err) {
-        console.error("Failed to fetch 2FA status:", err);
+        logger.error("Failed to fetch 2FA status", err, { component: "admin-settings" });
       } finally {
         setLoading(false);
       }

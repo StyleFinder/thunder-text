@@ -29,7 +29,7 @@ export class StorageAgent {
         analysisResult
       );
       const embedding = await generateEmbedding(embeddingText);
-      console.log('[StorageAgent] Embedding generated');
+      logger.debug('[StorageAgent] Embedding generated', { component: 'storage' });
 
       // 2. Build metadata
       const metadata = this.buildMetadata(

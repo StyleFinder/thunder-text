@@ -1,922 +1,490 @@
-# Thunder Text API Security Audit Report
+# Security Audit Report: Thunder Text
 
-**Generated**: 2025-12-13
-**Auditor**: Claude (Anthropic Security Analysis)
-**Scope**: All API routes in `/src/app/api/`
-**Total Routes Audited**: 157
+**Audit Date:** 2026-01-09
+**Application:** Thunder Text - Next.js 15 + React 19 Shopify App with Supabase Backend
+**Auditor:** Claude Opus 4.5 Security Review
 
 ---
 
 ## Executive Summary
 
-This comprehensive security audit identified **42 API routes with missing or insufficient authentication** that handle sensitive operations including user data, database writes, third-party API access, and billing operations. While the application implements multiple authentication patterns (NextAuth sessions, requireAuth middleware, OAuth flows), these are not consistently applied across all endpoints that require protection.
-
-### Risk Distribution
-
-- **Critical Vulnerabilities**: 8 routes (database access, billing, admin operations)
-- **High Vulnerabilities**: 19 routes (user data exposure, mutation endpoints)
-- **Medium Vulnerabilities**: 15 routes (potential information disclosure)
-- **Low/Info**: Additional routes requiring review
-
-### Key Findings
-
-1. **Inconsistent Authentication**: Mix of protected and unprotected routes in same directories
-2. **Cookie-Only Authentication**: Many routes rely solely on `shopify_shop` cookie without session validation
-3. **Missing Admin Checks**: Some admin routes accessible without role verification
-4. **Debug Endpoints Exposed**: Multiple debug/test endpoints in production code
-5. **OAuth State Management**: Some OAuth flows have proper CSRF protection, others don't
-
----
-
-## Authentication Patterns Identified
-
-### PROTECTED Patterns (Correct Implementation)
-
-✅ **NextAuth Session-Based**
-
-```typescript
-const session = await getServerSession(authOptions);
-if (!session?.user || session.user.role !== "admin") {
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-}
-```
-
-✅ **requireAuth Middleware**
-
-```typescript
-export const GET = requireAuth("user")(async (request) => {
-  // Protected route handler
-});
-```
-
-✅ **getUserId (Content Center)**
-
-```typescript
-const userId = await getUserId(request);
-if (!userId) {
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-}
-```
-
-### PROBLEMATIC Patterns
-
-⚠️ **Cookie-Only Authentication (Insufficient)**
-
-```typescript
-const shopDomain = req.cookies.get("shopify_shop")?.value;
-if (!shopDomain) {
-  return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-}
-```
-
-**Issue**: Cookies can be stolen/forged; should validate session
-
-⚠️ **Query Parameter Authentication (Insecure)**
-
-```typescript
-const shop = searchParams.get("shop");
-// Directly uses shop without validation
-```
-
-**Issue**: URL parameters are easily manipulated
-
----
-
-## Critical Vulnerabilities
-
-### CRITICAL-01: Admin Initialization Endpoint (No Auth)
-
-**Route**: `/api/admin/initialize-prompts`
-**Method**: POST
-**Severity**: 🚨 CRITICAL
-
-**Vulnerability**:
-
-- Allows ANY user to initialize default prompts for ANY shop
-- No authentication check whatsoever
-- Could be used to overwrite legitimate shop configurations
-
-**Current Code**:
-
-```typescript
-export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { shop } = body;
-
-  if (!shop) {
-    return NextResponse.json(
-      { error: "Shop domain is required" },
-      { status: 400 },
-    );
-  }
-
-  await initializeDefaultPrompts(shop); // NO AUTH CHECK
-}
-```
-
-**Remediation**:
-
-- [ ] Add `getServerSession` check with admin role requirement
-- [ ] Validate that requester owns the shop being initialized
-- [ ] Add audit logging for this sensitive operation
-
-**Example Fix**:
-
-```typescript
-export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json(
-      { error: "Admin access required" },
-      { status: 401 },
-    );
-  }
-
-  const body = await request.json();
-  const { shop } = body;
-  // ... rest of logic
-}
-```
-
----
-
-### CRITICAL-02: Ads Library Write Operations (Cookie-Only Auth)
-
-**Routes**:
-
-- `/api/ads-library/[id]` (PATCH, DELETE)
-- `/api/ads-library/save` (POST)
-
-**Method**: PATCH, DELETE, POST
-**Severity**: 🚨 CRITICAL
-
-**Vulnerability**:
-
-- Uses only `shopify_shop` cookie for authentication
-- No session validation or CSRF protection
-- Allows modification/deletion of ad library entries
-
-**Current Code**:
-
-```typescript
-const shopDomain = req.cookies.get("shopify_shop")?.value;
-if (!shopDomain) {
-  return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-}
-```
-
-**Impact**:
-
-- Attacker with stolen cookie can delete/modify ads
-- No protection against CSRF attacks
-- No verification that user owns the shop
-
-**Remediation**:
-
-- [ ] Replace cookie check with `getServerSession(authOptions)`
-- [ ] Validate user has access to the specific shop
-- [ ] Add CSRF token validation for mutations
-- [ ] Implement rate limiting on write operations
-
----
-
-### CRITICAL-03: Category Suggestion Without Auth
-
-**Route**: `/api/categories/suggest`
-**Method**: POST
-**Severity**: 🔴 HIGH
-
-**Vulnerability**:
-
-- No authentication required for AI category inference
-- Could be abused for free AI credits
-- No rate limiting visible
-
-**Current Code**:
-
-```typescript
-export async function POST(request: NextRequest) {
-  const { inferProductCategory } = await import('@/lib/category-inference')
-
-  const body = await request.json();
-  // NO AUTH CHECK
-
-  const inference = inferProductCategory(...);
-}
-```
-
-**Remediation**:
-
-- [ ] Add authentication check (requireAuth or getServerSession)
-- [ ] Implement rate limiting per user/IP
-- [ ] Track AI usage for billing
-
----
-
-### CRITICAL-04: Generate Endpoint Authentication Gap
-
-**Route**: `/api/generate`
-**Method**: POST
-**Severity**: 🔴 HIGH
-
-**Vulnerability**:
-
-- Weak authentication logic
-- Allows requests if "looks like Shopify" OR has token
-- User-Agent can be spoofed
-
-**Current Code**:
-
-```typescript
-const isShopifyRequest =
-  userAgent.includes("Shopify") || referer.includes(".myshopify.com");
-
-if (!isShopifyRequest && !sessionToken) {
-  return NextResponse.json(
-    { error: "Authentication required" },
-    { status: 401 },
-  );
-}
-```
-
-**Impact**:
-
-- Attacker can forge User-Agent header to bypass auth
-- Free AI generation access
-- Resource exhaustion
-
-**Remediation**:
-
-- [ ] Remove User-Agent-based authentication
-- [ ] Require valid session token for ALL requests
-- [ ] Validate session token cryptographically
-- [ ] Implement strict rate limiting
-
----
-
-### CRITICAL-05: Coach Favorites Endpoints (No Auth)
-
-**Routes**:
-
-- `/api/coach/favorites` (GET, POST, DELETE)
-- `/api/coach/favorites/all` (GET)
-
-**Severity**: 🔴 HIGH
-
-**Vulnerability**:
-
-- No authentication checks
-- Anyone can read/modify coach favorites
-- Email parameter is user-controlled without validation
-
-**Current Code**:
-
-```typescript
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const coachEmail = searchParams.get("coach_email");
-
-  // NO AUTH - directly queries database
-  const { data, error } = await supabase
-    .from("coach_favorites")
-    .select("shop_id")
-    .eq("coach_email", coachEmail);
-}
-```
-
-**Remediation**:
-
-- [ ] Add `getServerSession` with role check (coach/admin only)
-- [ ] Validate that authenticated user matches coach_email parameter
-- [ ] Add CSRF protection for POST/DELETE
-
----
-
-### CRITICAL-06: Category Management (Cookie-Only Auth)
-
-**Routes**:
-
-- `/api/categories` (GET, POST)
-- `/api/categories/children` (GET)
-
-**Severity**: 🔴 HIGH
-
-**Vulnerability**:
-
-- Uses shop query parameter without validation
-- Only checks if shop exists in database
-- No verification that requester owns the shop
-
-**Current Code**:
-
-```typescript
-const shop = url.searchParams.get("shop");
-
-if (!shop) {
-  return NextResponse.json(
-    { error: "Missing shop parameter" },
-    { status: 400 },
-  );
-}
-
-// Only checks shop exists, doesn't verify requester owns it
-const { data: shopData } = await supabaseAdmin
-  .from("shops")
-  .select("id")
-  .eq("shop_domain", fullShopDomain)
-  .single();
-```
-
-**Impact**:
-
-- Any authenticated user can read/write ANY shop's categories
-- Cross-tenant data access vulnerability
-
-**Remediation**:
-
-- [ ] Use requireAuth middleware to get authenticated user
-- [ ] Verify authenticated user's shop matches requested shop
-- [ ] Don't trust shop parameter from URL
-
----
-
-### CRITICAL-07: Shopify Products Endpoint (Weak Auth)
-
-**Route**: `/api/shopify/products`
-**Method**: GET
-**Severity**: 🔴 HIGH
-
-**Vulnerability**:
-
-- Complex authentication logic with multiple fallbacks
-- Standalone user lookup based on email from URL
-- Potential for accessing other users' Shopify data
-
-**Current Code**:
-
-```typescript
-let shop =
-  searchParams.get("shop") || "zunosai-staging-test-store.myshopify.com";
-
-// If shop is email, look up linked domain
-if (isEmail(shop)) {
-  const linkedDomain = await getLinkedShopifyDomain(shop);
-  shop = linkedDomain;
-}
-```
-
-**Impact**:
-
-- Email parameter can be manipulated
-- Attacker could access other users' linked Shopify stores
-- Default fallback shop is problematic
-
-**Remediation**:
-
-- [ ] Use authenticated session to determine user
-- [ ] Never trust shop/email from URL parameters
-- [ ] Remove default fallback shop
-- [ ] Validate session token properly
-
----
-
-### CRITICAL-08: Prompts Management (Weak Auth)
-
-**Route**: `/api/prompts`
-**Methods**: GET, PUT
-**Severity**: 🔴 HIGH
-
-**Vulnerability**:
-
-- Uses `store_id` from query parameters
-- No validation that requester owns the store
-- Allows reading/writing prompts for any store
-
-**Current Code**:
-
-```typescript
-const storeId = searchParams.get("store_id");
-
-if (!storeId) {
-  return NextResponse.json({ error: "Store ID is required" }, { status: 400 });
-}
-
-// Directly uses storeId without validating ownership
-const systemPrompt = await getSystemPrompt(storeId);
-```
-
-**Remediation**:
-
-- [ ] Get authenticated user's store_id from session
-- [ ] Don't accept store_id from query parameters
-- [ ] Validate ownership before any operations
+Thunder Text demonstrates a **solid security foundation** with mature implementations of critical security controls. The codebase shows evidence of security-conscious development practices, including proper authentication mechanisms, input validation, encryption of sensitive data, and comprehensive logging.
+
+### Overall Risk Assessment: **MEDIUM**
+
+| Severity | Count |
+|----------|-------|
+| Critical | 0 |
+| High     | 2 |
+| Medium   | 6 |
+| Low      | 5 |
+
+### Key Strengths
+- AES-256-GCM encryption for Shopify access tokens with key rotation support
+- Comprehensive HMAC validation for Shopify webhooks using timing-safe comparisons
+- Proper JWT verification using jsonwebtoken library with algorithm pinning
+- Progressive account lockout with database persistence (5 attempts / 15 min lockout)
+- Two-factor authentication for admin users via TOTP
+- Strong Content Security Policy headers
+- Rate limiting with Upstash Redis (distributed) and in-memory fallback
+- RLS policies for multi-tenant data isolation
+- DOMPurify sanitization in EnhancedContentComparison component
+- OAuth state validation with cryptographic nonces and cookie-based verification
+
+### Areas Requiring Attention
+- XSS vulnerability in BlogCreationModal (missing DOMPurify)
+- Dependency vulnerability in preact package
+- PDF parsing endpoint missing authentication
+- Some routes using legacy shop-domain authentication pattern
+- Missing audit logging for admin cross-user access
 
 ---
 
 ## High Vulnerabilities
 
-### HIGH-01: Business Profile Debug Endpoint
+### H1: XSS Risk in BlogCreationModal - Missing DOMPurify Sanitization
 
-**Route**: `/api/business-profile/debug`
-**Severity**: 🟠 MEDIUM-HIGH
+**Location:** `/Users/bigdaddy/projects/thunder-text/src/app/components/shared/blog-linking/BlogCreationModal.tsx:330`
 
-**Issue**: Debug endpoint exposed in production
+**Description:** The `BlogCreationModal` component uses `dangerouslySetInnerHTML` to render AI-generated blog content without DOMPurify sanitization. While the similar `EnhancedContentComparison.tsx` correctly uses DOMPurify, BlogCreationModal does not.
 
-- Returns internal authentication state
-- Shows database table structure
-- No authentication required
+**Impact:** If an attacker can influence AI-generated content through prompt injection or compromised API responses, they could execute arbitrary JavaScript in the context of the user's session, potentially stealing session tokens or performing actions on behalf of the user.
 
-**Remediation**:
-
-- [ ] Remove from production or add NODE_ENV check
-- [ ] Require admin authentication
-- [ ] Add to debug route guard
-
----
-
-### HIGH-02: AIE Generate Endpoint (No Visible Auth)
-
-**Route**: `/api/aie/generate`
-**Method**: POST
-**Severity**: 🟠 HIGH
-
-**Issue**:
-
-- No authentication visible in route handler
-- Generates AI ads without auth check
-- Could be abused for free AI credits
-
-**Remediation**:
-
-- [ ] Add requireAuth middleware
-- [ ] Implement rate limiting
-- [ ] Track usage for billing
-
----
-
-### HIGH-03: AIE Save Endpoint (No Auth)
-
-**Route**: `/api/aie/save`
-**Method**: POST
-**Severity**: 🟠 HIGH
-
-**Issue**:
-
-- No authentication check
-- Trusts shopId from request body
-- Allows saving ads to any shop's library
-
-**Current Code**:
-
-```typescript
-export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { productInfo, platform, goal, shopId, variant } = body;
-
-  // NO AUTH - directly uses shopId from request
-  const result = await aieEngine.saveSelectedVariant(...);
-}
+**Code Reference:**
+```tsx
+// BlogCreationModal.tsx:330 - Missing sanitization
+<div
+  className="p-4 border border-slate-200 rounded-lg bg-white max-h-48 overflow-y-auto text-sm prose prose-sm"
+  dangerouslySetInnerHTML={{ __html: generatedContent }}
+/>
 ```
 
-**Remediation**:
+**Remediation Checklist:**
+- [ ] Import DOMPurify in BlogCreationModal.tsx
+- [ ] Sanitize `generatedContent` before rendering:
+  ```tsx
+  import DOMPurify from 'dompurify';
 
-- [ ] Add authentication
-- [ ] Get shopId from session, not request
-- [ ] Validate ownership
+  // Configure allowed tags for blog content
+  const sanitizedContent = DOMPurify.sanitize(generatedContent, {
+    ALLOWED_TAGS: ['p', 'strong', 'em', 'br', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'a'],
+    ALLOWED_ATTR: ['href', 'target', 'rel']
+  });
+
+  <div dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
+  ```
+- [ ] Apply the same sanitization pattern to any other components rendering AI-generated HTML
+- [ ] Add unit tests for XSS prevention in content rendering
+
+**References:**
+- OWASP XSS Prevention Cheat Sheet
+- CWE-79: Improper Neutralization of Input During Web Page Generation
 
 ---
 
-### HIGH-04: Content Center Routes (Good Auth, But Verify)
+### H2: Dependency Vulnerability - Preact JSON VNode Injection
 
-**Routes**: Multiple under `/api/content-center/*`
-**Severity**: ✅ GOOD (Verify Implementation)
+**Location:** `/Users/bigdaddy/projects/thunder-text/node_modules/preact` (transitive dependency)
 
-**Status**: These routes use `getUserId(request)` which appears secure, but needs verification that the implementation properly validates tokens.
+**Description:** The project has a high severity vulnerability in the `preact` package (versions 10.28.0 - 10.28.1) which allows JSON VNode Injection.
 
-**Verification Needed**:
+**Impact:** Could allow attackers to inject malicious VNodes through JSON data, potentially leading to XSS or other client-side attacks.
 
-- [ ] Confirm getUserId validates JWT tokens cryptographically
-- [ ] Ensure rate limiting is actually enforced
-- [ ] Verify userId can't be spoofed
+**Remediation Checklist:**
+- [ ] Run `npm audit fix` to update preact to a patched version
+- [ ] If automatic fix fails, identify which direct dependency pulls in preact and update it
+- [ ] Verify fix with `npm audit` after updating
+- [ ] Add npm audit to CI/CD pipeline to catch future vulnerabilities
+
+**References:**
+- GitHub Advisory: https://github.com/advisories/GHSA-36hm-qxxp-pg3m
 
 ---
 
 ## Medium Vulnerabilities
 
-### MEDIUM-01: BHB Insights Endpoint
+### M1: PDF Parsing Route Missing Authentication
 
-**Route**: `/api/bhb/insights`
-**Method**: GET
-**Severity**: 🟡 MEDIUM
+**Location:** `/Users/bigdaddy/projects/thunder-text/src/app/api/parse-pdf/route.ts`
 
-**Status**: Has authentication but has fallback logic that could be problematic
+**Description:** The PDF parsing endpoint does not verify user authentication before processing uploaded files. While file validation exists (PDF extension check), any unauthenticated user could potentially abuse this endpoint.
 
-**Current Code**:
+**Impact:**
+- Resource exhaustion through repeated large PDF uploads
+- Potential information extraction if PDFs contain sensitive data
+- Could be used as part of a larger attack chain
 
+**Code Reference:**
 ```typescript
-const session = await getServerSession(authOptions);
-
-if (!session?.user) {
-  return NextResponse.json(
-    { error: "Authentication required" },
-    { status: 401 },
-  );
-}
-
-// Verify user is admin or coach
-const userRole = (session.user as { role?: string }).role;
-if (userRole !== "admin" && userRole !== "coach") {
-  return NextResponse.json(
-    { error: "Admin or coach access required" },
-    { status: 403 },
-  );
-}
+// parse-pdf/route.ts - No authentication check
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get("file") as File;
+    // Processing happens without verifying user is authenticated
 ```
 
-**Issue**: Role type casting could allow undefined roles to pass
+**Remediation Checklist:**
+- [ ] Add authentication check at the start of the handler:
+  ```typescript
+  import { getUserId } from "@/lib/auth/content-center-auth";
 
-**Remediation**:
+  export async function POST(request: NextRequest) {
+    const userId = await getUserId(request);
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    // ... rest of handler
+  }
+  ```
+- [ ] Add rate limiting to prevent abuse
+- [ ] Add explicit file size limits (currently relies on default limits)
+- [ ] Log PDF parsing operations for audit trail
 
-- [ ] Use proper role type from session
-- [ ] Add explicit role validation
-- [ ] Log access attempts
-
----
-
-### MEDIUM-02: Debug Routes Still Present
-
-**Routes**: `/api/debug/*` (multiple endpoints)
-**Severity**: 🟡 MEDIUM
-
-**Issue**: Debug endpoints exist in production codebase
-
-- `/api/debug/auth-status`
-- `/api/debug/check-token`
-- `/api/debug/env-check`
-- `/api/debug/db-check`
-- Many others (15+ total)
-
-**Remediation**:
-
-- [ ] Move to separate debug module
-- [ ] Add NODE_ENV=development check
-- [ ] Require admin authentication for all
-- [ ] Remove from production builds
+**References:** CWE-306: Missing Authentication for Critical Function
 
 ---
 
-### MEDIUM-03: Health Endpoint (Public - Expected)
+### M2: Content Samples Route Uses Legacy Shop Domain Authentication
 
-**Route**: `/api/health`
-**Severity**: ✅ PUBLIC (Expected)
+**Location:** `/Users/bigdaddy/projects/thunder-text/src/app/api/content-center/samples/route.ts:23-31`
 
-**Status**: Correctly public for health checks, but ensure it doesn't leak sensitive info.
+**Description:** The samples route allows authentication via a shop domain passed in the Authorization header or query parameter. While the content-center-auth module properly validates JWT session tokens, this fallback pattern in getShopDomain() could be exploited if shop domains are guessable.
 
-**Current Implementation**: ✅ Minimal info exposed (correct)
+**Impact:** An attacker who knows a shop's domain could potentially access content samples by passing the domain in the Authorization header (bypassing proper JWT validation).
 
----
-
-## Public Endpoints (Expected/Correct)
-
-### PUBLIC-01: Webhook Endpoints
-
-**Routes**:
-
-- `/api/webhooks/app-uninstalled`
-- `/api/webhooks/customers/*`
-- `/api/webhooks/shop/*`
-
-**Status**: ✅ CORRECT - Uses HMAC signature validation
-
-**Verification**:
-
+**Code Reference:**
 ```typescript
-const validation = await validateWebhook(request);
-if (!validation.valid) {
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+function getShopDomain(request: NextRequest): string | null {
+  // Try Authorization header first (embedded app pattern)
+  const authHeader = request.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.replace("Bearer ", "");
+  }
+  // Fallback to query parameter
+  return request.nextUrl.searchParams.get("shop");
 }
 ```
 
-**Security**: ✅ Proper implementation with:
+**Remediation Checklist:**
+- [ ] Update the samples route to use `getUserId()` from content-center-auth instead of `getShopDomain()`
+- [ ] Remove the legacy shop domain authentication pattern
+- [ ] Ensure all content-center routes use proper JWT validation
+- [ ] Add integration tests to verify authentication cannot be bypassed
 
-- HMAC signature verification
-- Idempotency checks for Stripe events
-- Webhook topic validation
-
----
-
-### PUBLIC-02: OAuth Callbacks
-
-**Routes**:
-
-- `/api/auth/shopify/callback`
-- `/api/facebook/oauth/callback`
-- `/api/google/oauth/callback`
-- `/api/tiktok/oauth/callback`
-
-**Status**: ✅ CORRECT - OAuth flows require state validation
-
-**Security**:
-
-- ✅ State parameter CSRF protection
-- ✅ Stored state verification (prevents replay attacks)
-- ✅ HMAC verification (Shopify)
-- ✅ Token exchange with secrets
+**References:** CWE-287: Improper Authentication
 
 ---
 
-### PUBLIC-03: Auth Endpoints
+### M3: Blog Library Route Allows Admin Cross-User Access Without Audit Logging
 
-**Routes**:
+**Location:** `/Users/bigdaddy/projects/thunder-text/src/app/api/blogs/library/route.ts:47-62`
 
-- `/api/auth/[...nextauth]` - NextAuth handler
-- `/api/auth/signup` - Account creation
-- `/api/auth/logout` - Logout
-- `/api/auth/shopify` - OAuth initiation
-- `/api/coach/set-password` - Password setup with token
-- `/api/coach/validate-token` - Token validation
+**Description:** Admin and coach users can access other users' blog content by passing a `store_id` parameter. While this may be intentional for support purposes, there's no audit logging when admins access user data.
 
-**Status**: ✅ CORRECT - Authentication endpoints should be public
+**Impact:** Without audit logging, potential misuse of admin access cannot be detected or investigated.
 
----
-
-## Route-by-Route Security Assessment
-
-### ✅ PROTECTED (Correct Implementation)
-
-| Route                                   | Auth Method                    | Status  |
-| --------------------------------------- | ------------------------------ | ------- |
-| `/api/admin/coaches`                    | getServerSession + admin role  | ✅ Good |
-| `/api/admin/two-factor/*`               | getServerSession + admin role  | ✅ Good |
-| `/api/admin/invite-coach`               | getServerSession + admin role  | ✅ Good |
-| `/api/aie/embeddings`                   | requireAuth('user')            | ✅ Good |
-| `/api/aie/library/*`                    | requireAuth('user')            | ✅ Good |
-| `/api/best-practices/*`                 | requireAuth('user')            | ✅ Good |
-| `/api/business-profile/all-prompts`     | requireAuth('user')            | ✅ Good |
-| `/api/business-profile/answer`          | getUserId                      | ✅ Good |
-| `/api/business-profile/generate`        | getUserId                      | ✅ Good |
-| `/api/business-profile/route`           | getUserId                      | ✅ Good |
-| `/api/business-profile/reset`           | getUserId                      | ✅ Good |
-| `/api/business-profile/settings`        | requireAuth                    | ✅ Good |
-| `/api/content-center/*`                 | getUserId                      | ✅ Good |
-| `/api/bhb/shops/[shop_id]/assign-coach` | getServerSession + admin       | ✅ Good |
-| `/api/bhb/shops/[shop_id]/campaigns`    | getServerSession + admin/coach | ✅ Good |
-| `/api/coach/ad-vault`                   | getServerSession + coach role  | ✅ Good |
-| `/api/coach/notes`                      | getServerSession + coach role  | ✅ Good |
-
-### 🚨 MISSING AUTH (Critical)
-
-| Route                                  | Issue                  | Risk Level  |
-| -------------------------------------- | ---------------------- | ----------- |
-| `/api/admin/initialize-prompts`        | No auth check          | 🚨 CRITICAL |
-| `/api/ads-library/[id]` (PATCH/DELETE) | Cookie-only            | 🚨 CRITICAL |
-| `/api/ads-library/save`                | Cookie-only            | 🚨 CRITICAL |
-| `/api/aie/generate`                    | No auth                | 🔴 HIGH     |
-| `/api/aie/save`                        | No auth                | 🔴 HIGH     |
-| `/api/categories/*`                    | Shop param only        | 🔴 HIGH     |
-| `/api/categories/suggest`              | No auth                | 🔴 HIGH     |
-| `/api/coach/favorites`                 | No auth                | 🔴 HIGH     |
-| `/api/coach/favorites/all`             | No auth                | 🔴 HIGH     |
-| `/api/generate`                        | Weak auth (User-Agent) | 🔴 HIGH     |
-| `/api/prompts`                         | Store ID param only    | 🔴 HIGH     |
-| `/api/shopify/products`                | Complex/weak auth      | 🔴 HIGH     |
-
-### ⚠️ NEEDS REVIEW (Medium Risk)
-
-| Route                         | Issue             | Action Needed         |
-| ----------------------------- | ----------------- | --------------------- |
-| `/api/ads-library` (GET)      | Cookie-only       | Verify session        |
-| `/api/bhb/insights`           | Role type casting | Strengthen validation |
-| `/api/business-profile/debug` | Debug endpoint    | Remove/protect        |
-| `/api/detect-category`        | No auth visible   | Add auth              |
-| `/api/detect-colors`          | No auth visible   | Add auth              |
-| `/api/enhance`                | No auth visible   | Add auth              |
-| All `/api/debug/*` routes     | Debug endpoints   | Remove/protect        |
-
----
-
-## Remediation Checklist
-
-### Immediate Actions (Week 1)
-
-**Critical Fixes**:
-
-- [ ] Add admin auth to `/api/admin/initialize-prompts`
-- [ ] Replace cookie-only auth in `/api/ads-library/*` with session auth
-- [ ] Add requireAuth to `/api/coach/favorites` endpoints
-- [ ] Fix `/api/generate` authentication (remove User-Agent bypass)
-- [ ] Add authentication to `/api/categories/suggest`
-- [ ] Fix `/api/prompts` to use session-based store_id
-- [ ] Strengthen `/api/shopify/products` authentication
-
-**High Priority**:
-
-- [ ] Add auth to `/api/aie/generate` and `/api/aie/save`
-- [ ] Fix `/api/categories/*` to validate shop ownership
-- [ ] Add rate limiting to AI generation endpoints
-
-### Short-term (Week 2-3)
-
-**Security Hardening**:
-
-- [ ] Audit all cookie-only authentication patterns
-- [ ] Implement CSRF protection for mutation endpoints
-- [ ] Add comprehensive rate limiting
-- [ ] Enable request logging for sensitive operations
-- [ ] Create security middleware for consistent auth
-
-**Code Quality**:
-
-- [ ] Remove or protect all `/api/debug/*` endpoints
-- [ ] Remove `/api/business-profile/debug`
-- [ ] Standardize on one authentication pattern
-- [ ] Add TypeScript strict mode for auth checks
-- [ ] Document authentication requirements per route
-
-### Medium-term (Month 1)
-
-**Architecture Improvements**:
-
-- [ ] Create unified authentication middleware
-- [ ] Implement role-based access control (RBAC) system
-- [ ] Add audit logging for sensitive operations
-- [ ] Implement session management best practices
-- [ ] Add automated security testing
-
-**Monitoring & Response**:
-
-- [ ] Set up alerts for unauthorized access attempts
-- [ ] Implement anomaly detection for API usage
-- [ ] Create security incident response plan
-- [ ] Regular security audit schedule
-
----
-
-## Authentication Best Practices
-
-### Recommended Pattern
-
+**Code Reference:**
 ```typescript
-import { requireAuth } from "@/lib/auth/ace-compat";
-
-// For user routes
-export const GET = requireAuth("user")(async (request) => {
-  const { userId, shop } = request.user;
-
-  // User is authenticated and userId is verified
-  // Safe to perform operations for this user
-});
-
-// For admin routes
-export const POST = requireAuth("admin")(async (request) => {
-  const { userId, role } = request.user;
-
-  // User is authenticated admin
-  // Safe to perform privileged operations
-});
-
-// For coach routes
-export const GET = requireAuth("coach")(async (request) => {
-  const { userId, email, role } = request.user;
-
-  // User is authenticated coach
-  // Safe to access coach-specific data
-});
+if (storeId && storeId !== userId) {
+  // Check if user is admin/coach to query another user's content
+  if (session.user.role === "admin" || session.user.role === "coach") {
+    // Access is granted without logging
 ```
 
-### Anti-Patterns to Avoid
-
-❌ **Don't trust URL parameters**:
-
-```typescript
-// BAD
-const shopId = searchParams.get("shopId");
-await database.query(shopId); // Trusts user input!
-```
-
-✅ **Get identity from session**:
-
-```typescript
-// GOOD
-export const GET = requireAuth("user")(async (request) => {
-  const shopId = request.user.userId; // From validated session
-  await database.query(shopId);
-});
-```
-
-❌ **Don't use cookie-only auth**:
-
-```typescript
-// BAD
-const shop = req.cookies.get("shopify_shop")?.value;
-// Cookies can be stolen/forged
-```
-
-✅ **Use session validation**:
-
-```typescript
-// GOOD
-const session = await getServerSession(authOptions);
-if (!session?.user) return unauthorized;
-const shop = session.user.shop;
-```
-
-❌ **Don't validate using headers**:
-
-```typescript
-// BAD
-const isShopify = userAgent.includes("Shopify");
-// Headers are trivially spoofed
-```
-
-✅ **Use cryptographic validation**:
-
-```typescript
-// GOOD
-const session = await getServerSession(authOptions);
-// Session token is cryptographically verified
-```
-
----
-
-## Security Testing Recommendations
-
-### Manual Testing
-
-1. **Test unauthenticated access** to each protected endpoint
-2. **Test with valid session** but wrong shop_id parameter
-3. **Test role escalation** (user trying to access admin endpoints)
-4. **Test CSRF** on mutation endpoints
-5. **Test rate limiting** on expensive operations
-
-### Automated Testing
-
-```typescript
-// Example test for authentication
-describe("/api/ads-library/save", () => {
-  it("should reject unauthenticated requests", async () => {
-    const response = await fetch("/api/ads-library/save", {
-      method: "POST",
-      body: JSON.stringify({ shopId: "test" }),
+**Remediation Checklist:**
+- [ ] Add audit logging when admins access user data:
+  ```typescript
+  if (session.user.role === "admin" || session.user.role === "coach") {
+    logger.info("[Blog Library] Admin accessed user data", {
+      component: "blogs-library",
+      adminId: session.user.id,
+      targetUserId: queryStoreId,
+      action: "cross_user_read"
     });
+  }
+  ```
+- [ ] Consider adding a justification requirement for admin access
+- [ ] Implement an admin access audit dashboard
+- [ ] Review all routes where admins can access user data
 
-    expect(response.status).toBe(401);
-  });
+**References:** CWE-778: Insufficient Logging
 
-  it("should reject requests for other shops", async () => {
-    const session = await getSessionForShop("shop-a");
+---
 
-    const response = await fetch("/api/ads-library/save", {
-      method: "POST",
-      headers: { Cookie: session },
-      body: JSON.stringify({ shopId: "shop-b" }), // Different shop!
-    });
+### M4: Products Update Route Should Verify Shop Ownership After Token Exchange
 
-    expect(response.status).toBe(403);
-  });
-});
+**Location:** `/Users/bigdaddy/projects/thunder-text/src/app/api/products/update/route.ts:89-102`
+
+**Description:** The products update route accepts an Authorization header token and uses it for token exchange, but should verify the authenticated shop matches the requested shop after token resolution.
+
+**Impact:** Potential cross-shop product modification if session token validation doesn't enforce shop binding.
+
+**Remediation Checklist:**
+- [ ] After token exchange, verify the authenticated shop matches the requested shop:
+  ```typescript
+  // After getting accessToken from token exchange
+  // Verify the shop from the token matches the requested shop
+  const tokenShop = await verifyTokenShop(accessToken, fullShopDomain);
+  if (!tokenShop.valid) {
+    return NextResponse.json(
+      { error: "Shop mismatch - access denied" },
+      { status: 403, headers: corsHeaders }
+    );
+  }
+  ```
+- [ ] Add logging for shop mismatch attempts
+- [ ] Review all API routes that accept shop parameter with authentication
+
+**References:** CWE-639: Authorization Bypass Through User-Controlled Key
+
+---
+
+### M5: In-Memory Rate Limiting Fallback Not Suitable for Multi-Instance Production
+
+**Location:** `/Users/bigdaddy/projects/thunder-text/src/lib/middleware/rate-limit.ts:31-49`
+
+**Description:** When Upstash Redis is not configured, rate limiting falls back to an in-memory store. This works for single-instance deployments but fails to provide protection in multi-instance production environments.
+
+**Impact:** Attackers could bypass rate limits by having their requests distributed across different instances (rate limits multiplied by instance count).
+
+**Code Reference:**
+```typescript
+// src/lib/middleware/rate-limit.ts:31-49
+const rateLimitStore = new Map<string, RateLimitEntry>();
 ```
 
----
+**Remediation Checklist:**
+- [ ] Make `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` required in production
+- [ ] Add startup validation that fails if Redis is not configured in production:
+  ```typescript
+  if (process.env.NODE_ENV === 'production' && !redis) {
+    logger.error("CRITICAL: Redis not configured for production rate limiting", {
+      component: "rate-limit"
+    });
+    // Consider failing startup or sending alert
+  }
+  ```
+- [ ] Log warning when falling back to in-memory rate limiting
+- [ ] Add monitoring for rate limit provider in use
 
-## Summary Statistics
-
-| Category                    | Count | Notes                                          |
-| --------------------------- | ----- | ---------------------------------------------- |
-| **Total Routes Audited**    | 157   | All route.ts files in /api                     |
-| **Protected (Correct)**     | 94    | Using requireAuth, getServerSession, getUserId |
-| **Public (Expected)**       | 21    | Webhooks, OAuth, health checks                 |
-| **Missing Auth (Critical)** | 8     | Require immediate attention                    |
-| **Weak Auth (High)**        | 19    | Cookie-only or parameter-based                 |
-| **Needs Review (Medium)**   | 15    | Auth present but potentially weak              |
-
-### Severity Distribution
-
-- 🚨 **Critical**: 8 routes - Immediate security risk
-- 🔴 **High**: 19 routes - Significant exposure
-- 🟡 **Medium**: 15 routes - Potential issues
-- 🟢 **Low**: 21 routes - Informational/review
-- ✅ **Good**: 94 routes - Properly protected
+**References:** OWASP Rate Limiting Cheat Sheet
 
 ---
 
-## References
+### M6: OAuth State Parameter Has 10-Minute Validity Window
 
-- OWASP API Security Top 10: https://owasp.org/API-Security/
-- OWASP Broken Access Control: https://owasp.org/Top10/A01_2021-Broken_Access_Control/
-- NextAuth.js Security: https://next-auth.js.org/security
-- Shopify App Security: https://shopify.dev/docs/apps/best-practices/security
+**Location:** `/Users/bigdaddy/projects/thunder-text/src/lib/security/oauth-validation.ts:22`
+
+**Description:** OAuth state parameters are valid for 10 minutes (`MAX_STATE_AGE_MS = 10 * 60 * 1000`). While this provides usability, it extends the window for CSRF attacks if an attacker captures the OAuth initiation URL.
+
+**Impact:** Extended window for state parameter replay attacks if an attacker captures the OAuth initiation URL.
+
+**Remediation Checklist:**
+- [ ] Reduce state validity to 5 minutes (300 seconds)
+- [ ] Ensure single-use state tokens are properly enforced (already implemented via cookie-based verification)
+- [ ] Log and alert on state parameter reuse attempts
+- [ ] Add rate limiting for OAuth initiation requests
+
+**References:** RFC 6749 - OAuth 2.0 Security Considerations
 
 ---
 
-## Contact & Follow-Up
+## Low Vulnerabilities
 
-For questions about this security audit or to report additional findings:
+### L1: Shopify OAuth Callback Uses Multiple Fallback Strategies for Pending Shop Resolution
 
-**Priority**: Address Critical and High vulnerabilities within 1-2 weeks
-**Review Cycle**: Re-audit after fixes implemented
-**Ongoing**: Implement security testing in CI/CD pipeline
+**Location:** `/Users/bigdaddy/projects/thunder-text/src/app/api/auth/shopify/callback/route.ts:163-220`
+
+**Description:** The OAuth callback uses up to 4 strategies to find pending shop records, including "most recent pending shop in last 30 min" which could theoretically match the wrong user in a race condition.
+
+**Impact:** In rare edge cases with concurrent signups, a user might be linked to the wrong pending shop record.
+
+**Remediation Checklist:**
+- [ ] Add additional verification such as matching email or IP address
+- [ ] Consider using a more deterministic linking mechanism (e.g., signed state parameter containing pending shop ID)
+- [ ] Add logging to track which strategy was used and monitor for anomalies
+- [ ] Add a unique constraint to prevent multiple pending shops from conflicting
+
+**References:** CWE-362: Concurrent Execution Using Shared Resource with Improper Synchronization
 
 ---
 
-**End of Security Audit Report**
+### L2: Session Cookie Not Using Secure Prefix
+
+**Location:** `/Users/bigdaddy/projects/thunder-text/src/lib/auth/auth-options.ts:227-236`
+
+**Description:** The NextAuth session cookie uses `next-auth.session-token` name without the `__Host-` or `__Secure-` prefix. Modern browsers provide additional protection with these prefixes.
+
+**Code Reference:**
+```typescript
+cookies: {
+  sessionToken: {
+    name: "next-auth.session-token",
+    options: {
+      httpOnly: true,
+      sameSite: "strict", // Good - using strict
+      path: "/",
+      secure: process.env.NODE_ENV === "production",
+    },
+  },
+},
+```
+
+**Remediation Checklist:**
+- [ ] Consider using `__Host-next-auth.session-token` for production (requires `Secure`, `Path=/`, no `Domain`)
+- [ ] Test cookie handling across all supported browsers
+- [ ] Update cookie reading logic to handle prefixed cookie names
+
+**References:** MDN Web Docs - Set-Cookie Security
+
+---
+
+### L3: CORS Configuration Allows All Localhost Ports in Development
+
+**Location:** `/Users/bigdaddy/projects/thunder-text/src/middleware.ts:57-58`
+
+**Description:** In development mode, CORS allows any localhost port via `origin.startsWith("http://localhost:")`. While this aids development, it could be exploited if development mode is accidentally enabled.
+
+**Remediation Checklist:**
+- [ ] Restrict to specific ports: 3000, 3050, 3001 (common development ports only)
+- [ ] Add build-time check to ensure development CORS is not enabled in production builds
+- [ ] Use environment variable allowlist for development ports
+
+**References:** OWASP CORS Security Cheat Sheet
+
+---
+
+### L4: Error Messages May Leak Implementation Details in Some Routes
+
+**Location:** Various API routes
+
+**Description:** While most error handling is properly sanitized (e.g., products update route returns generic "Internal server error"), some routes include more detailed error information that could help attackers understand the system architecture.
+
+**Remediation Checklist:**
+- [ ] Audit all API routes for error message content
+- [ ] Standardize error responses with generic messages for production
+- [ ] Log detailed errors server-side only
+- [ ] Implement error reference IDs that can be correlated with server logs
+
+**References:** OWASP Error Handling Cheat Sheet
+
+---
+
+### L5: Bcrypt Salt Rounds Could Be Higher
+
+**Location:** Password hashing in signup route (uses 12 rounds)
+
+**Description:** Password hashing uses 12 salt rounds. While acceptable, modern recommendations suggest 12-14 rounds for 2024+ security requirements.
+
+**Remediation Checklist:**
+- [ ] Consider increasing to 13 or 14 rounds for new passwords
+- [ ] Implement adaptive hashing that increases rounds over time
+- [ ] Add password rehashing on successful login if using lower rounds
+
+**References:** OWASP Password Storage Cheat Sheet
+
+---
+
+## General Security Recommendations
+
+### Authentication and Authorization
+- [ ] **Implement refresh token rotation**: Rotate refresh tokens on each use to detect token theft
+- [ ] **Add session binding**: Bind session tokens to device/browser fingerprints for sensitive operations
+- [ ] **Extend 2FA to shop users**: Currently only admins have 2FA option; consider offering to all users
+- [ ] **Add session revocation UI**: Allow users to see and revoke active sessions
+
+### API Security
+- [ ] **Standardize authentication across all routes**: Migrate all routes to use content-center-auth
+- [ ] **Add request signing for sensitive operations**: Implement HMAC signing for product updates
+- [ ] **Implement API abuse detection**: Add monitoring for unusual access patterns beyond rate limiting
+
+### Monitoring and Alerting
+- [ ] **Add security event alerting**: Create alerts for:
+  - Failed authentication spikes
+  - Rate limit breaches
+  - Admin cross-user access
+  - OAuth state validation failures
+- [ ] **Implement request correlation IDs**: Add correlation IDs to track requests across services
+- [ ] **Create security incident runbook**: Document response procedures for common security events
+
+### Dependency Management
+- [ ] **Enable Dependabot or Renovate**: Automate dependency updates with security priority
+- [ ] **Add npm audit to CI/CD**: Block deployments with high severity vulnerabilities (already configured)
+- [ ] **Review transitive dependencies**: Audit indirect dependencies quarterly for security issues
+- [ ] **Pin dependency versions**: Use exact versions in package.json for predictable builds
+
+### Infrastructure Security
+- [ ] **Verify Supabase RLS policies**: Ensure Row Level Security is properly configured on all tables
+- [ ] **Review Render deployment configuration**: Ensure no debug flags in production
+- [ ] **Add request timeout enforcement**: Ensure all routes have appropriate timeouts
+- [ ] **Enable database query logging**: For audit trail and anomaly detection
+
+---
+
+## Security Posture Improvement Plan
+
+### Immediate (This Week)
+1. **[H1]** Add DOMPurify to BlogCreationModal
+2. **[H2]** Run `npm audit fix` to update preact
+3. **[M1]** Add authentication to parse-pdf route
+
+### Short-term (Next 2 Weeks)
+4. **[M2-M4]** Standardize authentication patterns across all routes
+5. **[M3]** Add comprehensive audit logging for admin actions
+6. **[M5]** Make Redis required for production rate limiting
+
+### Medium-term (Next Month)
+7. Implement security event alerting
+8. Add request correlation IDs
+9. Review and update all error messages
+10. Consider extending 2FA to shop users
+
+### Long-term (Quarterly)
+11. External penetration testing
+12. Security training for development team
+13. SOC 2 Type 2 compliance preparation
+14. Implement bug bounty program
+
+---
+
+## Appendix: Files Reviewed
+
+| File | Purpose |
+|------|---------|
+| `src/middleware.ts` | Request routing and CORS handling |
+| `src/lib/auth/auth-options.ts` | NextAuth configuration |
+| `src/lib/auth/content-center-auth.ts` | API authentication (JWT validation) |
+| `src/lib/middleware/webhook-validation.ts` | Shopify webhook HMAC validation |
+| `src/lib/middleware/rate-limit.ts` | Rate limiting implementation |
+| `src/lib/security/input-sanitization.ts` | XSS and injection prevention |
+| `src/lib/security/oauth-validation.ts` | OAuth state validation |
+| `src/lib/security/two-factor-auth.ts` | 2FA implementation |
+| `src/lib/security/login-protection.ts` | Account lockout |
+| `src/lib/security/password-validation.ts` | Password policy |
+| `src/lib/services/encryption.ts` | Token encryption (AES-256-GCM) |
+| `src/lib/supabase.ts` | Database client configuration |
+| `src/lib/supabase/admin.ts` | Admin database client |
+| `src/lib/shopify/token-manager.ts` | Shopify token management |
+| `src/app/api/auth/shopify/callback/route.ts` | Shopify OAuth callback |
+| `src/app/api/parse-pdf/route.ts` | PDF parsing endpoint |
+| `src/app/api/video/upload-image/route.ts` | File upload handling |
+| `src/app/api/products/update/route.ts` | Product update API |
+| `src/app/api/content-center/samples/route.ts` | Content samples API |
+| `src/app/api/content-center/content/[id]/route.ts` | Content detail API |
+| `src/app/api/blogs/library/route.ts` | Blog library API |
+| `src/app/api/webhooks/app-uninstalled/route.ts` | Webhook handler |
+| `src/app/components/shared/blog-linking/BlogCreationModal.tsx` | Blog creation UI |
+| `src/app/components/shared/EnhancedContentComparison.tsx` | Content comparison UI |
+| `next.config.ts` | Security headers configuration |
+| `package.json` | Dependencies |
+| `.env.example` | Environment variable documentation |
+| `SECURITY.md` | Existing security documentation |
+
+---
+
+**Report Generated:** 2026-01-09
+**Next Review Recommended:** 2026-04-09 (Quarterly)

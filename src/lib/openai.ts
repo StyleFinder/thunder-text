@@ -71,7 +71,10 @@ export class AIDescriptionGenerator {
       // Validate and filter images
       const validImages = request.images.filter((img) => {
         if (!img || typeof img !== "string" || img.length === 0) {
-          console.warn("⚠️ Skipping invalid image:", img);
+          logger.warn("Skipping invalid image", undefined, {
+            component: "openai",
+            image: typeof img,
+          });
           return false;
         }
         if (
@@ -79,7 +82,10 @@ export class AIDescriptionGenerator {
           !img.startsWith("data:") &&
           !img.startsWith("//")
         ) {
-          console.warn("⚠️ Skipping non-URL image:", img);
+          logger.warn("Skipping non-URL image", undefined, {
+            component: "openai",
+            prefix: img.substring(0, 20),
+          });
           return false;
         }
         return true;

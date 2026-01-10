@@ -8,7 +8,7 @@
  *
  * Security measures:
  * - Cryptographic nonces for CSRF protection
- * - Timestamp validation (max 10 min age)
+ * - Timestamp validation (max 5 min age)
  * - Zod schema validation for type safety
  * - Base64url encoding/decoding
  * - Server-side state storage for replay attack prevention
@@ -18,8 +18,10 @@ import { z } from "zod";
 import { randomBytes, createHash } from "crypto";
 import { cookies } from "next/headers";
 
-// Maximum age of state parameter (10 minutes)
-const MAX_STATE_AGE_MS = 10 * 60 * 1000;
+// M6 SECURITY: Reduced OAuth state window from 10 to 5 minutes
+// Shorter window reduces replay attack opportunity while still allowing
+// for reasonable user interaction time during OAuth flows
+const MAX_STATE_AGE_MS = 5 * 60 * 1000;
 
 /**
  * Facebook OAuth State Schema

@@ -42,9 +42,9 @@ function FacebookAdsContent() {
   const [selectedCampaignId, setSelectedCampaignId] = useState("");
   const [selectedCampaignName, setSelectedCampaignName] = useState("");
   const [createAdModalOpen, setCreateAdModalOpen] = useState(false);
-  const [_showBanner, _setShowBanner] = useState(false);
-  const [_bannerMessage, _setBannerMessage] = useState("");
-  const [_bannerType, _setBannerType] = useState<"success" | "error">(
+  const [showBanner, setShowBanner] = useState(false);
+  const [bannerMessage, setBannerMessage] = useState("");
+  const [bannerType, setBannerType] = useState<"success" | "error">(
     "success",
   );
 

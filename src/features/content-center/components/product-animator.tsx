@@ -179,14 +179,12 @@ export function ProductAnimator() {
   const [credits, setCredits] = useState<CreditInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showQualityWarning, setShowQualityWarning] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [pendingGeneration, setPendingGeneration] = useState(false);
+  const [_pendingGeneration, setPendingGeneration] = useState(false);
   const [videoLibrary, setVideoLibrary] = useState<VideoLibraryItem[]>([]);
   const [libraryLoading, setLibraryLoading] = useState(false);
   // UGC-specific state
   const [selectedScriptIndex, setSelectedScriptIndex] = useState(0);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [showScriptSelection, setShowScriptSelection] = useState(false);
+  const [_showScriptSelection, setShowScriptSelection] = useState(false);
   // Video playback modal state
   const [selectedVideo, setSelectedVideo] = useState<VideoLibraryItem | null>(
     null,

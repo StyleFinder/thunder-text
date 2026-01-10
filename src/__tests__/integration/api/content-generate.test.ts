@@ -12,12 +12,12 @@
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 import { POST } from "@/app/api/content-center/generate/route";
 import { NextRequest } from "next/server";
-import { _TEST_SHOP, API_URLS } from "../../utils/test-constants";
+import { TEST_SHOP as _TEST_SHOP, API_URLS } from "../../utils/test-constants";
 import { createAuthenticatedRequest } from "../../utils/auth-helpers";
 import {
   mockGenerateContent,
   resetContentGeneratorMock,
-  _createMockGeneratedContent,
+  createMockGeneratedContent as _createMockGeneratedContent,
 } from "../../mocks/content-generator.mock";
 
 // Mock the content generator service

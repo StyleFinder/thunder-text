@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useShop } from "@/hooks/useShop";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import {
   Loader2,
@@ -226,7 +227,7 @@ function BillingContent() {
       }
     } catch (err) {
       setError("Failed to load subscription");
-      console.error("Subscription fetch error:", err);
+      logger.error("Subscription fetch error", err, { component: "billing-page" });
     } finally {
       setLoading(false);
     }
@@ -338,7 +339,7 @@ function BillingContent() {
         });
       }
     } catch (err) {
-      console.error("Error cancelling subscription:", err);
+      logger.error("Error cancelling subscription", err, { component: "billing-page" });
       toast({
         title: "Error",
         description: "Failed to cancel subscription",

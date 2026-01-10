@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useShop } from "@/hooks/useShop";
+import { logger } from "@/lib/logger";
 import Image from "next/image";
 import {
   ProductImageUpload,
@@ -35,6 +36,7 @@ import {
   AlertCircle,
   Wand2,
   Info,
+  ImageIcon,
 } from "lucide-react";
 import {
   Tooltip,
@@ -52,13 +54,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { logger } from "@/lib/logger";
+
+// Blog linking
+import { BlogLinkingSection } from "@/app/components/shared/blog-linking";
+import type { BlogSelection, DiscoverMoreSection } from "@/types/blog-linking";
+import { appendDiscoverMoreSection } from "@/lib/templates/discover-more-template";
 
 interface EnhancementOptions {
   generateTitle: boolean;
   enhanceDescription: boolean;
   generateSEO: boolean;
   updateImages: boolean;
+  generateAltText: boolean;
 }
 
 export default function UnifiedEnhancePage() {
@@ -101,6 +108,11 @@ export default function UnifiedEnhancePage() {
   const [keyFeatures, setKeyFeatures] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
 
+  // Blog linking state
+  const [blogLinkEnabled, setBlogLinkEnabled] = useState(false);
+  const [selectedBlog, setSelectedBlog] = useState<BlogSelection | null>(null);
+  const [blogSummary, setBlogSummary] = useState("");
+
   // Enhancement options - all three main options enabled by default
   const [enhancementOptions, setEnhancementOptions] =
     useState<EnhancementOptions>({
@@ -108,7 +120,16 @@ export default function UnifiedEnhancePage() {
       enhanceDescription: true,
       generateSEO: true,
       updateImages: false,
+      generateAltText: false,
     });
+
+  // Alt text generation state
+  const [altTextGenerating, setAltTextGenerating] = useState(false);
+  const [altTextResult, setAltTextResult] = useState<{
+    processed: number;
+    updated: number;
+    errors: string[];
+  } | null>(null);
 
   // Generation states
   const [generating, setGenerating] = useState(false);
@@ -355,7 +376,7 @@ export default function UnifiedEnhancePage() {
             type.includes("shirt") ||
             type.includes("dress")
           ) {
-            setSelectedTemplate("womens_clothing");
+            setSelectedTemplate("clothing");
             populatedFields.push("selectedTemplate");
           } else if (type.includes("jewelry") || type.includes("accessory")) {
             setSelectedTemplate("jewelry_accessories");
@@ -529,12 +550,44 @@ export default function UnifiedEnhancePage() {
     setError(null);
 
     try {
-      if (editedContent.description) {
+      // Prepare blog link data if enabled
+      let blogLink: DiscoverMoreSection | undefined;
+      if (blogLinkEnabled && selectedBlog && blogSummary) {
+        const blogUrl =
+          selectedBlog.source === "shopify" && shop
+            ? `https://${shop}/blogs/${selectedBlog.blogHandle || "news"}/${selectedBlog.handle || selectedBlog.id}`
+            : `#blog-${selectedBlog.id}`;
+
+        blogLink = {
+          blogId: selectedBlog.id,
+          blogSource: selectedBlog.source,
+          title: selectedBlog.title,
+          summary: blogSummary,
+          url: blogUrl,
+        };
+      }
+
+      // Prepare the updates, appending blog section to description if enabled
+      let finalDescription = editedContent.description;
+      if (finalDescription && blogLink) {
+        finalDescription = appendDiscoverMoreSection(finalDescription, {
+          blogTitle: blogLink.title,
+          summary: blogLink.summary,
+          blogUrl: blogLink.url,
+        });
+      }
+
+      const updatesWithBlog = {
+        ...editedContent,
+        description: finalDescription,
+      };
+
+      if (updatesWithBlog.description) {
         console.log(
           "📝 Description preview (first 200 chars):",
-          editedContent.description.substring(0, 200),
+          updatesWithBlog.description.substring(0, 200),
         );
-        console.log("📏 Description length:", editedContent.description.length);
+        console.log("📏 Description length:", updatesWithBlog.description.length);
       }
 
       const isTestStore = shop?.includes("zunosai-staging-test-store");
@@ -549,7 +602,8 @@ export default function UnifiedEnhancePage() {
           body: JSON.stringify({
             shop: shop || "zunosai-staging-test-store.myshopify.com",
             productId: productId,
-            updates: editedContent,
+            updates: updatesWithBlog,
+            blogLink: blogLink,
           }),
         });
       } else {
@@ -559,7 +613,8 @@ export default function UnifiedEnhancePage() {
           body: JSON.stringify({
             shop: shop || "zunosai-staging-test-store.myshopify.com",
             productId: productId,
-            updates: editedContent,
+            updates: updatesWithBlog,
+            blogLink: blogLink,
           }),
         });
       }
@@ -568,6 +623,41 @@ export default function UnifiedEnhancePage() {
 
       if (!response.ok) {
         throw new Error(result.error || "Failed to apply changes");
+      }
+
+      // Generate alt text if option is enabled
+      let altTextUpdateResult = null;
+      if (enhancementOptions.generateAltText && productId) {
+        setAltTextGenerating(true);
+        try {
+          const altTextResponse = isTestStore && !isEmbedded
+            ? await fetch(`/api/shopify/products/${encodeURIComponent(productId)}/alt-text`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ onlyMissing: true }),
+              })
+            : await authenticatedFetch(`/api/shopify/products/${encodeURIComponent(productId)}/alt-text`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ onlyMissing: true }),
+              });
+
+          const altTextData = await altTextResponse.json();
+          if (altTextResponse.ok && altTextData.success) {
+            altTextUpdateResult = {
+              processed: altTextData.data.processed,
+              updated: altTextData.data.updated,
+              errors: altTextData.data.errors || [],
+            };
+            setAltTextResult(altTextUpdateResult);
+          } else {
+            console.warn("Alt text generation warning:", altTextData.error);
+          }
+        } catch (altTextErr) {
+          logger.error("Alt text generation error", altTextErr, { component: "unified-enhance" });
+        } finally {
+          setAltTextGenerating(false);
+        }
       }
 
       if (productData) {
@@ -593,7 +683,11 @@ export default function UnifiedEnhancePage() {
         setProductData(updatedData);
       }
 
-      const message = "Updates have been successfully applied to the product.";
+      // Build success message including alt text results
+      let message = "Updates have been successfully applied to the product.";
+      if (altTextUpdateResult && altTextUpdateResult.updated > 0) {
+        message += ` Alt text generated for ${altTextUpdateResult.updated} image(s).`;
+      }
 
       setSuccessMessage(message);
       setUpdateResult(result);
@@ -892,6 +986,7 @@ export default function UnifiedEnhancePage() {
                       enhanceDescription: !allSelected,
                       generateSEO: !allSelected,
                       updateImages: false,
+                      generateAltText: !allSelected,
                     });
                   }}
                 >
@@ -920,6 +1015,13 @@ export default function UnifiedEnhancePage() {
                     label: "Generate SEO metadata",
                     checked: enhancementOptions.generateSEO,
                   },
+                  {
+                    id: "generateAltText",
+                    label: "Generate image alt text",
+                    description: "AI-generated alt text for images missing it",
+                    checked: enhancementOptions.generateAltText,
+                    icon: ImageIcon,
+                  },
                 ].map((option) => (
                   <div
                     key={option.id}
@@ -939,9 +1041,16 @@ export default function UnifiedEnhancePage() {
                         }))
                       }
                     />
-                    <Label htmlFor={option.id} className="cursor-pointer">
-                      {option.label}
-                    </Label>
+                    <div className="flex flex-col">
+                      <Label htmlFor={option.id} className="cursor-pointer">
+                        {option.label}
+                      </Label>
+                      {"description" in option && option.description && (
+                        <span className="text-xs text-gray-500 mt-0.5">
+                          {option.description}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -994,6 +1103,19 @@ export default function UnifiedEnhancePage() {
                 setAdditionalNotes={setAdditionalNotes}
               />
             </div>
+
+            {/* Blog Linking Section */}
+            <BlogLinkingSection
+              enabled={blogLinkEnabled}
+              onEnabledChange={setBlogLinkEnabled}
+              selectedBlog={selectedBlog}
+              onBlogSelect={setSelectedBlog}
+              summary={blogSummary}
+              onSummaryChange={setBlogSummary}
+              storeId={shop || ""}
+              shopDomain={shop || undefined}
+              loading={generating}
+            />
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-3 pt-4 pb-8">
@@ -1136,6 +1258,13 @@ export default function UnifiedEnhancePage() {
                       ) : null}
                     </>
                   ) : null}
+                  {altTextResult && altTextResult.updated > 0 && (
+                    <p className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <ImageIcon className="w-3 h-3 text-gray-500" />
+                      Alt text generated for {altTextResult.updated} image(s)
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -1151,6 +1280,7 @@ export default function UnifiedEnhancePage() {
                 setShowSuccessModal(false);
                 setSuccessMessage(null);
                 setUpdateResult(null);
+                setAltTextResult(null);
               }}
             >
               Close

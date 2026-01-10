@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase";
 import { ShopProvider } from "./ShopContext";
+import { logger } from "@/lib/logger";
 
 /**
  * Shop Layout for /stores/[shopId]/* routes
@@ -101,7 +102,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
     }
 
     // Log unexpected errors and redirect to login
-    console.error('[ShopLayout] Unexpected error:', error);
+    logger.error("Unexpected error in ShopLayout", error as Error, { component: "shop-layout" });
     redirect("/auth/login?error=layout_error");
   }
 }

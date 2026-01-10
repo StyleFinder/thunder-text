@@ -4,6 +4,7 @@
  * Generates ad copy using GPT-4 with RAG context
  */
 
+import { logger } from "@/lib/logger";
 import { aieOpenAI } from "./clients";
 import type {
   AIEPlatform,
@@ -14,7 +15,6 @@ import type {
   AIEBrandVoice,
 } from "./types";
 import { AIEGenerationError } from "./types";
-import { logger } from "@/lib/logger";
 import {
   determineVariantTypes,
   selectHookTechnique,
@@ -160,7 +160,10 @@ Generate ads in JSON format with clear structure.`;
     });
 
     if (!validation.valid) {
-      console.warn(`⚠️  Character limit warnings:`, validation.errors);
+      logger.warn("Character limit warnings", undefined, {
+        component: "ad-generator",
+        errors: validation.errors,
+      });
     }
 
     // Build variant draft

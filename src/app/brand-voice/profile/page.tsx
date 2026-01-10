@@ -231,8 +231,8 @@ export default function FullProfilePage() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
-          <Button onClick={() => router.push("/brand-voice/settings")}>
-            Brand Voice Settings
+          <Button onClick={() => router.push("/brand-voice")}>
+            Brand Voice
           </Button>
           <Button
             variant="outline"

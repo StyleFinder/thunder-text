@@ -8,8 +8,7 @@ import {
 } from "@/features/content-center";
 import type { GenerationParams } from "@/features/content-center/components/GenerationControls";
 import { ContentLoader } from "@/components/ui/loading/ContentLoader";
-import { _Button } from "@/components/ui/button";
-import { ArrowLeft, _Sparkles } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { ContentType, GeneratedContent } from "@/types/content-center";
 import { useShopifyAuth } from "@/app/components/UnifiedShopifyAuth";
 import { logger } from "@/lib/logger";

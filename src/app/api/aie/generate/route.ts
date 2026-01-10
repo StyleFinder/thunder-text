@@ -6,6 +6,7 @@ import { AiePlatform, AieGoal, AdLengthMode } from "@/types/aie";
 import { logger } from "@/lib/logger";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { canGenerateAdByDomain } from "@/lib/usage/limits";
+import { toError } from "@/lib/api/route-config";
 
 /**
  * POST /api/aie/generate
@@ -201,12 +202,13 @@ export async function POST(req: NextRequest) {
         researchSummary: result.researchSummary,
       },
     });
-  } catch (error: any) {
-    logger.error("AIE Generation Error:", error as Error, {
+  } catch (error) {
+    const err = toError(error);
+    logger.error("AIE Generation Error:", err, {
       component: "generate",
     });
     return NextResponse.json(
-      { error: error.message || "Internal Server Error" },
+      { error: err.message || "Internal Server Error" },
       { status: 500 },
     );
   }

@@ -14,6 +14,7 @@
 import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { useShop } from "@/hooks/useShop";
+import { logger } from "@/lib/logger";
 import { useNavigation } from "@/app/hooks/useNavigation";
 import {
   ArrowLeft,
@@ -135,7 +136,7 @@ export default function ImageGenerationPage() {
         }
       }
     } catch (error) {
-      console.error("Failed to fetch products:", error);
+      logger.error("Failed to fetch products", error, { component: "image-generation" });
     } finally {
       setIsLoadingProducts(false);
     }
@@ -149,7 +150,7 @@ export default function ImageGenerationPage() {
         setUsageInfo(data.usage);
       }
     } catch (error) {
-      console.error("Failed to fetch usage info:", error);
+      logger.error("Failed to fetch usage info", error, { component: "image-generation" });
     }
   };
 
@@ -162,7 +163,7 @@ export default function ImageGenerationPage() {
         setLibrary(data.images || []);
       }
     } catch (error) {
-      console.error("Failed to fetch library:", error);
+      logger.error("Failed to fetch library", error, { component: "image-generation" });
     } finally {
       setIsLoadingLibrary(false);
     }
@@ -193,7 +194,7 @@ export default function ImageGenerationPage() {
     async (image?: GeneratedImage): Promise<boolean> => {
       const imageToSave = image || currentImage;
       if (!imageToSave) {
-        console.error("No image to save");
+        logger.warn("No image to save", { component: "image-generation" });
         return false;
       }
 
@@ -220,7 +221,7 @@ export default function ImageGenerationPage() {
         const data = await response.json();
 
         if (!response.ok) {
-          console.error("Save to library failed:", data.error);
+          logger.error("Save to library failed", new Error(data.error), { component: "image-generation" });
           return false;
         }
 
@@ -239,7 +240,7 @@ export default function ImageGenerationPage() {
         }
         return true;
       } catch (error) {
-        console.error("Failed to save to library:", error);
+        logger.error("Failed to save to library", error, { component: "image-generation" });
         return false;
       }
     },
@@ -293,13 +294,12 @@ export default function ImageGenerationPage() {
         setDeleteConfirm(null);
       }
     } catch (error) {
-      console.error("Failed to delete from library:", error);
+      logger.error("Failed to delete from library", error, { component: "image-generation" });
     }
   };
 
-  const _handleIterate = useCallback((feedback: string) => {
+  const _handleIterate = useCallback((_feedback: string) => {
     // This is handled by the chat component
-    console.log("Iterate with:", feedback);
   }, []);
 
   if (shopLoading) {
@@ -566,7 +566,6 @@ export default function ImageGenerationPage() {
                 aspectRatio={aspectRatio}
                 onImageGenerated={handleImageGenerated}
                 onSaveToLibrary={handleSaveToLibrary}
-                onDownload={handleDownload}
                 onExport={() => setShowExportDialog(true)}
                 disabled={!referenceImage}
               />

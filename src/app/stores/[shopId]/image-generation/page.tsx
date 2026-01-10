@@ -9,7 +9,8 @@
  */
 
 import { Suspense } from "react";
-import { Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { Loader2, Sparkles, Lock } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { isImageGenerationEnabled } from "@/lib/feature-flags";
@@ -44,21 +45,23 @@ function LoadingSpinner() {
 export default function StoreImageGenerationPage() {
   const params = useParams();
   const shopId = params?.shopId as string;
+  const { data: session } = useSession();
+  const userRole = (session?.user as { role?: string })?.role;
 
-  // Check if image generation is enabled
-  if (!isImageGenerationEnabled()) {
+  // Check if image generation is enabled (requires admin role)
+  if (!isImageGenerationEnabled(userRole)) {
     return (
       <div className="container mx-auto px-4 py-16 max-w-2xl">
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-6">
-            <AlertCircle className="h-8 w-8 text-gray-400" />
+            <Lock className="h-8 w-8 text-gray-400" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            Feature Not Available
+            Admin Access Required
           </h1>
           <p className="text-gray-600 mb-8">
-            Image generation is currently not available. This feature is in
-            development and will be enabled in a future release.
+            Image generation is an admin-only feature. Please contact your
+            administrator if you need access to this functionality.
           </p>
           <Link
             href={shopId ? `/stores/${shopId}/dashboard` : "/dashboard"}
