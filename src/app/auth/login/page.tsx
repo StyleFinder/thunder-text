@@ -53,8 +53,12 @@ export default function LoginPage() {
         redirect: false,
       });
 
-      if (result?.error) {
-        if (result.error.includes("ACCOUNT_LOCKED")) {
+      // Debug: signIn result is logged to help diagnose auth issues
+
+      // Check if login actually failed (ok: false means auth failed)
+      // Note: result.error may contain URL query params like "session_expired" even on success
+      if (!result?.ok) {
+        if (result?.error?.includes("ACCOUNT_LOCKED")) {
           const seconds = result.error.split(":")[1];
           setError(`Account locked. Please try again in ${seconds} seconds.`);
         } else {
@@ -70,11 +74,13 @@ export default function LoginPage() {
         const statusData = await statusResponse.json();
 
         if (statusResponse.ok && statusData.success && statusData.data) {
-          const { onboarding_completed, shop_domain, shop_id } = statusData.data;
+          const { onboarding_completed, shop_domain, shop_id } =
+            statusData.data;
 
           // Check if Shopify is connected - this is the TRUE indicator of onboarding completion
           // A shop_domain that doesn't start with "pending-" means Shopify is connected
-          const hasShopifyConnected = shop_domain && !shop_domain.startsWith("pending-");
+          const hasShopifyConnected =
+            shop_domain && !shop_domain.startsWith("pending-");
 
           // If onboarding is complete OR Shopify is connected, user should go to dashboard
           if (onboarding_completed || hasShopifyConnected) {

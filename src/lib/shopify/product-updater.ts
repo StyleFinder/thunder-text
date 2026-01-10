@@ -27,6 +27,8 @@ export interface ProductUpdateResult {
       description_updated: boolean;
       seo_updated: boolean;
       metafields_updated: boolean;
+      image_alt_updated?: boolean;
+      images_alt_count?: number;
     };
   };
   backup?: {

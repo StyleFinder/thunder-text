@@ -23,7 +23,8 @@ import {
   hasScope,
   ApiKeyScope,
 } from "@/lib/security/api-keys";
-import { createHmac, timingSafeEqual } from "crypto";
+// Note: crypto imports reserved for future HMAC validation
+// import { createHmac, timingSafeEqual } from "crypto";
 
 /**
  * Authentication result
@@ -77,8 +78,9 @@ interface ShopifySessionTokenPayload {
 
 /**
  * Parse a JWT without verification (for extracting claims)
+ * Reserved for future use when lightweight claim extraction is needed
  */
-function parseJWT(token: string): ShopifySessionTokenPayload | null {
+function _parseJWT(token: string): ShopifySessionTokenPayload | null {
   try {
     const [, payload] = token.split(".");
     if (!payload) return null;
@@ -106,68 +108,78 @@ function extractShopFromJWT(
 }
 
 /**
- * Verify Shopify session token signature using HMAC-SHA256
- * SECURITY: Uses timing-safe comparison to prevent timing attacks
+ * Verify Shopify session token signature using jsonwebtoken library
+ *
+ * SECURITY FIX (H2): Replaced manual HMAC verification with proper JWT library.
+ * - Explicitly specifies allowed algorithms to prevent algorithm confusion attacks
+ * - Validates all standard JWT claims
+ * - Uses jsonwebtoken's built-in timing-safe comparison
  */
-function verifySessionTokenSignature(token: string): boolean {
+function verifySessionTokenSignature(token: string): ShopifySessionTokenPayload | null {
   const clientSecret = process.env.SHOPIFY_API_SECRET;
 
   if (!clientSecret) {
     logger.error("SHOPIFY_API_SECRET not configured", undefined, {
       component: "content-center-auth",
     });
-    return false;
+    return null;
   }
 
   try {
-    const [header, payload, signature] = token.split(".");
+    // Use jsonwebtoken library with explicit algorithm specification
+    // This prevents algorithm confusion attacks (e.g., none algorithm, RS256 vs HS256)
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const jwt = require("jsonwebtoken") as { verify: (token: string, secret: string, options: { algorithms: string[]; complete: boolean }) => ShopifySessionTokenPayload };
 
-    if (!header || !payload || !signature) {
-      return false;
-    }
+    const decoded = jwt.verify(token, clientSecret, {
+      algorithms: ["HS256"], // Shopify session tokens use HS256
+      complete: false,
+    });
 
-    // Create the signing input (header.payload)
-    const signingInput = `${header}.${payload}`;
-
-    // Create HMAC-SHA256 signature
-    const hmac = createHmac("sha256", clientSecret);
-    hmac.update(signingInput);
-    const expectedSignature = hmac.digest("base64url");
-
-    // Timing-safe comparison
-    try {
-      const expectedBuffer = Buffer.from(expectedSignature, "utf8");
-      const receivedBuffer = Buffer.from(signature, "utf8");
-
-      if (expectedBuffer.length !== receivedBuffer.length) {
-        return false;
+    return decoded;
+  } catch (error) {
+    // Log specific JWT error types for debugging
+    if (error instanceof Error) {
+      if (error.name === "TokenExpiredError") {
+        logger.debug("Session token expired", {
+          component: "content-center-auth",
+        });
+      } else if (error.name === "JsonWebTokenError") {
+        logger.debug("Invalid session token signature", {
+          component: "content-center-auth",
+          error: error.message,
+        });
+      } else if (error.name === "NotBeforeError") {
+        logger.debug("Session token not yet valid", {
+          component: "content-center-auth",
+        });
       }
-
-      return timingSafeEqual(expectedBuffer, receivedBuffer);
-    } catch {
-      return false;
     }
-  } catch {
-    return false;
+    return null;
   }
 }
 
 /**
  * Validate a Shopify session token
  * Returns shop domain if valid, null if invalid
+ *
+ * SECURITY: Uses jsonwebtoken library for signature verification which:
+ * - Validates signature with timing-safe comparison
+ * - Validates exp, nbf claims automatically
+ * - Prevents algorithm confusion attacks via explicit algorithm list
  */
 function validateShopifySessionToken(token: string): string | null {
-  // Parse the JWT
-  const payload = parseJWT(token);
+  // Use jsonwebtoken library to verify and decode in one step
+  // This handles signature verification, expiration, and nbf checks
+  const payload = verifySessionTokenSignature(token);
+
   if (!payload) {
-    logger.debug("Failed to parse session token JWT", {
-      component: "content-center-auth",
-    });
+    // verifySessionTokenSignature already logged the specific error
     return null;
   }
 
   // Verify required fields
-  if (!payload.iss || !payload.dest || !payload.aud || !payload.exp) {
+  if (!payload.iss || !payload.dest || !payload.aud) {
     logger.debug("Session token missing required fields", {
       component: "content-center-auth",
     });
@@ -186,26 +198,18 @@ function validateShopifySessionToken(token: string): string | null {
     return null;
   }
 
-  // Check not before
-  const now = Math.floor(Date.now() / 1000);
-  if (payload.nbf && payload.nbf > now) {
-    logger.debug("Session token not yet valid", {
-      component: "content-center-auth",
-    });
-    return null;
-  }
-
-  // Check expiration
-  if (payload.exp < now) {
-    logger.debug("Session token expired", {
-      component: "content-center-auth",
-    });
-    return null;
-  }
-
-  // Verify signature
-  if (!verifySessionTokenSignature(token)) {
-    logger.warn("Session token signature verification failed", {
+  // Validate issuer format (should be https://{shop}.myshopify.com/admin)
+  try {
+    const issuerUrl = new URL(payload.iss);
+    if (!issuerUrl.hostname.endsWith(".myshopify.com")) {
+      logger.warn("Session token issuer is not a Shopify domain", {
+        component: "content-center-auth",
+        issuer: payload.iss,
+      });
+      return null;
+    }
+  } catch {
+    logger.debug("Invalid issuer URL in session token", {
       component: "content-center-auth",
     });
     return null;
@@ -528,12 +532,9 @@ export async function getUserId(request: NextRequest): Promise<string | null> {
  * @returns True if user has access, false otherwise
  */
 export async function hasResourceAccess(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  userId: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  resourceType: "sample" | "profile" | "content" | "template",
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  resourceId: string,
+  _userId: string,
+  _resourceType: "sample" | "profile" | "content" | "template",
+  _resourceId: string,
 ): Promise<boolean> {
   // For now, RLS policies handle access control at database level
   // This function is a placeholder for future enhancements like:

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { SerpApiTrendsProvider } from "@/lib/trends/providers/serpapi";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
 
 /**
  * POST /api/trends/refresh/backfill
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const theme = Array.isArray(shopTheme.themes)
+    const _theme = Array.isArray(shopTheme.themes)
       ? shopTheme.themes[0]
       : shopTheme.themes;
 
@@ -133,13 +133,12 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", shopThemeId);
 
-
     return NextResponse.json({
       success: true,
       message: "Backfill completed successfully",
     });
   } catch (error) {
-    logger.error("Backfill error:", error as Error, { component: 'backfill' });
+    logger.error("Backfill error:", error as Error, { component: "backfill" });
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(

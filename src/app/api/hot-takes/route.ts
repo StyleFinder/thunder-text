@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/hot-takes
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
     const { data: hotTakes, error } = await query;
 
     if (error) {
-      console.error("[Hot Takes API] Error fetching hot takes:", error);
+      logger.error("Error fetching hot takes", error, { component: "hot-takes-api", operation: "fetch" });
       return NextResponse.json(
         {
           success: false,
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
       data: hotTakes || [],
     });
   } catch (error) {
-    console.error("[Hot Takes API] Unexpected error:", error);
+    logger.error("Unexpected error fetching hot takes", error, { component: "hot-takes-api", operation: "fetch" });
     return NextResponse.json(
       {
         success: false,
@@ -136,12 +137,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error("[Hot Takes API] Error creating hot take:", {
-        error,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
+      logger.error("Error creating hot take", error, {
+        component: "hot-takes-api",
+        operation: "create",
+        errorCode: error.code,
+        errorDetails: error.details,
+        errorHint: error.hint,
       });
       return NextResponse.json(
         {
@@ -161,7 +162,7 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     );
   } catch (error) {
-    console.error("[Hot Takes API] Unexpected error:", error);
+    logger.error("Unexpected error creating hot take", error, { component: "hot-takes-api", operation: "create" });
     return NextResponse.json(
       {
         success: false,

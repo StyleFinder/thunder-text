@@ -103,6 +103,66 @@ const eslintConfig = [
       ],
     },
   },
+  // Bulletproof React: Enforce unidirectional imports
+  // Import hierarchy: shared (lib/components/hooks) → features → app
+  {
+    files: ["src/features/**/*.ts", "src/features/**/*.tsx"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/app/*", "../app/*", "../../app/*"],
+              message:
+                "Features cannot import from app layer. Move shared code to /lib or /components.",
+            },
+            {
+              group: [
+                "@/features/*/components/*",
+                "@/features/*/hooks/*",
+                "@/features/*/api/*",
+                "@/features/*/utils/*",
+                "@/features/*/types/*",
+              ],
+              message:
+                "Import from feature index.ts only (e.g., @/features/auth), not internal paths.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Shared code (lib, components, hooks) cannot import from features or app
+  {
+    files: [
+      "src/lib/**/*.ts",
+      "src/lib/**/*.tsx",
+      "src/components/**/*.ts",
+      "src/components/**/*.tsx",
+      "src/hooks/**/*.ts",
+      "src/hooks/**/*.tsx",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/features/*", "../features/*", "../../features/*"],
+              message:
+                "Shared code cannot import from features. Keep shared code dependency-free.",
+            },
+            {
+              group: ["@/app/*", "../app/*", "../../app/*"],
+              message:
+                "Shared code cannot import from app layer. Keep shared code dependency-free.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

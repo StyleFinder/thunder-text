@@ -6,8 +6,13 @@ Sentry.init({
   // 10% sampling in production to reduce costs, 100% in development for debugging
   tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
 
-  // Setting this option to true will print useful information to the console while you're setting up Sentry.
-  debug: false,
+  // Only enable debug in development
+  debug: process.env.NODE_ENV === "development",
+
+  // Enable Sentry logging feature
+  _experiments: {
+    enableLogs: true,
+  },
 
   // Filter out sensitive data
   beforeSend(event) {
@@ -30,5 +35,19 @@ Sentry.init({
     }
 
     return event;
+  },
+
+  // Scrub PII from transaction names (URLs)
+  beforeSendTransaction(transaction) {
+    if (transaction.transaction) {
+      // Replace dynamic route segments with placeholders
+      transaction.transaction = transaction.transaction
+        .replace(/\/stores\/[^/]+/, "/stores/[shopId]")
+        .replace(/\/products\/[^/]+/, "/products/[productId]")
+        .replace(/\/sessions\/[^/]+/, "/sessions/[sessionId]")
+        .replace(/email=[^&]+/, "email=[REDACTED]")
+        .replace(/token=[^&]+/, "token=[REDACTED]");
+    }
+    return transaction;
   },
 });

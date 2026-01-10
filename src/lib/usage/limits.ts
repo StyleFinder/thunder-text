@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 /**
  * Usage Limits Configuration and Enforcement
  *
@@ -121,7 +122,7 @@ export function getCurrentBillingPeriod(): { start: Date; end: Date } {
     23,
     59,
     59,
-    999
+    999,
   );
   return { start, end };
 }
@@ -153,7 +154,7 @@ export async function getShopPlan(shopId: string): Promise<string> {
  * Get shop ID from shop domain
  */
 export async function getShopIdFromDomain(
-  shopDomain: string
+  shopDomain: string,
 ): Promise<string | null> {
   const { data: shop, error } = await supabaseAdmin
     .from("shops")
@@ -171,7 +172,9 @@ export async function getShopIdFromDomain(
 /**
  * Count product descriptions generated this billing period
  */
-export async function countProductDescriptions(shopId: string): Promise<number> {
+export async function countProductDescriptions(
+  shopId: string,
+): Promise<number> {
   const { start, end } = getCurrentBillingPeriod();
 
   // Count from generated_content table
@@ -229,7 +232,7 @@ export async function countAds(shopId: string): Promise<number> {
   // Return the maximum to avoid undercounting
   return Math.max(
     generatedCount || 0,
-    (adsLibraryCount || 0) + (facebookDraftsCount || 0)
+    (adsLibraryCount || 0) + (facebookDraftsCount || 0),
   );
 }
 
@@ -237,7 +240,7 @@ export async function countAds(shopId: string): Promise<number> {
  * Check if a shop can generate a product description
  */
 export async function canGenerateProductDescription(
-  shopId: string
+  shopId: string,
 ): Promise<UsageCheckResult> {
   try {
     const plan = await getShopPlan(shopId);
@@ -270,7 +273,7 @@ export async function canGenerateProductDescription(
     logger.error(
       "[Usage Limits] Error checking product description limit",
       error as Error,
-      { component: "usage-limits", shopId }
+      { component: "usage-limits", shopId },
     );
     // Fail open - allow generation if there's an error checking limits
     return {
@@ -349,7 +352,7 @@ export async function getUsageStats(shopId: string): Promise<UsageStats> {
       limit: limits.productDescriptions,
       remaining: Math.max(0, limits.productDescriptions - productDescUsed),
       percentUsed: Math.round(
-        (productDescUsed / limits.productDescriptions) * 100
+        (productDescUsed / limits.productDescriptions) * 100,
       ),
     },
     ads: {
@@ -368,7 +371,7 @@ export async function getUsageStats(shopId: string): Promise<UsageStats> {
  * Check usage by shop domain (convenience function)
  */
 export async function canGenerateProductDescriptionByDomain(
-  shopDomain: string
+  shopDomain: string,
 ): Promise<UsageCheckResult> {
   const shopId = await getShopIdFromDomain(shopDomain);
   if (!shopId) {
@@ -388,7 +391,7 @@ export async function canGenerateProductDescriptionByDomain(
  * Check ad usage by shop domain (convenience function)
  */
 export async function canGenerateAdByDomain(
-  shopDomain: string
+  shopDomain: string,
 ): Promise<UsageCheckResult> {
   const shopId = await getShopIdFromDomain(shopDomain);
   if (!shopId) {

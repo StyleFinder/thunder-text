@@ -82,7 +82,11 @@ export class IntegrationService {
 
     // 3. Check Expiry & Refresh if needed (Placeholder for refresh logic)
     if (data.expires_at && new Date(data.expires_at) < new Date()) {
-      console.log(`Token for ${provider} expired, attempting refresh...`);
+      logger.info(`Token for ${provider} expired, attempting refresh...`, {
+        component: "integration-service",
+        shopId,
+        provider,
+      });
       // TODO: Implement refresh logic here or return null to trigger re-auth flow
       // return await this.refreshToken(shopId, provider, data.refresh_token);
       return null;

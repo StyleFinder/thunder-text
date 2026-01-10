@@ -1,11 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth/auth-options';
-import { generateImage, getSystemHealth } from '@/lib/services/image-generation-client';
-import { logger } from '@/lib/logger';
-import { supabaseAdmin } from '@/lib/supabase/admin';
-import type { ImageProvider, AspectRatio, ImageQuality } from '@/types/image-generation';
-import { CREDIT_LIMITS } from '@/types/image-generation';
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/auth-options";
+import {
+  generateImage,
+  getSystemHealth,
+} from "@/lib/services/image-generation-client";
+import { logger } from "@/lib/logger";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import type {
+  ImageProvider,
+  AspectRatio,
+  ImageQuality,
+} from "@/types/image-generation";
+import { CREDIT_LIMITS } from "@/types/image-generation";
+import {
+  startRequestTracker,
+  calculateImageCost,
+} from "@/lib/monitoring/api-logger";
 
 /**
  * POST /api/image-generation
@@ -24,11 +36,17 @@ import { CREDIT_LIMITS } from '@/types/image-generation';
  * - conversationId: string (optional) - For iteration tracking
  */
 export async function POST(req: NextRequest) {
+  const tracker = startRequestTracker();
+  let shopId: string | null = null;
+
   try {
     // SECURITY: Require session authentication
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
     }
 
     // Parse request body first to get shopId fallback
@@ -38,25 +56,30 @@ export async function POST(req: NextRequest) {
       referenceImage,
       provider,
       model,
-      aspectRatio = '1:1',
-      quality: _qualityIgnored = 'standard', // Quality parameter ignored - always use standard for cost efficiency
+      aspectRatio = "1:1",
+      quality: _qualityIgnored = "standard", // Quality parameter ignored - always use standard for cost efficiency
       conversationId,
       questionnaireAnswers,
       shopId: shopIdFromBody,
     } = body;
 
     // Get shop domain from session OR use shopId from request body
-    const shopDomainFromSession = (session.user as { shopDomain?: string }).shopDomain;
+    const shopDomainFromSession = (session.user as { shopDomain?: string })
+      .shopDomain;
     const userIdFromSession = (session.user as { id?: string }).id;
 
-    let shopData: { id: string; is_active: boolean; plan: string | null } | null = null;
+    let shopData: {
+      id: string;
+      is_active: boolean;
+      plan: string | null;
+    } | null = null;
 
     // Try to find shop by session domain first
     if (shopDomainFromSession) {
       const { data, error } = await supabaseAdmin
-        .from('shops')
-        .select('id, is_active, plan')
-        .eq('shop_domain', shopDomainFromSession)
+        .from("shops")
+        .select("id, is_active, plan")
+        .eq("shop_domain", shopDomainFromSession)
         .single();
 
       if (!error && data) {
@@ -67,9 +90,9 @@ export async function POST(req: NextRequest) {
     // Fall back to shopId from request body if session lookup failed
     if (!shopData && shopIdFromBody) {
       const { data, error } = await supabaseAdmin
-        .from('shops')
-        .select('id, is_active, plan')
-        .eq('id', shopIdFromBody)
+        .from("shops")
+        .select("id, is_active, plan")
+        .eq("id", shopIdFromBody)
         .single();
 
       if (!error && data) {
@@ -80,9 +103,9 @@ export async function POST(req: NextRequest) {
     // Fall back to user ID from session (for standalone users where user.id === shop.id)
     if (!shopData && userIdFromSession) {
       const { data, error } = await supabaseAdmin
-        .from('shops')
-        .select('id, is_active, plan')
-        .eq('id', userIdFromSession)
+        .from("shops")
+        .select("id, is_active, plan")
+        .eq("id", userIdFromSession)
         .single();
 
       if (!error && data) {
@@ -91,53 +114,75 @@ export async function POST(req: NextRequest) {
     }
 
     if (!shopData) {
-      logger.error('Shop not found for image generation:', undefined, {
-        component: 'image-generation',
+      logger.error("Shop not found for image generation:", undefined, {
+        component: "image-generation",
         shopDomainFromSession,
         shopIdFromBody,
         userIdFromSession,
       });
-      return NextResponse.json({ error: 'No shop associated with account' }, { status: 403 });
+      return NextResponse.json(
+        { error: "No shop associated with account" },
+        { status: 403 },
+      );
     }
 
     if (!shopData.is_active) {
-      return NextResponse.json({ error: 'Shop is not active' }, { status: 403 });
+      return NextResponse.json(
+        { error: "Shop is not active" },
+        { status: 403 },
+      );
     }
 
-    const shopId = shopData.id;
-    const plan = shopData.plan || 'starter';
+    shopId = shopData.id;
+    const plan = shopData.plan || "starter";
 
     // Check usage limits
     const usageCheck = await checkUsageLimits(shopId, plan);
     if (!usageCheck.allowed) {
+      // Log rate limited request
+      await tracker.log({
+        shopId,
+        operationType: "image_generation",
+        endpoint: "/api/image-generation",
+        model: "gpt-image-1",
+        status: "rate_limited",
+        metadata: { plan, used: usageCheck.used, limit: usageCheck.limit },
+      });
+
       return NextResponse.json(
         {
-          error: 'Monthly image generation limit reached',
+          error: "Monthly image generation limit reached",
           details: {
             used: usageCheck.used,
             limit: usageCheck.limit,
             remaining: 0,
           },
         },
-        { status: 429 }
+        { status: 429 },
       );
     }
 
     // Validate required fields
-    if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+    if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
+      return NextResponse.json(
+        { error: "Prompt is required" },
+        { status: 400 },
+      );
     }
 
-    if (provider !== 'openai') {
+    if (provider !== "openai") {
       return NextResponse.json(
-        { error: 'Valid provider (openai) is required' },
-        { status: 400 }
+        { error: "Valid provider (openai) is required" },
+        { status: 400 },
       );
     }
 
     // Validate prompt length
     if (prompt.length > 4000) {
-      return NextResponse.json({ error: 'Prompt exceeds maximum length of 4000 characters' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Prompt exceeds maximum length of 4000 characters" },
+        { status: 400 },
+      );
     }
 
     // Check system health
@@ -145,15 +190,15 @@ export async function POST(req: NextRequest) {
     if (!health.overall.healthy) {
       return NextResponse.json(
         {
-          error: 'Image generation service is temporarily unavailable',
+          error: "Image generation service is temporarily unavailable",
           health: health.providers,
         },
-        { status: 503 }
+        { status: 503 },
       );
     }
 
-    logger.info('Starting image generation request', {
-      component: 'image-generation',
+    logger.info("Starting image generation request", {
+      component: "image-generation",
       shopId,
       provider,
       model,
@@ -166,7 +211,7 @@ export async function POST(req: NextRequest) {
       provider: provider as ImageProvider,
       model,
       aspectRatio: aspectRatio as AspectRatio,
-      quality: 'standard' as ImageQuality, // Force standard quality - HD disabled for cost savings
+      quality: "standard" as ImageQuality, // Force standard quality - HD disabled for cost savings
       shopId,
       conversationId,
       questionnaireAnswers,
@@ -174,6 +219,22 @@ export async function POST(req: NextRequest) {
 
     // Record usage
     await recordUsage(shopId, result.costCents, result.provider, result.model);
+
+    // Log successful API request
+    const imageCost = calculateImageCost("gpt-image-1", "standard");
+    await tracker.log({
+      shopId,
+      operationType: "image_generation",
+      endpoint: "/api/image-generation",
+      model: result.model || "gpt-image-1",
+      costUsd: imageCost,
+      status: "success",
+      metadata: {
+        provider: result.provider,
+        aspectRatio,
+        hasReferenceImage: !!referenceImage,
+      },
+    });
 
     // Return result with usage info
     return NextResponse.json({
@@ -185,27 +246,58 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Image generation error:', error as Error, {
-      component: 'image-generation',
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    logger.error("Image generation error:", error as Error, {
+      component: "image-generation",
+    });
+
+    // Determine error type for logging
+    let errorType = "api_error";
+    if (errorMessage.includes("circuit breaker")) {
+      errorType = "timeout";
+    } else if (
+      errorMessage.includes("content policy") ||
+      errorMessage.includes("safety")
+    ) {
+      errorType = "validation_error";
+    }
+
+    // Log failed API request
+    await tracker.logError({
+      shopId,
+      operationType: "image_generation",
+      endpoint: "/api/image-generation",
+      model: "gpt-image-1",
+      errorType,
+      errorMessage,
     });
 
     // Check for specific error types
-    if (errorMessage.includes('circuit breaker')) {
+    if (errorMessage.includes("circuit breaker")) {
       return NextResponse.json(
-        { error: 'Service temporarily unavailable. Please try again later.' },
-        { status: 503 }
+        { error: "Service temporarily unavailable. Please try again later." },
+        { status: 503 },
       );
     }
 
-    if (errorMessage.includes('content policy') || errorMessage.includes('safety')) {
+    if (
+      errorMessage.includes("content policy") ||
+      errorMessage.includes("safety")
+    ) {
       return NextResponse.json(
-        { error: 'Your prompt was flagged by content safety filters. Please revise and try again.' },
-        { status: 400 }
+        {
+          error:
+            "Your prompt was flagged by content safety filters. Please revise and try again.",
+        },
+        { status: 400 },
       );
     }
 
-    return NextResponse.json({ error: errorMessage || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: errorMessage || "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -218,7 +310,10 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
     }
 
     const health = getSystemHealth();
@@ -233,10 +328,13 @@ export async function GET() {
       },
     });
   } catch (error: unknown) {
-    logger.error('Health check error:', error as Error, {
-      component: 'image-generation',
+    logger.error("Health check error:", error as Error, {
+      component: "image-generation",
     });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -245,7 +343,7 @@ export async function GET() {
  */
 async function checkUsageLimits(
   shopId: string,
-  plan: string
+  plan: string,
 ): Promise<{ allowed: boolean; used: number; limit: number }> {
   const limit = CREDIT_LIMITS[plan] || CREDIT_LIMITS.starter;
 
@@ -255,14 +353,14 @@ async function checkUsageLimits(
   startOfMonth.setHours(0, 0, 0, 0);
 
   const { count, error } = await supabaseAdmin
-    .from('generated_images')
-    .select('id', { count: 'exact', head: true })
-    .eq('shop_id', shopId)
-    .gte('created_at', startOfMonth.toISOString());
+    .from("generated_images")
+    .select("id", { count: "exact", head: true })
+    .eq("shop_id", shopId)
+    .gte("created_at", startOfMonth.toISOString());
 
   if (error) {
-    logger.error('Error checking usage limits:', error as Error, {
-      component: 'image-generation',
+    logger.error("Error checking usage limits:", error as Error, {
+      component: "image-generation",
       shopId,
     });
     // Allow on error to avoid blocking users
@@ -284,12 +382,12 @@ async function recordUsage(
   shopId: string,
   costCents: number,
   provider: string,
-  model: string
+  model: string,
 ): Promise<void> {
   try {
     // Note: This is a lightweight usage record
     // Full image record is created when the image is saved to library
-    await supabaseAdmin.from('image_generation_usage').insert({
+    await supabaseAdmin.from("image_generation_usage").insert({
       shop_id: shopId,
       cost_cents: costCents,
       provider,
@@ -298,8 +396,8 @@ async function recordUsage(
     });
   } catch (error) {
     // Log but don't fail on usage recording errors
-    logger.error('Error recording usage:', error as Error, {
-      component: 'image-generation',
+    logger.error("Error recording usage:", error as Error, {
+      component: "image-generation",
       shopId,
     });
   }

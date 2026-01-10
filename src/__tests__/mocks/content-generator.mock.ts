@@ -31,7 +31,7 @@ export const mockGeneratedContent: GeneratedContentResult = {
  * Create a customized mock response
  */
 export function createMockGeneratedContent(
-  overrides: Partial<GeneratedContentResult> = {}
+  overrides: Partial<GeneratedContentResult> = {},
 ): GeneratedContentResult {
   return {
     ...mockGeneratedContent,
@@ -47,25 +47,22 @@ export function createMockGeneratedContent(
  * Mock implementation of generateContent
  * Returns predictable content for testing
  */
-export const mockGenerateContent = jest.fn().mockImplementation(
-  async (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    voiceProfile: any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    params: any
-  ): Promise<GeneratedContentResult> => {
-    return createMockGeneratedContent({
-      metadata: {
-        ...mockGeneratedContent.metadata,
-        contentType: params.contentType,
-        topic: params.topic,
-        requestedWordCount: params.wordCount,
-        toneIntensity: params.toneIntensity,
-        ctaType: params.ctaType,
-      },
-    });
-  }
-);
+export const mockGenerateContent = jest
+  .fn()
+  .mockImplementation(
+    async (voiceProfile: any, params: any): Promise<GeneratedContentResult> => {
+      return createMockGeneratedContent({
+        metadata: {
+          ...mockGeneratedContent.metadata,
+          contentType: params.contentType,
+          topic: params.topic,
+          requestedWordCount: params.wordCount,
+          toneIntensity: params.toneIntensity,
+          ctaType: params.ctaType,
+        },
+      });
+    },
+  );
 
 /**
  * Reset the mock between tests

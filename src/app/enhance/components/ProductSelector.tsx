@@ -1,10 +1,10 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { useState, useEffect, useMemo } from "react";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-  Loader2,
   Search,
   Package,
   Zap,
@@ -12,62 +12,94 @@ import {
   PenTool,
   ImageOff,
   AlertCircle,
-  RefreshCw
-} from 'lucide-react'
-import { logger } from '@/lib/logger'
+  RefreshCw,
+} from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface Product {
-  id: string
-  title: string
-  handle: string
+  id: string;
+  title: string;
+  handle: string;
   featuredImage?: {
-    url: string
-    altText?: string
-  }
-  status: string
-  totalInventory?: number
+    url: string;
+    altText?: string;
+  };
+  status: string;
+  totalInventory?: number;
 }
 
 interface ProductSelectorProps {
-  shop: string
-  onProductSelect: (productId: string) => void
+  shop: string;
+  onProductSelect: (productId: string) => void;
 }
 
-export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps) {
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
+export function ProductSelector({
+  shop,
+  onProductSelect,
+}: ProductSelectorProps) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
+    // Q5: AbortController for cleanup to prevent memory leaks
+    const abortController = new AbortController();
+    let isMounted = true;
+
     const fetchProducts = async () => {
       try {
-        setLoading(true)
-        setError(null)
-
-        const response = await fetch(`/api/shopify/products?shop=${encodeURIComponent(shop)}`)
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch products')
+        if (isMounted) {
+          setLoading(true);
+          setError(null);
         }
 
-        const data = await response.json()
-        setProducts(data.products || [])
+        const response = await fetch(
+          `/api/shopify/products?shop=${encodeURIComponent(shop)}`,
+          { signal: abortController.signal },
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch products");
+        }
+
+        const data = await response.json();
+        if (isMounted) {
+          setProducts(data.products || []);
+        }
       } catch (err) {
-        logger.error('Failed to fetch products for selector', err as Error, { component: 'ProductSelector' })
-        setError('Failed to load products. Please try again.')
+        // Don't update state if aborted
+        if (err instanceof Error && err.name === "AbortError") return;
+        if (isMounted) {
+          logger.error("Failed to fetch products for selector", err as Error, {
+            component: "ProductSelector",
+          });
+          setError("Failed to load products. Please try again.");
+        }
       } finally {
-        setLoading(false)
+        if (isMounted) setLoading(false);
       }
-    }
+    };
 
-    fetchProducts()
-  }, [shop])
+    fetchProducts();
 
-  const filteredProducts = products.filter(product =>
-    product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.handle.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+    // Cleanup: abort fetch and mark as unmounted
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, [shop]);
+
+  // Q8: Memoize filtered products to avoid recomputation on every render
+  const filteredProducts = useMemo(
+    () =>
+      products.filter(
+        (product) =>
+          product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.handle.toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
+    [products, searchQuery],
+  );
 
   // Loading state
   if (loading) {
@@ -79,13 +111,20 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
             <div className="flex items-center gap-4 mb-6">
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)' }}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                }}
               >
                 <PenTool className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Enhance Product</h1>
-                <p className="text-gray-500 text-sm">Select a product to enhance</p>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Enhance Product
+                </h1>
+                <p className="text-gray-500 text-sm">
+                  Select a product to enhance
+                </p>
               </div>
             </div>
           </div>
@@ -95,7 +134,10 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
             <div className="h-10 w-full bg-gray-100 rounded-lg animate-pulse mb-6" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="border border-gray-200 rounded-xl p-4 animate-pulse">
+                <div
+                  key={i}
+                  className="border border-gray-200 rounded-xl p-4 animate-pulse"
+                >
                   <div className="flex gap-3">
                     <div className="w-16 h-16 bg-gray-100 rounded-lg" />
                     <div className="flex-1">
@@ -110,7 +152,7 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
           </div>
         </main>
       </div>
-    )
+    );
   }
 
   // Error state
@@ -119,14 +161,17 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
       <div
         className="min-h-screen flex items-center justify-center p-6"
         style={{
-          background: 'linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)'
+          background:
+            "linear-gradient(135deg, #001429 0%, #002952 50%, #003d7a 100%)",
         }}
       >
         <div className="w-full max-w-md">
           <div className="flex items-center justify-center gap-3 mb-8">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)' }}
+              style={{
+                background: "linear-gradient(135deg, #ffcc00 0%, #ff9900 100%)",
+              }}
             >
               <Zap className="w-5 h-5 text-white" />
             </div>
@@ -136,7 +181,7 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
             <div className="text-center">
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
-                style={{ background: 'rgba(220, 38, 38, 0.1)' }}
+                style={{ background: "rgba(220, 38, 38, 0.1)" }}
               >
                 <AlertCircle className="w-8 h-8 text-red-500" />
               </div>
@@ -147,8 +192,9 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
               <Button
                 className="w-full h-11 text-base font-medium"
                 style={{
-                  background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)',
-                  border: 'none'
+                  background:
+                    "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                  border: "none",
                 }}
                 onClick={() => window.location.reload()}
               >
@@ -159,7 +205,7 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -171,25 +217,31 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
             <div className="flex items-center gap-4">
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #0066cc 0%, #0099ff 100%)' }}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+                }}
               >
                 <PenTool className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Enhance Product</h1>
-                <p className="text-gray-500 text-sm">Select a product to enhance its description</p>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Enhance Product
+                </h1>
+                <p className="text-gray-500 text-sm">
+                  Select a product to enhance its description
+                </p>
               </div>
             </div>
             <Button
               variant="outline"
               className="border-gray-200 hover:bg-gray-50"
-              onClick={() => window.location.href = `/dashboard?shop=${shop}`}
+              onClick={() => (window.location.href = `/dashboard?shop=${shop}`)}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
             </Button>
           </div>
-
         </div>
 
         {/* Product Selection Card */}
@@ -213,17 +265,17 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
             <div className="text-center py-12">
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-                style={{ background: 'rgba(0, 102, 204, 0.1)' }}
+                style={{ background: "rgba(0, 102, 204, 0.1)" }}
               >
-                <Package className="w-8 h-8" style={{ color: '#0066cc' }} />
+                <Package className="w-8 h-8" style={{ color: "#0066cc" }} />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                {searchQuery ? 'No products found' : 'No products in store'}
+                {searchQuery ? "No products found" : "No products in store"}
               </h3>
               <p className="text-gray-500">
                 {searchQuery
-                  ? 'Try adjusting your search terms'
-                  : 'Add some products to your Shopify store first'}
+                  ? "Try adjusting your search terms"
+                  : "Add some products to your Shopify store first"}
               </p>
             </div>
           ) : (
@@ -232,17 +284,20 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
                 <button
                   key={product.id}
                   onClick={() => {
-                    const numericId = product.id.split('/').pop() || product.id
-                    onProductSelect(numericId)
+                    const numericId = product.id.split("/").pop() || product.id;
+                    onProductSelect(numericId);
                   }}
                   className="text-left p-4 border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 group"
                 >
                   <div className="flex gap-3">
                     {product.featuredImage?.url ? (
-                      <img
+                      <Image
                         src={product.featuredImage.url}
                         alt={product.featuredImage.altText || product.title}
+                        width={64}
+                        height={64}
                         className="w-16 h-16 object-cover rounded-lg group-hover:scale-105 transition-transform"
+                        unoptimized
                       />
                     ) : (
                       <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center">
@@ -258,9 +313,9 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
                       </p>
                       <span
                         className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          product.status === 'ACTIVE'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-600'
+                          product.status === "ACTIVE"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-600"
                         }`}
                       >
                         {product.status}
@@ -274,5 +329,5 @@ export function ProductSelector({ shop, onProductSelect }: ProductSelectorProps)
         </div>
       </main>
     </div>
-  )
+  );
 }

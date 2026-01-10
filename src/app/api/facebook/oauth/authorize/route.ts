@@ -157,8 +157,6 @@ export async function GET(request: NextRequest) {
     facebookAuthUrl.searchParams.set("scope", scopes.join(","));
     facebookAuthUrl.searchParams.set("response_type", "code");
 
-    console.log("Initiating Facebook OAuth for shop:", shop);
-
     // Redirect to Facebook OAuth consent screen
     return NextResponse.redirect(facebookAuthUrl.toString());
   } catch (error) {

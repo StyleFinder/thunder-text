@@ -1,9 +1,11 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 /**
  * AIE Ad Generator
  * Generates ad copy using GPT-4 with RAG context
  */
 
-import { aieOpenAI } from './clients';
+import { logger } from "@/lib/logger";
+import { aieOpenAI } from "./clients";
 import type {
   AIEPlatform,
   AIEGoal,
@@ -11,17 +13,16 @@ import type {
   AIERAGContext,
   AIEAdVariantDraft,
   AIEBrandVoice,
-} from './types';
-import { AIEGenerationError } from './types';
-import { logger } from '@/lib/logger'
+} from "./types";
+import { AIEGenerationError } from "./types";
 import {
   determineVariantTypes,
   selectHookTechnique,
   selectTone,
   validateCharacterLimits,
-} from './utils';
-import { createRequestTracker } from '@/lib/monitoring/request-logger';
-import { logError } from '@/lib/monitoring/error-logger';
+} from "./utils";
+import { createRequestTracker } from "@/lib/monitoring/request-logger";
+import { logError } from "@/lib/monitoring/error-logger";
 
 /**
  * Generate 3 ad variants using GPT-4 with RAG context
@@ -37,8 +38,6 @@ export async function generateAdVariants(params: {
   imageUrl?: string;
 }): Promise<AIEAdVariantDraft[]> {
   try {
-    console.log(`🎨 Generating 3 ad variants for ${params.platform}/${params.goal}`);
-
     // Determine variant types (3 different approaches)
     const variantTypes = determineVariantTypes(params.platform, params.goal);
 
@@ -49,10 +48,6 @@ export async function generateAdVariants(params: {
       const variantType = variantTypes[i];
       const hookTechnique = selectHookTechnique(variantType);
       const tone = selectTone(variantType, params.platform);
-
-      console.log(
-        `  Variant ${i + 1}: ${variantType} (${hookTechnique} hook, ${tone} tone)`
-      );
 
       const variant = await generateSingleVariant({
         ...params,
@@ -70,13 +65,14 @@ export async function generateAdVariants(params: {
       }
     }
 
-
     return variants;
   } catch (error) {
-    logger.error('Error generating ad variants:', error as Error, { component: 'ad-generator' });
+    logger.error("Error generating ad variants:", error as Error, {
+      component: "ad-generator",
+    });
     throw new AIEGenerationError(
-      'Failed to generate ad variants',
-      error instanceof Error ? error : undefined
+      "Failed to generate ad variants",
+      error instanceof Error ? error : undefined,
     );
   }
 }
@@ -100,7 +96,7 @@ async function generateSingleVariant(params: {
   shopId?: string;
 }): Promise<AIEAdVariantDraft> {
   // Create request tracker for monitoring
-  const tracker = createRequestTracker('ad_generation', params.shopId);
+  const tracker = createRequestTracker("ad_generation", params.shopId);
 
   // Build the prompt with RAG context
   const prompt = buildGenerationPrompt(params);
@@ -112,42 +108,45 @@ Generate ads in JSON format with clear structure.`;
   try {
     // Call GPT-4o-mini for ad generation (text-only, cost-effective)
     const response = await aieOpenAI.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: "gpt-4o-mini",
       messages: [
         {
-          role: 'system',
+          role: "system",
           content: systemPrompt,
         },
         {
-          role: 'user',
+          role: "user",
           content: prompt,
         },
       ],
       max_tokens: 1500,
       temperature: 0.8, // Higher creativity for ad copy
-      response_format: { type: 'json_object' },
+      response_format: { type: "json_object" },
     });
 
     const content = response.choices[0].message.content;
     if (!content) {
-      throw new Error('No response from GPT-4');
+      throw new Error("No response from GPT-4");
     }
 
     // Log successful request
-    const inputTokens = response.usage?.prompt_tokens || Math.ceil((systemPrompt.length + prompt.length) / 4);
-    const outputTokens = response.usage?.completion_tokens || Math.ceil(content.length / 4);
+    const inputTokens =
+      response.usage?.prompt_tokens ||
+      Math.ceil((systemPrompt.length + prompt.length) / 4);
+    const outputTokens =
+      response.usage?.completion_tokens || Math.ceil(content.length / 4);
 
     await tracker.complete({
-      model: 'gpt-4o-mini',
+      model: "gpt-4o-mini",
       inputTokens,
       outputTokens,
-      endpoint: 'chat.completions',
+      endpoint: "chat.completions",
       metadata: {
         platform: params.platform,
         goal: params.goal,
         variantNumber: params.variantNumber,
-        variantType: params.variantType
-      }
+        variantType: params.variantType,
+      },
     });
 
     const generated = JSON.parse(content);
@@ -161,13 +160,16 @@ Generate ads in JSON format with clear structure.`;
     });
 
     if (!validation.valid) {
-      console.warn(`⚠️  Character limit warnings:`, validation.errors);
+      logger.warn("Character limit warnings", undefined, {
+        component: "ad-generator",
+        errors: validation.errors,
+      });
     }
 
     // Build variant draft
     const variant: AIEAdVariantDraft = {
-      id: '', // Will be set by database
-      ad_request_id: '', // Will be set when saved
+      id: "", // Will be set by database
+      ad_request_id: "", // Will be set when saved
       variant_number: params.variantNumber,
       variant_type: params.variantType,
       headline: generated.headline,
@@ -191,7 +193,9 @@ Generate ads in JSON format with clear structure.`;
         best_practice_ids: params.ragContext.best_practices
           .slice(0, 5)
           .map((bp) => bp.id),
-        example_ids: params.ragContext.ad_examples.slice(0, 3).map((ex) => ex.id),
+        example_ids: params.ragContext.ad_examples
+          .slice(0, 3)
+          .map((ex) => ex.id),
       },
       is_selected: false,
       user_edited: false,
@@ -204,11 +208,13 @@ Generate ads in JSON format with clear structure.`;
             title: bp.title,
             similarity: bp.similarity,
           })),
-        examples_referenced: params.ragContext.ad_examples.slice(0, 3).map((ex) => ({
-          id: ex.id,
-          headline: ex.headline,
-          similarity: ex.similarity,
-        })),
+        examples_referenced: params.ragContext.ad_examples
+          .slice(0, 3)
+          .map((ex) => ({
+            id: ex.id,
+            headline: ex.headline,
+            similarity: ex.similarity,
+          })),
       },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -217,30 +223,37 @@ Generate ads in JSON format with clear structure.`;
     return variant;
   } catch (error) {
     // Log error to monitoring system
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const isTimeout = errorMessage.toLowerCase().includes('timeout');
-    const isRateLimited = errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('429');
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    const isTimeout = errorMessage.toLowerCase().includes("timeout");
+    const isRateLimited =
+      errorMessage.toLowerCase().includes("rate limit") ||
+      errorMessage.toLowerCase().includes("429");
 
     await tracker.error({
-      model: 'gpt-4o-mini',
-      errorCode: isRateLimited ? '429' : undefined,
+      model: "gpt-4o-mini",
+      errorCode: isRateLimited ? "429" : undefined,
       errorMessage,
-      endpoint: 'chat.completions',
+      endpoint: "chat.completions",
       isTimeout,
-      isRateLimited
+      isRateLimited,
     });
 
     await logError({
-      errorType: isTimeout ? 'timeout' : isRateLimited ? 'rate_limit' : 'api_error',
+      errorType: isTimeout
+        ? "timeout"
+        : isRateLimited
+          ? "rate_limit"
+          : "api_error",
       errorMessage,
       shopId: params.shopId,
-      endpoint: 'ad-generator',
-      operationType: 'ad_generation',
+      endpoint: "ad-generator",
+      operationType: "ad_generation",
       requestData: {
         platform: params.platform,
         goal: params.goal,
-        variantNumber: params.variantNumber
-      }
+        variantNumber: params.variantNumber,
+      },
     });
 
     throw error;
@@ -272,7 +285,7 @@ function buildGenerationPrompt(params: {
 **Tone**: ${params.tone}
 **Campaign Goal**: ${params.goal}
 **Category**: ${params.category}
-${params.targetAudience ? `**Target Audience**: ${params.targetAudience}` : ''}`);
+${params.targetAudience ? `**Target Audience**: ${params.targetAudience}` : ""}`);
 
   // Section 2: Product/Service Description
   sections.push(`# Product/Service Description
@@ -281,13 +294,14 @@ ${params.description}`);
 
   // Section 3: Brand Voice (if provided)
   if (params.brandVoice) {
-    const forbiddenWords = params.brandVoice.forbidden_words?.join(', ') || 'None';
+    const forbiddenWords =
+      params.brandVoice.forbidden_words?.join(", ") || "None";
     sections.push(`# Brand Voice Guidelines
 
-**Tone**: ${params.brandVoice.tone || 'Not specified'}
-**Values**: ${params.brandVoice.values?.join(', ') || 'Not specified'}
+**Tone**: ${params.brandVoice.tone || "Not specified"}
+**Values**: ${params.brandVoice.values?.join(", ") || "Not specified"}
 **Forbidden Words**: ${forbiddenWords}
-**Example Copy**: ${params.brandVoice.example_copy || 'Not provided'}`);
+**Example Copy**: ${params.brandVoice.example_copy || "Not provided"}`);
   }
 
   // Section 4: Best Practices (Top 5 most relevant)
@@ -299,9 +313,9 @@ ${params.ragContext.best_practices
     (bp, idx) =>
       `${idx + 1}. **${bp.title}** (similarity: ${((bp.similarity || 0) * 100).toFixed(0)}%)
    ${bp.description}
-   ${bp.example_text ? `Example: "${bp.example_text}"` : ''}`
+   ${bp.example_text ? `Example: "${bp.example_text}"` : ""}`,
   )
-  .join('\n\n')}`);
+  .join("\n\n")}`);
 
   // Section 5: High-Performing Examples (if available)
   if (params.ragContext.ad_examples.length > 0) {
@@ -311,12 +325,12 @@ ${params.ragContext.ad_examples
   .slice(0, 3)
   .map(
     (ex, idx) =>
-      `${idx + 1}. ${ex.headline ? `Headline: "${ex.headline}"` : ''}
+      `${idx + 1}. ${ex.headline ? `Headline: "${ex.headline}"` : ""}
    Primary Text: "${ex.primary_text.substring(0, 100)}..."
    Hook: ${ex.hook_type}, Tone: ${ex.tone}
-   Performance: ${ex.performance_tag} (${ex.performance_percentile}th percentile)`
+   Performance: ${ex.performance_tag} (${ex.performance_percentile}th percentile)`,
   )
-  .join('\n\n')}`);
+  .join("\n\n")}`);
   }
 
   // Section 6: Platform Guidelines
@@ -333,7 +347,7 @@ Generate a JSON object with the following structure:
   "headline": "string (${getPlatformLimits(params.platform).headline} chars max)",
   "headline_alternatives": ["alternative 1", "alternative 2", "alternative 3"],
   "primary_text": "string (${getPlatformLimits(params.platform).primaryText} chars max)",
-  "description": "string (${getPlatformLimits(params.platform).description || 'optional'})",
+  "description": "string (${getPlatformLimits(params.platform).description || "optional"})",
   "cta": "string (e.g., Shop Now, Learn More, Sign Up)",
   "cta_rationale": "Why this CTA matches the goal",
   "reasoning": "Explain which best practices you applied and why"
@@ -347,7 +361,7 @@ Generate a JSON object with the following structure:
 5. Stay within platform character limits
 6. Ensure the ad is compelling, clear, and conversion-focused`);
 
-  return sections.join('\n\n');
+  return sections.join("\n\n");
 }
 
 /**

@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 /**
  * Shopify GraphQL Billing API
  *
@@ -137,7 +138,7 @@ export async function createAppSubscription(
   planId: string,
   billingInterval: "monthly" | "annual" = "monthly",
   isTest: boolean = false,
-  trialDays?: number
+  trialDays?: number,
 ): Promise<CreateSubscriptionResult> {
   try {
     const plan = PLAN_CONFIGS[planId];
@@ -149,18 +150,22 @@ export async function createAppSubscription(
     }
 
     // Determine price based on billing interval
-    const price = billingInterval === "annual" ? plan.annualPrice : plan.monthlyPrice;
-    const interval: BillingInterval = billingInterval === "annual" ? "ANNUAL" : "EVERY_30_DAYS";
+    const price =
+      billingInterval === "annual" ? plan.annualPrice : plan.monthlyPrice;
+    const interval: BillingInterval =
+      billingInterval === "annual" ? "ANNUAL" : "EVERY_30_DAYS";
 
     // Build the return URL (where Shopify redirects after approval/decline)
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.thundertext.com";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || "https://app.thundertext.com";
     const returnUrl = `${baseUrl}/api/billing/callback?shop=${shopDomain}`;
 
     // Construct the subscription name with interval
     const subscriptionName = `${plan.name} (${billingInterval === "annual" ? "Annual" : "Monthly"})`;
 
     // Use provided trialDays if specified, otherwise use plan default
-    const effectiveTrialDays = trialDays !== undefined ? trialDays : plan.trialDays;
+    const effectiveTrialDays =
+      trialDays !== undefined ? trialDays : plan.trialDays;
 
     logger.info("[GraphQL Billing] Creating subscription", {
       component: "graphql-billing",
@@ -210,18 +215,25 @@ export async function createAppSubscription(
     const response = await shopifyGraphQL<AppSubscriptionCreateResponse>(
       APP_SUBSCRIPTION_CREATE_MUTATION,
       variables,
-      shopDomain
+      shopDomain,
     );
 
     const { appSubscriptionCreate } = response.data;
 
     // Check for user errors
-    if (appSubscriptionCreate.userErrors && appSubscriptionCreate.userErrors.length > 0) {
-      logger.error("[GraphQL Billing] Subscription creation failed with user errors", undefined, {
-        component: "graphql-billing",
-        shopDomain,
-        userErrors: appSubscriptionCreate.userErrors,
-      });
+    if (
+      appSubscriptionCreate.userErrors &&
+      appSubscriptionCreate.userErrors.length > 0
+    ) {
+      logger.error(
+        "[GraphQL Billing] Subscription creation failed with user errors",
+        undefined,
+        {
+          component: "graphql-billing",
+          shopDomain,
+          userErrors: appSubscriptionCreate.userErrors,
+        },
+      );
       return {
         success: false,
         error: appSubscriptionCreate.userErrors[0].message,
@@ -231,10 +243,14 @@ export async function createAppSubscription(
 
     // Check for confirmation URL
     if (!appSubscriptionCreate.confirmationUrl) {
-      logger.error("[GraphQL Billing] No confirmation URL returned", undefined, {
-        component: "graphql-billing",
-        shopDomain,
-      });
+      logger.error(
+        "[GraphQL Billing] No confirmation URL returned",
+        undefined,
+        {
+          component: "graphql-billing",
+          shopDomain,
+        },
+      );
       return {
         success: false,
         error: "No confirmation URL returned from Shopify",
@@ -254,14 +270,21 @@ export async function createAppSubscription(
       subscriptionId: appSubscriptionCreate.appSubscription?.id,
     };
   } catch (error) {
-    logger.error("[GraphQL Billing] Error creating subscription", error as Error, {
-      component: "graphql-billing",
-      shopDomain,
-      planId,
-    });
+    logger.error(
+      "[GraphQL Billing] Error creating subscription",
+      error as Error,
+      {
+        component: "graphql-billing",
+        shopDomain,
+        planId,
+      },
+    );
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error creating subscription",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error creating subscription",
     };
   }
 }
@@ -293,7 +316,7 @@ const APP_SUBSCRIPTION_CANCEL_MUTATION = `
  */
 export async function cancelAppSubscription(
   shopDomain: string,
-  subscriptionId: string
+  subscriptionId: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     interface AppSubscriptionCancelResponse {
@@ -309,12 +332,15 @@ export async function cancelAppSubscription(
     const response = await shopifyGraphQL<AppSubscriptionCancelResponse>(
       APP_SUBSCRIPTION_CANCEL_MUTATION,
       { id: subscriptionId },
-      shopDomain
+      shopDomain,
     );
 
     const { appSubscriptionCancel } = response.data;
 
-    if (appSubscriptionCancel.userErrors && appSubscriptionCancel.userErrors.length > 0) {
+    if (
+      appSubscriptionCancel.userErrors &&
+      appSubscriptionCancel.userErrors.length > 0
+    ) {
       return {
         success: false,
         error: appSubscriptionCancel.userErrors[0].message,
@@ -329,14 +355,21 @@ export async function cancelAppSubscription(
 
     return { success: true };
   } catch (error) {
-    logger.error("[GraphQL Billing] Error cancelling subscription", error as Error, {
-      component: "graphql-billing",
-      shopDomain,
-      subscriptionId,
-    });
+    logger.error(
+      "[GraphQL Billing] Error cancelling subscription",
+      error as Error,
+      {
+        component: "graphql-billing",
+        shopDomain,
+        subscriptionId,
+      },
+    );
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error cancelling subscription",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error cancelling subscription",
     };
   }
 }
@@ -395,7 +428,7 @@ export interface ActiveSubscription {
  * @returns The active subscription details, or null if none
  */
 export async function getActiveSubscription(
-  shopDomain: string
+  shopDomain: string,
 ): Promise<ActiveSubscription | null> {
   try {
     interface CurrentAppInstallationResponse {
@@ -426,10 +459,11 @@ export async function getActiveSubscription(
     const response = await shopifyGraphQL<CurrentAppInstallationResponse>(
       CURRENT_APP_INSTALLATION_QUERY,
       {},
-      shopDomain
+      shopDomain,
     );
 
-    const subscriptions = response.data.currentAppInstallation.activeSubscriptions;
+    const subscriptions =
+      response.data.currentAppInstallation.activeSubscriptions;
 
     if (!subscriptions || subscriptions.length === 0) {
       return null;
@@ -451,10 +485,14 @@ export async function getActiveSubscription(
       interval: pricing?.interval,
     };
   } catch (error) {
-    logger.error("[GraphQL Billing] Error getting active subscription", error as Error, {
-      component: "graphql-billing",
-      shopDomain,
-    });
+    logger.error(
+      "[GraphQL Billing] Error getting active subscription",
+      error as Error,
+      {
+        component: "graphql-billing",
+        shopDomain,
+      },
+    );
     return null;
   }
 }

@@ -134,11 +134,12 @@ export default function AdsLibraryPage() {
       // Remove the deleted ad from local state
       setAds(ads.filter((ad) => ad.id !== adToDelete.id));
       setAdToDelete(null);
-    } catch (err: any) {
-      logger.error("Error deleting ad:", err as Error, {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to delete ad";
+      logger.error("Error deleting ad:", err instanceof Error ? err : new Error(errorMessage), {
         component: "ads-library",
       });
-      setError(err.message || "Failed to delete ad");
+      setError(errorMessage);
     } finally {
       setIsDeleting(false);
     }

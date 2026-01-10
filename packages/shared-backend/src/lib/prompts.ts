@@ -32,11 +32,10 @@ export interface CombinedPrompt {
 
 // Product categories - keeping for backward compatibility with existing components
 export const PRODUCT_CATEGORIES = [
-  { value: 'womens_clothing', label: "Women's Clothing" },
+  { value: 'clothing', label: 'Clothing' },
   { value: 'jewelry_accessories', label: 'Jewelry & Accessories' },
   { value: 'home_living', label: 'Home & Living' },
   { value: 'beauty_personal_care', label: 'Beauty & Personal Care' },
-  { value: 'electronics', label: 'Electronics' },
   { value: 'general', label: 'General Products' }
 ] as const
 
@@ -222,11 +221,10 @@ export async function getGlobalDefaultTemplate(storeId: string): Promise<Product
  */
 function getDefaultCategoryTemplate(category: ProductCategory): string {
   const templates: Record<ProductCategory, string> = {
-    'womens_clothing': "Focus on style, comfort, and versatility. Highlight fabric quality, fit, and how the piece can be styled for different occasions.",
+    'clothing': "Focus on style, comfort, and versatility. Highlight fabric quality, fit, and how the piece can be styled for different occasions.",
     'jewelry_accessories': "Emphasize craftsmanship, materials, and the emotional connection. Describe how the piece enhances personal style and makes the wearer feel special.",
     'home_living': "Focus on functionality, aesthetic appeal, and how the item improves daily life. Highlight quality, design, and the ambiance it creates.",
     'beauty_personal_care': "Emphasize benefits, ingredients, and results. Focus on how the product makes the user look and feel better.",
-    'electronics': "Highlight key features, performance, and value. Focus on how the technology improves the user's life or work.",
     'general': "Focus on key benefits, quality, and value proposition. Highlight what makes this product special and worth purchasing."
   }
   
@@ -488,7 +486,7 @@ export async function resetCategoryTemplate(
   category: ProductCategory
 ): Promise<CategoryTemplate | null> {
   const defaultTemplates: Record<ProductCategory, string> = {
-    womens_clothing: `Structure your description following this format:
+    clothing: `Structure your description following this format:
 
 Start with an opening hook (1-2 sentences) that helps the customer visualize wearing this item. Use aspirational language that connects to their desired lifestyle.
 

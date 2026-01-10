@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
+import { checkRateLimitAsync, RATE_LIMITS } from "@/lib/middleware/rate-limit";
 
 // Lazy import supabaseAdmin to avoid module load failures
 async function getSupabaseAdmin() {
@@ -30,6 +31,27 @@ const signupSchema = z.object({
  */
 export async function POST(req: NextRequest) {
   try {
+    // SECURITY H2: Rate limit signup by IP to prevent account creation spam
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+                     req.headers.get("x-real-ip") ||
+                     "unknown";
+
+    const { allowed, headers: rateLimitHeaders } = await checkRateLimitAsync(
+      `signup:${clientIp}`,
+      RATE_LIMITS.AUTH_SIGNUP
+    );
+
+    if (!allowed) {
+      logger.warn("[Signup] Rate limit exceeded", {
+        component: "signup",
+        ip: clientIp,
+      });
+      return NextResponse.json(
+        { error: RATE_LIMITS.AUTH_SIGNUP.message },
+        { status: 429, headers: rateLimitHeaders }
+      );
+    }
+
     const body = await req.json();
 
     // Validate input

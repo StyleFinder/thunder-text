@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -172,10 +172,7 @@ export default function AdEditorPage() {
       return;
     }
 
-    // Get the campaign name from the campaigns array
-    const selectedCampaignData = campaigns.find(
-      (c) => c.id === selectedCampaign,
-    );
+    // Use memoized selectedCampaignData
     if (!selectedCampaignData) {
       setError("Selected campaign not found. Please try selecting again.");
       return;
@@ -236,11 +233,12 @@ export default function AdEditorPage() {
 
       // Show success modal instead of banner (user is at bottom of page)
       setFacebookSuccessModalOpen(true);
-    } catch (err: any) {
-      logger.error("Error posting to campaign:", err as Error, {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to post ad to campaign";
+      logger.error("Error posting to campaign:", err instanceof Error ? err : new Error(errorMessage), {
         component: "ad-editor",
       });
-      setError(err.message || "Failed to post ad to campaign");
+      setError(errorMessage);
     } finally {
       setIsPosting(false);
     }
@@ -310,11 +308,12 @@ export default function AdEditorPage() {
       setAd(data.data?.ad);
       setSuccessMessage("Changes saved successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err: any) {
-      logger.error("Error saving ad:", err as Error, {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to save changes";
+      logger.error("Error saving ad:", err instanceof Error ? err : new Error(errorMessage), {
         component: "ad-editor",
       });
-      setError(err.message || "Failed to save changes");
+      setError(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -349,29 +348,47 @@ export default function AdEditorPage() {
     URL.revokeObjectURL(url);
   };
 
-  const getPlatformColor = (platform: string) => {
-    const colors: Record<string, string> = {
-      meta: "#1877F2",
-      instagram: "#E4405F",
-      google: "#4285F4",
-      tiktok: "#000000",
-      pinterest: "#E60023",
-    };
-    // eslint-disable-next-line security/detect-object-injection
-    return colors[platform] || "#6B7280";
-  };
+  // Memoized platform color lookup
+  const platformColors = useMemo(() => ({
+    meta: "#1877F2",
+    instagram: "#E4405F",
+    google: "#4285F4",
+    tiktok: "#000000",
+    pinterest: "#E60023",
+  }), []);
 
-  const getPlatformName = (platform: string) => {
-    const names: Record<string, string> = {
-      meta: "Meta (Facebook)",
-      instagram: "Instagram",
-      google: "Google Ads",
-      tiktok: "TikTok",
-      pinterest: "Pinterest",
-    };
+  const getPlatformColor = useCallback((platform: string) => {
     // eslint-disable-next-line security/detect-object-injection
-    return names[platform] || platform;
-  };
+    return platformColors[platform as keyof typeof platformColors] || "#6B7280";
+  }, [platformColors]);
+
+  // Memoized platform name lookup
+  const platformNames = useMemo(() => ({
+    meta: "Meta (Facebook)",
+    instagram: "Instagram",
+    google: "Google Ads",
+    tiktok: "TikTok",
+    pinterest: "Pinterest",
+  }), []);
+
+  const getPlatformName = useCallback((platform: string) => {
+    // eslint-disable-next-line security/detect-object-injection
+    return platformNames[platform as keyof typeof platformNames] || platform;
+  }, [platformNames]);
+
+  // Memoized derived values from ad data
+  const currentPlatformColor = useMemo(() =>
+    ad ? getPlatformColor(ad.platform) : "#6B7280",
+  [ad, getPlatformColor]);
+
+  const currentPlatformName = useMemo(() =>
+    ad ? getPlatformName(ad.platform) : "",
+  [ad, getPlatformName]);
+
+  // Memoized campaign lookup for success modal
+  const selectedCampaignData = useMemo(() =>
+    campaigns.find((c) => c.id === selectedCampaign),
+  [campaigns, selectedCampaign]);
 
   // Loading state
   if (isLoading) {
@@ -471,7 +488,7 @@ export default function AdEditorPage() {
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center"
                 style={{
-                  background: `linear-gradient(135deg, ${getPlatformColor(ad.platform)} 0%, ${getPlatformColor(ad.platform)}cc 100%)`,
+                  background: `linear-gradient(135deg, ${currentPlatformColor} 0%, ${currentPlatformColor}cc 100%)`,
                 }}
               >
                 <Sparkles className="w-6 h-6 text-white" />
@@ -479,7 +496,7 @@ export default function AdEditorPage() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Edit Ad</h1>
                 <p className="text-gray-500 text-sm">
-                  {getPlatformName(ad.platform)} •{" "}
+                  {currentPlatformName} •{" "}
                   {ad.campaign_goal.charAt(0).toUpperCase() +
                     ad.campaign_goal.slice(1)}
                 </p>
@@ -525,11 +542,11 @@ export default function AdEditorPage() {
           <div className="flex flex-wrap gap-2">
             <Badge
               style={{
-                backgroundColor: `${getPlatformColor(ad.platform)}20`,
-                color: getPlatformColor(ad.platform),
+                backgroundColor: `${currentPlatformColor}20`,
+                color: currentPlatformColor,
               }}
             >
-              {getPlatformName(ad.platform)}
+              {currentPlatformName}
             </Badge>
             <Badge variant="outline">{ad.campaign_goal}</Badge>
             {ad.predicted_score && (
@@ -861,12 +878,12 @@ export default function AdEditorPage() {
               <div
                 className="px-4 py-3 border-b border-gray-100 flex items-center gap-2"
                 style={{
-                  backgroundColor: `${getPlatformColor(ad.platform)}10`,
+                  backgroundColor: `${currentPlatformColor}10`,
                 }}
               >
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                  style={{ backgroundColor: getPlatformColor(ad.platform) }}
+                  style={{ backgroundColor: currentPlatformColor }}
                 >
                   {ad.platform.charAt(0).toUpperCase()}
                 </div>
@@ -911,7 +928,7 @@ export default function AdEditorPage() {
                   )}
                   <button
                     className="w-full py-2 px-4 rounded-lg font-medium text-white text-sm"
-                    style={{ backgroundColor: getPlatformColor(ad.platform) }}
+                    style={{ backgroundColor: currentPlatformColor }}
                   >
                     {cta || "Shop Now"}
                   </button>
@@ -1016,8 +1033,7 @@ export default function AdEditorPage() {
                 <div className="flex justify-between">
                   <span className="text-gray-500">Campaign:</span>
                   <span className="font-medium text-gray-900">
-                    {campaigns.find((c) => c.id === selectedCampaign)?.name ||
-                      "Selected campaign"}
+                    {selectedCampaignData?.name || "Selected campaign"}
                   </span>
                 </div>
                 <div className="flex justify-between">

@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { queryWithTenant } from "@/lib/postgres";
 import { getUserId } from "@/lib/auth/content-center-auth";
 import type { ApiResponse } from "@/types/business-profile";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
 
 /**
  * POST /api/business-profile/reset
@@ -23,7 +23,6 @@ export async function POST(
       );
     }
 
-
     // Get current profile
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("business_profiles")
@@ -41,11 +40,15 @@ export async function POST(
 
     // SECURITY: Double-check that profile belongs to authenticated tenant
     if (profile.store_id !== userId) {
-      logger.error("🚨 SECURITY VIOLATION: Profile store_id mismatch", undefined, {
-        authenticated_store: userId,
-        profile_store: profile.store_id,
-        component: 'reset'
-      });
+      logger.error(
+        "🚨 SECURITY VIOLATION: Profile store_id mismatch",
+        undefined,
+        {
+          authenticated_store: userId,
+          profile_store: profile.store_id,
+          component: "reset",
+        },
+      );
       return NextResponse.json(
         { success: false, error: "Unauthorized access" },
         { status: 403 },
@@ -53,17 +56,11 @@ export async function POST(
     }
 
     // Delete all responses for this profile using tenant-aware query
-    const deleteResult = await queryWithTenant(
+    const _deleteResult = await queryWithTenant(
       userId,
       `DELETE FROM business_profile_responses
        WHERE business_profile_id = $1`,
       [profile.id],
-    );
-
-    console.log(
-      "✅ Deleted responses:",
-      deleteResult.rowCount || 0,
-      "rows affected",
     );
 
     // Reset profile status
@@ -83,13 +80,14 @@ export async function POST(
       .eq("store_id", userId); // Additional security check
 
     if (updateError) {
-      logger.error("❌ Failed to reset profile:", updateError as Error, { component: 'reset' });
+      logger.error("❌ Failed to reset profile:", updateError as Error, {
+        component: "reset",
+      });
       return NextResponse.json(
         { success: false, error: "Failed to reset profile status" },
         { status: 500 },
       );
     }
-
 
     return NextResponse.json(
       {
@@ -101,7 +99,9 @@ export async function POST(
       { status: 200 },
     );
   } catch (error) {
-    logger.error("Error in POST /api/business-profile/reset:", error as Error, { component: 'reset' });
+    logger.error("Error in POST /api/business-profile/reset:", error as Error, {
+      component: "reset",
+    });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 },

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useNavigation } from "../hooks/useNavigation";
 import { useShopStatus } from "@/hooks/useShopStatus";
 import { useShop } from "@/hooks/useShop";
+import { logger } from "@/lib/logger";
 import {
   Loader2,
   Sparkles,
@@ -105,7 +106,7 @@ function StatCard({
 }
 
 // Plan config for usage limits
-const PLAN_CREDITS: Record<string, number> = {
+const _PLAN_CREDITS: Record<string, number> = {
   free: 0, // Free plan uses feature-based limits, not credits
   starter: 5000,
   pro: 25000,
@@ -129,7 +130,8 @@ function PlanUsageCard({
   // Use real usage data from API, fallback to zeros if not available
   const productDescUsed = usage?.productDescriptions.used ?? 0;
   const adDescUsed = usage?.ads.used ?? 0;
-  const productDescTotal = usage?.productDescriptions.limit ?? FREE_PLAN_LIMITS.productDescriptions;
+  const productDescTotal =
+    usage?.productDescriptions.limit ?? FREE_PLAN_LIMITS.productDescriptions;
   const adDescTotal = usage?.ads.limit ?? FREE_PLAN_LIMITS.adDescriptions;
   const productPercent = usage?.productDescriptions.percentUsed ?? 0;
   const adPercent = usage?.ads.percentUsed ?? 0;
@@ -250,7 +252,8 @@ function ActivePlanCard({
 
   // Use real usage data - show product descriptions usage for paid plans
   const productUsed = usage?.productDescriptions.used ?? 0;
-  const productLimit = usage?.productDescriptions.limit ?? (isPro ? 5000 : 2000);
+  const productLimit =
+    usage?.productDescriptions.limit ?? (isPro ? 5000 : 2000);
   const adsUsed = usage?.ads.used ?? 0;
   const adsLimit = usage?.ads.limit ?? (isPro ? 1000 : 300);
   const productPercent = usage?.productDescriptions.percentUsed ?? 0;
@@ -404,7 +407,9 @@ function ActivePlanCard({
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-white font-medium text-sm">
-                  {maxPercent >= 100 ? "You've reached your limit!" : "Running low on usage!"}
+                  {maxPercent >= 100
+                    ? "You've reached your limit!"
+                    : "Running low on usage!"}
                 </p>
                 <p className="text-amber-100 text-xs mt-0.5">
                   Upgrade to Pro for 5,000 products & 1,000 ads/month
@@ -431,7 +436,8 @@ function ActivePlanCard({
             <p
               className={`text-sm ${isPro ? "text-amber-800" : "text-blue-800"}`}
             >
-              {usage?.productDescriptions.remaining.toLocaleString() ?? 0} products remaining
+              {usage?.productDescriptions.remaining.toLocaleString() ?? 0}{" "}
+              products remaining
             </p>
             <Link href={`/settings/billing?shop=${shop}`}>
               <Button
@@ -692,7 +698,7 @@ function DashboardContent() {
           setSubscription(data.subscription);
         }
       } catch (error) {
-        console.error("Error fetching subscription:", error);
+        logger.error("Error fetching subscription", error, { component: "dashboard", shop });
       } finally {
         setSubscriptionLoading(false);
       }
@@ -726,7 +732,7 @@ function DashboardContent() {
           });
         }
       } catch (error) {
-        console.error("Error fetching stats:", error);
+        logger.error("Error fetching stats", error, { component: "dashboard", shop });
       } finally {
         setStatsLoading(false);
       }
@@ -920,9 +926,17 @@ function DashboardContent() {
         {!subscriptionLoading && (
           <div className="mt-8">
             {isActivePaid && subscription ? (
-              <ActivePlanCard shop={shop} subscription={subscription} usage={stats.usage} />
+              <ActivePlanCard
+                shop={shop}
+                subscription={subscription}
+                usage={stats.usage}
+              />
             ) : (
-              <PlanUsageCard shop={shop} subscription={subscription} usage={stats.usage} />
+              <PlanUsageCard
+                shop={shop}
+                subscription={subscription}
+                usage={stats.usage}
+              />
             )}
           </div>
         )}

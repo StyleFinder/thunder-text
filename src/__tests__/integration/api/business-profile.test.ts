@@ -6,7 +6,7 @@
 import { describe, it, expect } from "@jest/globals";
 import { GET } from "@/app/api/business-profile/route";
 import { NextRequest } from "next/server";
-import { TEST_SHOP, API_URLS } from "../../utils/test-constants";
+import { TEST_SHOP as _TEST_SHOP, API_URLS } from "../../utils/test-constants";
 import { createAuthenticatedRequest } from "../../utils/auth-helpers";
 
 describe("GET /api/business-profile", () => {
@@ -78,7 +78,9 @@ describe("GET /api/business-profile", () => {
 
       // Should return auth error, not crash
       expect(response.status).toBe(401);
-      expect(response.headers.get("content-type")).toContain("application/json");
+      expect(response.headers.get("content-type")).toContain(
+        "application/json",
+      );
     });
   });
 });

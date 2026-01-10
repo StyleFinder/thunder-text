@@ -114,7 +114,7 @@ export async function POST(
           profile,
           first_prompt: firstPrompt as InterviewPrompt,
           interview_mode: mode,
-          total_questions: mode === "quick_start" ? 7 : 21,
+          total_questions: mode === "quick_start" ? 12 : 21,
         },
       },
       { status: 201 },

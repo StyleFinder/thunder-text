@@ -1,8 +1,9 @@
-'use client'
+/* eslint-disable react/no-unescaped-entities -- Quotes and apostrophes in JSX text are intentional */
+"use client";
 
-import { Suspense } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Suspense } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 function NotFoundContent() {
   return (
@@ -20,14 +21,12 @@ function NotFoundContent() {
               </p>
             </div>
             <div className="flex gap-3">
-              <Button
-                onClick={() => window.location.href = '/'}
-              >
+              <Button onClick={() => (window.location.href = "/")}>
                 Go to Home
               </Button>
               <Button
                 variant="outline"
-                onClick={() => window.location.href = '/dashboard'}
+                onClick={() => (window.location.href = "/dashboard")}
               >
                 Go to Dashboard
               </Button>
@@ -36,7 +35,7 @@ function NotFoundContent() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 function NotFoundFallback() {
@@ -47,7 +46,7 @@ function NotFoundFallback() {
         <p className="text-sm text-muted-foreground">Loading...</p>
       </div>
     </div>
-  )
+  );
 }
 
 export default function NotFound() {
@@ -55,5 +54,5 @@ export default function NotFound() {
     <Suspense fallback={<NotFoundFallback />}>
       <NotFoundContent />
     </Suspense>
-  )
+  );
 }

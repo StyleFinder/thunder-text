@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useShop } from "@/hooks/useShop";
+import { logger } from "@/lib/logger";
 import Image from "next/image";
 import {
   ProductImageUpload,
@@ -33,7 +34,16 @@ import {
   Sparkles,
   ExternalLink,
   AlertCircle,
+  Wand2,
+  Info,
+  ImageIcon,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
@@ -44,13 +54,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { logger } from "@/lib/logger";
+
+// Blog linking
+import { BlogLinkingSection } from "@/app/components/shared/blog-linking";
+import type { BlogSelection, DiscoverMoreSection } from "@/types/blog-linking";
+import { appendDiscoverMoreSection } from "@/lib/templates/discover-more-template";
 
 interface EnhancementOptions {
   generateTitle: boolean;
   enhanceDescription: boolean;
   generateSEO: boolean;
   updateImages: boolean;
+  generateAltText: boolean;
 }
 
 export default function UnifiedEnhancePage() {
@@ -60,9 +75,7 @@ export default function UnifiedEnhancePage() {
 
   const productId = searchParams?.get("productId") || "";
   const shop =
-    shopFromHook ||
-    authShop ||
-    "zunosai-staging-test-store.myshopify.com";
+    shopFromHook || authShop || "zunosai-staging-test-store.myshopify.com";
 
   // Product data states
   const [productData, setProductData] = useState<EnhancementProductData | null>(
@@ -95,6 +108,11 @@ export default function UnifiedEnhancePage() {
   const [keyFeatures, setKeyFeatures] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
 
+  // Blog linking state
+  const [blogLinkEnabled, setBlogLinkEnabled] = useState(false);
+  const [selectedBlog, setSelectedBlog] = useState<BlogSelection | null>(null);
+  const [blogSummary, setBlogSummary] = useState("");
+
   // Enhancement options - all three main options enabled by default
   const [enhancementOptions, setEnhancementOptions] =
     useState<EnhancementOptions>({
@@ -102,7 +120,16 @@ export default function UnifiedEnhancePage() {
       enhanceDescription: true,
       generateSEO: true,
       updateImages: false,
+      generateAltText: false,
     });
+
+  // Alt text generation state
+  const [altTextGenerating, setAltTextGenerating] = useState(false);
+  const [altTextResult, setAltTextResult] = useState<{
+    processed: number;
+    updated: number;
+    errors: string[];
+  } | null>(null);
 
   // Generation states
   const [generating, setGenerating] = useState(false);
@@ -114,10 +141,12 @@ export default function UnifiedEnhancePage() {
   const [applying, setApplying] = useState(false);
   const [progress, setProgress] = useState(0);
 
+  // Track which fields were auto-populated from Shopify
+  const [autoPopulatedFields, setAutoPopulatedFields] = useState<string[]>([]);
+
   // Load product data function
   const loadProduct = useCallback(async () => {
     if (!productId || productId.trim() === "" || !shop) {
-      console.log("Missing required params:", { productId, shop });
       return;
     }
 
@@ -125,7 +154,6 @@ export default function UnifiedEnhancePage() {
     setError(null);
 
     try {
-      console.log("Loading product data for:", { productId, shop });
       const isTestStore = shop.includes("zunosai-staging-test-store");
       const isEmbedded =
         typeof window !== "undefined" && window.top !== window.self;
@@ -141,9 +169,11 @@ export default function UnifiedEnhancePage() {
 
       if (data) {
         setProductData(data);
+        const populatedFields: string[] = [];
 
         if (data.productType) {
           setParentCategory(data.productType.toLowerCase());
+          populatedFields.push("parentCategory");
         }
 
         if (data.variants && data.variants.length > 0) {
@@ -172,21 +202,25 @@ export default function UnifiedEnhancePage() {
             const uniqueSizes = [...new Set(sizes)];
             if (uniqueSizes.includes("XS") && uniqueSizes.includes("XL")) {
               setAvailableSizing("xs-xl");
+              populatedFields.push("availableSizing");
             } else if (
               uniqueSizes.includes("XS") &&
               uniqueSizes.includes("XXL")
             ) {
               setAvailableSizing("xs-xxl");
+              populatedFields.push("availableSizing");
             } else if (
               uniqueSizes.includes("S") &&
               uniqueSizes.includes("XXXL")
             ) {
               setAvailableSizing("s-xxxl");
+              populatedFields.push("availableSizing");
             } else if (
               uniqueSizes.length === 1 &&
               uniqueSizes[0] === "One Size"
             ) {
               setAvailableSizing("onesize");
+              populatedFields.push("availableSizing");
             }
           }
         }
@@ -212,6 +246,7 @@ export default function UnifiedEnhancePage() {
           if (materials) {
             extractedFabric = materials;
             setFabricMaterial(materials);
+            populatedFields.push("fabricMaterial");
           }
         }
 
@@ -225,7 +260,10 @@ export default function UnifiedEnhancePage() {
             )
             .map((line) => line.replace(/^[•\-]\s*/, ""))
             .join("\n");
-          if (features) setKeyFeatures(features);
+          if (features) {
+            setKeyFeatures(features);
+            populatedFields.push("keyFeatures");
+          }
         }
 
         // Intelligent extraction from description text
@@ -246,6 +284,9 @@ export default function UnifiedEnhancePage() {
               const match = data.originalDescription.match(pattern);
               if (match && match[1]) {
                 setFabricMaterial(match[1].trim());
+                if (!populatedFields.includes("fabricMaterial")) {
+                  populatedFields.push("fabricMaterial");
+                }
                 break;
               }
             }
@@ -323,6 +364,7 @@ export default function UnifiedEnhancePage() {
             // Remove duplicates and limit to 5
             const uniqueOccasions = [...new Set(foundOccasions)].slice(0, 5);
             setOccasionUse(uniqueOccasions.join(", "));
+            populatedFields.push("occasionUse");
           }
         }
 
@@ -334,12 +376,19 @@ export default function UnifiedEnhancePage() {
             type.includes("shirt") ||
             type.includes("dress")
           ) {
-            setSelectedTemplate("womens_clothing");
+            setSelectedTemplate("clothing");
+            populatedFields.push("selectedTemplate");
           } else if (type.includes("jewelry") || type.includes("accessory")) {
             setSelectedTemplate("jewelry_accessories");
+            populatedFields.push("selectedTemplate");
           } else {
             setSelectedTemplate("general");
           }
+        }
+
+        // Set auto-populated fields state
+        if (populatedFields.length > 0) {
+          setAutoPopulatedFields(populatedFields);
         }
       }
     } catch (err) {
@@ -501,12 +550,44 @@ export default function UnifiedEnhancePage() {
     setError(null);
 
     try {
-      if (editedContent.description) {
+      // Prepare blog link data if enabled
+      let blogLink: DiscoverMoreSection | undefined;
+      if (blogLinkEnabled && selectedBlog && blogSummary) {
+        const blogUrl =
+          selectedBlog.source === "shopify" && shop
+            ? `https://${shop}/blogs/${selectedBlog.blogHandle || "news"}/${selectedBlog.handle || selectedBlog.id}`
+            : `#blog-${selectedBlog.id}`;
+
+        blogLink = {
+          blogId: selectedBlog.id,
+          blogSource: selectedBlog.source,
+          title: selectedBlog.title,
+          summary: blogSummary,
+          url: blogUrl,
+        };
+      }
+
+      // Prepare the updates, appending blog section to description if enabled
+      let finalDescription = editedContent.description;
+      if (finalDescription && blogLink) {
+        finalDescription = appendDiscoverMoreSection(finalDescription, {
+          blogTitle: blogLink.title,
+          summary: blogLink.summary,
+          blogUrl: blogLink.url,
+        });
+      }
+
+      const updatesWithBlog = {
+        ...editedContent,
+        description: finalDescription,
+      };
+
+      if (updatesWithBlog.description) {
         console.log(
           "📝 Description preview (first 200 chars):",
-          editedContent.description.substring(0, 200),
+          updatesWithBlog.description.substring(0, 200),
         );
-        console.log("📏 Description length:", editedContent.description.length);
+        console.log("📏 Description length:", updatesWithBlog.description.length);
       }
 
       const isTestStore = shop?.includes("zunosai-staging-test-store");
@@ -521,7 +602,8 @@ export default function UnifiedEnhancePage() {
           body: JSON.stringify({
             shop: shop || "zunosai-staging-test-store.myshopify.com",
             productId: productId,
-            updates: editedContent,
+            updates: updatesWithBlog,
+            blogLink: blogLink,
           }),
         });
       } else {
@@ -531,7 +613,8 @@ export default function UnifiedEnhancePage() {
           body: JSON.stringify({
             shop: shop || "zunosai-staging-test-store.myshopify.com",
             productId: productId,
-            updates: editedContent,
+            updates: updatesWithBlog,
+            blogLink: blogLink,
           }),
         });
       }
@@ -540,6 +623,41 @@ export default function UnifiedEnhancePage() {
 
       if (!response.ok) {
         throw new Error(result.error || "Failed to apply changes");
+      }
+
+      // Generate alt text if option is enabled
+      let altTextUpdateResult = null;
+      if (enhancementOptions.generateAltText && productId) {
+        setAltTextGenerating(true);
+        try {
+          const altTextResponse = isTestStore && !isEmbedded
+            ? await fetch(`/api/shopify/products/${encodeURIComponent(productId)}/alt-text`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ onlyMissing: true }),
+              })
+            : await authenticatedFetch(`/api/shopify/products/${encodeURIComponent(productId)}/alt-text`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ onlyMissing: true }),
+              });
+
+          const altTextData = await altTextResponse.json();
+          if (altTextResponse.ok && altTextData.success) {
+            altTextUpdateResult = {
+              processed: altTextData.data.processed,
+              updated: altTextData.data.updated,
+              errors: altTextData.data.errors || [],
+            };
+            setAltTextResult(altTextUpdateResult);
+          } else {
+            console.warn("Alt text generation warning:", altTextData.error);
+          }
+        } catch (altTextErr) {
+          logger.error("Alt text generation error", altTextErr, { component: "unified-enhance" });
+        } finally {
+          setAltTextGenerating(false);
+        }
       }
 
       if (productData) {
@@ -565,7 +683,11 @@ export default function UnifiedEnhancePage() {
         setProductData(updatedData);
       }
 
-      const message = "Updates have been successfully applied to the product.";
+      // Build success message including alt text results
+      let message = "Updates have been successfully applied to the product.";
+      if (altTextUpdateResult && altTextUpdateResult.updated > 0) {
+        message += ` Alt text generated for ${altTextUpdateResult.updated} image(s).`;
+      }
 
       setSuccessMessage(message);
       setUpdateResult(result);
@@ -738,6 +860,82 @@ export default function UnifiedEnhancePage() {
             </div>
           )}
 
+          {/* Smart Fill Indicator */}
+          {autoPopulatedFields.length > 0 && (
+            <TooltipProvider>
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-green-100">
+                      <Wand2 className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-green-800">
+                          Smart Fill Applied
+                        </h3>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <Info className="w-4 h-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs p-3">
+                            <p className="text-sm">
+                              We analyzed your Shopify product data and
+                              pre-filled fields to save you time. You can edit
+                              any field before generating.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <p className="text-xs text-green-600">
+                        {autoPopulatedFields.length} field
+                        {autoPopulatedFields.length !== 1 ? "s" : ""}{" "}
+                        auto-filled from your Shopify data
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {autoPopulatedFields.includes("parentCategory") && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        Category
+                      </span>
+                    )}
+                    {autoPopulatedFields.includes("availableSizing") && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        Sizing
+                      </span>
+                    )}
+                    {autoPopulatedFields.includes("fabricMaterial") && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        Material
+                      </span>
+                    )}
+                    {autoPopulatedFields.includes("occasionUse") && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        Occasion
+                      </span>
+                    )}
+                    {autoPopulatedFields.includes("keyFeatures") && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        Features
+                      </span>
+                    )}
+                    {autoPopulatedFields.includes("selectedTemplate") && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        Template
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </TooltipProvider>
+          )}
+
           {/* Main Form */}
           <div className="space-y-6">
             {/* Images Section */}
@@ -788,6 +986,7 @@ export default function UnifiedEnhancePage() {
                       enhanceDescription: !allSelected,
                       generateSEO: !allSelected,
                       updateImages: false,
+                      generateAltText: !allSelected,
                     });
                   }}
                 >
@@ -816,6 +1015,13 @@ export default function UnifiedEnhancePage() {
                     label: "Generate SEO metadata",
                     checked: enhancementOptions.generateSEO,
                   },
+                  {
+                    id: "generateAltText",
+                    label: "Generate image alt text",
+                    description: "AI-generated alt text for images missing it",
+                    checked: enhancementOptions.generateAltText,
+                    icon: ImageIcon,
+                  },
                 ].map((option) => (
                   <div
                     key={option.id}
@@ -835,9 +1041,16 @@ export default function UnifiedEnhancePage() {
                         }))
                       }
                     />
-                    <Label htmlFor={option.id} className="cursor-pointer">
-                      {option.label}
-                    </Label>
+                    <div className="flex flex-col">
+                      <Label htmlFor={option.id} className="cursor-pointer">
+                        {option.label}
+                      </Label>
+                      {"description" in option && option.description && (
+                        <span className="text-xs text-gray-500 mt-0.5">
+                          {option.description}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -890,6 +1103,19 @@ export default function UnifiedEnhancePage() {
                 setAdditionalNotes={setAdditionalNotes}
               />
             </div>
+
+            {/* Blog Linking Section */}
+            <BlogLinkingSection
+              enabled={blogLinkEnabled}
+              onEnabledChange={setBlogLinkEnabled}
+              selectedBlog={selectedBlog}
+              onBlogSelect={setSelectedBlog}
+              summary={blogSummary}
+              onSummaryChange={setBlogSummary}
+              storeId={shop || ""}
+              shopDomain={shop || undefined}
+              loading={generating}
+            />
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-3 pt-4 pb-8">
@@ -1032,6 +1258,13 @@ export default function UnifiedEnhancePage() {
                       ) : null}
                     </>
                   ) : null}
+                  {altTextResult && altTextResult.updated > 0 && (
+                    <p className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <ImageIcon className="w-3 h-3 text-gray-500" />
+                      Alt text generated for {altTextResult.updated} image(s)
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -1047,6 +1280,7 @@ export default function UnifiedEnhancePage() {
                 setShowSuccessModal(false);
                 setSuccessMessage(null);
                 setUpdateResult(null);
+                setAltTextResult(null);
               }}
             >
               Close

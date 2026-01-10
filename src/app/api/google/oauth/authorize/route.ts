@@ -159,8 +159,6 @@ export async function GET(request: NextRequest) {
     ];
     googleAuthUrl.searchParams.set("scope", scopes.join(" "));
 
-    console.log("Initiating Google Ads OAuth for shop:", shop);
-
     // Redirect to Google OAuth consent screen
     return NextResponse.redirect(googleAuthUrl.toString());
   } catch (error) {

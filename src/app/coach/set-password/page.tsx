@@ -1,35 +1,36 @@
-'use client';
+"use client";
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, Button, Input, Text } from '@/components/bhb';
-import { colors } from '@/lib/design-system/colors';
-import { layout } from '@/lib/design-system/layout';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Card, Button, Input, Text } from "@/features/bhb";
+import { colors } from "@/lib/design-system/colors";
+import { layout } from "@/lib/design-system/layout";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 function SetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams.get("token");
 
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
-  const [coachEmail, setCoachEmail] = useState('');
+  const [coachEmail, setCoachEmail] = useState("");
 
   useEffect(() => {
     if (!token) {
-      setError('Invalid or missing invitation token');
+      setError("Invalid or missing invitation token");
       setValidating(false);
       return;
     }
 
     // Validate token
     validateToken();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const validateToken = async () => {
@@ -38,13 +39,13 @@ function SetPasswordForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Invalid token');
+        throw new Error(data.error || "Invalid token");
       }
 
       setTokenValid(true);
       setCoachEmail(data.email);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid token");
       setTokenValid(false);
     } finally {
       setValidating(false);
@@ -53,54 +54,60 @@ function SetPasswordForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     // Validation
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError("Password must be at least 8 characters");
       return;
     }
 
+    // eslint-disable-next-line security/detect-possible-timing-attacks -- Safe comparison context
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch('/api/coach/set-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password })
+      const response = await fetch("/api/coach/set-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to set password');
+        throw new Error(data.error || "Failed to set password");
       }
 
       // Redirect to coach login
-      router.push('/coach/login?message=Password set successfully. Please log in.');
-    } catch (err: any) {
-      setError(err.message);
+      router.push(
+        "/coach/login?message=Password set successfully. Please log in.",
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to set password");
       setLoading(false);
     }
   };
 
   if (validating) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #000000 0%, #434343 50%, #C0C0C0 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: layout.spacing.lg
-      }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          background:
+            "linear-gradient(135deg, #000000 0%, #434343 50%, #C0C0C0 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: layout.spacing.lg,
+        }}
+      >
         <Card>
-          <Text style={{ textAlign: 'center' }}>Validating invitation...</Text>
+          <Text style={{ textAlign: "center" }}>Validating invitation...</Text>
         </Card>
       </div>
     );
@@ -108,20 +115,23 @@ function SetPasswordForm() {
 
   if (!tokenValid) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #000000 0%, #434343 50%, #C0C0C0 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: layout.spacing.lg
-      }}>
-        <div style={{ width: '100%', maxWidth: '500px' }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          background:
+            "linear-gradient(135deg, #000000 0%, #434343 50%, #C0C0C0 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: layout.spacing.lg,
+        }}
+      >
+        <div style={{ width: "100%", maxWidth: "500px" }}>
           <Card>
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                {error || 'This invitation link is invalid or has expired.'}
+                {error || "This invitation link is invalid or has expired."}
               </AlertDescription>
             </Alert>
           </Card>
@@ -131,20 +141,26 @@ function SetPasswordForm() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #000000 0%, #434343 50%, #C0C0C0 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: layout.spacing.lg
-    }}>
-      <div style={{ width: '100%', maxWidth: '500px' }}>
-        <div style={{ textAlign: 'center', marginBottom: layout.spacing.xl }}>
-          <Text variant="h1" style={{ color: colors.white, marginBottom: layout.spacing.xs }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(135deg, #000000 0%, #434343 50%, #C0C0C0 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: layout.spacing.lg,
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: "500px" }}>
+        <div style={{ textAlign: "center", marginBottom: layout.spacing.xl }}>
+          <Text
+            variant="h1"
+            style={{ color: colors.white, marginBottom: layout.spacing.xs }}
+          >
             Set Your Password
           </Text>
-          <Text style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+          <Text style={{ color: "rgba(255, 255, 255, 0.9)" }}>
             Welcome, {coachEmail}
           </Text>
         </div>
@@ -159,7 +175,14 @@ function SetPasswordForm() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: layout.spacing.lg }}>
+          <form
+            onSubmit={handleSubmit}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: layout.spacing.lg,
+            }}
+          >
             <div>
               <Input
                 label="Password"
@@ -189,7 +212,7 @@ function SetPasswordForm() {
               fullWidth
               disabled={loading}
             >
-              {loading ? 'Setting Password...' : 'Set Password'}
+              {loading ? "Setting Password..." : "Set Password"}
             </Button>
           </form>
         </Card>
@@ -200,20 +223,25 @@ function SetPasswordForm() {
 
 export default function SetPasswordPage() {
   return (
-    <Suspense fallback={
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #000000 0%, #434343 50%, #C0C0C0 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: layout.spacing.lg
-      }}>
-        <Card>
-          <Text style={{ textAlign: 'center' }}>Loading...</Text>
-        </Card>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div
+          style={{
+            minHeight: "100vh",
+            background:
+              "linear-gradient(135deg, #000000 0%, #434343 50%, #C0C0C0 100%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: layout.spacing.lg,
+          }}
+        >
+          <Card>
+            <Text style={{ textAlign: "center" }}>Loading...</Text>
+          </Card>
+        </div>
+      }
+    >
       <SetPasswordForm />
     </Suspense>
   );

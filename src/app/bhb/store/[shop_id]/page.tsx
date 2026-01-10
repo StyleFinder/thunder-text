@@ -30,7 +30,7 @@ import {
   Building2,
 } from "lucide-react";
 import Link from "next/link";
-import { BHBLayout } from "@/components/bhb";
+import { BHBLayout } from "@/features/bhb";
 import {
   getMockStoreDashboard,
   type StoreDashboardData,

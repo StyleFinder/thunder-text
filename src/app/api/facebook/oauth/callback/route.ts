@@ -55,11 +55,6 @@ async function exchangeCodeForToken(code: string): Promise<{
   tokenUrl.searchParams.set("redirect_uri", redirectUri);
   tokenUrl.searchParams.set("code", code);
 
-  console.log(
-    "🔵 Token exchange URL:",
-    tokenUrl.toString().replace(appSecret, "***SECRET***"),
-  );
-
   const response = await fetch(tokenUrl.toString());
 
   if (!response.ok) {
@@ -234,24 +229,14 @@ export async function GET(request: NextRequest) {
   let stateData: FacebookOAuthState | undefined;
 
   try {
-    console.log("🔵 Facebook OAuth callback received:", request.url);
-
     const { searchParams } = new URL(request.url);
     const code = searchParams.get("code");
     const state = searchParams.get("state");
     const error = searchParams.get("error");
     const errorDescription = searchParams.get("error_description");
 
-    console.log("🔵 Callback parameters:", {
-      hasCode: !!code,
-      hasState: !!state,
-      error,
-      errorDescription,
-    });
-
     // Handle user denial or errors from Facebook
     if (error) {
-      console.log("Facebook OAuth error:", error, errorDescription);
 
       const redirectUrl = new URL(
         "/settings",
@@ -324,18 +309,8 @@ export async function GET(request: NextRequest) {
 
     const { shop_id, shop_domain } = stateData;
 
-    console.log("🔵 Processing Facebook OAuth callback for shop:", shop_domain);
-    console.log("🔵 State data:", {
-      shop_id,
-      shop_domain,
-      hasHost: !!stateData.host,
-      hasEmbedded: !!stateData.embedded,
-    });
-
     // Exchange authorization code for access token
-    console.log("🔵 Starting token exchange...");
     const tokenData = await exchangeCodeForToken(code);
-    console.log("🔵 Token exchange successful");
     const { access_token, expires_in } = tokenData;
 
     // Get user's Facebook information
@@ -362,10 +337,6 @@ export async function GET(request: NextRequest) {
         access_token,
         primaryPage.id,
       );
-      console.log("🔵 Instagram account lookup:", {
-        pageId: primaryPage.id,
-        instagramAccountId,
-      });
     }
 
     // Encrypt access token before storage

@@ -274,6 +274,9 @@ function TrendsContent() {
             })}
           </div>
 
+          {/* Theme Selector - Enable new themes */}
+          <ThemeSelector onThemeEnabled={() => loadThemes()} />
+
           {/* All Themes Table */}
           <div
             style={{

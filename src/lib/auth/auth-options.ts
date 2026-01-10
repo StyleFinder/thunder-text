@@ -175,10 +175,24 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          logger.info("[Auth] Attempting password verification", {
+            component: "auth",
+            email: credentials.email,
+            hasPasswordHash: !!shop.password_hash,
+            hashLength: shop.password_hash?.length,
+          });
+
           const isValid = await bcrypt.compare(
             credentials.password,
             shop.password_hash,
           );
+
+          logger.info("[Auth] Password verification result", {
+            component: "auth",
+            email: credentials.email,
+            isValid,
+          });
+
           if (!isValid) {
             // SECURITY: Record failed attempt with database persistence
             await recordFailedAttemptWithPersistence(credentials.email);
@@ -296,7 +310,7 @@ export const authOptions: NextAuthOptions = {
       name: "next-auth.session-token",
       options: {
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: "strict", // SECURITY M1: Use strict to prevent CSRF attacks
         path: "/",
         secure: process.env.NODE_ENV === "production",
       },

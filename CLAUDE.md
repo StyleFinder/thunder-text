@@ -122,6 +122,165 @@ RETURNING id, shop_domain;
 - `/src/lib/auth/content-center-auth.ts` - `getUserId()` returns shops.id
 - `/src/app/api/*/route.ts` - All API routes use `getUserId()` for store_id
 - `/supabase/migrations/*` - All tables reference shops(id) as store_id
+- `/src/hooks/useShop.ts` - Client-side hook for shop context
+
+---
+
+## 🔴 CRITICAL: Client-Side API Calls Pattern
+
+**THE RECURRING ISSUE**: Client components incorrectly use `localStorage.getItem("supabase_token")` or other values instead of the shop domain when calling APIs.
+
+### The Pattern: useShop() Hook
+
+**ALL client components that make API calls MUST use the `useShop()` hook to get shop context.**
+
+```tsx
+// ✅ CORRECT: Using useShop() hook
+import { useShop } from "@/hooks/useShop";
+
+export function MyComponent() {
+  const { shop, shopDomain } = useShop();
+
+  const handleApiCall = async () => {
+    const shopIdentifier = shopDomain || shop;
+    if (!shopIdentifier) {
+      setError("Shop not found");
+      return;
+    }
+
+    const response = await fetch("/api/content-center/samples", {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${shopIdentifier}`,  // ← Shop domain, NOT token
+      },
+      // ...
+    });
+  };
+}
+```
+
+```tsx
+// ❌ WRONG: Using localStorage token
+const response = await fetch("/api/content-center/samples", {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem("supabase_token")}`,  // ❌ WRONG
+  },
+});
+
+// ❌ WRONG: Hardcoding or guessing shop domain
+Authorization: `Bearer some-shop.myshopify.com`  // ❌ WRONG
+
+// ❌ WRONG: Not checking if shop exists
+const { shop } = useShop();
+// Missing: if (!shop) return;  // ❌ Will cause "Shop not found" error
+```
+
+### API Authorization Header Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ CLIENT COMPONENT                                                │
+│                                                                 │
+│  const { shop, shopDomain } = useShop();                       │
+│  const shopIdentifier = shopDomain || shop;                     │
+│                                                                 │
+│  Authorization: `Bearer ${shopIdentifier}`                      │
+│         ↓                                                       │
+│  "Bearer zunosai-staging-test-store.myshopify.com"             │
+└─────────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ API ROUTE                                                       │
+│                                                                 │
+│  const shop = getShopDomain(request);                          │
+│  // Extracts: "zunosai-staging-test-store.myshopify.com"       │
+│                                                                 │
+│  const { data: shopData } = await supabaseAdmin                │
+│    .from("shops")                                               │
+│    .select("id")                                                │
+│    .eq("shop_domain", shop)                                     │
+│    .single();                                                   │
+│                                                                 │
+│  // Use shopData.id as store_id for all queries                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Checklist for New Client Components with API Calls
+
+When creating any component that makes fetch() calls to Thunder Text APIs:
+
+- [ ] Import `useShop` hook: `import { useShop } from "@/hooks/useShop";`
+- [ ] Destructure shop values: `const { shop, shopDomain } = useShop();`
+- [ ] Create shopIdentifier: `const shopIdentifier = shopDomain || shop;`
+- [ ] Check for missing shop before API calls: `if (!shopIdentifier) { setError("Shop not found"); return; }`
+- [ ] Use shopIdentifier in Authorization header: `Authorization: \`Bearer ${shopIdentifier}\``
+- [ ] NEVER use `localStorage.getItem("supabase_token")` for Authorization
+- [ ] NEVER use session tokens or JWT tokens for shop identification
+
+### Why This Pattern Exists
+
+1. **UUID-based routing** (`/stores/[shopId]/...`) provides `shopId` via ShopContext
+2. **Legacy routing** (`?shop=domain`) provides shop domain via query params
+3. **Session-based auth** provides shop domain via NextAuth session
+4. **The `useShop()` hook** unifies all three sources into a single interface
+5. **API routes** expect shop domain in Authorization header, NOT tokens
+
+### Example: Full Component Pattern
+
+```tsx
+"use client";
+
+import { useState } from "react";
+import { useShop } from "@/hooks/useShop";
+
+export function MySampleComponent() {
+  const { shop, shopDomain } = useShop();
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (data: FormData) => {
+    // 1. Get shop identifier
+    const shopIdentifier = shopDomain || shop;
+
+    // 2. Check if shop exists
+    if (!shopIdentifier) {
+      setError("Shop not found");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // 3. Use shop identifier in Authorization header
+      const response = await fetch("/api/my-endpoint", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${shopIdentifier}`,
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to submit");
+      }
+
+      // Handle success
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (/* UI */);
+}
+```
+
+---
 
 ### When Creating New Features
 
@@ -491,6 +650,169 @@ fi
 - Undocumented tables with unclear purpose
 - Foreign keys with inconsistent naming
 - Hours spent debugging variable confusion
+
+---
+
+## 🔴 CRITICAL: Store Route Pattern (UUID-Based Routing)
+
+**All authenticated store pages MUST follow the `/stores/[shopId]/...` URL pattern.**
+
+### The Pattern
+
+Thunder Text uses UUID-based routing for all store-specific pages. This ensures proper authentication via the `ShopProvider` in the layout.
+
+```
+/stores/[shopId]/dashboard          ← Dashboard
+/stores/[shopId]/create-pd          ← Create product description
+/stores/[shopId]/ai-coaches         ← AI Coaches
+/stores/[shopId]/ai-coaches/[coachKey]  ← Coach chat
+/stores/[shopId]/settings           ← Settings
+```
+
+### How It Works
+
+1. **Layout** (`/stores/[shopId]/layout.tsx`):
+   - Validates `shopId` is a valid UUID
+   - Checks NextAuth session
+   - Fetches shop from database
+   - Wraps children in `ShopProvider` with `shopId` and `shopDomain`
+
+2. **ShopContext** (`/stores/[shopId]/ShopContext.tsx`):
+   - Provides `useShopContext()` - throws if no context (for required auth)
+   - Provides `useOptionalShopContext()` - returns null if no context (for pages that work both ways)
+   - Provides `useShopIdentifier()` - returns shopId or shopDomain
+
+### Creating New Store Pages
+
+**Step 1: Create the wrapper page in `/stores/[shopId]/`**
+
+```tsx
+// /src/app/stores/[shopId]/your-feature/page.tsx
+"use client";
+
+import { Suspense } from "react";
+import { Loader2 } from "lucide-react";
+import YourFeaturePage from "@/app/your-feature/page";
+
+export const dynamic = "force-dynamic";
+
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <Loader2 className="h-5 w-5 animate-spin" style={{ color: "#0066cc" }} />
+    </div>
+  );
+}
+
+export default function StoreYourFeaturePage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <YourFeaturePage />
+    </Suspense>
+  );
+}
+```
+
+**Step 2: Update the original page to use ShopContext**
+
+```tsx
+// /src/app/your-feature/page.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { useOptionalShopContext } from '@/app/stores/[shopId]/ShopContext';
+
+export default function YourFeaturePage() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Get shop context when accessed via /stores/[shopId]/...
+  const shopContext = useOptionalShopContext();
+
+  const [shopId, setShopId] = useState<string | null>(shopContext?.shopId || null);
+  const [shopDomain, setShopDomain] = useState<string | null>(shopContext?.shopDomain || null);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!shopContext);
+  const [authLoading, setAuthLoading] = useState(!shopContext);
+
+  // Initialize shop from context, URL params, or API
+  useEffect(() => {
+    if (shopContext) {
+      setShopId(shopContext.shopId);
+      setShopDomain(shopContext.shopDomain);
+      setIsAuthenticated(true);
+      setAuthLoading(false);
+      return;
+    }
+
+    // Fallback to legacy auth (query params or /api/shop/me)
+    const initShop = async () => {
+      // ... legacy auth logic
+    };
+    initShop();
+  }, [shopContext]);
+
+  // Build URLs that work for both routing patterns
+  const buildUrl = (path: string) => {
+    if (shopId && pathname?.startsWith('/stores/')) {
+      return `/stores/${shopId}${path}`;
+    }
+    return `${path}${shopDomain ? `?shop=${shopDomain}` : ''}`;
+  };
+
+  // Use buildUrl for all navigation
+  const handleNavigate = () => {
+    router.push(buildUrl('/some-other-page'));
+  };
+}
+```
+
+**Step 3: Add to useNavigation shopPaths**
+
+```tsx
+// /src/app/hooks/useNavigation.tsx
+const shopPaths = [
+  "/dashboard",
+  "/settings",
+  "/create-pd",
+  // ... existing paths
+  "/your-feature",  // ← Add your new path here
+];
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `/src/app/stores/[shopId]/layout.tsx` | Validates auth, provides ShopContext |
+| `/src/app/stores/[shopId]/ShopContext.tsx` | Shop context hooks |
+| `/src/app/hooks/useNavigation.tsx` | Navigation with UUID routing support |
+
+### Common Mistakes
+
+```tsx
+// ❌ WRONG: Hardcoded legacy URL
+router.push(`/ai-coaches?shop=${shopDomain}`);
+
+// ✅ CORRECT: Use buildUrl helper
+router.push(buildUrl('/ai-coaches'));
+
+// ❌ WRONG: Forgetting to add path to useNavigation
+// Navigation links won't use UUID routing
+
+// ✅ CORRECT: Add to shopPaths array in useNavigation.tsx
+const shopPaths = [..., "/your-feature"];
+```
+
+### Checklist for New Store Pages
+
+- [ ] Created wrapper in `/stores/[shopId]/your-feature/page.tsx`
+- [ ] Original page uses `useOptionalShopContext()`
+- [ ] Added `shopId` state alongside `shopDomain`
+- [ ] Created `buildUrl()` helper function
+- [ ] All `router.push()` calls use `buildUrl()`
+- [ ] Added path to `shopPaths` in `useNavigation.tsx`
+- [ ] Tested URL: `https://app.com/stores/{uuid}/your-feature`
 
 ---
 

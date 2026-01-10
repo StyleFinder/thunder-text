@@ -84,8 +84,8 @@ export default function AdminCoachesPage() {
       setInviteName('');
       setInviteEmail('');
       fetchCoaches();
-    } catch (err: any) {
-      setInviteError(err.message);
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : "Failed to send invitation");
     } finally {
       setInviteLoading(false);
     }

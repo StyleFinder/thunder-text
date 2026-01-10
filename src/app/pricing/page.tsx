@@ -1,12 +1,13 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 "use client";
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 import {
   Loader2,
   Zap,
   FileText,
-  Languages,
   Sparkles,
   MessageSquare,
   Image,
@@ -56,8 +57,16 @@ const PLANS: Plan[] = [
     credits: "1,500 Product Descriptions",
     bulkGeneration: "100 Ads & Social Posts",
     features: [
-      { icon: FileText, text: "AI Generated Descriptions, Titles, & Meta", included: true },
-      { icon: FileText, text: "Product Titles & Meta Descriptions", included: true },
+      {
+        icon: FileText,
+        text: "AI Generated Descriptions, Titles, & Meta",
+        included: true,
+      },
+      {
+        icon: FileText,
+        text: "Product Titles & Meta Descriptions",
+        included: true,
+      },
       { icon: Search, text: "SEO-Friendly Descriptions", included: true },
       { icon: Image, text: "Image SEO (Alt Text)", included: true },
       { icon: Settings, text: "Direct Shopify Import", included: true },
@@ -75,8 +84,16 @@ const PLANS: Plan[] = [
     badge: "Most Popular",
     features: [
       { icon: FileText, text: "All Starter Features", included: true },
-      { icon: FileText, text: "3,000 Product Descriptions/month", included: true },
-      { icon: MessageSquare, text: "400 Ads & Social Posts/month", included: true },
+      {
+        icon: FileText,
+        text: "3,000 Product Descriptions/month",
+        included: true,
+      },
+      {
+        icon: MessageSquare,
+        text: "400 Ads & Social Posts/month",
+        included: true,
+      },
       { icon: Image, text: "200 AI Image Generations/month", included: true },
       { icon: Search, text: "Web Search Integration", included: true },
       { icon: Sparkles, text: "Advanced Custom Instructions", included: true },
@@ -96,7 +113,9 @@ function PlanIcon({ plan }: { plan: string }) {
   const style = styles[plan] || styles.free;
 
   return (
-    <div className={`w-12 h-12 rounded-full ${style.bg} ring-4 ${style.ring} flex items-center justify-center`}>
+    <div
+      className={`w-12 h-12 rounded-full ${style.bg} ring-4 ${style.ring} flex items-center justify-center`}
+    >
       {plan === "pro" ? (
         <Crown className="w-6 h-6 text-amber-700" />
       ) : plan === "starter" ? (
@@ -111,7 +130,8 @@ function PlanIcon({ plan }: { plan: string }) {
 export default function PricingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly");
+  const [billingInterval, setBillingInterval] =
+    useState<BillingInterval>("monthly");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [shopDomain, setShopDomain] = useState<string | null>(null);
@@ -125,7 +145,7 @@ export default function PricingPage() {
 
   const handleSelectPlan = async (planId: string) => {
     if (!shopDomain) {
-      console.error("No shop domain found");
+      logger.warn("No shop domain found", { component: "pricing-page" });
       return;
     }
 
@@ -157,12 +177,12 @@ export default function PricingPage() {
           router.push(data.dashboardUrl);
         }
       } else {
-        console.error("Failed to select plan:", data.error);
+        logger.error("Failed to select plan", new Error(data.error), { component: "pricing-page", planId });
         setIsLoading(false);
         setSelectedPlan(null);
       }
     } catch (error) {
-      console.error("Error selecting plan:", error);
+      logger.error("Error selecting plan", error, { component: "pricing-page", planId });
       setIsLoading(false);
       setSelectedPlan(null);
     }
@@ -170,7 +190,7 @@ export default function PricingPage() {
 
   const handleFreeTrial = async () => {
     if (!shopDomain) {
-      console.error("No shop domain found");
+      logger.warn("No shop domain found", { component: "pricing-page" });
       return;
     }
 
@@ -194,12 +214,12 @@ export default function PricingPage() {
       if (data.success && data.dashboardUrl) {
         router.push(data.dashboardUrl);
       } else {
-        console.error("Failed to start free trial:", data.error);
+        logger.error("Failed to start free trial", new Error(data.error), { component: "pricing-page" });
         setIsLoading(false);
         setSelectedPlan(null);
       }
     } catch (error) {
-      console.error("Error starting free trial:", error);
+      logger.error("Error starting free trial", error, { component: "pricing-page" });
       setIsLoading(false);
       setSelectedPlan(null);
     }
@@ -225,10 +245,16 @@ export default function PricingPage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
               <Zap className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-800">Thunder Text</span>
+            <span className="text-xl font-bold text-gray-800">
+              Thunder Text
+            </span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Choose Your Plan</h1>
-          <p className="text-gray-600">Select a plan to get started with AI-powered product descriptions</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Choose Your Plan
+          </h1>
+          <p className="text-gray-600">
+            Select a plan to get started with AI-powered product descriptions
+          </p>
         </div>
 
         {/* Billing Toggle */}
@@ -264,7 +290,9 @@ export default function PricingPage() {
             <div
               key={plan.id}
               className={`bg-white rounded-2xl shadow-lg p-6 border-2 transition-all ${
-                plan.highlighted ? "border-blue-500 ring-2 ring-blue-100" : "border-gray-100"
+                plan.highlighted
+                  ? "border-blue-500 ring-2 ring-blue-100"
+                  : "border-gray-100"
               }`}
             >
               {/* Plan Header */}
@@ -272,7 +300,9 @@ export default function PricingPage() {
                 <PlanIcon plan={plan.id} />
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-semibold text-gray-900">{plan.name}</h3>
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      {plan.name}
+                    </h3>
                     {plan.badge && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
                         <Sparkles className="w-3 h-3" />
@@ -282,12 +312,19 @@ export default function PricingPage() {
                   </div>
                   <div className="mt-1">
                     <span className="text-3xl font-bold text-gray-900">
-                      ${billingInterval === "monthly" ? plan.monthlyPrice : Math.round(plan.annualPrice / 12)}
+                      $
+                      {billingInterval === "monthly"
+                        ? plan.monthlyPrice
+                        : Math.round(plan.annualPrice / 12)}
                     </span>
                     <span className="text-gray-500">/ month</span>
                   </div>
                   <p className="text-sm text-gray-500">
-                    ${billingInterval === "monthly" ? plan.monthlyPrice * 12 : plan.annualPrice}/year
+                    $
+                    {billingInterval === "monthly"
+                      ? plan.monthlyPrice * 12
+                      : plan.annualPrice}
+                    /year
                   </p>
                 </div>
               </div>
@@ -317,7 +354,9 @@ export default function PricingPage() {
                 </div>
                 <div className="flex items-start gap-3">
                   <FileText className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-gray-700">{plan.bulkGeneration}</span>
+                  <span className="text-sm text-gray-700">
+                    {plan.bulkGeneration}
+                  </span>
                   <Check className="w-4 h-4 text-green-500 ml-auto flex-shrink-0" />
                 </div>
               </div>
@@ -327,7 +366,9 @@ export default function PricingPage() {
                 {plan.features.map((feature, idx) => (
                   <div key={idx} className="flex items-start gap-3">
                     <feature.icon className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">{feature.text}</span>
+                    <span className="text-sm text-gray-700">
+                      {feature.text}
+                    </span>
                     <Check className="w-4 h-4 text-green-500 ml-auto flex-shrink-0" />
                   </div>
                 ))}
@@ -342,8 +383,15 @@ export default function PricingPage() {
             <div className="flex items-center gap-4">
               <PlanIcon plan="free" />
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900">Free Trial</h3>
-                <p className="text-2xl font-bold text-gray-900">$0<span className="text-base font-normal text-gray-500">/ 14 days</span></p>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Free Trial
+                </h3>
+                <p className="text-2xl font-bold text-gray-900">
+                  $0
+                  <span className="text-base font-normal text-gray-500">
+                    / 14 days
+                  </span>
+                </p>
               </div>
               <Button
                 onClick={handleFreeTrial}
@@ -358,7 +406,8 @@ export default function PricingPage() {
               </Button>
             </div>
             <p className="mt-4 text-sm text-gray-500 text-center">
-              14-day free trial with full access to all features. No credit card required.
+              14-day free trial with full access to all features. No credit card
+              required.
             </p>
           </div>
         </div>

@@ -32,8 +32,6 @@ export async function ensureBestPracticeEmbeddings(): Promise<{
     return { total: 0, had_embeddings: 0, generated: 0, errors: 0 };
   }
 
-  console.log(`⚡ Generating embeddings for ${totalPractices} best practices...`);
-
   let generated = 0;
   let errors = 0;
 
@@ -74,13 +72,6 @@ export async function ensureBestPracticeEmbeddings(): Promise<{
       errors++;
     }
   }
-
-  console.log(
-    `\n📊 Embedding generation complete:\n` +
-      `   - Total practices: ${totalPractices}\n` +
-      `   - Generated: ${generated}\n` +
-      `   - Errors: ${errors}`
-  );
 
   return {
     total: totalPractices,

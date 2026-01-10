@@ -146,8 +146,6 @@ export async function GET(request: NextRequest) {
     tiktokAuthUrl.searchParams.set("redirect_uri", redirectUri);
     tiktokAuthUrl.searchParams.set("state", state);
 
-    console.log("Initiating TikTok OAuth for shop:", shop);
-
     // Redirect to TikTok OAuth authorization screen
     return NextResponse.redirect(tiktokAuthUrl.toString());
   } catch (error) {

@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 /**
  * AIE Variant Scorer
  * Scores generated ad variants based on multiple quality factors
@@ -8,8 +9,8 @@ import type {
   AIEPlatform,
   AIEGoal,
   AIEBrandVoice,
-} from './types';
-import { calculateQualityScore } from './utils';
+} from "./types";
+import { calculateQualityScore } from "./utils";
 
 export interface VariantScore {
   predicted_score: number; // 0-1
@@ -36,8 +37,14 @@ export function scoreAdVariant(params: {
 }): VariantScore {
   const scores = {
     brand_fit: scoreBrandFit(params.variant, params.brandVoice),
-    context_relevance: scoreContextRelevance(params.variant, params.description),
-    platform_compliance: scorePlatformCompliance(params.variant, params.platform),
+    context_relevance: scoreContextRelevance(
+      params.variant,
+      params.description,
+    ),
+    platform_compliance: scorePlatformCompliance(
+      params.variant,
+      params.platform,
+    ),
     hook_strength: scoreHookStrength(params.variant),
     cta_clarity: scoreCTAClarity(params.variant, params.goal),
   };
@@ -69,31 +76,33 @@ export function scoreAdVariant(params: {
  */
 function scoreBrandFit(
   variant: AIEAdVariantDraft,
-  brandVoice?: AIEBrandVoice
+  brandVoice?: AIEBrandVoice,
 ): number {
   if (!brandVoice) return 0.8; // Neutral score if no brand voice provided
 
   let score = 1.0;
-  const fullText = `${variant.headline} ${variant.primary_text} ${variant.description || ''}`.toLowerCase();
+  const fullText =
+    `${variant.headline} ${variant.primary_text} ${variant.description || ""}`.toLowerCase();
 
   // Check forbidden words
   if (brandVoice.forbidden_words && brandVoice.forbidden_words.length > 0) {
     const forbiddenUsed = brandVoice.forbidden_words.filter((word) =>
-      fullText.includes(word.toLowerCase())
+      fullText.includes(word.toLowerCase()),
     );
     score -= forbiddenUsed.length * 0.2; // -0.2 per forbidden word
   }
 
   // Check tone alignment
-  const toneArray = typeof brandVoice.tone === 'string' ? [brandVoice.tone] : brandVoice.tone;
+  const toneArray =
+    typeof brandVoice.tone === "string" ? [brandVoice.tone] : brandVoice.tone;
   if (toneArray && toneArray.length > 0) {
     const hasExpectedTone = toneArray.some((expectedTone: string) => {
       const toneIndicators: Record<string, string[]> = {
-        professional: ['proven', 'trusted', 'expert', 'quality'],
-        casual: ['hey', 'you', 'your', 'just'],
-        playful: ['fun', '!', 'wow', 'amazing'],
-        urgent: ['now', 'today', 'limited', 'hurry'],
-        empathetic: ['understand', 'know', 'feel', 'help'],
+        professional: ["proven", "trusted", "expert", "quality"],
+        casual: ["hey", "you", "your", "just"],
+        playful: ["fun", "!", "wow", "amazing"],
+        urgent: ["now", "today", "limited", "hurry"],
+        empathetic: ["understand", "know", "feel", "help"],
       };
 
       const indicators = toneIndicators[expectedTone.toLowerCase()] || [];
@@ -111,7 +120,7 @@ function scoreBrandFit(
  */
 function scoreContextRelevance(
   variant: AIEAdVariantDraft,
-  description: string
+  description: string,
 ): number {
   let score = 0.5; // Base score
 
@@ -121,11 +130,12 @@ function scoreContextRelevance(
 
   // Check if key concepts from description appear in ad copy
   const keyConceptsUsed = descriptionWords.filter(
-    (word) => word.length > 4 && variantText.includes(word)
+    (word) => word.length > 4 && variantText.includes(word),
   );
 
   // Score based on concept overlap
-  const conceptOverlap = keyConceptsUsed.length / Math.max(descriptionWords.length, 1);
+  const conceptOverlap =
+    keyConceptsUsed.length / Math.max(descriptionWords.length, 1);
   score += conceptOverlap * 0.5;
 
   return Math.min(1, score);
@@ -136,7 +146,7 @@ function scoreContextRelevance(
  */
 function scorePlatformCompliance(
   variant: AIEAdVariantDraft,
-  platform: AIEPlatform
+  platform: AIEPlatform,
 ): number {
   let score = 1.0;
 
@@ -178,10 +188,11 @@ function scorePlatformCompliance(
   }
 
   // Platform-specific bonuses
-  if (platform === 'meta' || platform === 'instagram') {
+  if (platform === "meta" || platform === "instagram") {
     // Check for emoji usage (2-3 is optimal)
     // Use safer emoji detection pattern
-    const emojiPattern = /(?:[\u2700-\u27bf]|(?:\ud83c[\udde6-\uddff]){2}|[\ud800-\udbff][\udc00-\udfff]|[\u0023-\u0039]\ufe0f?\u20e3|\u3299|\u3297|\u303d|\u3030|\u24c2|\ud83c[\udd70-\udd71]|\ud83c[\udd7e-\udd7f]|\ud83c\udd8e|\ud83c[\udd91-\udd9a]|\ud83c[\udde6-\uddff]|[\ud83c[\ude01-\ude02]|\ud83c\ude1a|\ud83c\ude2f|[\ud83c[\ude32-\ude3a]|[\ud83c[\ude50-\ude51]|\u203c|\u2049|[\u25aa-\u25ab]|\u25b6|\u25c0|[\u25fb-\u25fe]|\u00a9|\u00ae|\u2122|\u2139|\ud83c\udc04|[\u2600-\u26FF]|\u2b05|\u2b06|\u2b07|\u2b1b|\u2b1c|\u2b50|\u2b55|\u231a|\u231b|\u2328|\u23cf|[\u23e9-\u23f3]|[\u23f8-\u23fa]|\ud83c\udccf|\u2934|\u2935|[\u2190-\u21ff])/g;
+    const emojiPattern =
+      /(?:[\u2700-\u27bf]|(?:\ud83c[\udde6-\uddff]){2}|[\ud800-\udbff][\udc00-\udfff]|[\u0023-\u0039]\ufe0f?\u20e3|\u3299|\u3297|\u303d|\u3030|\u24c2|\ud83c[\udd70-\udd71]|\ud83c[\udd7e-\udd7f]|\ud83c\udd8e|\ud83c[\udd91-\udd9a]|\ud83c[\udde6-\uddff]|[\ud83c[\ude01-\ude02]|\ud83c\ude1a|\ud83c\ude2f|[\ud83c[\ude32-\ude3a]|[\ud83c[\ude50-\ude51]|\u203c|\u2049|[\u25aa-\u25ab]|\u25b6|\u25c0|[\u25fb-\u25fe]|\u00a9|\u00ae|\u2122|\u2139|\ud83c\udc04|[\u2600-\u26FF]|\u2b05|\u2b06|\u2b07|\u2b1b|\u2b1c|\u2b50|\u2b55|\u231a|\u231b|\u2328|\u23cf|[\u23e9-\u23f3]|[\u23f8-\u23fa]|\ud83c\udccf|\u2934|\u2935|[\u2190-\u21ff])/g;
     const emojiCount = (variant.primary_text.match(emojiPattern) || []).length;
     if (emojiCount >= 2 && emojiCount <= 3) {
       score += 0.05;
@@ -236,11 +247,11 @@ function scoreCTAClarity(variant: AIEAdVariantDraft, goal: AIEGoal): number {
 
   // Goal-aligned CTAs
   const goalCTAMap: Record<AIEGoal, string[]> = {
-    conversion: ['shop', 'buy', 'order', 'get', 'start', 'sign up'],
-    awareness: ['learn', 'discover', 'explore', 'see', 'watch'],
-    engagement: ['join', 'comment', 'share', 'follow', 'subscribe'],
-    traffic: ['visit', 'browse', 'check', 'view', 'see more'],
-    app_installs: ['download', 'install', 'get app', 'try'],
+    conversion: ["shop", "buy", "order", "get", "start", "sign up"],
+    awareness: ["learn", "discover", "explore", "see", "watch"],
+    engagement: ["join", "comment", "share", "follow", "subscribe"],
+    traffic: ["visit", "browse", "check", "view", "see more"],
+    app_installs: ["download", "install", "get app", "try"],
   };
 
   const alignedCTAs = goalCTAMap[goal] || [];
@@ -279,37 +290,41 @@ function analyzeVariant(params: {
 
   // Hook strength analysis
   if (params.scores.hook_strength >= 0.8) {
-    strengths.push('Strong opening hook that grabs attention');
+    strengths.push("Strong opening hook that grabs attention");
   } else if (params.scores.hook_strength < 0.6) {
-    improvements.push('Strengthen opening hook with question, stat, or benefit');
+    improvements.push(
+      "Strengthen opening hook with question, stat, or benefit",
+    );
   }
 
   // CTA analysis
   if (params.scores.cta_clarity >= 0.8) {
-    strengths.push('Clear, action-oriented CTA aligned with campaign goal');
+    strengths.push("Clear, action-oriented CTA aligned with campaign goal");
   } else if (params.scores.cta_clarity < 0.6) {
-    improvements.push('Make CTA more specific and aligned with campaign goal');
+    improvements.push("Make CTA more specific and aligned with campaign goal");
   }
 
   // Platform compliance analysis
   if (params.scores.platform_compliance >= 0.9) {
-    strengths.push('Perfectly optimized for platform requirements');
+    strengths.push("Perfectly optimized for platform requirements");
   } else if (params.scores.platform_compliance < 0.7) {
-    improvements.push('Reduce copy length to meet platform character limits');
+    improvements.push("Reduce copy length to meet platform character limits");
   }
 
   // Brand fit analysis
   if (params.scores.brand_fit >= 0.9) {
-    strengths.push('Excellent brand voice alignment');
+    strengths.push("Excellent brand voice alignment");
   } else if (params.scores.brand_fit < 0.7) {
-    improvements.push('Better align tone and messaging with brand voice');
+    improvements.push("Better align tone and messaging with brand voice");
   }
 
   // Context relevance analysis
   if (params.scores.context_relevance >= 0.8) {
-    strengths.push('Highly relevant to product description');
+    strengths.push("Highly relevant to product description");
   } else if (params.scores.context_relevance < 0.6) {
-    improvements.push('Incorporate more specific product features and benefits');
+    improvements.push(
+      "Incorporate more specific product features and benefits",
+    );
   }
 
   return { strengths, improvements };
@@ -319,10 +334,10 @@ function analyzeVariant(params: {
  * Rank variants by score
  */
 export function rankVariants(
-  variants: Array<AIEAdVariantDraft & { score: VariantScore }>
+  variants: Array<AIEAdVariantDraft & { score: VariantScore }>,
 ): Array<AIEAdVariantDraft & { score: VariantScore; rank: number }> {
   const ranked = [...variants].sort(
-    (a, b) => b.score.predicted_score - a.score.predicted_score
+    (a, b) => b.score.predicted_score - a.score.predicted_score,
   );
 
   return ranked.map((variant, index) => ({

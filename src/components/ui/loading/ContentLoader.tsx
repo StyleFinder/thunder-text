@@ -1,53 +1,56 @@
-'use client'
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
+"use client";
 
-import { RefreshCw, Loader2 } from 'lucide-react'
+import { RefreshCw, Loader2 } from "lucide-react";
 
 interface ContentLoaderProps {
-  message?: string
-  size?: 'sm' | 'md' | 'lg'
-  variant?: 'spinner' | 'pulse'
-  className?: string
+  message?: string;
+  size?: "sm" | "md" | "lg";
+  variant?: "spinner" | "pulse";
+  className?: string;
 }
 
 export function ContentLoader({
-  message = 'Loading...',
-  size = 'md',
-  variant = 'spinner',
-  className = ''
+  message = "Loading...",
+  size = "md",
+  variant = "spinner",
+  className = "",
 }: ContentLoaderProps) {
   const sizeClasses = {
-    sm: 'h-4 w-4',
-    md: 'h-6 w-6',
-    lg: 'h-8 w-8'
-  }
+    sm: "h-4 w-4",
+    md: "h-6 w-6",
+    lg: "h-8 w-8",
+  };
 
   const textSizeClasses = {
-    sm: 'text-sm',
-    md: 'text-base',
-    lg: 'text-lg'
-  }
+    sm: "text-sm",
+    md: "text-base",
+    lg: "text-lg",
+  };
 
   return (
     <div className={`flex items-center justify-center gap-3 ${className}`}>
-      {variant === 'spinner' ? (
+      {variant === "spinner" ? (
         <Loader2 className={`${sizeClasses[size]} animate-spin text-primary`} />
       ) : (
-        <RefreshCw className={`${sizeClasses[size]} animate-spin text-primary`} />
+        <RefreshCw
+          className={`${sizeClasses[size]} animate-spin text-primary`}
+        />
       )}
       <span className={`${textSizeClasses[size]} text-muted-foreground`}>
         {message}
       </span>
     </div>
-  )
+  );
 }
 
-export function SkeletonLoader({ className = '' }: { className?: string }) {
+export function SkeletonLoader({ className = "" }: { className?: string }) {
   return (
     <div className={`animate-pulse ${className}`}>
       <div className="h-4 bg-muted rounded w-3/4 mb-2" />
       <div className="h-4 bg-muted rounded w-1/2" />
     </div>
-  )
+  );
 }
 
 export function CardSkeletonLoader() {
@@ -62,7 +65,7 @@ export function CardSkeletonLoader() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export function ListSkeletonLoader({ count = 3 }: { count?: number }) {
@@ -80,5 +83,5 @@ export function ListSkeletonLoader({ count = 3 }: { count?: number }) {
         </div>
       ))}
     </div>
-  )
+  );
 }

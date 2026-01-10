@@ -75,41 +75,101 @@ export async function GET(request: NextRequest) {
     // Default shop ID for global trend data (used when no shop-specific data exists)
     const DEFAULT_TRENDS_SHOP_ID = "11111111-1111-1111-1111-111111111111";
 
-    // Use shop-specific ID if found, otherwise fall back to default
-    const effectiveShopId = shopId || DEFAULT_TRENDS_SHOP_ID;
-
-    // 2. Get trend signal
+    // 2. Get trend signal - try shop-specific first, then fall back to global
     let signal = null;
-    const { data: signalData, error: signalError } = await supabaseAdmin
-      .from("trend_signals")
-      .select("*")
-      .eq("shop_id", effectiveShopId)
-      .eq("theme_id", theme.id)
-      .maybeSingle();
 
-    if (signalError) {
-      logger.error("Error fetching signal:", signalError as Error, {
-        component: "signals",
-      });
+    // First try shop-specific data if we have a shopId
+    if (shopId) {
+      const { data: shopSignalData, error: shopSignalError } =
+        await supabaseAdmin
+          .from("trend_signals")
+          .select("*")
+          .eq("shop_id", shopId)
+          .eq("theme_id", theme.id)
+          .maybeSingle();
+
+      if (shopSignalError) {
+        logger.error(
+          "Error fetching shop-specific signal:",
+          shopSignalError as Error,
+          {
+            component: "signals",
+          },
+        );
+      }
+      signal = shopSignalData;
     }
-    signal = signalData;
 
-    // 3. Get trend series
+    // Fall back to global/default data if no shop-specific data
+    if (!signal) {
+      const { data: defaultSignalData, error: defaultSignalError } =
+        await supabaseAdmin
+          .from("trend_signals")
+          .select("*")
+          .eq("shop_id", DEFAULT_TRENDS_SHOP_ID)
+          .eq("theme_id", theme.id)
+          .maybeSingle();
+
+      if (defaultSignalError) {
+        logger.error(
+          "Error fetching default signal:",
+          defaultSignalError as Error,
+          {
+            component: "signals",
+          },
+        );
+      }
+      signal = defaultSignalData;
+    }
+
+    // 3. Get trend series - try shop-specific first, then fall back to global
     let series: unknown[] = [];
-    const { data: seriesRecords, error: seriesError } = await supabaseAdmin
-      .from("trend_series")
-      .select("points, granularity, start_date, end_date, updated_at")
-      .eq("shop_id", effectiveShopId)
-      .eq("theme_id", theme.id)
-      .order("start_date", { ascending: false })
-      .limit(1);
 
-    if (seriesError) {
-      logger.error("Error fetching series:", seriesError as Error, {
-        component: "signals",
-      });
+    // First try shop-specific data if we have a shopId
+    if (shopId) {
+      const { data: shopSeriesRecords, error: shopSeriesError } =
+        await supabaseAdmin
+          .from("trend_series")
+          .select("points, granularity, start_date, end_date, updated_at")
+          .eq("shop_id", shopId)
+          .eq("theme_id", theme.id)
+          .order("start_date", { ascending: false })
+          .limit(1);
+
+      if (shopSeriesError) {
+        logger.error(
+          "Error fetching shop-specific series:",
+          shopSeriesError as Error,
+          {
+            component: "signals",
+          },
+        );
+      }
+      series = shopSeriesRecords?.[0]?.points || [];
     }
-    series = seriesRecords?.[0]?.points || [];
+
+    // Fall back to global/default data if no shop-specific series
+    if (series.length === 0) {
+      const { data: defaultSeriesRecords, error: defaultSeriesError } =
+        await supabaseAdmin
+          .from("trend_series")
+          .select("points, granularity, start_date, end_date, updated_at")
+          .eq("shop_id", DEFAULT_TRENDS_SHOP_ID)
+          .eq("theme_id", theme.id)
+          .order("start_date", { ascending: false })
+          .limit(1);
+
+      if (defaultSeriesError) {
+        logger.error(
+          "Error fetching default series:",
+          defaultSeriesError as Error,
+          {
+            component: "signals",
+          },
+        );
+      }
+      series = defaultSeriesRecords?.[0]?.points || [];
+    }
 
     // 4. Get seasonal profile (optional)
     const { data: profile, error: profileError } = await supabaseAdmin

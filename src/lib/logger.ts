@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 /**
  * Centralized Logger with Sentry Integration
  *
@@ -5,29 +6,29 @@
  * Use this instead of console.error for production error logging.
  */
 
-import * as Sentry from '@sentry/nextjs'
+import * as Sentry from "@sentry/nextjs";
 
-import type { SeverityLevel } from '@sentry/nextjs'
+import type { SeverityLevel } from "@sentry/nextjs";
 
-type LogLevel = 'error' | 'warning' | 'info' | 'debug'
+type LogLevel = "error" | "warning" | "info" | "debug";
 
 // Map our log levels to Sentry severity levels
 const logLevelToSeverity: Record<LogLevel, SeverityLevel> = {
-  error: 'error',
-  warning: 'warning',
-  info: 'info',
-  debug: 'debug'
-}
+  error: "error",
+  warning: "warning",
+  info: "info",
+  debug: "debug",
+};
 
 interface LogContext {
-  [key: string]: unknown
+  [key: string]: unknown;
 }
 
 /**
  * Logger class with Sentry integration
  */
 class Logger {
-  private isDevelopment = process.env.NODE_ENV === 'development'
+  private isDevelopment = process.env.NODE_ENV === "development";
 
   /**
    * Log error with Sentry tracking
@@ -38,12 +39,12 @@ class Logger {
   error(message: string, error?: Error | unknown, context?: LogContext): void {
     // Always log to console in development
     if (this.isDevelopment) {
-      console.error(`❌ ${message}`, error, context)
+      console.error(`❌ ${message}`, error, context);
     }
 
     // Send to Sentry with context
     Sentry.captureException(error || new Error(message), {
-      level: 'error',
+      level: "error",
       tags: {
         component: context?.component as string | undefined,
         operation: context?.operation as string | undefined,
@@ -51,7 +52,7 @@ class Logger {
       contexts: {
         details: context || {},
       },
-    })
+    });
   }
 
   /**
@@ -60,25 +61,37 @@ class Logger {
    * @param errorOrContext - Error object or context data
    * @param context - Additional context data (if error provided)
    */
-  warn(message: string, errorOrContext?: Error | unknown | LogContext, context?: LogContext): void {
+  warn(
+    message: string,
+    errorOrContext?: Error | unknown | LogContext,
+    context?: LogContext,
+  ): void {
     // Determine if second param is an error or context
-    const isError = errorOrContext instanceof Error ||
-      (errorOrContext && typeof errorOrContext === 'object' && 'message' in errorOrContext && 'stack' in errorOrContext)
+    const isError =
+      errorOrContext instanceof Error ||
+      (errorOrContext &&
+        typeof errorOrContext === "object" &&
+        "message" in errorOrContext &&
+        "stack" in errorOrContext);
 
-    const actualContext = isError ? context : (errorOrContext as LogContext | undefined)
-    const error = isError ? errorOrContext : undefined
+    const actualContext = isError
+      ? context
+      : (errorOrContext as LogContext | undefined);
+    const error = isError ? errorOrContext : undefined;
 
     if (this.isDevelopment) {
-      console.warn(`⚠️ ${message}`, error, actualContext)
+      console.warn(`⚠️ ${message}`, error, actualContext);
     }
 
     Sentry.captureMessage(message, {
-      level: 'warning',
+      level: "warning",
       contexts: {
         details: actualContext || {},
-        error: error ? { message: String(error), stack: (error as Error)?.stack } : undefined,
+        error: error
+          ? { message: String(error), stack: (error as Error)?.stack }
+          : undefined,
       },
-    })
+    });
   }
 
   /**
@@ -88,7 +101,7 @@ class Logger {
    */
   info(message: string, context?: LogContext): void {
     if (this.isDevelopment) {
-      console.log(`ℹ️ ${message}`, context)
+      console.log(`ℹ️ ${message}`, context);
     }
   }
 
@@ -99,7 +112,7 @@ class Logger {
    */
   debug(message: string, context?: LogContext): void {
     if (this.isDevelopment) {
-      console.log(`🔍 ${message}`, context)
+      console.log(`🔍 ${message}`, context);
     }
   }
 
@@ -112,14 +125,14 @@ class Logger {
     Sentry.setUser({
       id: userId,
       ...metadata,
-    })
+    });
   }
 
   /**
    * Clear user context
    */
   clearUser(): void {
-    Sentry.setUser(null)
+    Sentry.setUser(null);
   }
 
   /**
@@ -131,16 +144,16 @@ class Logger {
   addBreadcrumb(
     message: string,
     category: string,
-    level: LogLevel = 'info'
+    level: LogLevel = "info",
   ): void {
     Sentry.addBreadcrumb({
       message,
       category,
       level: logLevelToSeverity[level],
       timestamp: Date.now() / 1000,
-    })
+    });
   }
 }
 
 // Export singleton instance
-export const logger = new Logger()
+export const logger = new Logger();

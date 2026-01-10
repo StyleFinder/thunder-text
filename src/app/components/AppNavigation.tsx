@@ -21,8 +21,14 @@ import {
   FilePlus,
   Package,
   Sparkles,
+  Bot,
+  Video,
 } from "lucide-react";
 import { useNavigation } from "../hooks/useNavigation";
+import {
+  isImageGenerationEnabled,
+  isVideoGenerationEnabled,
+} from "@/lib/feature-flags";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -86,6 +92,9 @@ function NavigationContent({ children }: AppNavigationProps) {
   // - Default to 'user'
   let userRole: string;
 
+  // Get the actual session role for admin-only feature checks
+  const sessionRole = (session?.user as { role?: string })?.role;
+
   if (shop) {
     // Shop parameter present = store owner accessing via Shopify
     // Always treat as 'user' role regardless of session
@@ -100,15 +109,7 @@ function NavigationContent({ children }: AppNavigationProps) {
     userRole = "user";
   }
 
-  // Debug log (remove in production)
-  useEffect(() => {
-    console.log("[AppNavigation] Role determination:", {
-      shop,
-      sessionRole: session?.user?.role,
-      sessionStatus: status,
-      determinedRole: userRole,
-    });
-  }, [shop, session?.user?.role, status, userRole]);
+  // Role determination logged for debugging navigation routing issues
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -134,6 +135,20 @@ function NavigationContent({ children }: AppNavigationProps) {
         exactMatch: false,
       }),
       allowedRoles: ["user", "admin"], // Store owners only
+    },
+    // AI Coaches - moved to second position
+    {
+      url: buildUrl("/ai-coaches"),
+      label: "AI Coaches",
+      icon: Bot,
+      onClick: () => navigateTo("/ai-coaches"),
+      matches: isActive({
+        label: "AI Coaches",
+        url: buildUrl("/ai-coaches"),
+        matchPaths: ["/ai-coaches"],
+        exactMatch: false,
+      }),
+      allowedRoles: ["user", "admin"],
     },
     // Coach Dashboard (BHB Dashboard)
     {
@@ -216,19 +231,42 @@ function NavigationContent({ children }: AppNavigationProps) {
       }),
       allowedRoles: ["user", "admin"],
     },
-    {
-      url: buildUrl("/image-generation"),
-      label: "Image Generation",
-      icon: Sparkles,
-      onClick: () => navigateTo("/image-generation"),
-      matches: isActive({
-        label: "Image Generation",
-        url: buildUrl("/image-generation"),
-        matchPaths: ["/image-generation"],
-        exactMatch: false,
-      }),
-      allowedRoles: ["user", "admin"],
-    },
+    // Image Generation - admin only (requires admin role)
+    ...(isImageGenerationEnabled(sessionRole)
+      ? [
+          {
+            url: buildUrl("/image-generation"),
+            label: "Image Generation",
+            icon: Sparkles,
+            onClick: () => navigateTo("/image-generation"),
+            matches: isActive({
+              label: "Image Generation",
+              url: buildUrl("/image-generation"),
+              matchPaths: ["/image-generation"],
+              exactMatch: false,
+            }),
+            allowedRoles: ["admin"],
+          },
+        ]
+      : []),
+    // Video Generation - admin only (requires admin role)
+    ...(isVideoGenerationEnabled(sessionRole)
+      ? [
+          {
+            url: buildUrl("/content-center/animator"),
+            label: "Video Generation",
+            icon: Video,
+            onClick: () => navigateTo("/content-center/animator"),
+            matches: isActive({
+              label: "Video Generation",
+              url: buildUrl("/content-center/animator"),
+              matchPaths: ["/content-center/animator"],
+              exactMatch: false,
+            }),
+            allowedRoles: ["admin"],
+          },
+        ]
+      : []),
     {
       url: buildUrl("/business-profile"),
       label: "Business Profile",

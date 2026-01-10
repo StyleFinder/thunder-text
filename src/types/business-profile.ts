@@ -417,7 +417,13 @@ export type InterviewPromptKey =
   | "brand_reputation"
   | "communication_style"
   | "values_beliefs"
-  | "future_vision";
+  | "future_vision"
+  // AI Coaching questions (added to Quick Start)
+  | "discount_comfort"
+  | "inventory_size"
+  | "time_availability"
+  | "quarterly_goal"
+  | "policies_summary";
 
 export type InterviewCategory =
   | "Business Foundation & Identity"
@@ -426,4 +432,5 @@ export type InterviewCategory =
   | "Customer Challenges & Solutions"
   | "Business Model & Growth"
   | "Brand & Communication"
-  | "Strategic Vision";
+  | "Strategic Vision"
+  | "Business Operations";

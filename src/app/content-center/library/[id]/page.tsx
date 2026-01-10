@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RichTextEditor } from "@/components/content-center/RichTextEditor";
+import { RichTextEditor } from "@/features/content-center";
 import { ContentLoader } from "@/components/ui/loading/ContentLoader";
 import {
   ArrowLeft,

@@ -2,9 +2,25 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useCallback, useEffect, Suspense, useRef } from "react";
+import {
+  useState,
+  useCallback,
+  useEffect,
+  Suspense,
+  useRef,
+  useMemo,
+} from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2, Zap, ArrowLeft, Sparkles, CheckCircle2 } from "lucide-react";
+import {
+  Loader2,
+  Zap,
+  ArrowLeft,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
+  Save,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -42,6 +58,10 @@ import {
 import { CategoryTemplateSelector } from "@/app/components/CategoryTemplateSelector";
 import { ProductTypeSelector } from "@/app/components/ProductTypeSelector";
 
+// Blog linking components
+import { BlogLinkingSection } from "@/app/components/shared/blog-linking";
+import type { BlogSelection } from "@/types/blog-linking";
+
 interface GeneratedContent {
   title?: string;
   description?: string;
@@ -51,7 +71,7 @@ interface GeneratedContent {
   [key: string]: unknown;
 }
 
-// Step indicator component
+// Step indicator component for individual sections
 function StepIndicator({
   step,
   title,
@@ -80,6 +100,183 @@ function StepIndicator({
     </div>
   );
 }
+
+// Progress stepper component showing overall progress at top
+function ProgressStepper({
+  steps,
+  currentStep,
+}: {
+  steps: { id: string; label: string; complete: boolean }[];
+  currentStep: number;
+}) {
+  const completedSteps = steps.filter((s) => s.complete).length;
+  const progressPercent = Math.round((completedSteps / steps.length) * 100);
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+      {/* Progress bar */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-medium text-gray-700">
+          Progress: {completedSteps} of {steps.length} steps complete
+        </span>
+        <span className="text-sm font-semibold" style={{ color: "#0066cc" }}>
+          {progressPercent}%
+        </span>
+      </div>
+      <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-4">
+        <div
+          className="h-full rounded-full transition-all duration-500 ease-out"
+          style={{
+            width: `${progressPercent}%`,
+            background: "linear-gradient(135deg, #0066cc 0%, #0099ff 100%)",
+          }}
+        />
+      </div>
+
+      {/* Step indicators */}
+      <div className="flex items-center justify-between">
+        {steps.map((step, index) => (
+          <div key={step.id} className="flex items-center">
+            <div className="flex flex-col items-center">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                  step.complete
+                    ? "bg-green-100 text-green-600"
+                    : index === currentStep
+                      ? "bg-blue-100 text-blue-600 ring-2 ring-blue-300"
+                      : "bg-gray-100 text-gray-400"
+                }`}
+              >
+                {step.complete ? (
+                  <CheckCircle2 className="w-4 h-4" />
+                ) : (
+                  index + 1
+                )}
+              </div>
+              <span
+                className={`text-xs mt-1 max-w-[80px] text-center ${
+                  step.complete
+                    ? "text-green-600 font-medium"
+                    : index === currentStep
+                      ? "text-blue-600 font-medium"
+                      : "text-gray-400"
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+            {index < steps.length - 1 && (
+              <div
+                className={`w-8 sm:w-12 md:w-16 h-0.5 mx-1 ${
+                  step.complete ? "bg-green-300" : "bg-gray-200"
+                }`}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Validation feedback component
+function ValidationFeedback({
+  isValid,
+  message,
+  showWhenValid = false,
+}: {
+  isValid: boolean;
+  message: string;
+  showWhenValid?: boolean;
+}) {
+  if (isValid && !showWhenValid) return null;
+
+  return (
+    <div
+      className={`flex items-center gap-2 mt-2 text-sm ${
+        isValid ? "text-green-600" : "text-amber-600"
+      }`}
+    >
+      {isValid ? (
+        <CheckCircle2 className="w-4 h-4" />
+      ) : (
+        <AlertCircle className="w-4 h-4" />
+      )}
+      <span>{message}</span>
+    </div>
+  );
+}
+
+// Generate button disabled reasons component
+function GenerateButtonStatus({
+  canGenerate,
+  reasons,
+}: {
+  canGenerate: boolean;
+  reasons: string[];
+}) {
+  if (canGenerate) return null;
+
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+      <p className="text-sm font-medium text-amber-800 mb-1">
+        Complete these items to enable generation:
+      </p>
+      <ul className="text-sm text-amber-700 space-y-1">
+        {reasons.map((reason, i) => (
+          <li key={i} className="flex items-center gap-2">
+            <AlertCircle className="w-3 h-3" />
+            {reason}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// Draft saved indicator component
+function DraftIndicator({
+  lastSaved,
+  hasDraft,
+  onClearDraft,
+}: {
+  lastSaved: Date | null;
+  hasDraft: boolean;
+  onClearDraft: () => void;
+}) {
+  if (!hasDraft) return null;
+
+  return (
+    <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 mb-4">
+      <div className="flex items-center gap-2 text-sm text-blue-700">
+        <Save className="w-4 h-4" />
+        <span>
+          Draft saved
+          {lastSaved && (
+            <span className="text-blue-500 ml-1">
+              at{" "}
+              {lastSaved.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          )}
+        </span>
+      </div>
+      <button
+        onClick={onClearDraft}
+        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+      >
+        <Trash2 className="w-3 h-3" />
+        Clear draft
+      </button>
+    </div>
+  );
+}
+
+// Constants for auto-save
+const DRAFT_STORAGE_KEY = "thunder-text-create-pd-draft";
+const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
 
 function CreateProductContent() {
   const searchParams = useSearchParams();
@@ -160,6 +357,28 @@ function CreateProductContent() {
   > | null>(null);
   const [progress, setProgress] = useState(0);
 
+  // Draft/auto-save state
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [hasDraft, setHasDraft] = useState(false);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLoadingDraftRef = useRef(false);
+
+  // Blog linking state
+  const [blogLinkEnabled, setBlogLinkEnabled] = useState(false);
+  const [selectedBlog, setSelectedBlog] = useState<BlogSelection | null>(null);
+  const [blogSummary, setBlogSummary] = useState("");
+
+  // Clear draft from localStorage
+  const clearDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+      setHasDraft(false);
+      setLastSavedAt(null);
+    } catch (e) {
+      console.warn("Failed to clear draft:", e);
+    }
+  }, []);
+
   // Reset form to initial state for creating a new product
   const resetForm = useCallback(() => {
     // Clear all photos and detected colors
@@ -188,9 +407,17 @@ function CreateProductContent() {
     setProductCreated(null);
     setProgress(0);
 
+    // Reset blog linking state
+    setBlogLinkEnabled(false);
+    setSelectedBlog(null);
+    setBlogSummary("");
+
+    // Clear saved draft
+    clearDraft();
+
     // Scroll to top of page
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [clearAllPhotos, clearVariants, defaultSizing]);
+  }, [clearAllPhotos, clearVariants, defaultSizing, clearDraft]);
 
   // Apply initial form values from pre-populated data
   useEffect(() => {
@@ -212,6 +439,155 @@ function CreateProductContent() {
       setAvailableSizing(defaultSizing);
     }
   }, [defaultSizing, availableSizing]);
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    // Don't load draft if we have pre-populated data from URL params
+    if (initialFormValues || productId) return;
+
+    try {
+      const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (savedDraft) {
+        isLoadingDraftRef.current = true;
+        const draft = JSON.parse(savedDraft);
+
+        // Restore form fields
+        if (draft.selectedTemplate) setSelectedTemplate(draft.selectedTemplate);
+        if (draft.productType) setProductType(draft.productType);
+        if (draft.availableSizing) setAvailableSizing(draft.availableSizing);
+        if (draft.fabricMaterial) setFabricMaterial(draft.fabricMaterial);
+        if (draft.occasionUse) setOccasionUse(draft.occasionUse);
+        if (draft.targetAudience) setTargetAudience(draft.targetAudience);
+        if (draft.keyFeatures) setKeyFeatures(draft.keyFeatures);
+        if (draft.additionalNotes) setAdditionalNotes(draft.additionalNotes);
+
+        setHasDraft(true);
+        if (draft.savedAt) {
+          setLastSavedAt(new Date(draft.savedAt));
+        }
+
+        // Small delay to prevent immediate re-save
+        setTimeout(() => {
+          isLoadingDraftRef.current = false;
+        }, 100);
+      }
+    } catch (e) {
+      console.warn("Failed to load draft:", e);
+    }
+  }, [initialFormValues, productId]);
+
+  // Auto-save form data to localStorage
+  useEffect(() => {
+    // Don't save if we're loading a draft or have no meaningful data
+    if (isLoadingDraftRef.current) return;
+
+    const hasData =
+      productType ||
+      (selectedTemplate && selectedTemplate !== "general") ||
+      fabricMaterial ||
+      occasionUse ||
+      targetAudience ||
+      keyFeatures ||
+      additionalNotes;
+
+    if (!hasData) return;
+
+    // Clear existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    // Set new timer for auto-save
+    autoSaveTimerRef.current = setTimeout(() => {
+      try {
+        const draft = {
+          selectedTemplate,
+          productType,
+          availableSizing,
+          fabricMaterial,
+          occasionUse,
+          targetAudience,
+          keyFeatures,
+          additionalNotes,
+          savedAt: new Date().toISOString(),
+        };
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+        setHasDraft(true);
+        setLastSavedAt(new Date());
+      } catch (e) {
+        console.warn("Failed to save draft:", e);
+      }
+    }, AUTO_SAVE_INTERVAL);
+
+    // Cleanup
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [
+    selectedTemplate,
+    productType,
+    availableSizing,
+    fabricMaterial,
+    occasionUse,
+    targetAudience,
+    keyFeatures,
+    additionalNotes,
+  ]);
+
+  // Progress steps calculation
+  const progressSteps = useMemo(
+    () => [
+      { id: "product-type", label: "Product Type", complete: !!productType },
+      { id: "photos", label: "Photos", complete: primaryPhotos.length > 0 },
+      {
+        id: "category",
+        label: "Category",
+        complete: !!selectedTemplate && selectedTemplate !== "general",
+      },
+      { id: "details", label: "Details", complete: !!availableSizing },
+      {
+        id: "features",
+        label: "Features",
+        complete: !!keyFeatures || !!fabricMaterial,
+      },
+    ],
+    [
+      productType,
+      primaryPhotos.length,
+      selectedTemplate,
+      availableSizing,
+      keyFeatures,
+      fabricMaterial,
+    ],
+  );
+
+  // Current active step (first incomplete step)
+  const currentActiveStep = useMemo(() => {
+    const firstIncomplete = progressSteps.findIndex((s) => !s.complete);
+    return firstIncomplete === -1 ? progressSteps.length - 1 : firstIncomplete;
+  }, [progressSteps]);
+
+  // Validation state for generate button
+  const validationState = useMemo(() => {
+    const reasons: string[] = [];
+
+    if (primaryPhotos.length === 0) {
+      reasons.push("Upload at least one primary photo");
+    }
+    if (!selectedTemplate) {
+      reasons.push("Select a product category template");
+    }
+    if (!productType) {
+      reasons.push("Specify the product type");
+    }
+
+    return {
+      canGenerate: reasons.length === 0 && !generating,
+      reasons,
+    };
+  }, [primaryPhotos.length, selectedTemplate, productType, generating]);
 
   // Cleanup progress timer on unmount
   useEffect(() => {
@@ -518,6 +894,19 @@ function CreateProductContent() {
           ? suggestedCategory.category
           : selectedTemplate;
 
+      // Prepare blog link data if enabled
+      const blogLink = blogLinkEnabled && selectedBlog && blogSummary
+        ? {
+            blogId: selectedBlog.id,
+            blogSource: selectedBlog.source,
+            title: selectedBlog.title,
+            summary: blogSummary,
+            url: selectedBlog.source === "shopify" && shop
+              ? `https://${shop}/blogs/${selectedBlog.blogHandle || "news"}/${selectedBlog.handle || selectedBlog.id}`
+              : `#blog-${selectedBlog.id}`,
+          }
+        : undefined;
+
       const response = await fetch(url.toString(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -536,6 +925,7 @@ function CreateProductContent() {
             colorVariants: detectedVariants,
           },
           uploadedImages: uploadedImagesData,
+          blogLink,
         }),
       });
 
@@ -596,6 +986,19 @@ function CreateProductContent() {
           </Button>
         </div>
 
+        {/* Progress Stepper */}
+        <ProgressStepper
+          steps={progressSteps}
+          currentStep={currentActiveStep}
+        />
+
+        {/* Draft Saved Indicator */}
+        <DraftIndicator
+          lastSaved={lastSavedAt}
+          hasDraft={hasDraft}
+          onClearDraft={clearDraft}
+        />
+
         {/* Product Data Banner */}
         <ProductDataBanner
           dataLoading={dataLoading}
@@ -621,6 +1024,15 @@ function CreateProductContent() {
               onChange={setProductType}
               shopDomain={shop || undefined}
             />
+            <ValidationFeedback
+              isValid={!!productType}
+              message={
+                productType
+                  ? "Product type specified"
+                  : "Please specify what product you're selling"
+              }
+              showWhenValid={true}
+            />
           </div>
         </div>
 
@@ -645,6 +1057,15 @@ function CreateProductContent() {
               onPhotosAdd={handlePrimaryPhotosAdd}
               onPhotoRemove={handlePrimaryPhotoRemove}
               onVariantOverride={updateVariantOverride}
+            />
+            <ValidationFeedback
+              isValid={primaryPhotos.length > 0}
+              message={
+                primaryPhotos.length > 0
+                  ? `${primaryPhotos.length} photo${primaryPhotos.length > 1 ? "s" : ""} uploaded`
+                  : "Upload at least one primary photo to generate a description"
+              }
+              showWhenValid={true}
             />
           </div>
         </div>
@@ -852,12 +1273,33 @@ function CreateProductContent() {
           </div>
         </div>
 
+        {/* Step 7: Blog Linking (Optional) */}
+        <div className="mb-6">
+          <BlogLinkingSection
+            enabled={blogLinkEnabled}
+            onEnabledChange={setBlogLinkEnabled}
+            selectedBlog={selectedBlog}
+            onBlogSelect={setSelectedBlog}
+            summary={blogSummary}
+            onSummaryChange={setBlogSummary}
+            storeId={shop || ""}
+            shopDomain={shop || undefined}
+            loading={generating}
+          />
+        </div>
+
         {/* Error Display */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
             <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
+
+        {/* Generation Requirements Status */}
+        <GenerateButtonStatus
+          canGenerate={validationState.canGenerate}
+          reasons={validationState.reasons}
+        />
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-3">
@@ -918,6 +1360,10 @@ function CreateProductContent() {
         }}
         onCreateInShopify={handleCreateInShopify}
         creatingProduct={creatingProduct}
+        blogLinkEnabled={blogLinkEnabled}
+        selectedBlog={selectedBlog}
+        blogSummary={blogSummary}
+        shopDomain={shop || undefined}
       />
 
       <ProductCreatedModal data={productCreated} onClose={resetForm} />

@@ -12,7 +12,7 @@ import {
   SearchFilterBar,
   PerformanceTable,
   PerformanceLegend,
-} from "@/components/bhb";
+} from "@/features/bhb";
 
 interface CampaignPerformance {
   campaign_id: string;

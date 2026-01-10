@@ -48,13 +48,21 @@ export function useProductData({
     useState<UseProductDataReturn["initialFormValues"]>(null);
 
   useEffect(() => {
+    // Q5: Track mounted state to prevent memory leaks
+    let isMounted = true;
+
     async function fetchProductData() {
       if (source === "admin_extension" && productId && shop) {
-        setDataLoading(true);
-        setDataLoadError(null);
+        if (isMounted) {
+          setDataLoading(true);
+          setDataLoadError(null);
+        }
 
         try {
           const data = await fetchProductDataForPrePopulation(productId, shop);
+
+          // Check if component is still mounted before updating state
+          if (!isMounted) return;
 
           if (data) {
             setPrePopulatedData(data);
@@ -80,6 +88,9 @@ export function useProductData({
             setDataLoadError("Could not load product data from Shopify");
           }
         } catch (error) {
+          // Check if component is still mounted before updating state
+          if (!isMounted) return;
+
           logger.error("Error fetching product data", error as Error, {
             component: "useProductData",
             operation: "fetchProductData",
@@ -104,12 +115,17 @@ export function useProductData({
             });
           }
         } finally {
-          setDataLoading(false);
+          if (isMounted) setDataLoading(false);
         }
       }
     }
 
     fetchProductData();
+
+    // Cleanup: mark as unmounted
+    return () => {
+      isMounted = false;
+    };
   }, [source, productId, shop, productTypeParam, vendor]);
 
   return {

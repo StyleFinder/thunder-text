@@ -11,14 +11,6 @@ import { useShop } from "@/hooks/useShop";
 // Force dynamic rendering for this page
 export const dynamic = "force-dynamic";
 
-interface SystemPrompt {
-  id: string;
-  name: string;
-  content: string;
-  is_default: boolean;
-  updated_at: string;
-}
-
 interface Template {
   id: string;
   name: string;
@@ -29,21 +21,16 @@ interface Template {
 }
 
 function PromptsSettingsContent() {
-  const searchParams = useSearchParams();
+  const _searchParams = useSearchParams();
   const { shop } = useShop();
   const { toast } = useToast();
 
   // State
-  const [systemPrompt, setSystemPrompt] = useState<SystemPrompt | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  // System prompt editing
-  const [editingSystemPrompt, setEditingSystemPrompt] = useState(false);
-  const [systemPromptContent, setSystemPromptContent] = useState("");
 
   // Template selection and editing
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
@@ -72,12 +59,7 @@ function PromptsSettingsContent() {
         }
 
         const data = await response.json();
-        setSystemPrompt(data.system_prompt);
         setTemplates(data.category_templates || []);
-
-        if (data.system_prompt) {
-          setSystemPromptContent(data.system_prompt.content);
-        }
 
         // Auto-select first template or default template
         if (data.category_templates && data.category_templates.length > 0) {
@@ -109,47 +91,6 @@ function PromptsSettingsContent() {
       setEditingTemplateContent(selectedTemplate.content);
     }
   }, [selectedTemplateId, selectedTemplate, editingTemplate]);
-
-  // Save system prompt
-  const handleSaveSystemPrompt = async () => {
-    if (!systemPromptContent.trim()) return;
-
-    try {
-      setSaving(true);
-      const response = await fetch("/api/prompts", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          store_id: shop,
-          type: "system_prompt",
-          content: systemPromptContent,
-          name: "Custom System Prompt",
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save system prompt");
-      }
-
-      const result = await response.json();
-      setSystemPrompt(result.data);
-      setEditingSystemPrompt(false);
-      setSuccess("System prompt saved successfully!");
-      toast({
-        title: "Success",
-        description: "System prompt saved successfully!",
-      });
-    } catch (err) {
-      logger.error("Error saving system prompt", err as Error, {
-        component: "prompts-settings-page",
-        operation: "handleSaveSystemPrompt",
-        shop,
-      });
-      setError("Failed to save system prompt");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // Save template
   const handleSaveTemplate = async () => {
@@ -339,43 +280,6 @@ function PromptsSettingsContent() {
         shop,
       });
       setError("Failed to set template as default");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleResetSystemPrompt = async () => {
-    try {
-      setSaving(true);
-      const response = await fetch("/api/prompts/reset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          store_id: shop,
-          type: "system_prompt",
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to reset system prompt");
-      }
-
-      const result = await response.json();
-      setSystemPrompt(result.data);
-      setSystemPromptContent(result.data.content);
-      setEditingSystemPrompt(false);
-      setSuccess("System prompt reset to default!");
-      toast({
-        title: "Success",
-        description: "System prompt reset to default!",
-      });
-    } catch (err) {
-      logger.error("Error resetting system prompt", err as Error, {
-        component: "prompts-settings-page",
-        operation: "handleResetSystemPrompt",
-        shop,
-      });
-      setError("Failed to reset system prompt");
     } finally {
       setSaving(false);
     }
@@ -1005,190 +909,6 @@ function PromptsSettingsContent() {
                   )}
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* System Prompt Section */}
-          <div
-            style={{
-              background: "#ffffff",
-              border: "1px solid #e5e7eb",
-              borderRadius: "8px",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
-            }}
-          >
-            <div
-              style={{
-                padding: "24px",
-                borderBottom: "1px solid #e5e7eb",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-              }}
-            >
-              <div>
-                <h2
-                  style={{
-                    fontSize: "24px",
-                    fontWeight: 700,
-                    color: "#003366",
-                    marginBottom: "4px",
-                    fontFamily:
-                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                  }}
-                >
-                  Master System Prompt
-                </h2>
-                <p
-                  style={{
-                    fontSize: "14px",
-                    color: "#6b7280",
-                    margin: 0,
-                    fontFamily:
-                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                  }}
-                >
-                  Universal copywriting principles applied to all product
-                  descriptions
-                </p>
-              </div>
-              <div style={{ display: "flex", gap: "12px" }}>
-                {editingSystemPrompt && (
-                  <button
-                    onClick={handleResetSystemPrompt}
-                    disabled={saving}
-                    style={{
-                      background: "transparent",
-                      color: "#003366",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "8px",
-                      padding: "12px 24px",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      fontFamily:
-                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                      cursor: saving ? "not-allowed" : "pointer",
-                      transition: "all 0.15s ease",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!saving) e.currentTarget.style.background = "#f9fafb";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!saving)
-                        e.currentTarget.style.background = "transparent";
-                    }}
-                  >
-                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Restore to Default
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    if (editingSystemPrompt) {
-                      handleSaveSystemPrompt();
-                    } else {
-                      setEditingSystemPrompt(true);
-                    }
-                  }}
-                  disabled={saving && editingSystemPrompt}
-                  style={{
-                    background:
-                      saving && editingSystemPrompt ? "#93c5fd" : "#0066cc",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: "8px",
-                    padding: "12px 24px",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    fontFamily:
-                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                    cursor:
-                      saving && editingSystemPrompt ? "not-allowed" : "pointer",
-                    transition: "background 0.15s ease",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!(saving && editingSystemPrompt))
-                      e.currentTarget.style.background = "#0052a3";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!(saving && editingSystemPrompt))
-                      e.currentTarget.style.background = "#0066cc";
-                  }}
-                >
-                  {saving && editingSystemPrompt && (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  )}
-                  {editingSystemPrompt ? "Save" : "Edit"}
-                </button>
-              </div>
-            </div>
-            <div style={{ padding: "24px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "16px",
-                }}
-              >
-                <textarea
-                  value={systemPromptContent}
-                  onChange={(e) => setSystemPromptContent(e.target.value)}
-                  rows={10}
-                  disabled={!editingSystemPrompt}
-                  style={{
-                    width: "100%",
-                    padding: "12px",
-                    fontSize: "14px",
-                    fontFamily:
-                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "8px",
-                    outline: "none",
-                    background: editingSystemPrompt ? "#ffffff" : "#f9fafb",
-                    color: "#003366",
-                    cursor: editingSystemPrompt ? "text" : "not-allowed",
-                    resize: "vertical",
-                  }}
-                />
-
-                {editingSystemPrompt && (
-                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <button
-                      onClick={() => {
-                        setEditingSystemPrompt(false);
-                        setSystemPromptContent(systemPrompt?.content || "");
-                      }}
-                      style={{
-                        background: "transparent",
-                        color: "#003366",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "8px",
-                        padding: "12px 24px",
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        fontFamily:
-                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                        cursor: "pointer",
-                        transition: "all 0.15s ease",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#f9fafb";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "transparent";
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>

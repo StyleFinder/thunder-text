@@ -55,8 +55,11 @@ function isAllowedOrigin(origin: string): boolean {
       return true;
     }
 
-    // Allow ngrok domains for development tunneling
-    if (origin.endsWith(".ngrok.app") || origin.endsWith(".ngrok-free.app")) {
+    // SECURITY M4: ngrok only allowed in development AND with explicit env var
+    if (
+      process.env.ALLOW_NGROK_TUNNEL === "true" &&
+      (origin.endsWith(".ngrok.app") || origin.endsWith(".ngrok-free.app"))
+    ) {
       return true;
     }
   }
@@ -148,9 +151,6 @@ export async function middleware(request: NextRequest) {
     const timestamp = searchParams.get("timestamp");
 
     if (shop && hmac && timestamp) {
-      console.log("[Middleware] Detected Shopify hosted install redirect");
-      console.log("[Middleware] Shop:", shop, "Has HMAC:", !!hmac, "Has timestamp:", !!timestamp);
-
       // Normalize shop domain
       const normalizedShop = shop.includes(".myshopify.com") ? shop : `${shop}.myshopify.com`;
 
@@ -218,7 +218,6 @@ export async function middleware(request: NextRequest) {
           // Extract the sub-path after the legacy route
           const subPath = pathname.replace(route, "") || "";
           const newPath = `/stores/${token.id}${route}${subPath}`;
-          console.log(`[Middleware] Redirecting legacy route: ${pathname} -> ${newPath}`);
           return NextResponse.redirect(new URL(newPath, request.url));
         }
       }
@@ -238,10 +237,12 @@ export async function middleware(request: NextRequest) {
         referer.startsWith("https://app.zunosai.com") ||
         (process.env.RENDER_EXTERNAL_URL &&
           referer.startsWith(process.env.RENDER_EXTERNAL_URL)) ||
+        // SECURITY M4: ngrok only allowed in development AND with explicit env var
         (process.env.NODE_ENV === "development" &&
           (referer.startsWith("http://localhost:") ||
-            referer.includes(".ngrok.app") ||
-            referer.includes(".ngrok-free.app"))));
+            (process.env.ALLOW_NGROK_TUNNEL === "true" &&
+              (referer.includes(".ngrok.app") ||
+                referer.includes(".ngrok-free.app"))))));
 
     // For same-origin requests, let browser handle it
     if (!origin && isOwnDomainReferer) {

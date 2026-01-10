@@ -36,4 +36,18 @@ Sentry.init({
     }
     return event;
   },
+
+  // Scrub PII from transaction names (URLs)
+  beforeSendTransaction(transaction) {
+    if (transaction.transaction) {
+      // Replace dynamic route segments with placeholders
+      transaction.transaction = transaction.transaction
+        .replace(/\/stores\/[^/]+/, "/stores/[shopId]")
+        .replace(/\/products\/[^/]+/, "/products/[productId]")
+        .replace(/\/sessions\/[^/]+/, "/sessions/[sessionId]")
+        .replace(/email=[^&]+/, "email=[REDACTED]")
+        .replace(/token=[^&]+/, "token=[REDACTED]");
+    }
+    return transaction;
+  },
 });

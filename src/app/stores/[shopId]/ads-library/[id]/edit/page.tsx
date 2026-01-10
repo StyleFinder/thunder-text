@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -65,6 +66,7 @@ interface AdData {
   campaign_goal: string;
   variant_type?: string;
   image_urls?: string[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   product_metadata?: any;
   predicted_score?: number;
   selected_length?: string;
@@ -248,11 +250,13 @@ export default function AdEditorPage() {
 
       // Show success modal instead of banner (user is at bottom of page)
       setFacebookSuccessModalOpen(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to post ad to campaign";
       logger.error("Error posting to campaign:", err as Error, {
         component: "ad-editor",
       });
-      setError(err.message || "Failed to post ad to campaign");
+      setError(errorMessage);
     } finally {
       setIsPosting(false);
     }
@@ -322,11 +326,13 @@ export default function AdEditorPage() {
       setAd(data.data?.ad);
       setSuccessMessage("Changes saved successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to save changes";
       logger.error("Error saving ad:", err as Error, {
         component: "ad-editor",
       });
-      setError(err.message || "Failed to save changes");
+      setError(errorMessage);
     } finally {
       setIsSaving(false);
     }

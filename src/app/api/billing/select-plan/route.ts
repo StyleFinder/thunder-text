@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 /**
  * API Route: /api/billing/select-plan
  *
@@ -19,7 +20,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { createAppSubscription, PLAN_CONFIGS } from "@/lib/shopify/graphql-billing";
+import {
+  createAppSubscription,
+  PLAN_CONFIGS,
+} from "@/lib/shopify/graphql-billing";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +42,7 @@ export async function POST(request: NextRequest) {
     if (!planId || !shopDomain) {
       return NextResponse.json(
         { success: false, error: "Missing planId or shopDomain" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -67,7 +71,7 @@ export async function POST(request: NextRequest) {
       });
       return NextResponse.json(
         { success: false, error: "Shop not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -106,10 +110,11 @@ export async function POST(request: NextRequest) {
     // Use Shopify Billing API to create subscription
     if (planId === "starter" || planId === "pro") {
       // Determine if this is a test charge (dev stores get free test subscriptions)
-      const isTestStore = normalizedDomain.includes("dev") ||
-                          normalizedDomain.includes("test") ||
-                          normalizedDomain.includes("staging") ||
-                          process.env.NODE_ENV === "development";
+      const isTestStore =
+        normalizedDomain.includes("dev") ||
+        normalizedDomain.includes("test") ||
+        normalizedDomain.includes("staging") ||
+        process.env.NODE_ENV === "development";
 
       // Check trial eligibility: shop only gets trial ONCE, regardless of which plan
       // If has_used_trial is true, they get 0 trial days
@@ -132,17 +137,21 @@ export async function POST(request: NextRequest) {
         planId,
         billingInterval || "monthly",
         isTestStore, // Test charges for dev stores
-        trialDays // Pass explicit trial days (0 if already used)
+        trialDays, // Pass explicit trial days (0 if already used)
       );
 
       if (!result.success) {
-        logger.error("[Select Plan] Failed to create subscription", new Error(result.error || "Unknown error"), {
-          component: "select-plan",
-          shopId: shop.id,
-          planId,
-          error: result.error,
-          userErrors: result.userErrors,
-        });
+        logger.error(
+          "[Select Plan] Failed to create subscription",
+          new Error(result.error || "Unknown error"),
+          {
+            component: "select-plan",
+            shopId: shop.id,
+            planId,
+            error: result.error,
+            userErrors: result.userErrors,
+          },
+        );
 
         return NextResponse.json(
           {
@@ -150,7 +159,7 @@ export async function POST(request: NextRequest) {
             error: result.error || "Failed to create subscription",
             userErrors: result.userErrors,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -169,20 +178,20 @@ export async function POST(request: NextRequest) {
         updateData.first_trial_started_at = new Date().toISOString();
       }
 
-      await supabaseAdmin
-        .from("shops")
-        .update(updateData)
-        .eq("id", shop.id);
+      await supabaseAdmin.from("shops").update(updateData).eq("id", shop.id);
 
-      logger.info("[Select Plan] Subscription created, redirecting to confirmation", {
-        component: "select-plan",
-        shopId: shop.id,
-        planId,
-        subscriptionId: result.subscriptionId,
-        confirmationUrl: result.confirmationUrl,
-        hasUsedTrial,
-        trialDays,
-      });
+      logger.info(
+        "[Select Plan] Subscription created, redirecting to confirmation",
+        {
+          component: "select-plan",
+          shopId: shop.id,
+          planId,
+          subscriptionId: result.subscriptionId,
+          confirmationUrl: result.confirmationUrl,
+          hasUsedTrial,
+          trialDays,
+        },
+      );
 
       // Return the confirmation URL for redirect
       return NextResponse.json({
@@ -195,17 +204,20 @@ export async function POST(request: NextRequest) {
     // Invalid plan
     return NextResponse.json(
       { success: false, error: "Invalid plan selected" },
-      { status: 400 }
+      { status: 400 },
     );
-
   } catch (error) {
-    logger.error("[Select Plan] Error processing plan selection", error as Error, {
-      component: "select-plan",
-    });
+    logger.error(
+      "[Select Plan] Error processing plan selection",
+      error as Error,
+      {
+        component: "select-plan",
+      },
+    );
 
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

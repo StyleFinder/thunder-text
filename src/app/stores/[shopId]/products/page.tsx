@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, Suspense } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useShopContext } from "../ShopContext";
 import { logger } from "@/lib/logger";
@@ -74,10 +75,13 @@ function ProductCard({
       {/* Product Image */}
       <div className="h-48 bg-gray-50 flex items-center justify-center overflow-hidden">
         {primaryImage ? (
-          <img
+          <Image
             src={primaryImage.url}
             alt={primaryImage.altText || productData.title}
+            width={400}
+            height={192}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            unoptimized
           />
         ) : (
           <div className="text-center p-6">
@@ -164,6 +168,7 @@ function ProductsContent() {
     if (shopDomain) {
       fetchProducts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopDomain]);
 
   const fetchProducts = async (nextCursor?: string) => {

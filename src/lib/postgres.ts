@@ -47,14 +47,13 @@ function getPool(): Pool {
   const poolerMatch = connectionString.match(/postgres\.([a-z0-9]+):/);
   const projectId = directMatch?.[1] || poolerMatch?.[1] || "unknown";
 
-  console.log("=".repeat(80));
-  console.log("🔗 PostgreSQL Direct Connection Initialized");
-  console.log("=".repeat(80));
-  console.log("Database Host:", dbHost);
-  console.log("Database Name:", dbName);
-  console.log("Supabase Project ID:", projectId);
-  console.log("Expected Project:", "upkmmwvbspgeanotzknk (Thunder Text)");
-  console.log("=".repeat(80));
+  logger.info("PostgreSQL Direct Connection Initialized", {
+    component: "postgres",
+    dbHost,
+    dbName,
+    projectId,
+    expectedProject: "upkmmwvbspgeanotzknk",
+  });
 
   if (projectId !== "upkmmwvbspgeanotzknk") {
     logger.error(
@@ -84,10 +83,10 @@ function getPool(): Pool {
   pool
     .query("SELECT current_database(), current_schema()")
     .then(() => {
-      console.log("✅ PostgreSQL connection verified");
+      logger.info("PostgreSQL connection verified", { component: "postgres" });
     })
     .catch((err) => {
-      console.error("❌ PostgreSQL connection test failed:", err.message);
+      logger.error("PostgreSQL connection test failed", err, { component: "postgres" });
     });
 
   poolInitialized = true;

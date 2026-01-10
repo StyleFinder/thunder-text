@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
 import { lookupShopWithFallback } from "@/lib/shop-lookup";
+import { toError } from "@/lib/api/route-config";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -96,12 +97,13 @@ export async function DELETE(
       success: true,
       message: `${provider} disconnected successfully`,
     });
-  } catch (error: any) {
-    logger.error(`Error disconnecting provider:`, error as Error, {
+  } catch (error) {
+    const err = toError(error);
+    logger.error(`Error disconnecting provider:`, err, {
       component: "[provider]",
     });
     return NextResponse.json(
-      { error: "Internal Server Error", message: error.message },
+      { error: "Internal Server Error", message: err.message },
       { status: 500 },
     );
   }

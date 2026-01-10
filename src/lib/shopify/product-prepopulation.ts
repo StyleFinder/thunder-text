@@ -1,127 +1,133 @@
-import { shopifyGraphQL } from './client'
-import { logger } from '@/lib/logger'
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
+import { shopifyGraphQL } from "./client";
+import { logger } from "@/lib/logger";
 
 // GraphQL response types
 interface ShopifyImageNode {
   node: {
-    url: string
-    altText?: string
-    width?: number
-    height?: number
-  }
+    url: string;
+    altText?: string;
+    width?: number;
+    height?: number;
+  };
 }
 
 interface ShopifyCollectionNode {
   node: {
-    title: string
-  }
+    title: string;
+  };
 }
 
 interface ShopifyVariantNode {
   node: {
-    id: string
-    title: string
-    price: string
-    sku?: string
-    weight?: number
-    metafields: ShopifyMetafieldEdges
-  }
+    id: string;
+    title: string;
+    price: string;
+    sku?: string;
+    weight?: number;
+    metafields: ShopifyMetafieldEdges;
+  };
 }
 
 interface ShopifyMetafieldNode {
   node: {
-    namespace: string
-    key: string
-    value: string
-    type: string
-  }
+    namespace: string;
+    key: string;
+    value: string;
+    type: string;
+  };
 }
 
 interface ShopifyMetafieldEdges {
-  edges: ShopifyMetafieldNode[]
+  edges: ShopifyMetafieldNode[];
 }
 
 interface ShopifyProductData {
-  id: string
-  title: string
-  handle: string
-  descriptionHtml: string
-  vendor: string
-  productType: string
-  tags: string[]
+  id: string;
+  title: string;
+  handle: string;
+  descriptionHtml: string;
+  vendor: string;
+  productType: string;
+  tags: string[];
   seo?: {
-    title?: string
-    description?: string
-  }
+    title?: string;
+    description?: string;
+  };
   images: {
-    edges: ShopifyImageNode[]
-  }
+    edges: ShopifyImageNode[];
+  };
   variants: {
-    edges: ShopifyVariantNode[]
-  }
+    edges: ShopifyVariantNode[];
+  };
   collections: {
-    edges: ShopifyCollectionNode[]
-  }
-  metafields: ShopifyMetafieldEdges
+    edges: ShopifyCollectionNode[];
+  };
+  metafields: ShopifyMetafieldEdges;
 }
 
 export interface PrePopulatedProductData {
-  id: string
-  title: string
-  handle: string
+  id: string;
+  title: string;
+  handle: string;
   images: Array<{
-    url: string
-    altText?: string
-    width?: number
-    height?: number
-  }>
+    url: string;
+    altText?: string;
+    width?: number;
+    height?: number;
+  }>;
   category: {
-    primary?: string
-    collections?: string[]
-  }
+    primary?: string;
+    collections?: string[];
+  };
   variants: Array<{
-    id: string
-    title: string
-    price: string
-    sku?: string
-    weight?: number
+    id: string;
+    title: string;
+    price: string;
+    sku?: string;
+    weight?: number;
     dimensions?: {
-      length?: number
-      width?: number
-      height?: number
-    }
-  }>
+      length?: number;
+      width?: number;
+      height?: number;
+    };
+  }>;
   materials: {
-    fabric?: string
-    composition?: string[]
-    careInstructions?: string[]
-  }
+    fabric?: string;
+    composition?: string[];
+    careInstructions?: string[];
+  };
   metafields: {
-    sizing?: Record<string, unknown> | null
-    specifications?: Record<string, unknown> | null
-    features?: Record<string, unknown> | null
-  }
-  vendor: string
-  productType: string
-  tags: string[]
-  existingDescription?: string
-  seoTitle?: string
-  seoDescription?: string
+    sizing?: Record<string, unknown> | null;
+    specifications?: Record<string, unknown> | null;
+    features?: Record<string, unknown> | null;
+  };
+  vendor: string;
+  productType: string;
+  tags: string[];
+  existingDescription?: string;
+  seoTitle?: string;
+  seoDescription?: string;
 }
 
 export async function fetchProductDataForPrePopulation(
   productId: string,
   shop: string,
-  sessionToken?: string
+  sessionToken?: string,
 ): Promise<PrePopulatedProductData | null> {
   try {
-    
     // Use Shopify Admin API to fetch comprehensive product data
-    const productData = await fetchShopifyProduct(productId, shop, sessionToken)
-    
+    const productData = await fetchShopifyProduct(
+      productId,
+      shop,
+      sessionToken,
+    );
+
     if (!productData) {
-      logger.error('❌ No product data returned from Shopify', undefined, { component: 'product-prepopulation' })
-      return null
+      logger.error("❌ No product data returned from Shopify", undefined, {
+        component: "product-prepopulation",
+      });
+      return null;
     }
 
     const processedData: PrePopulatedProductData = {
@@ -136,16 +142,20 @@ export async function fetchProductDataForPrePopulation(
       })),
       category: {
         primary: extractPrimaryCategory(productData),
-        collections: productData.collections.edges.map(({ node }: ShopifyCollectionNode) => node.title),
+        collections: productData.collections.edges.map(
+          ({ node }: ShopifyCollectionNode) => node.title,
+        ),
       },
-      variants: productData.variants.edges.map(({ node }: ShopifyVariantNode) => ({
-        id: node.id,
-        title: node.title,
-        price: node.price,
-        sku: node.sku,
-        weight: node.weight,
-        dimensions: extractDimensions(node.metafields),
-      })),
+      variants: productData.variants.edges.map(
+        ({ node }: ShopifyVariantNode) => ({
+          id: node.id,
+          title: node.title,
+          price: node.price,
+          sku: node.sku,
+          weight: node.weight,
+          dimensions: extractDimensions(node.metafields),
+        }),
+      ),
       materials: extractMaterials(productData.metafields),
       metafields: {
         sizing: extractSizingInfo(productData.metafields),
@@ -158,23 +168,31 @@ export async function fetchProductDataForPrePopulation(
       existingDescription: productData.descriptionHtml,
       seoTitle: productData.seo?.title,
       seoDescription: productData.seo?.description,
-    }
+    };
 
-    return processedData
+    return processedData;
   } catch (error) {
-    logger.error('❌ Failed to fetch product data for pre-population:', error as Error, { component: 'product-prepopulation' })
-    return null
+    logger.error(
+      "❌ Failed to fetch product data for pre-population:",
+      error as Error,
+      { component: "product-prepopulation" },
+    );
+    return null;
   }
 }
 
-async function fetchShopifyProduct(productId: string, shop: string, sessionToken?: string) {
+async function fetchShopifyProduct(
+  productId: string,
+  shop: string,
+  sessionToken?: string,
+) {
   // Ensure productId is in the correct GraphQL format
-  let formattedProductId = productId
+  let formattedProductId = productId;
 
   // Handle different ID formats
-  if (!productId.startsWith('gid://')) {
+  if (!productId.startsWith("gid://")) {
     // If it's just a numeric ID, convert to GraphQL format
-    formattedProductId = `gid://shopify/Product/${productId}`
+    formattedProductId = `gid://shopify/Product/${productId}`;
   } else {
   }
 
@@ -249,27 +267,37 @@ async function fetchShopifyProduct(productId: string, shop: string, sessionToken
         }
       }
     }
-  `
-
+  `;
 
   try {
     // Use shopifyGraphQL helper which handles authentication properly
-    const response = await shopifyGraphQL<{ product: ShopifyProductData }>(query, { id: formattedProductId }, shop, sessionToken)
+    const response = await shopifyGraphQL<{ product: ShopifyProductData }>(
+      query,
+      { id: formattedProductId },
+      shop,
+      sessionToken,
+    );
 
     if (!response?.data?.product) {
-      logger.error(`No product found with ID: ${formattedProductId}`, new Error('Product not found'), { component: 'product-prepopulation' })
-      logger.debug(`Full response: ${JSON.stringify(response, null, 2)}`, { component: 'product-prepopulation' })
-      return null
+      logger.error(
+        `No product found with ID: ${formattedProductId}`,
+        new Error("Product not found"),
+        { component: "product-prepopulation" },
+      );
+      logger.debug(`Full response: ${JSON.stringify(response, null, 2)}`, {
+        component: "product-prepopulation",
+      });
+      return null;
     }
 
-    return response.data.product
+    return response.data.product;
   } catch (error) {
-    logger.error('Error fetching product from Shopify', error as Error, {
-      component: 'product-prepopulation',
+    logger.error("Error fetching product from Shopify", error as Error, {
+      component: "product-prepopulation",
       productId: formattedProductId,
-      shop
-    })
-    throw error
+      shop,
+    });
+    throw error;
   }
 }
 
@@ -281,226 +309,260 @@ function extractPrimaryCategory(productData: ShopifyProductData): string {
   // 4. Default to 'general'
 
   if (productData.collections.edges.length > 0) {
-    const primaryCollection = productData.collections.edges[0].node.title
-    return primaryCollection
+    const primaryCollection = productData.collections.edges[0].node.title;
+    return primaryCollection;
   }
 
   if (productData.productType) {
-    return productData.productType
+    return productData.productType;
   }
 
   if (productData.vendor) {
-    return productData.vendor
+    return productData.vendor;
   }
 
-  return 'general'
+  return "general";
 }
 
-function extractDimensions(metafields: ShopifyMetafieldEdges): { length?: number; width?: number; height?: number } {
-  const dimensions: { length?: number; width?: number; height?: number } = {}
+function extractDimensions(metafields: ShopifyMetafieldEdges): {
+  length?: number;
+  width?: number;
+  height?: number;
+} {
+  const dimensions: { length?: number; width?: number; height?: number } = {};
 
-  if (!metafields || !metafields.edges) return dimensions
+  if (!metafields || !metafields.edges) return dimensions;
 
   metafields.edges.forEach(({ node }: ShopifyMetafieldNode) => {
-    const { namespace, key, value } = node
-    
-    if (namespace === 'custom' || namespace === 'product') {
+    const { namespace, key, value } = node;
+
+    if (namespace === "custom" || namespace === "product") {
       switch (key.toLowerCase()) {
-        case 'length':
-        case 'dimension_length':
-          dimensions.length = parseFloat(value) || undefined
-          break
-        case 'width':
-        case 'dimension_width':
-          dimensions.width = parseFloat(value) || undefined
-          break
-        case 'height':
-        case 'dimension_height':
-          dimensions.height = parseFloat(value) || undefined
-          break
+        case "length":
+        case "dimension_length":
+          dimensions.length = parseFloat(value) || undefined;
+          break;
+        case "width":
+        case "dimension_width":
+          dimensions.width = parseFloat(value) || undefined;
+          break;
+        case "height":
+        case "dimension_height":
+          dimensions.height = parseFloat(value) || undefined;
+          break;
       }
     }
-  })
+  });
 
-  return dimensions
+  return dimensions;
 }
 
-function extractMaterials(metafields: ShopifyMetafieldEdges): { fabric?: string; composition?: string[]; careInstructions?: string[] } {
-  const materials: { fabric?: string; composition?: string[]; careInstructions?: string[] } = {}
+function extractMaterials(metafields: ShopifyMetafieldEdges): {
+  fabric?: string;
+  composition?: string[];
+  careInstructions?: string[];
+} {
+  const materials: {
+    fabric?: string;
+    composition?: string[];
+    careInstructions?: string[];
+  } = {};
 
-  if (!metafields || !metafields.edges) return materials
+  if (!metafields || !metafields.edges) return materials;
 
   metafields.edges.forEach(({ node }: ShopifyMetafieldNode) => {
-    const { namespace, key, value } = node
-    
-    if (namespace === 'custom' || namespace === 'product') {
+    const { namespace, key, value } = node;
+
+    if (namespace === "custom" || namespace === "product") {
       switch (key.toLowerCase()) {
-        case 'fabric':
-        case 'material':
-        case 'fabric_content':
-          materials.fabric = value
-          break
-        case 'composition':
-        case 'fabric_composition':
+        case "fabric":
+        case "material":
+        case "fabric_content":
+          materials.fabric = value;
+          break;
+        case "composition":
+        case "fabric_composition":
           try {
-            materials.composition = JSON.parse(value)
+            materials.composition = JSON.parse(value);
           } catch {
-            materials.composition = value.split(',').map((item: string) => item.trim())
+            materials.composition = value
+              .split(",")
+              .map((item: string) => item.trim());
           }
-          break
-        case 'care_instructions':
-        case 'care':
+          break;
+        case "care_instructions":
+        case "care":
           try {
-            materials.careInstructions = JSON.parse(value)
+            materials.careInstructions = JSON.parse(value);
           } catch {
-            materials.careInstructions = value.split(',').map((item: string) => item.trim())
+            materials.careInstructions = value
+              .split(",")
+              .map((item: string) => item.trim());
           }
-          break
+          break;
       }
     }
-  })
+  });
 
-  return materials
+  return materials;
 }
 
-function extractSizingInfo(metafields: ShopifyMetafieldEdges): Record<string, unknown> | null {
-  if (!metafields || !metafields.edges) return null
+function extractSizingInfo(
+  metafields: ShopifyMetafieldEdges,
+): Record<string, unknown> | null {
+  if (!metafields || !metafields.edges) return null;
 
-  const sizingInfo: Record<string, unknown> = {}
+  const sizingInfo: Record<string, unknown> = {};
 
   metafields.edges.forEach(({ node }: ShopifyMetafieldNode) => {
-    const { namespace, key, value } = node
-    
-    if (namespace === 'custom' || namespace === 'product') {
+    const { namespace, key, value } = node;
+
+    if (namespace === "custom" || namespace === "product") {
       switch (key.toLowerCase()) {
-        case 'size_chart':
-        case 'sizing':
-        case 'sizes':
-        case 'size_range':
+        case "size_chart":
+        case "sizing":
+        case "sizes":
+        case "size_range":
           try {
-            sizingInfo[key] = JSON.parse(value)
+            sizingInfo[key] = JSON.parse(value);
           } catch {
-            sizingInfo[key] = value
+            sizingInfo[key] = value;
           }
-          break
+          break;
       }
     }
-  })
+  });
 
-  return Object.keys(sizingInfo).length > 0 ? sizingInfo : null
+  return Object.keys(sizingInfo).length > 0 ? sizingInfo : null;
 }
 
-function extractSpecifications(metafields: ShopifyMetafieldEdges): Record<string, unknown> | null {
-  if (!metafields || !metafields.edges) return null
+function extractSpecifications(
+  metafields: ShopifyMetafieldEdges,
+): Record<string, unknown> | null {
+  if (!metafields || !metafields.edges) return null;
 
-  const specifications: Record<string, unknown> = {}
+  const specifications: Record<string, unknown> = {};
 
   metafields.edges.forEach(({ node }: ShopifyMetafieldNode) => {
-    const { namespace, key, value } = node
-    
-    if (namespace === 'custom' || namespace === 'product' || namespace === 'specifications') {
+    const { namespace, key, value } = node;
+
+    if (
+      namespace === "custom" ||
+      namespace === "product" ||
+      namespace === "specifications"
+    ) {
       // Include various specification-related fields
-      if (key.toLowerCase().includes('spec') || 
-          key.toLowerCase().includes('feature') || 
-          key.toLowerCase().includes('detail') ||
-          namespace === 'specifications') {
+      if (
+        key.toLowerCase().includes("spec") ||
+        key.toLowerCase().includes("feature") ||
+        key.toLowerCase().includes("detail") ||
+        namespace === "specifications"
+      ) {
         try {
-          specifications[key] = JSON.parse(value)
+          specifications[key] = JSON.parse(value);
         } catch {
-          specifications[key] = value
+          specifications[key] = value;
         }
       }
     }
-  })
+  });
 
-  return Object.keys(specifications).length > 0 ? specifications : null
+  return Object.keys(specifications).length > 0 ? specifications : null;
 }
 
-function extractFeatures(metafields: ShopifyMetafieldEdges): Record<string, unknown> | null {
-  if (!metafields || !metafields.edges) return null
+function extractFeatures(
+  metafields: ShopifyMetafieldEdges,
+): Record<string, unknown> | null {
+  if (!metafields || !metafields.edges) return null;
 
-  const features: Record<string, unknown> = {}
+  const features: Record<string, unknown> = {};
 
   metafields.edges.forEach(({ node }: ShopifyMetafieldNode) => {
-    const { namespace, key, value } = node
-    
-    if (namespace === 'custom' || namespace === 'product') {
+    const { namespace, key, value } = node;
+
+    if (namespace === "custom" || namespace === "product") {
       switch (key.toLowerCase()) {
-        case 'features':
-        case 'key_features':
-        case 'highlights':
-        case 'benefits':
+        case "features":
+        case "key_features":
+        case "highlights":
+        case "benefits":
           try {
-            features[key] = JSON.parse(value)
+            features[key] = JSON.parse(value);
           } catch {
-            features[key] = value.split(',').map((item: string) => item.trim())
+            features[key] = value.split(",").map((item: string) => item.trim());
           }
-          break
+          break;
       }
     }
-  })
+  });
 
-  return Object.keys(features).length > 0 ? features : null
+  return Object.keys(features).length > 0 ? features : null;
 }
 
 export function formatKeyFeatures(data: PrePopulatedProductData): string {
-  const features: string[] = []
+  const features: string[] = [];
 
   // Extract features from various sources
   if (data.metafields.features) {
-    const metafieldFeatures = data.metafields.features
+    const metafieldFeatures = data.metafields.features;
     Object.values(metafieldFeatures).forEach((value: unknown) => {
       if (Array.isArray(value)) {
-        features.push(...value.filter((v): v is string => typeof v === 'string'))
-      } else if (typeof value === 'string') {
-        features.push(value)
+        features.push(
+          ...value.filter((v): v is string => typeof v === "string"),
+        );
+      } else if (typeof value === "string") {
+        features.push(value);
       }
-    })
+    });
   }
 
   // Add material information as features
   if (data.materials.fabric) {
-    features.push(`Made from ${data.materials.fabric}`)
+    features.push(`Made from ${data.materials.fabric}`);
   }
 
   // Add sizing information as features
   if (data.metafields.sizing) {
-    const sizingInfo = data.metafields.sizing
-    Object.entries(sizingInfo).forEach(([key, value]) => {
-      if (typeof value === 'string') {
-        features.push(`Available in ${value}`)
+    const sizingInfo = data.metafields.sizing;
+    Object.entries(sizingInfo).forEach(([_key, value]) => {
+      if (typeof value === "string") {
+        features.push(`Available in ${value}`);
       }
-    })
+    });
   }
 
   // Add collection-based features
   if (data.category.collections && data.category.collections.length > 0) {
-    const primaryCollection = data.category.collections[0]
+    const primaryCollection = data.category.collections[0];
     if (primaryCollection !== data.category.primary) {
-      features.push(`Part of ${primaryCollection} collection`)
+      features.push(`Part of ${primaryCollection} collection`);
     }
   }
 
-  return features.join(', ')
+  return features.join(", ");
 }
 
-export function formatSizingData(sizingData: Record<string, unknown> | null): string {
-  if (!sizingData) return ''
+export function formatSizingData(
+  sizingData: Record<string, unknown> | null,
+): string {
+  if (!sizingData) return "";
 
   // Convert sizing data to a readable format
-  const sizingStrings: string[] = []
+  const sizingStrings: string[] = [];
 
-  Object.entries(sizingData).forEach(([key, value]) => {
-    if (typeof value === 'string') {
-      sizingStrings.push(value)
+  Object.entries(sizingData).forEach(([_key, value]) => {
+    if (typeof value === "string") {
+      sizingStrings.push(value);
     } else if (Array.isArray(value)) {
-      sizingStrings.push(value.join(', '))
+      sizingStrings.push(value.join(", "));
     }
-  })
+  });
 
-  return sizingStrings.join(' | ')
+  return sizingStrings.join(" | ");
 }
 
-export function extractKeyFeaturesFromData(data: PrePopulatedProductData): string {
-  return formatKeyFeatures(data)
+export function extractKeyFeaturesFromData(
+  data: PrePopulatedProductData,
+): string {
+  return formatKeyFeatures(data);
 }

@@ -82,13 +82,9 @@ export async function GET(request: NextRequest) {
   let stateData: TikTokOAuthState | undefined
 
   try {
-    console.log('🔵 TikTok OAuth callback received:', request.url)
-
     const { searchParams } = new URL(request.url)
     const authCode = searchParams.get('auth_code')
     const state = searchParams.get('state')
-
-    console.log('🔵 Callback parameters:', { hasAuthCode: !!authCode, hasState: !!state })
 
     // Validate required parameters
     if (!authCode || !state) {
@@ -137,13 +133,8 @@ export async function GET(request: NextRequest) {
 
     const { shop_id, shop_domain, return_to } = stateData
 
-    console.log('🔵 Processing TikTok OAuth callback for shop:', shop_domain)
-    console.log('🔵 State data:', { shop_id, shop_domain, return_to })
-
     // Exchange authorization code for access token
-    console.log('🔵 Starting token exchange...')
     const tokenData = await exchangeCodeForToken(authCode)
-    console.log('🔵 Token exchange successful')
     const { access_token, advertiser_ids } = tokenData
 
     // Encrypt tokens before storing

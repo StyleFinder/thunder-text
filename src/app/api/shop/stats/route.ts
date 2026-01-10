@@ -63,6 +63,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get shop record for display stats (used for demo/screenshot purposes)
+    const { data: shopRecord } = await supabaseAdmin
+      .from("shops")
+      .select("product_descriptions_used, ads_created, display_name")
+      .eq("id", shopId)
+      .single();
+
     // Get current month boundaries
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -124,14 +131,17 @@ export async function GET(request: NextRequest) {
       .lte("created_at", endOfMonth.toISOString());
 
     // Combine counts (use max of different sources to avoid undercounting)
+    // Also check shop record for pre-populated demo/display stats
     const productsGenerated = Math.max(
       productDescriptionsCount || 0,
       productDescTableCount || 0,
+      shopRecord?.product_descriptions_used || 0,
     );
 
     const adsCreated = Math.max(
       (adsLibraryCount || 0) + (socialAdsCount || 0),
       facebookDraftsCount || 0,
+      shopRecord?.ads_created || 0,
     );
 
     // Calculate time saved: average 8 min per product description, 9 min per ad
@@ -176,9 +186,16 @@ export async function GET(request: NextRequest) {
       plan: usageStats.plan,
     });
 
+    // Determine store display name (prefer display_name over domain)
+    const storeDisplayName =
+      shopRecord?.display_name ||
+      (shopDomain ? shopDomain.replace(".myshopify.com", "") : null);
+
     return NextResponse.json({
       success: true,
       data: {
+        // Store info
+        storeName: storeDisplayName,
         // This month stats
         productsGenerated,
         adsCreated,

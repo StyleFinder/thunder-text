@@ -1,22 +1,108 @@
-'use client';
+/* eslint-disable react/no-unescaped-entities -- Quotes and apostrophes in JSX text are intentional */
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import ReactMarkdown from 'react-markdown'; // eslint-disable-line @typescript-eslint/no-unused-vars
-import { CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
-import type {
-  ChatMessage,
-  InterviewPrompt,
-  BusinessProfile,
-  InterviewStatus,
-} from '@/types/business-profile';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+// Q1: logger import removed - now handled in hooks
+
+// Q1: Custom hooks extracted for cleaner state management
+import { useBusinessInterview } from "@/hooks/useBusinessInterview";
+import { useBusinessProfile } from "@/hooks/useBusinessProfile";
+import { usePolicySummary } from "@/hooks/usePolicySummary";
+
+// Quick answer options for AI coaching questions (all answers must be 20+ words to meet min_words requirement)
+const QUICK_ANSWER_OPTIONS: Record<string, { label: string; value: string }[]> =
+  {
+    discount_comfort: [
+      {
+        label: "Rarely discount",
+        value:
+          "I rarely discount my products and prefer to maintain full price positioning. I focus on communicating value and quality rather than competing on price, as I believe discounting can devalue my brand.",
+      },
+      {
+        label: "Sometimes discount",
+        value:
+          "I occasionally run sales and promotions, maybe a few times per season or for special occasions like holidays and end-of-season clearances. I try to be strategic about when and how much I discount.",
+      },
+      {
+        label: "Frequently discount",
+        value:
+          "I frequently run promotions and sales throughout the year. Discounts are a regular part of my marketing strategy to move inventory, attract new customers, and keep my audience engaged with fresh offers.",
+      },
+    ],
+    inventory_size: [
+      {
+        label: "Small (under 100)",
+        value:
+          "I have a small, carefully curated inventory with fewer than 100 SKUs total. I focus on quality over quantity and prefer to offer a thoughtfully selected collection that my customers will love.",
+      },
+      {
+        label: "Medium (100-500)",
+        value:
+          "I have a medium-sized inventory with around 100 to 500 products in my store. This gives me a nice balance of variety for my customers without being overwhelming to manage.",
+      },
+      {
+        label: "Large (500+)",
+        value:
+          "I have a large inventory with over 500 products available in my store. Wide selection is important to my business model, as I want customers to find exactly what they are looking for.",
+      },
+    ],
+    time_availability: [
+      {
+        label: "Very limited (1-2 hrs/day)",
+        value:
+          "I have very limited time and can only dedicate about 1-2 hours per day to my boutique. It is a side hustle alongside my other responsibilities, so I need to be efficient with my time.",
+      },
+      {
+        label: "Moderate (3-5 hrs/day)",
+        value:
+          "I have moderate availability and spend about 3-5 hours daily on my boutique business. It is a significant part of my day but not quite full-time yet, so I balance it with other commitments.",
+      },
+      {
+        label: "Flexible (6+ hrs/day)",
+        value:
+          "I have a flexible schedule and dedicate 6 or more hours daily to my boutique. It is my primary focus and main source of income, so I have plenty of time to implement new strategies and ideas.",
+      },
+    ],
+    quarterly_goal: [
+      {
+        label: "Increase sales",
+        value:
+          "My main goal this quarter is to increase overall sales revenue and grow my customer base significantly. I want to focus on acquiring new customers while also encouraging repeat purchases from my existing loyal customers.",
+      },
+      {
+        label: "Clear inventory",
+        value:
+          "My primary focus this quarter is clearing out slow-moving inventory and making room for fresh new products. I need to move older stock to free up cash flow and shelf space for upcoming seasonal items.",
+      },
+      {
+        label: "Build brand awareness",
+        value:
+          "This quarter I want to focus on building brand awareness and establishing a stronger presence in my market. I want more people to know about my boutique and what makes it special and unique.",
+      },
+      {
+        label: "Improve margins",
+        value:
+          "My goal this quarter is to improve profit margins by optimizing my pricing strategy, being more selective about discounting, and potentially finding better suppliers or negotiating better wholesale rates.",
+      },
+    ],
+    // policies_summary: Removed - users need to provide their specific policy URLs and details
+  };
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -24,393 +110,221 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import styles from './page.module.css'; // eslint-disable-line @typescript-eslint/no-unused-vars
-import { logger } from '@/lib/logger';
-import { useShop } from '@/hooks/useShop';
+} from "@/components/ui/dialog";
+import { useShop } from "@/hooks/useShop";
 
 export default function BrandVoicePage() {
   const router = useRouter();
 
   // Use the unified shop hook for authentication
-  const { shopDomain, hasShop, isLoading: authLoading } = useShop();
+  const { shopId, shopDomain, hasShop, isLoading: authLoading } = useShop();
 
-  // State
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [currentInput, setCurrentInput] = useState('');
-  const [currentPrompt, setCurrentPrompt] = useState<InterviewPrompt | null>(null);
-  const [profile, setProfile] = useState<BusinessProfile | null>(null);
-  const [interviewStatus, setInterviewStatus] = useState<InterviewStatus>('not_started');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGeneratingProfile, setIsGeneratingProfile] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
-  const [profileLoading, setProfileLoading] = useState(true);
+  // Helper to build store-based URLs
+  const buildUrl = (path: string) => {
+    if (shopId) {
+      return `/stores/${shopId}${path}`;
+    }
+    return path;
+  };
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const hasLoadedProfile = useRef(false);
-  const [isResetting, setIsResetting] = useState(false);
+  // Q1: Use extracted custom hooks for cleaner state management
+  const {
+    profile,
+    profileLoading,
+    isGeneratingProfile,
+    isRegenerating,
+    showProfileSuccess,
+    setProfile,
+    setProfileLoading,
+    setShowProfileSuccess: _setShowProfileSuccess,
+    loadProfile,
+    generateProfile,
+    regenerateProfile,
+  } = useBusinessProfile({ shopDomain });
+
+  const {
+    messages,
+    currentInput,
+    currentPrompt,
+    interviewStatus,
+    progress,
+    totalQuestions,
+    currentQuestionNumber,
+    isSubmitting,
+    error,
+    messagesEndRef,
+    hasLoadedProfile,
+    setCurrentInput,
+    setMessages: _setMessages,
+    setInterviewStatus,
+    setProgress: _setProgress,
+    setCurrentPrompt: _setCurrentPrompt,
+    setError,
+    addAIMessage: _addAIMessage,
+    addUserMessage: _addUserMessage,
+    startInterview,
+    submitAnswer: submitInterviewAnswer,
+    resetInterview,
+  } = useBusinessInterview({
+    shopDomain,
+    onProfileUpdate: setProfile,
+  });
+
+  // Callback for handling policy summary - needs to update currentInput
+  const handlePolicySummary = useCallback(
+    (summary: string, type: "return" | "shipping") => {
+      const prefix = type === "return" ? "Return Policy:" : "Shipping Policy:";
+      const newSummary = `${prefix} ${summary}`;
+
+      if (currentInput.trim()) {
+        setCurrentInput(`${currentInput}\n\n${newSummary}`);
+      } else {
+        setCurrentInput(newSummary);
+      }
+    },
+    [currentInput, setCurrentInput]
+  );
+
+  const {
+    returnPolicyUrl,
+    shippingPolicyUrl,
+    isSummarizingReturn,
+    isSummarizingShipping,
+    setReturnPolicyUrl,
+    setShippingPolicyUrl,
+    summarizePolicy,
+    clearPolicyUrls,
+  } = usePolicySummary({
+    shopDomain,
+    onSummaryReceived: handlePolicySummary,
+    setError,
+  });
+
+  // UI-only state that doesn't need a hook
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, messagesEndRef]);
 
-  const showCompletionState = () => {
-    setMessages([]);
-    setInterviewStatus('completed');
-  };
-
-  const loadProfile = async () => {
-    try {
-      const response = await fetch('/api/business-profile', {
-        headers: {
-          'Authorization': `Bearer ${shopDomain}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data.profile) {
-          setProfile(data.data.profile);
-
-          // If interview is completed with generated profile, redirect to settings
-          if (
-            data.data.profile.interview_status === 'completed' &&
-            data.data.profile.master_profile_text
-          ) {
-            router.replace('/brand-voice/settings');
-            return;
-          }
-
-          // Don't auto-load responses - let user choose mode first
-          // Just store the profile data for when they start
-          setInterviewStatus(data.data.profile.interview_status || 'not_started');
-        }
-      }
-    } catch (error) {
-      logger.error('Failed to load profile:', error as Error, { component: 'business-profile' });
-    } finally {
-      setProfileLoading(false);
-    }
-  };
-
+  // Load profile on mount
   useEffect(() => {
     if (hasShop && shopDomain && !hasLoadedProfile.current) {
       hasLoadedProfile.current = true;
-      loadProfile();
+      loadProfile().then(({ status }) => {
+        setInterviewStatus(status);
+      });
     }
-  }, [shopDomain, hasShop]);
+  }, [shopDomain, hasShop, loadProfile, hasLoadedProfile, setInterviewStatus]);
 
   // If not authenticated, set profileLoading to false
   useEffect(() => {
     if (!authLoading && !hasShop) {
       setProfileLoading(false);
     }
-  }, [authLoading, hasShop]);
+  }, [authLoading, hasShop, setProfileLoading]);
 
-  // Profile completed - redirect to settings page
-  useEffect(() => {
-    if (interviewStatus === 'completed' && profile?.master_profile_text) {
-      router.replace('/brand-voice/settings');
-    }
-  }, [interviewStatus, profile, router]);
-
-  // Track interview mode and total questions
-  const [interviewMode, setInterviewMode] = useState<'full' | 'quick_start'>('full');
-  const [totalQuestions, setTotalQuestions] = useState(19);
-  const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
-
-  const startInterview = async (mode: 'full' | 'quick_start' = 'full') => {
-
-    if (!shopDomain) {
-      setError('Shop domain not found. Please reload the page from Shopify Admin.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-    setInterviewMode(mode);
-
-    try {
-      // First, start/update the interview with selected mode
-      const response = await fetch('/api/business-profile/start', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${shopDomain}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ mode }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setProfile(data.data.profile);
-        setInterviewStatus('in_progress');
-        setTotalQuestions(data.data.total_questions || (mode === 'quick_start' ? 7 : 21));
-
-        // Now load any existing responses for this mode
-        const profileResponse = await fetch('/api/business-profile', {
-          headers: {
-            'Authorization': `Bearer ${shopDomain}`,
-          },
-        });
-
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json();
-
-          if (profileData.success && profileData.data.responses && profileData.data.responses.length > 0) {
-            // User has existing responses - load chat history
-            const chatHistory: ChatMessage[] = [];
-
-            const timeEstimate = mode === 'quick_start' ? '5-7 minutes' : '15-20 minutes';
-            chatHistory.push({
-              id: 'welcome',
-              type: 'ai',
-              content: `Hi! I'm here to learn about your business so we can create content that truly represents your brand. This ${mode === 'quick_start' ? 'quick' : ''} conversation will take about ${timeEstimate}. Ready to get started?`,
-              timestamp: new Date(profileData.data.profile.interview_started_at || Date.now()),
-            });
-
-            // Add question-answer pairs from existing responses
-            profileData.data.responses.forEach((resp: any) => {
-              chatHistory.push({
-                id: `q-${resp.id}`,
-                type: 'ai',
-                content: resp.prompt?.question_text || resp.prompt_key,
-                timestamp: new Date(resp.created_at),
-                prompt_key: resp.prompt_key,
-              });
-
-              chatHistory.push({
-                id: `a-${resp.id}`,
-                type: 'user',
-                content: resp.response_text,
-                timestamp: new Date(resp.created_at),
-              });
-            });
-
-            setMessages(chatHistory);
-            setProgress(profileData.data.progress.percentage_complete);
-            setCurrentQuestionNumber(profileData.data.progress.current_question);
-
-            // If there's a next prompt, show it
-            if (profileData.data.progress.next_prompt) {
-              setCurrentPrompt(profileData.data.progress.next_prompt);
-              setTimeout(() => {
-                addAIMessage(
-                  profileData.data.progress.next_prompt.question_text,
-                  profileData.data.progress.next_prompt.prompt_key
-                );
-              }, 500);
-            }
-          } else {
-            // No existing responses - start fresh
-            setCurrentPrompt(data.data.first_prompt);
-            const timeEstimate = mode === 'quick_start' ? '5-7 minutes' : '15-20 minutes';
-            addAIMessage(
-              `Hi! I'm here to learn about your business so we can create content that truly represents your brand. This ${mode === 'quick_start' ? 'quick' : ''} conversation will take about ${timeEstimate}. Ready to get started?`
-            );
-
-            setTimeout(() => {
-              addAIMessage(
-                data.data.first_prompt.question_text,
-                data.data.first_prompt.prompt_key
-              );
-            }, 1500);
-          }
-        }
-      } else {
-        setError(data.error || 'Failed to start interview');
-      }
-    } catch (error) {
-      logger.error('Failed to start interview:', error as Error, { component: 'business-profile' });
-      setError('Failed to start interview. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
+  // Q1: Submit answer with policy URL handling
   const submitAnswer = async () => {
     if (!currentInput.trim() || !currentPrompt) return;
 
-    const wordCount = currentInput.trim().split(/\s+/).length;
-    if (currentPrompt.min_words && wordCount < currentPrompt.min_words) {
-      setError(
-        `Please provide at least ${currentPrompt.min_words} words (current: ${wordCount})`
-      );
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-
-    addUserMessage(currentInput);
-    const userAnswer = currentInput;
-    setCurrentInput('');
-
-    try {
-      const response = await fetch('/api/business-profile/answer', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${shopDomain}`,
-        },
-        body: JSON.stringify({
-          prompt_key: currentPrompt.prompt_key,
-          question_number: currentPrompt.question_number,
-          response_text: userAnswer,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setProgress(data.data.progress.percentage_complete);
-        setCurrentQuestionNumber(data.data.progress.current_question);
-
-        if (data.data.interview_complete) {
-          setTimeout(() => {
-            addAIMessage("Excellent! You've completed all questions. 🎉");
-          }, 800);
-        } else if (data.data.next_prompt) {
-          setCurrentPrompt(data.data.next_prompt);
-
-          setTimeout(() => {
-            addAIMessage(
-              data.data.next_prompt.question_text,
-              data.data.next_prompt.prompt_key
-            );
-          }, 1000);
-        }
-      } else {
-        setError(data.error || 'Failed to submit answer');
+    // For policies_summary, combine URLs with description
+    let finalAnswer = currentInput;
+    if (currentPrompt.prompt_key === "policies_summary") {
+      const parts: string[] = [];
+      if (returnPolicyUrl.trim()) {
+        parts.push(`Return Policy URL: ${returnPolicyUrl.trim()}`);
       }
-    } catch (error) {
-      logger.error('Failed to submit answer:', error as Error, { component: 'business-profile' });
-      setError('Failed to submit answer. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const generateProfile = async () => {
-    setIsGeneratingProfile(true);
-
-    try {
-      const response = await fetch('/api/business-profile/generate', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${shopDomain}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setProfile(data.data.profile);
-        setInterviewStatus('completed');
-
-        setTimeout(() => {
-          addAIMessage('Your Business Profile is complete! 🎊');
-        }, 500);
-
-        setTimeout(() => {
-          addAIMessage(
-            'This profile will now guide all AI-generated content to match your unique business identity, voice, and messaging.'
-          );
-        }, 1500);
-
-        setTimeout(() => {
-          showCompletionState();
-        }, 3000);
-      } else {
-        setError(data.error || 'Failed to generate profile');
-        addAIMessage(
-          "I encountered an issue generating your profile. Let me try again..."
-        );
+      if (shippingPolicyUrl.trim()) {
+        parts.push(`Shipping Policy URL: ${shippingPolicyUrl.trim()}`);
       }
-    } catch (error) {
-      logger.error('Failed to generate profile:', error as Error, { component: 'business-profile' });
-      setError('Failed to generate profile. Please try again.');
-    } finally {
-      setIsGeneratingProfile(false);
+      if (currentInput.trim()) {
+        parts.push(`Policy Details: ${currentInput.trim()}`);
+      }
+      finalAnswer = parts.join("\n\n");
     }
+
+    // Submit using the hook function, and clear policy URLs on completion
+    await submitInterviewAnswer(finalAnswer, () => {
+      if (currentPrompt.prompt_key === "policies_summary") {
+        clearPolicyUrls();
+      }
+    });
   };
 
-  const addAIMessage = (content: string, promptKey?: string) => {
-    const message: ChatMessage = {
-      id: Date.now().toString() + Math.random(),
-      type: 'ai',
-      content,
-      timestamp: new Date(),
-      prompt_key: promptKey,
-    };
-    setMessages((prev) => [...prev, message]);
-  };
-
-  const addUserMessage = (content: string) => {
-    const message: ChatMessage = {
-      id: Date.now().toString() + Math.random(),
-      type: 'user',
-      content,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, message]);
-  };
-
+  // Q1: Handle reset using hook function
   const handleReset = async () => {
     setIsResetting(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/business-profile/reset', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${shopDomain}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setMessages([]);
-        setInterviewStatus('not_started');
-        setProgress(0);
-        setCurrentPrompt(null);
-        setProfile(null);
-        setCurrentInput('');
-        setShowResetConfirm(false);
-
-        hasLoadedProfile.current = false;
-        await loadProfile();
-      } else {
-        setError(data.error || 'Failed to reset interview');
-      }
-    } catch (error) {
-      logger.error('Failed to reset interview:', error as Error, { component: 'business-profile' });
-      setError('Failed to reset interview. Please try again.');
-    } finally {
-      setIsResetting(false);
+    const success = await resetInterview();
+    if (success) {
+      setProfile(null);
+      setShowResetConfirm(false);
     }
+    setIsResetting(false);
   };
 
-  const wordCount = currentInput
-    .trim()
-    .split(/\s+/)
-    .filter((w) => w.length > 0).length;
+  // Calculate word count (include policy URLs for policies_summary question)
+  const wordCount = (() => {
+    if (currentPrompt?.prompt_key === "policies_summary") {
+      const parts: string[] = [];
+      if (returnPolicyUrl.trim())
+        parts.push(`Return Policy URL: ${returnPolicyUrl.trim()}`);
+      if (shippingPolicyUrl.trim())
+        parts.push(`Shipping Policy URL: ${shippingPolicyUrl.trim()}`);
+      if (currentInput.trim())
+        parts.push(`Policy Details: ${currentInput.trim()}`);
+      const combined = parts.join(" ");
+      return combined
+        .trim()
+        .split(/\s+/)
+        .filter((w) => w.length > 0).length;
+    }
+    return currentInput
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w.length > 0).length;
+  })();
 
   // Loading state - wait for both auth and profile to load
   if (authLoading || profileLoading) {
     return (
-      <div className="w-full flex flex-col items-center" style={{ padding: '32px', background: '#fafaf9', minHeight: '100vh' }}>
-        <div className="w-full" style={{ maxWidth: '800px' }}>
-          <Card style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
-            <CardContent className="flex items-center justify-center" style={{ padding: '80px' }}>
-              <div className="flex flex-col items-center" style={{ gap: '16px' }}>
-                <RefreshCw className="h-8 w-8 animate-spin" style={{ color: '#0066cc' }} />
-                <p style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Loading...</p>
+      <div
+        className="w-full flex flex-col items-center"
+        style={{ padding: "32px", background: "#fafaf9", minHeight: "100vh" }}
+      >
+        <div className="w-full" style={{ maxWidth: "800px" }}>
+          <Card
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+            }}
+          >
+            <CardContent
+              className="flex items-center justify-center"
+              style={{ padding: "80px" }}
+            >
+              <div
+                className="flex flex-col items-center"
+                style={{ gap: "16px" }}
+              >
+                <RefreshCw
+                  className="h-8 w-8 animate-spin"
+                  style={{ color: "#0066cc" }}
+                />
+                <p
+                  style={{
+                    fontSize: "14px",
+                    color: "#6b7280",
+                    fontFamily:
+                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                  }}
+                >
+                  Loading...
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -422,12 +336,41 @@ export default function BrandVoicePage() {
   // Not authenticated
   if (!hasShop) {
     return (
-      <div className="w-full flex flex-col items-center" style={{ padding: '32px', background: '#fafaf9', minHeight: '100vh' }}>
-        <div className="w-full" style={{ maxWidth: '800px' }}>
-          <Alert variant="destructive" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '16px' }}>
-            <AlertCircle className="h-4 w-4" style={{ color: '#cc0066' }} />
-            <AlertTitle style={{ fontSize: '16px', fontWeight: 600, color: '#991b1b', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginBottom: '4px' }}>Authentication Required</AlertTitle>
-            <AlertDescription style={{ fontSize: '14px', color: '#991b1b', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+      <div
+        className="w-full flex flex-col items-center"
+        style={{ padding: "32px", background: "#fafaf9", minHeight: "100vh" }}
+      >
+        <div className="w-full" style={{ maxWidth: "800px" }}>
+          <Alert
+            variant="destructive"
+            style={{
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: "8px",
+              padding: "16px",
+            }}
+          >
+            <AlertCircle className="h-4 w-4" style={{ color: "#cc0066" }} />
+            <AlertTitle
+              style={{
+                fontSize: "16px",
+                fontWeight: 600,
+                color: "#991b1b",
+                fontFamily:
+                  'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                marginBottom: "4px",
+              }}
+            >
+              Authentication Required
+            </AlertTitle>
+            <AlertDescription
+              style={{
+                fontSize: "14px",
+                color: "#991b1b",
+                fontFamily:
+                  'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              }}
+            >
               Please log in to access this page.
             </AlertDescription>
           </Alert>
@@ -436,20 +379,304 @@ export default function BrandVoicePage() {
     );
   }
 
-  // Show loading while redirecting completed users
-  if (interviewStatus === 'completed' && profile?.master_profile_text) {
+  // Show completed profile view with options
+  if (interviewStatus === "completed" && profile?.master_profile_text) {
     return (
-      <div className="w-full flex flex-col items-center" style={{ padding: '32px', background: '#fafaf9', minHeight: '100vh' }}>
-        <div className="w-full" style={{ maxWidth: '800px' }}>
-          <Card style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
-            <CardContent className="flex items-center justify-center" style={{ padding: '80px' }}>
-              <div className="flex flex-col items-center" style={{ gap: '16px' }}>
-                <RefreshCw className="h-8 w-8 animate-spin" style={{ color: '#0066cc' }} />
-                <p style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Redirecting to settings...</p>
+      <div
+        className="w-full flex flex-col items-center"
+        style={{ padding: "32px", background: "#fafaf9", minHeight: "100vh" }}
+      >
+        <div className="w-full" style={{ maxWidth: "800px" }}>
+          <div style={{ marginBottom: "32px" }}>
+            <h1
+              style={{
+                fontSize: "32px",
+                fontWeight: 700,
+                marginBottom: "8px",
+                color: "#003366",
+                fontFamily:
+                  'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              }}
+            >
+              Business Profile
+            </h1>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "#6b7280",
+                fontFamily:
+                  'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              }}
+            >
+              Your business profile has been created
+            </p>
+          </div>
+
+          <Card
+            style={{
+              background: "#ffffff",
+              border: "2px solid #22c55e",
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+            }}
+          >
+            <CardContent style={{ padding: "32px" }}>
+              <div
+                className="flex flex-col items-center"
+                style={{ gap: "20px", textAlign: "center" }}
+              >
+                <div
+                  style={{
+                    background: "#dcfce7",
+                    borderRadius: "50%",
+                    padding: "16px",
+                  }}
+                >
+                  <CheckCircle
+                    className="h-12 w-12"
+                    style={{ color: "#22c55e" }}
+                  />
+                </div>
+                <div>
+                  <h3
+                    style={{
+                      fontSize: "24px",
+                      fontWeight: 700,
+                      color: "#003366",
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Business Profile Complete
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      color: "#6b7280",
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    Your AI-powered business profile is ready and will guide all
+                    AI-generated content to match your unique brand voice.
+                  </p>
+                </div>
+                {showProfileSuccess && (
+                  <Alert
+                    style={{
+                      background: "#dcfce7",
+                      border: "1px solid #86efac",
+                      borderRadius: "8px",
+                      padding: "12px",
+                      width: "100%",
+                    }}
+                  >
+                    <CheckCircle
+                      className="h-4 w-4"
+                      style={{ color: "#22c55e" }}
+                    />
+                    <AlertDescription
+                      style={{
+                        fontSize: "14px",
+                        color: "#166534",
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      }}
+                    >
+                      Profile regenerated successfully! AI Coaches profile data
+                      has been updated.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {error && (
+                  <Alert
+                    variant="destructive"
+                    style={{
+                      background: "#fef2f2",
+                      border: "1px solid #fecaca",
+                      borderRadius: "8px",
+                      padding: "12px",
+                      width: "100%",
+                    }}
+                  >
+                    <AlertCircle
+                      className="h-4 w-4"
+                      style={{ color: "#dc2626" }}
+                    />
+                    <AlertDescription
+                      style={{
+                        fontSize: "14px",
+                        color: "#991b1b",
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      }}
+                    >
+                      {error}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <div
+                  className="flex flex-col w-full"
+                  style={{ gap: "12px", marginTop: "8px" }}
+                >
+                  <Button
+                    onClick={() => router.push(buildUrl("/ai-coaches"))}
+                    className="w-full"
+                    style={{
+                      background: "#0066cc",
+                      color: "#ffffff",
+                      borderRadius: "8px",
+                      padding: "16px 24px",
+                      fontSize: "16px",
+                      fontWeight: 600,
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Go to AI Coaches
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      router.push(buildUrl("/brand-voice"))
+                    }
+                    className="w-full"
+                    style={{
+                      background: "#ffffff",
+                      color: "#0066cc",
+                      borderRadius: "8px",
+                      padding: "16px 24px",
+                      fontSize: "16px",
+                      fontWeight: 600,
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      border: "2px solid #e5e7eb",
+                      cursor: "pointer",
+                    }}
+                  >
+                    View Brand Voice
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      setError(null);
+                      const result = await regenerateProfile();
+                      if (!result) {
+                        setError("Failed to regenerate profile. Please try again.");
+                      }
+                    }}
+                    disabled={isRegenerating}
+                    className="w-full"
+                    style={{
+                      background: "#ffffff",
+                      color: "#0066cc",
+                      borderRadius: "8px",
+                      padding: "16px 24px",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      border: "1px solid #e5e7eb",
+                      cursor: isRegenerating ? "not-allowed" : "pointer",
+                      opacity: isRegenerating ? 0.7 : 1,
+                    }}
+                  >
+                    {isRegenerating ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Regenerating...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Regenerate Profile
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowResetConfirm(true)}
+                    className="w-full"
+                    style={{
+                      background: "#ffffff",
+                      color: "#6b7280",
+                      borderRadius: "8px",
+                      padding: "16px 24px",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      border: "1px solid #e5e7eb",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Start Over (Reset Interview)
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Reset Confirmation Dialog */}
+        <Dialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+          <DialogContent style={{ borderRadius: "8px" }}>
+            <DialogHeader>
+              <DialogTitle
+                style={{
+                  fontSize: "18px",
+                  fontWeight: 600,
+                  color: "#003366",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                }}
+              >
+                Start Over?
+              </DialogTitle>
+              <DialogDescription
+                style={{
+                  fontSize: "14px",
+                  color: "#6b7280",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                }}
+              >
+                This will delete all your interview answers and generated
+                profile. You'll need to complete the interview again.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter style={{ gap: "12px" }}>
+              <Button
+                variant="outline"
+                onClick={() => setShowResetConfirm(false)}
+                style={{
+                  borderRadius: "8px",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleReset}
+                disabled={isResetting}
+                style={{
+                  background: "#dc2626",
+                  color: "#ffffff",
+                  borderRadius: "8px",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                }}
+              >
+                {isResetting ? "Resetting..." : "Yes, Start Over"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -457,105 +684,349 @@ export default function BrandVoicePage() {
   // Welcome screen - always show mode selection if no messages loaded
   if (messages.length === 0) {
     return (
-      <div className="w-full flex flex-col items-center" style={{ padding: '32px', background: '#fafaf9', minHeight: '100vh' }}>
-        <div className="w-full" style={{ maxWidth: '1000px' }}>
-          <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: '#003366', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Business Profile</h1>
-            <p style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Build your comprehensive business foundation</p>
+      <div
+        className="w-full flex flex-col items-center"
+        style={{ padding: "32px", background: "#fafaf9", minHeight: "100vh" }}
+      >
+        <div className="w-full" style={{ maxWidth: "1000px" }}>
+          <div style={{ marginBottom: "32px" }}>
+            <h1
+              style={{
+                fontSize: "32px",
+                fontWeight: 700,
+                marginBottom: "8px",
+                color: "#003366",
+                fontFamily:
+                  'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              }}
+            >
+              Business Profile
+            </h1>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "#6b7280",
+                fontFamily:
+                  'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              }}
+            >
+              Build your comprehensive business foundation
+            </p>
           </div>
 
-          <Card style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
-            <CardHeader style={{ padding: '32px' }}>
-              <div className="flex items-center" style={{ gap: '12px', marginBottom: '8px' }}>
-                <CheckCircle className="h-5 w-5" style={{ color: '#0066cc' }} />
-                <CardTitle style={{ fontSize: '24px', fontWeight: 700, color: '#003366', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Welcome to Your Business Profile Interview</CardTitle>
+          <Card
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+            }}
+          >
+            <CardHeader style={{ padding: "32px" }}>
+              <div
+                className="flex items-center"
+                style={{ gap: "12px", marginBottom: "8px" }}
+              >
+                <CheckCircle className="h-5 w-5" style={{ color: "#0066cc" }} />
+                <CardTitle
+                  style={{
+                    fontSize: "24px",
+                    fontWeight: 700,
+                    color: "#003366",
+                    fontFamily:
+                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                  }}
+                >
+                  Welcome to Your Business Profile Interview
+                </CardTitle>
               </div>
-              <CardDescription style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginBottom: '16px' }}>
+              <CardDescription
+                style={{
+                  fontSize: "14px",
+                  color: "#6b7280",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                  marginBottom: "16px",
+                }}
+              >
                 Choose how you'd like to build your business profile
               </CardDescription>
 
-              <Alert style={{ background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
-                <AlertCircle className="h-4 w-4" style={{ color: '#0066cc' }} />
-                <AlertTitle style={{ fontSize: '16px', fontWeight: 600, color: '#003366', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginBottom: '4px' }}>How It Works</AlertTitle>
-                <AlertDescription style={{ fontSize: '14px', color: '#001429', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', lineHeight: 1.5 }}>
-                  I'll ask you questions about your business, customers, and goals.
-                  Answer naturally - there are no wrong answers. The AI will synthesize your responses into a
-                  comprehensive profile for ad generation.
+              <Alert
+                style={{
+                  background: "#f3f4f6",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  marginBottom: "16px",
+                }}
+              >
+                <AlertCircle className="h-4 w-4" style={{ color: "#0066cc" }} />
+                <AlertTitle
+                  style={{
+                    fontSize: "16px",
+                    fontWeight: 600,
+                    color: "#003366",
+                    fontFamily:
+                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    marginBottom: "4px",
+                  }}
+                >
+                  How It Works
+                </AlertTitle>
+                <AlertDescription
+                  style={{
+                    fontSize: "14px",
+                    color: "#001429",
+                    fontFamily:
+                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  I'll ask you questions about your business, customers, and
+                  goals. Answer naturally - there are no wrong answers. The AI
+                  will synthesize your responses into a comprehensive profile
+                  for ad generation.
                 </AlertDescription>
               </Alert>
 
-              <div style={{ background: 'rgba(243, 244, 246, 0.5)', padding: '16px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                <p style={{ fontSize: '14px', fontStyle: 'italic', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', lineHeight: 1.5 }}>
-                  "Answer naturally and conversationally. Don't worry about being perfect - the goal is to capture
-                  your authentic thoughts and business reality."
+              <div
+                style={{
+                  background: "rgba(243, 244, 246, 0.5)",
+                  padding: "16px",
+                  borderRadius: "8px",
+                  border: "1px solid #e5e7eb",
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: "14px",
+                    fontStyle: "italic",
+                    color: "#6b7280",
+                    fontFamily:
+                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  "Answer naturally and conversationally. Don't worry about
+                  being perfect - the goal is to capture your authentic thoughts
+                  and business reality."
                 </p>
               </div>
             </CardHeader>
-            <CardContent style={{ padding: '32px', paddingTop: '0' }}>
+            <CardContent style={{ padding: "32px", paddingTop: "0" }}>
               {/* Two column layout for options */}
-              <div className="grid md:grid-cols-2" style={{ gap: '24px', marginBottom: '24px' }}>
+              <div
+                className="grid md:grid-cols-2"
+                style={{ gap: "24px", marginBottom: "24px" }}
+              >
                 {/* Quick Start Option */}
-                <Card className="relative" style={{ border: '2px solid #0066cc', background: 'linear-gradient(135deg, rgba(0, 102, 204, 0.05) 0%, #ffffff 100%)', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
-                  <div className="absolute" style={{ top: '-12px', right: '16px', background: '#0066cc', color: '#ffffff', padding: '4px 12px', borderRadius: '9999px', fontSize: '12px', fontWeight: 600, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+                <Card
+                  className="relative"
+                  style={{
+                    border: "2px solid #0066cc",
+                    background:
+                      "linear-gradient(135deg, rgba(0, 102, 204, 0.05) 0%, #ffffff 100%)",
+                    borderRadius: "8px",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+                  }}
+                >
+                  <div
+                    className="absolute"
+                    style={{
+                      top: "-12px",
+                      right: "16px",
+                      background: "#0066cc",
+                      color: "#ffffff",
+                      padding: "4px 12px",
+                      borderRadius: "9999px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    }}
+                  >
                     RECOMMENDED
                   </div>
-                  <CardHeader style={{ padding: '24px' }}>
-                    <CardTitle style={{ fontSize: '20px', fontWeight: 700, color: '#0066cc', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginBottom: '4px' }}>Quick Start</CardTitle>
-                    <CardDescription style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>7 essential questions in ~5-7 minutes</CardDescription>
+                  <CardHeader style={{ padding: "24px" }}>
+                    <CardTitle
+                      style={{
+                        fontSize: "20px",
+                        fontWeight: 700,
+                        color: "#0066cc",
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                        marginBottom: "4px",
+                      }}
+                    >
+                      Quick Start
+                    </CardTitle>
+                    <CardDescription
+                      style={{
+                        fontSize: "14px",
+                        color: "#6b7280",
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      }}
+                    >
+                      12 essential questions in ~8-10 minutes
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent style={{ padding: '0 24px 24px 24px' }}>
-                    <div style={{ marginBottom: '16px' }}>
+                  <CardContent style={{ padding: "0 24px 24px 24px" }}>
+                    <div style={{ marginBottom: "16px" }}>
                       {[
-                        'Perfect for running ads quickly',
-                        'Captures core brand voice & customer insights',
-                        'Can expand to full profile later',
+                        "Perfect for running ads & AI coaches quickly",
+                        "Captures brand voice, customer insights & operations",
+                        "Can expand to full profile later",
                       ].map((item, i) => (
-                        <div key={i} className="flex items-start" style={{ gap: '8px', marginBottom: '8px' }}>
-                          <CheckCircle className="flex-shrink-0" style={{ width: '16px', height: '16px', color: '#0066cc', marginTop: '2px' }} />
-                          <span style={{ fontSize: '14px', color: '#001429', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>{item}</span>
+                        <div
+                          key={i}
+                          className="flex items-start"
+                          style={{ gap: "8px", marginBottom: "8px" }}
+                        >
+                          <CheckCircle
+                            className="flex-shrink-0"
+                            style={{
+                              width: "16px",
+                              height: "16px",
+                              color: "#0066cc",
+                              marginTop: "2px",
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontSize: "14px",
+                              color: "#001429",
+                              fontFamily:
+                                'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                            }}
+                          >
+                            {item}
+                          </span>
                         </div>
                       ))}
                     </div>
                     <Button
                       className="w-full"
-                      onClick={() => startInterview('quick_start')}
+                      onClick={() => startInterview("quick_start")}
                       disabled={isSubmitting}
-                      style={{ background: '#0066cc', color: '#ffffff', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', border: 'none', cursor: 'pointer' }}
+                      style={{
+                        background: "#0066cc",
+                        color: "#ffffff",
+                        borderRadius: "8px",
+                        padding: "12px 16px",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                        border: "none",
+                        cursor: "pointer",
+                      }}
                     >
-                      {isSubmitting ? 'Starting...' : 'Start Quick Interview'}
+                      {isSubmitting ? "Starting..." : "Start Quick Interview"}
                     </Button>
                   </CardContent>
                 </Card>
 
                 {/* Full Interview Option */}
-                <Card style={{ border: '2px solid #e5e7eb', background: '#ffffff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
-                  <CardHeader style={{ padding: '24px' }}>
-                    <CardTitle style={{ fontSize: '20px', fontWeight: 700, color: '#003366', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginBottom: '4px' }}>Full Interview</CardTitle>
-                    <CardDescription style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>19 comprehensive questions in ~15-20 minutes</CardDescription>
+                <Card
+                  style={{
+                    border: "2px solid #e5e7eb",
+                    background: "#ffffff",
+                    borderRadius: "8px",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+                  }}
+                >
+                  <CardHeader style={{ padding: "24px" }}>
+                    <CardTitle
+                      style={{
+                        fontSize: "20px",
+                        fontWeight: 700,
+                        color: "#003366",
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                        marginBottom: "4px",
+                      }}
+                    >
+                      Full Interview
+                    </CardTitle>
+                    <CardDescription
+                      style={{
+                        fontSize: "14px",
+                        color: "#6b7280",
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      }}
+                    >
+                      19 comprehensive questions in ~15-20 minutes
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent style={{ padding: '0 24px 24px 24px' }}>
-                    <div style={{ marginBottom: '16px' }}>
-                      <p style={{ fontSize: '14px', fontWeight: 600, color: '#003366', marginBottom: '12px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>What You'll Create:</p>
+                  <CardContent style={{ padding: "0 24px 24px 24px" }}>
+                    <div style={{ marginBottom: "16px" }}>
+                      <p
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          color: "#003366",
+                          marginBottom: "12px",
+                          fontFamily:
+                            'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                        }}
+                      >
+                        What You'll Create:
+                      </p>
                       {[
-                        'Comprehensive Business Profile - Your complete story, positioning, and unique value',
-                        'Ideal Customer Insights - Deep understanding of who you serve and their needs',
-                        'Brand Voice Guidelines - How to communicate authentically across all channels',
-                        'Strategic Foundation - Clear vision and messaging framework',
+                        "Comprehensive Business Profile - Your complete story, positioning, and unique value",
+                        "Ideal Customer Insights - Deep understanding of who you serve and their needs",
+                        "Brand Voice Guidelines - How to communicate authentically across all channels",
+                        "Strategic Foundation - Clear vision and messaging framework",
                       ].map((item, i) => (
-                        <div key={i} className="flex items-start" style={{ gap: '8px', marginBottom: '8px' }}>
-                          <CheckCircle className="flex-shrink-0" style={{ width: '16px', height: '16px', color: '#6b7280', marginTop: '2px' }} />
-                          <span style={{ fontSize: '14px', color: '#001429', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>{item}</span>
+                        <div
+                          key={i}
+                          className="flex items-start"
+                          style={{ gap: "8px", marginBottom: "8px" }}
+                        >
+                          <CheckCircle
+                            className="flex-shrink-0"
+                            style={{
+                              width: "16px",
+                              height: "16px",
+                              color: "#6b7280",
+                              marginTop: "2px",
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontSize: "14px",
+                              color: "#001429",
+                              fontFamily:
+                                'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                            }}
+                          >
+                            {item}
+                          </span>
                         </div>
                       ))}
                     </div>
                     <Button
                       variant="outline"
                       className="w-full"
-                      onClick={() => startInterview('full')}
+                      onClick={() => startInterview("full")}
                       disabled={isSubmitting}
-                      style={{ background: '#ffffff', color: '#0066cc', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', border: '2px solid #0066cc', cursor: 'pointer' }}
+                      style={{
+                        background: "#ffffff",
+                        color: "#0066cc",
+                        borderRadius: "8px",
+                        padding: "12px 16px",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                        border: "2px solid #0066cc",
+                        cursor: "pointer",
+                      }}
                     >
-                      {isSubmitting ? 'Starting...' : 'Start Full Interview'}
+                      {isSubmitting ? "Starting..." : "Start Full Interview"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -569,72 +1040,292 @@ export default function BrandVoicePage() {
 
   // Interview in progress
   return (
-    <div className="w-full flex flex-col items-center" style={{ padding: '32px', background: '#fafaf9', minHeight: '100vh' }}>
-      <div className="w-full" style={{ maxWidth: '800px' }}>
-        <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: '#003366', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>Brand Voice Interview</h1>
+    <div
+      className="w-full flex flex-col items-center"
+      style={{ padding: "32px", background: "#fafaf9", minHeight: "100vh" }}
+    >
+      <div className="w-full" style={{ maxWidth: "800px" }}>
+        <div style={{ marginBottom: "32px" }}>
+          <h1
+            style={{
+              fontSize: "32px",
+              fontWeight: 700,
+              marginBottom: "8px",
+              color: "#003366",
+              fontFamily:
+                'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            }}
+          >
+            Brand Voice Interview
+          </h1>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <Card style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
-            <CardContent style={{ padding: '24px' }}>
-              <div className="flex items-center justify-between" style={{ marginBottom: '16px' }}>
-                <Badge variant="secondary" style={{ background: '#f3f4f6', color: '#003366', padding: '4px 12px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <Card
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+            }}
+          >
+            <CardContent style={{ padding: "24px" }}>
+              <div
+                className="flex items-center justify-between"
+                style={{ marginBottom: "16px" }}
+              >
+                <Badge
+                  variant="secondary"
+                  style={{
+                    background: "#f3f4f6",
+                    color: "#003366",
+                    padding: "4px 12px",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    fontFamily:
+                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                  }}
+                >
                   Question {currentQuestionNumber} of {totalQuestions}
                 </Badge>
                 <Button
                   variant="outline"
                   onClick={() => setShowResetConfirm(true)}
                   disabled={isResetting}
-                  style={{ background: '#ffffff', color: '#0066cc', borderRadius: '8px', padding: '8px 16px', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', border: '2px solid #e5e7eb', cursor: 'pointer' }}
+                  style={{
+                    background: "#ffffff",
+                    color: "#0066cc",
+                    borderRadius: "8px",
+                    padding: "8px 16px",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    fontFamily:
+                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    border: "2px solid #e5e7eb",
+                    cursor: "pointer",
+                  }}
                 >
-                  {isResetting ? 'Resetting...' : 'Start Over'}
+                  {isResetting ? "Resetting..." : "Start Over"}
                 </Button>
               </div>
-              <Progress value={progress} style={{ marginBottom: '8px' }} />
-              <p style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>{Math.round(progress)}% Complete</p>
+              <Progress value={progress} style={{ marginBottom: "8px" }} />
+              <p
+                style={{
+                  fontSize: "14px",
+                  color: "#6b7280",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                }}
+              >
+                {Math.round(progress)}% Complete
+              </p>
             </CardContent>
           </Card>
 
           {error && (
-            <Alert variant="destructive" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '16px' }}>
-              <AlertCircle className="h-4 w-4" style={{ color: '#cc0066' }} />
-              <AlertTitle style={{ fontSize: '16px', fontWeight: 600, color: '#991b1b', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginBottom: '4px' }}>Error</AlertTitle>
-              <AlertDescription style={{ fontSize: '14px', color: '#991b1b', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>{error}</AlertDescription>
+            <Alert
+              variant="destructive"
+              style={{
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: "8px",
+                padding: "16px",
+              }}
+            >
+              <AlertCircle className="h-4 w-4" style={{ color: "#cc0066" }} />
+              <AlertTitle
+                style={{
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  color: "#991b1b",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                  marginBottom: "4px",
+                }}
+              >
+                Error
+              </AlertTitle>
+              <AlertDescription
+                style={{
+                  fontSize: "14px",
+                  color: "#991b1b",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                }}
+              >
+                {error}
+              </AlertDescription>
             </Alert>
           )}
 
-          <Card style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
-            <CardContent style={{ padding: '24px' }}>
-              <div style={{ minHeight: '400px', maxHeight: '500px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className="flex"
-                    style={{ justifyContent: msg.type === 'user' ? 'flex-end' : 'flex-start' }}
-                  >
+          <Card
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+            }}
+          >
+            <CardContent style={{ padding: "24px" }}>
+              <div
+                style={{
+                  minHeight: "400px",
+                  maxHeight: "500px",
+                  overflowY: "auto",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "16px",
+                }}
+              >
+                {messages.map((msg, index) => {
+                  // Check if this is the last AI message and has quick answer options
+                  const isLastAIMessage =
+                    msg.type === "ai" && index === messages.length - 1;
+                  const quickOptions = msg.prompt_key
+                    ? QUICK_ANSWER_OPTIONS[msg.prompt_key]
+                    : null;
+                  const showQuickAnswers =
+                    isLastAIMessage &&
+                    quickOptions &&
+                    currentPrompt?.prompt_key === msg.prompt_key;
+
+                  return (
                     <div
+                      key={msg.id}
+                      className="flex"
                       style={{
-                        maxWidth: '85%',
-                        borderRadius: '8px',
-                        padding: '12px 16px',
-                        background: msg.type === 'user' ? '#0066cc' : '#f3f4f6',
-                        color: msg.type === 'user' ? '#ffffff' : '#001429',
+                        justifyContent:
+                          msg.type === "user" ? "flex-end" : "flex-start",
                       }}
                     >
-                      <p style={{ fontSize: '14px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', lineHeight: 1.5 }}>{msg.content}</p>
-                      <p style={{ fontSize: '12px', opacity: 0.7, marginTop: '8px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-                        {msg.timestamp.toLocaleTimeString()}
-                      </p>
+                      <div
+                        style={{
+                          maxWidth: "85%",
+                          borderRadius: "8px",
+                          padding: "12px 16px",
+                          background:
+                            msg.type === "user" ? "#0066cc" : "#f3f4f6",
+                          color: msg.type === "user" ? "#ffffff" : "#001429",
+                        }}
+                      >
+                        <p
+                          style={{
+                            fontSize: "14px",
+                            fontFamily:
+                              'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          {msg.content}
+                        </p>
+
+                        {/* Quick answer buttons for AI coaching questions */}
+                        {showQuickAnswers && (
+                          <div
+                            style={{
+                              marginTop: "12px",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "8px",
+                            }}
+                          >
+                            <p
+                              style={{
+                                fontSize: "12px",
+                                color: "#6b7280",
+                                fontFamily:
+                                  'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                                marginBottom: "4px",
+                              }}
+                            >
+                              Quick answers (or type your own below):
+                            </p>
+                            {quickOptions.map((option, optIndex) => (
+                              <button
+                                key={optIndex}
+                                onClick={() => setCurrentInput(option.value)}
+                                disabled={isSubmitting}
+                                style={{
+                                  background: "#ffffff",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "6px",
+                                  padding: "8px 12px",
+                                  fontSize: "13px",
+                                  fontFamily:
+                                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                                  color: "#003366",
+                                  cursor: isSubmitting
+                                    ? "not-allowed"
+                                    : "pointer",
+                                  textAlign: "left",
+                                  transition: "all 0.15s ease",
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isSubmitting) {
+                                    e.currentTarget.style.background =
+                                      "#0066cc";
+                                    e.currentTarget.style.color = "#ffffff";
+                                    e.currentTarget.style.borderColor =
+                                      "#0066cc";
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = "#ffffff";
+                                  e.currentTarget.style.color = "#003366";
+                                  e.currentTarget.style.borderColor = "#e5e7eb";
+                                }}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        <p
+                          style={{
+                            fontSize: "12px",
+                            opacity: 0.7,
+                            marginTop: "8px",
+                            fontFamily:
+                              'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                          }}
+                        >
+                          {msg.timestamp.toLocaleTimeString()}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {isGeneratingProfile && (
-                  <div className="flex" style={{ justifyContent: 'flex-start' }}>
-                    <div className="flex items-center" style={{ background: '#f3f4f6', borderRadius: '8px', padding: '12px 16px', gap: '12px' }}>
-                      <RefreshCw className="h-4 w-4 animate-spin" style={{ color: '#0066cc' }} />
-                      <p style={{ fontSize: '14px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#001429' }}>Generating your Business Profile...</p>
+                  <div
+                    className="flex"
+                    style={{ justifyContent: "flex-start" }}
+                  >
+                    <div
+                      className="flex items-center"
+                      style={{
+                        background: "#f3f4f6",
+                        borderRadius: "8px",
+                        padding: "12px 16px",
+                        gap: "12px",
+                      }}
+                    >
+                      <RefreshCw
+                        className="h-4 w-4 animate-spin"
+                        style={{ color: "#0066cc" }}
+                      />
+                      <p
+                        style={{
+                          fontSize: "14px",
+                          fontFamily:
+                            'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                          color: "#001429",
+                        }}
+                      >
+                        Generating your Business Profile...
+                      </p>
                     </div>
                   </div>
                 )}
@@ -645,22 +1336,180 @@ export default function BrandVoicePage() {
           </Card>
 
           {/* Show Generate Profile button when 100% complete */}
-          {!isGeneratingProfile && progress >= 100 && (
-            <Card style={{ background: '#ffffff', border: '2px solid #0066cc', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
-              <CardContent style={{ padding: '24px' }}>
-                <div className="flex flex-col items-center" style={{ gap: '16px', textAlign: 'center' }}>
-                  <CheckCircle className="h-12 w-12" style={{ color: '#0066cc' }} />
+          {!isGeneratingProfile && !showProfileSuccess && progress >= 100 && (
+            <Card
+              style={{
+                background: "#ffffff",
+                border: "2px solid #0066cc",
+                borderRadius: "8px",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+              }}
+            >
+              <CardContent style={{ padding: "24px" }}>
+                <div
+                  className="flex flex-col items-center"
+                  style={{ gap: "16px", textAlign: "center" }}
+                >
+                  <CheckCircle
+                    className="h-12 w-12"
+                    style={{ color: "#0066cc" }}
+                  />
                   <div>
-                    <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#003366', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginBottom: '8px' }}>All Questions Complete!</h3>
-                    <p style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>You've answered all {totalQuestions} questions. Ready to generate your Business Profile?</p>
+                    <h3
+                      style={{
+                        fontSize: "20px",
+                        fontWeight: 700,
+                        color: "#003366",
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                        marginBottom: "8px",
+                      }}
+                    >
+                      All Questions Complete!
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: "14px",
+                        color: "#6b7280",
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      }}
+                    >
+                      You've answered all {totalQuestions} questions. Ready to
+                      generate your Business Profile?
+                    </p>
                   </div>
                   <Button
                     onClick={generateProfile}
+                    disabled={isGeneratingProfile}
                     className="w-full"
-                    style={{ background: '#0066cc', color: '#ffffff', borderRadius: '8px', padding: '16px 24px', fontSize: '16px', fontWeight: 600, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', border: 'none', cursor: 'pointer' }}
+                    style={{
+                      background: isGeneratingProfile ? "#93c5fd" : "#0066cc",
+                      color: "#ffffff",
+                      borderRadius: "8px",
+                      padding: "16px 24px",
+                      fontSize: "16px",
+                      fontWeight: 600,
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      border: "none",
+                      cursor: isGeneratingProfile ? "not-allowed" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                    }}
                   >
-                    Generate Business Profile
+                    {isGeneratingProfile && (
+                      <RefreshCw className="h-5 w-5 animate-spin" />
+                    )}
+                    {isGeneratingProfile
+                      ? "Generating Your Profile..."
+                      : "Generate Business Profile"}
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Profile Generated Success State */}
+          {showProfileSuccess && (
+            <Card
+              style={{
+                background: "#ffffff",
+                border: "2px solid #22c55e",
+                borderRadius: "8px",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+              }}
+            >
+              <CardContent style={{ padding: "32px" }}>
+                <div
+                  className="flex flex-col items-center"
+                  style={{ gap: "20px", textAlign: "center" }}
+                >
+                  <div
+                    style={{
+                      background: "#dcfce7",
+                      borderRadius: "50%",
+                      padding: "16px",
+                    }}
+                  >
+                    <CheckCircle
+                      className="h-12 w-12"
+                      style={{ color: "#22c55e" }}
+                    />
+                  </div>
+                  <div>
+                    <h3
+                      style={{
+                        fontSize: "24px",
+                        fontWeight: 700,
+                        color: "#003366",
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Business Profile Created!
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: "14px",
+                        color: "#6b7280",
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      Your AI-powered business profile is ready. It will guide
+                      all AI-generated content to match your unique brand voice
+                      and messaging.
+                    </p>
+                  </div>
+                  <div
+                    className="flex flex-col w-full"
+                    style={{ gap: "12px", marginTop: "8px" }}
+                  >
+                    <Button
+                      onClick={() => router.push(buildUrl("/ai-coaches"))}
+                      className="w-full"
+                      style={{
+                        background: "#0066cc",
+                        color: "#ffffff",
+                        borderRadius: "8px",
+                        padding: "16px 24px",
+                        fontSize: "16px",
+                        fontWeight: 600,
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Go to AI Coaches
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        router.push(buildUrl("/brand-voice"))
+                      }
+                      className="w-full"
+                      style={{
+                        background: "#ffffff",
+                        color: "#0066cc",
+                        borderRadius: "8px",
+                        padding: "16px 24px",
+                        fontSize: "16px",
+                        fontWeight: 600,
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                        border: "2px solid #e5e7eb",
+                        cursor: "pointer",
+                      }}
+                    >
+                      View Brand Voice
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -668,40 +1517,307 @@ export default function BrandVoicePage() {
 
           {/* Show answer input when interview in progress */}
           {!isGeneratingProfile && currentPrompt && progress < 100 && (
-            <Card style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
-              <CardContent style={{ padding: '24px' }}>
-                <div style={{ marginBottom: '16px' }}>
-                  <Label htmlFor="answer" style={{ fontSize: '14px', fontWeight: 600, color: '#003366', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', display: 'block', marginBottom: '8px' }}>Your Answer</Label>
-                  <Textarea
-                    id="answer"
-                    value={currentInput}
-                    onChange={(e) => setCurrentInput(e.target.value)}
-                    placeholder="Type your answer here..."
-                    rows={5}
-                    disabled={isSubmitting}
-                    style={{ width: '100%', padding: '12px', fontSize: '14px', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#ffffff', color: '#001429', lineHeight: 1.5 }}
-                  />
-                </div>
+            <Card
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+              }}
+            >
+              <CardContent style={{ padding: "24px" }}>
+                {/* Special input for policies_summary question */}
+                {currentPrompt.prompt_key === "policies_summary" ? (
+                  <>
+                    <div style={{ marginBottom: "20px" }}>
+                      <Label
+                        htmlFor="return-policy-url"
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          color: "#003366",
+                          fontFamily:
+                            'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                          display: "block",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        Return Policy URL{" "}
+                        <span style={{ color: "#6b7280", fontWeight: 400 }}>
+                          (optional)
+                        </span>
+                      </Label>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <Input
+                          id="return-policy-url"
+                          type="url"
+                          value={returnPolicyUrl}
+                          onChange={(e) => setReturnPolicyUrl(e.target.value)}
+                          placeholder="https://yourstore.com/policies/refund-policy"
+                          disabled={isSubmitting || isSummarizingReturn}
+                          style={{
+                            flex: 1,
+                            padding: "12px",
+                            fontSize: "14px",
+                            fontFamily:
+                              'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "8px",
+                            background: "#ffffff",
+                            color: "#001429",
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => summarizePolicy("return")}
+                          disabled={
+                            isSubmitting ||
+                            isSummarizingReturn ||
+                            !returnPolicyUrl.trim()
+                          }
+                          style={{
+                            background:
+                              isSubmitting ||
+                              isSummarizingReturn ||
+                              !returnPolicyUrl.trim()
+                                ? "#e5e7eb"
+                                : "#0066cc",
+                            color: "#ffffff",
+                            borderRadius: "8px",
+                            padding: "12px 16px",
+                            fontSize: "14px",
+                            fontWeight: 600,
+                            fontFamily:
+                              'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                            border: "none",
+                            cursor:
+                              isSubmitting ||
+                              isSummarizingReturn ||
+                              !returnPolicyUrl.trim()
+                                ? "not-allowed"
+                                : "pointer",
+                            whiteSpace: "nowrap",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                        >
+                          {isSummarizingReturn && (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          )}
+                          {isSummarizingReturn ? "Summarizing..." : "Summarize"}
+                        </Button>
+                      </div>
+                    </div>
+                    <div style={{ marginBottom: "20px" }}>
+                      <Label
+                        htmlFor="shipping-policy-url"
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          color: "#003366",
+                          fontFamily:
+                            'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                          display: "block",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        Shipping Policy URL{" "}
+                        <span style={{ color: "#6b7280", fontWeight: 400 }}>
+                          (optional)
+                        </span>
+                      </Label>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <Input
+                          id="shipping-policy-url"
+                          type="url"
+                          value={shippingPolicyUrl}
+                          onChange={(e) => setShippingPolicyUrl(e.target.value)}
+                          placeholder="https://yourstore.com/policies/shipping-policy"
+                          disabled={isSubmitting || isSummarizingShipping}
+                          style={{
+                            flex: 1,
+                            padding: "12px",
+                            fontSize: "14px",
+                            fontFamily:
+                              'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "8px",
+                            background: "#ffffff",
+                            color: "#001429",
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => summarizePolicy("shipping")}
+                          disabled={
+                            isSubmitting ||
+                            isSummarizingShipping ||
+                            !shippingPolicyUrl.trim()
+                          }
+                          style={{
+                            background:
+                              isSubmitting ||
+                              isSummarizingShipping ||
+                              !shippingPolicyUrl.trim()
+                                ? "#e5e7eb"
+                                : "#0066cc",
+                            color: "#ffffff",
+                            borderRadius: "8px",
+                            padding: "12px 16px",
+                            fontSize: "14px",
+                            fontWeight: 600,
+                            fontFamily:
+                              'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                            border: "none",
+                            cursor:
+                              isSubmitting ||
+                              isSummarizingShipping ||
+                              !shippingPolicyUrl.trim()
+                                ? "not-allowed"
+                                : "pointer",
+                            whiteSpace: "nowrap",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                        >
+                          {isSummarizingShipping && (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          )}
+                          {isSummarizingShipping
+                            ? "Summarizing..."
+                            : "Summarize"}
+                        </Button>
+                      </div>
+                    </div>
+                    <div style={{ marginBottom: "16px" }}>
+                      <Label
+                        htmlFor="policy-details"
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          color: "#003366",
+                          fontFamily:
+                            'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                          display: "block",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        Policy Summary
+                      </Label>
+                      <Textarea
+                        id="policy-details"
+                        value={currentInput}
+                        onChange={(e) => setCurrentInput(e.target.value)}
+                        placeholder="Describe your return and shipping policies. For example: We offer 30-day returns for unworn items with tags. Free shipping on orders over $75, otherwise $7.99 flat rate. Most orders ship within 2-3 business days."
+                        rows={5}
+                        disabled={isSubmitting}
+                        style={{
+                          width: "100%",
+                          padding: "12px",
+                          fontSize: "14px",
+                          fontFamily:
+                            'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "8px",
+                          background: "#ffffff",
+                          color: "#001429",
+                          lineHeight: 1.5,
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ marginBottom: "16px" }}>
+                    <Label
+                      htmlFor="answer"
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        color: "#003366",
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                        display: "block",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Your Answer
+                    </Label>
+                    <Textarea
+                      id="answer"
+                      value={currentInput}
+                      onChange={(e) => setCurrentInput(e.target.value)}
+                      placeholder="Type your answer here..."
+                      rows={5}
+                      disabled={isSubmitting}
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        fontSize: "14px",
+                        fontFamily:
+                          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "8px",
+                        background: "#ffffff",
+                        color: "#001429",
+                        lineHeight: 1.5,
+                      }}
+                    />
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
-                  <p style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      color: "#6b7280",
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    }}
+                  >
                     <span
                       style={{
-                        color: wordCount < (currentPrompt.min_words || 0) ? '#cc0066' : '#6b7280',
-                        fontWeight: wordCount < (currentPrompt.min_words || 0) ? 600 : 400
+                        color:
+                          wordCount < (currentPrompt.min_words || 0)
+                            ? "#cc0066"
+                            : "#6b7280",
+                        fontWeight:
+                          wordCount < (currentPrompt.min_words || 0)
+                            ? 600
+                            : 400,
                       }}
                     >
                       {wordCount} words
                     </span>
                     {currentPrompt.min_words && (
-                      <span style={{ marginLeft: '4px' }}>(minimum {currentPrompt.min_words})</span>
+                      <span style={{ marginLeft: "4px" }}>
+                        (minimum {currentPrompt.min_words})
+                      </span>
                     )}
                   </p>
                   <Button
                     onClick={submitAnswer}
                     disabled={isSubmitting || !currentInput.trim()}
-                    style={{ background: isSubmitting || !currentInput.trim() ? '#e5e7eb' : '#0066cc', color: '#ffffff', borderRadius: '8px', padding: '12px 24px', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', border: 'none', cursor: isSubmitting || !currentInput.trim() ? 'not-allowed' : 'pointer' }}
+                    style={{
+                      background:
+                        isSubmitting || !currentInput.trim()
+                          ? "#e5e7eb"
+                          : "#0066cc",
+                      color: "#ffffff",
+                      borderRadius: "8px",
+                      padding: "12px 24px",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      border: "none",
+                      cursor:
+                        isSubmitting || !currentInput.trim()
+                          ? "not-allowed"
+                          : "pointer",
+                    }}
                   >
-                    {isSubmitting ? 'Submitting...' : 'Continue'}
+                    {isSubmitting ? "Submitting..." : "Continue"}
                   </Button>
                 </div>
               </CardContent>
@@ -710,25 +1826,99 @@ export default function BrandVoicePage() {
         </div>
 
         <Dialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
-          <DialogContent style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', padding: '32px' }}>
-            <DialogHeader style={{ marginBottom: '24px' }}>
-              <DialogTitle style={{ fontSize: '24px', fontWeight: 700, color: '#003366', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginBottom: '8px' }}>Reset Interview?</DialogTitle>
-              <DialogDescription style={{ fontSize: '14px', color: '#6b7280', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', lineHeight: 1.5 }}>
-                This will delete all your current responses and restart the interview. This action cannot be undone.
+          <DialogContent
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+              padding: "32px",
+            }}
+          >
+            <DialogHeader style={{ marginBottom: "24px" }}>
+              <DialogTitle
+                style={{
+                  fontSize: "24px",
+                  fontWeight: 700,
+                  color: "#003366",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                  marginBottom: "8px",
+                }}
+              >
+                Reset Interview?
+              </DialogTitle>
+              <DialogDescription
+                style={{
+                  fontSize: "14px",
+                  color: "#6b7280",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                  lineHeight: 1.5,
+                }}
+              >
+                This will delete all your current responses and restart the
+                interview. This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
-            <Alert variant="destructive" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '16px', marginBottom: '24px' }}>
-              <AlertCircle className="h-4 w-4" style={{ color: '#cc0066' }} />
-              <AlertTitle style={{ fontSize: '16px', fontWeight: 600, color: '#991b1b', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginBottom: '4px' }}>Warning</AlertTitle>
-              <AlertDescription style={{ fontSize: '14px', color: '#991b1b', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-                You will lose all progress ({currentPrompt?.question_number || 0} questions completed). Are you sure?
+            <Alert
+              variant="destructive"
+              style={{
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: "8px",
+                padding: "16px",
+                marginBottom: "24px",
+              }}
+            >
+              <AlertCircle className="h-4 w-4" style={{ color: "#cc0066" }} />
+              <AlertTitle
+                style={{
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  color: "#991b1b",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                  marginBottom: "4px",
+                }}
+              >
+                Warning
+              </AlertTitle>
+              <AlertDescription
+                style={{
+                  fontSize: "14px",
+                  color: "#991b1b",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                }}
+              >
+                You will lose all progress (
+                {currentPrompt?.question_number || 0} questions completed). Are
+                you sure?
               </AlertDescription>
             </Alert>
-            <DialogFooter style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <DialogFooter
+              style={{
+                display: "flex",
+                gap: "12px",
+                justifyContent: "flex-end",
+              }}
+            >
               <Button
                 variant="outline"
                 onClick={() => setShowResetConfirm(false)}
-                style={{ background: '#ffffff', color: '#0066cc', borderRadius: '8px', padding: '12px 24px', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', border: '2px solid #e5e7eb', cursor: 'pointer' }}
+                style={{
+                  background: "#ffffff",
+                  color: "#0066cc",
+                  borderRadius: "8px",
+                  padding: "12px 24px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                  border: "2px solid #e5e7eb",
+                  cursor: "pointer",
+                }}
               >
                 Cancel
               </Button>
@@ -736,9 +1926,20 @@ export default function BrandVoicePage() {
                 variant="destructive"
                 onClick={handleReset}
                 disabled={isResetting}
-                style={{ background: isResetting ? '#e5e7eb' : '#cc0066', color: '#ffffff', borderRadius: '8px', padding: '12px 24px', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', border: 'none', cursor: isResetting ? 'not-allowed' : 'pointer' }}
+                style={{
+                  background: isResetting ? "#e5e7eb" : "#cc0066",
+                  color: "#ffffff",
+                  borderRadius: "8px",
+                  padding: "12px 24px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                  border: "none",
+                  cursor: isResetting ? "not-allowed" : "pointer",
+                }}
               >
-                {isResetting ? 'Resetting...' : 'Yes, Start Over'}
+                {isResetting ? "Resetting..." : "Yes, Start Over"}
               </Button>
             </DialogFooter>
           </DialogContent>

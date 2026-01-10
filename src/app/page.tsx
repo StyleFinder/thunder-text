@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Zap, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -28,26 +29,24 @@ export default function RootPage() {
         const shop = searchParams?.get("shop");
         const hmac = searchParams?.get("hmac");
         const timestamp = searchParams?.get("timestamp");
-        const host = searchParams?.get("host");
+        const _host = searchParams?.get("host");
 
         // SHOPIFY HOSTED INSTALL FLOW DETECTION
         // When Shopify redirects after install via hosted OAuth, it sends these params to application_url
         // We need to kick off proper OAuth to get the access token
         if (shop && hmac && timestamp) {
-          console.log("[Root] Detected Shopify install redirect - initiating OAuth flow");
-          console.log("[Root] Shop:", shop, "Has HMAC:", !!hmac, "Has Host:", !!host);
-
           // Redirect to our OAuth initiation endpoint
           // This will generate proper state, store it, and redirect to Shopify OAuth
           // IMPORTANT: Use window.location.href for API routes - router.replace can't handle them
-          const normalizedShop = shop.includes(".myshopify.com") ? shop : `${shop}.myshopify.com`;
+          const normalizedShop = shop.includes(".myshopify.com")
+            ? shop
+            : `${shop}.myshopify.com`;
           window.location.href = `/api/auth/shopify?shop=${normalizedShop}`;
           return;
         }
 
         if (!shop) {
           // No shop parameter - redirect to login page
-          console.log("[Root] No shop parameter, redirecting to login");
           router.replace("/auth/login");
           return;
         }
@@ -61,7 +60,6 @@ export default function RootPage() {
 
         if (!response.ok) {
           // Shop not found or error - redirect to welcome for new setup
-          console.log("[Root] Shop not found, redirecting to welcome");
           router.replace(`/welcome?shop=${shop}`);
           return;
         }
@@ -73,21 +71,14 @@ export default function RootPage() {
 
           if (user_type === "coach") {
             // Coach user - redirect to coach portal
-            console.log(
-              "[Root] Coach user detected, redirecting to coach login",
-            );
             router.replace("/coach/login");
             return;
           }
 
           // Store user - check onboarding status
           if (onboarding_completed) {
-            console.log("[Root] Onboarding complete, redirecting to dashboard");
             router.replace(`/dashboard?shop=${shop}`);
           } else {
-            console.log(
-              "[Root] Onboarding not complete, redirecting to welcome",
-            );
             router.replace(`/welcome?shop=${shop}`);
           }
         } else {
@@ -95,7 +86,7 @@ export default function RootPage() {
           router.replace(`/welcome?shop=${shop}`);
         }
       } catch (error) {
-        console.error("[Root] Error determining route:", error);
+        logger.error("Error determining route", error, { component: "root-page" });
         setError("Failed to load. Please try again.");
         setIsLoading(false);
       }

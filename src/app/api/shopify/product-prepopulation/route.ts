@@ -104,8 +104,6 @@ export async function GET(request: NextRequest) {
       ? shop
       : `${shop}.myshopify.com`;
 
-    console.log("🏪 Using shop:", fullShop);
-
     // Get access token using proper Token Exchange
     let accessToken: string;
     try {

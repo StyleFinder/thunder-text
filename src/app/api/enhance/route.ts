@@ -7,6 +7,7 @@ import {
 } from "@/lib/middleware/cors";
 import { logger } from "@/lib/logger";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { startRequestTracker } from "@/lib/monitoring/api-logger";
 
 export async function OPTIONS(request: NextRequest) {
   return handleCorsPreflightRequest(request);
@@ -23,6 +24,8 @@ export async function OPTIONS(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   const corsHeaders = createCorsHeaders(request);
+  const tracker = startRequestTracker();
+  let shopId: string | null = null;
 
   // Check if we're in a build environment without proper configuration
   if (
@@ -105,6 +108,7 @@ export async function POST(request: NextRequest) {
 
     // Use database-derived shop ID
     const storeId = shopData.id;
+    shopId = storeId;
 
     // Dynamic imports to avoid loading during build
     const { aiGenerator } = await import("@/lib/openai");
@@ -131,12 +135,6 @@ export async function POST(request: NextRequest) {
       .filter((img) => img && img.length > 0);
     const uploadedImages = formData.getAll("images") as File[];
 
-    console.log("📸 Processing images:", {
-      existingImagesCount: existingImages.length,
-      existingImages: existingImages,
-      uploadedImagesCount: uploadedImages.length,
-    });
-
     // Process uploaded images if any
     const processedImages = [];
 
@@ -148,8 +146,6 @@ export async function POST(request: NextRequest) {
         (imgUrl.startsWith("http") || imgUrl.startsWith("data:"))
       ) {
         processedImages.push(imgUrl);
-      } else {
-        console.warn("⚠️ Invalid image URL skipped:", imgUrl);
       }
     }
 
@@ -164,12 +160,6 @@ export async function POST(request: NextRequest) {
         processedImages.push(dataUri);
       }
     }
-
-    // Log final processed images for debugging
-    console.log("🎨 Final processed images:", {
-      count: processedImages.length,
-      images: processedImages.slice(0, 2), // Log first 2 URLs for debugging
-    });
 
     // Ensure we have valid images for AI processing
     const imagesToProcess =
@@ -218,6 +208,23 @@ export async function POST(request: NextRequest) {
       processingTime: enhancedContent.processingTime,
     };
 
+    // Log successful API request
+    await tracker.log({
+      shopId,
+      operationType: 'product_description',
+      endpoint: '/api/enhance',
+      model: 'gpt-4o-mini',
+      inputTokens: enhancedContent.tokenUsage?.prompt || 0,
+      outputTokens: enhancedContent.tokenUsage?.completion || 0,
+      status: 'success',
+      metadata: {
+        template,
+        category: parentCategory,
+        imageCount: imagesToProcess.length,
+        enhancementOptions,
+      },
+    });
+
     return NextResponse.json(
       {
         success: true,
@@ -229,6 +236,17 @@ export async function POST(request: NextRequest) {
     logger.error("Enhancement API error:", error as Error, {
       component: "enhance",
     });
+
+    // Log failed API request
+    await tracker.logError({
+      shopId,
+      operationType: 'product_description',
+      endpoint: '/api/enhance',
+      model: 'gpt-4o-mini',
+      errorType: 'api_error',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+    });
+
     return NextResponse.json(
       {
         error: "Internal server error",

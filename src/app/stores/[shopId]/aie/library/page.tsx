@@ -3,24 +3,25 @@
  * Displays store's ad library with tabs for different statuses
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { Plus, Loader2, X } from 'lucide-react';
-import { logger } from '@/lib/logger';
-import { useShop } from '@/hooks/useShop';
-import { ContentLoader } from '@/components/ui/loading/ContentLoader';
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import { Plus, Loader2, X } from "lucide-react";
+import { logger } from "@/lib/logger";
+import { useShop } from "@/hooks/useShop";
+import { ContentLoader } from "@/components/ui/loading/ContentLoader";
 
 interface AdLibraryItem {
   id: string;
   shop_id: string;
-  status: 'draft' | 'active' | 'paused' | 'archived';
+  status: "draft" | "active" | "paused" | "archived";
   headline: string;
   primary_text: string;
   description: string | null;
@@ -60,13 +61,34 @@ interface AdCardProps {
 function AdCard({ ad, onStatusChange, onEdit }: AdCardProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'draft':
-        return <Badge variant="secondary" className="bg-dodger-100 text-dodger-700 hover:bg-dodger-200">Draft</Badge>;
-      case 'active':
-        return <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-200">Active</Badge>;
-      case 'paused':
-        return <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-200">Paused</Badge>;
-      case 'archived':
+      case "draft":
+        return (
+          <Badge
+            variant="secondary"
+            className="bg-dodger-100 text-dodger-700 hover:bg-dodger-200"
+          >
+            Draft
+          </Badge>
+        );
+      case "active":
+        return (
+          <Badge
+            variant="secondary"
+            className="bg-green-100 text-green-700 hover:bg-green-200"
+          >
+            Active
+          </Badge>
+        );
+      case "paused":
+        return (
+          <Badge
+            variant="secondary"
+            className="bg-amber-100 text-amber-700 hover:bg-amber-200"
+          >
+            Paused
+          </Badge>
+        );
+      case "archived":
         return <Badge variant="secondary">Archived</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
@@ -74,10 +96,10 @@ function AdCard({ ad, onStatusChange, onEdit }: AdCardProps) {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
@@ -100,7 +122,8 @@ function AdCard({ ad, onStatusChange, onEdit }: AdCardProps) {
             <>
               <div className="flex flex-col gap-2">
                 <p className="text-sm font-semibold">
-                  Media ({ad.image_urls.length} {ad.image_urls.length === 1 ? 'image' : 'images'})
+                  Media ({ad.image_urls.length}{" "}
+                  {ad.image_urls.length === 1 ? "image" : "images"})
                 </p>
                 <div className="grid grid-cols-3 gap-2 max-w-[50%]">
                   {ad.image_urls.slice(0, 4).map((url, idx) => (
@@ -108,10 +131,12 @@ function AdCard({ ad, onStatusChange, onEdit }: AdCardProps) {
                       key={idx}
                       className="relative pb-[100%] bg-gray-100 rounded-lg overflow-hidden"
                     >
-                      <img
+                      <Image
                         src={url}
                         alt={`Ad image ${idx + 1}`}
-                        className="absolute top-0 left-0 w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        unoptimized
                       />
                     </div>
                   ))}
@@ -124,9 +149,7 @@ function AdCard({ ad, onStatusChange, onEdit }: AdCardProps) {
                   )}
                 </div>
                 {ad.image_urls.length > 1 && (
-                  <p className="text-xs text-gray-500 text-center">
-                    Carousel
-                  </p>
+                  <p className="text-xs text-gray-500 text-center">Carousel</p>
                 )}
               </div>
               <Separator />
@@ -135,68 +158,58 @@ function AdCard({ ad, onStatusChange, onEdit }: AdCardProps) {
 
           {/* Ad Content */}
           <div className="flex flex-col gap-2">
-            <h3 className="text-lg font-bold text-oxford-900">
-              {ad.headline}
-            </h3>
-            <p className="text-base">
-              {ad.primary_text}
-            </p>
+            <h3 className="text-lg font-bold text-oxford-900">{ad.headline}</h3>
+            <p className="text-base">{ad.primary_text}</p>
             {ad.description && (
-              <p className="text-sm text-gray-500">
-                {ad.description}
-              </p>
+              <p className="text-sm text-gray-500">{ad.description}</p>
             )}
             <div className="flex items-start gap-2 flex-wrap">
-              <Badge variant="secondary" className="bg-dodger-100 text-dodger-700 hover:bg-dodger-200">{ad.cta}</Badge>
+              <Badge
+                variant="secondary"
+                className="bg-dodger-100 text-dodger-700 hover:bg-dodger-200"
+              >
+                {ad.cta}
+              </Badge>
               <Badge variant="secondary">{ad.platform}</Badge>
               <Badge variant="secondary">{ad.campaign_goal}</Badge>
             </div>
           </div>
 
           {/* Product Info */}
-          {ad.product_metadata?.products && ad.product_metadata.products.length > 0 && (
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-semibold">
-                Products
-              </p>
-              {ad.product_metadata.products.map((product) => (
-                <p key={product.id} className="text-xs text-gray-500">
-                  • {product.title}
-                </p>
-              ))}
-            </div>
-          )}
+          {ad.product_metadata?.products &&
+            ad.product_metadata.products.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <p className="text-sm font-semibold">Products</p>
+                {ad.product_metadata.products.map((product) => (
+                  <p key={product.id} className="text-xs text-gray-500">
+                    • {product.title}
+                  </p>
+                ))}
+              </div>
+            )}
 
           {/* Metrics (if available) */}
           {hasMetrics && (
             <>
               <Separator />
               <div className="flex flex-col gap-2">
-                <p className="text-sm font-semibold">
-                  Performance
-                </p>
+                <p className="text-sm font-semibold">Performance</p>
                 <div className="grid grid-cols-[repeat(auto-fit,minmax(100px,1fr))] gap-2">
                   <div className="flex flex-col gap-0.5">
-                    <p className="text-xs text-gray-500">
-                      Impressions
-                    </p>
+                    <p className="text-xs text-gray-500">Impressions</p>
                     <p className="text-sm font-semibold">
                       {ad.impressions.toLocaleString()}
                     </p>
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    <p className="text-xs text-gray-500">
-                      Clicks
-                    </p>
+                    <p className="text-xs text-gray-500">Clicks</p>
                     <p className="text-sm font-semibold">
                       {ad.clicks.toLocaleString()}
                     </p>
                   </div>
                   {ad.conversions > 0 && (
                     <div className="flex flex-col gap-0.5">
-                      <p className="text-xs text-gray-500">
-                        Conversions
-                      </p>
+                      <p className="text-xs text-gray-500">Conversions</p>
                       <p className="text-sm font-semibold">
                         {ad.conversions.toLocaleString()}
                       </p>
@@ -204,9 +217,7 @@ function AdCard({ ad, onStatusChange, onEdit }: AdCardProps) {
                   )}
                   {ad.ctr !== null && (
                     <div className="flex flex-col gap-0.5">
-                      <p className="text-xs text-gray-500">
-                        CTR
-                      </p>
+                      <p className="text-xs text-gray-500">CTR</p>
                       <p className="text-sm font-semibold">
                         {ad.ctr.toFixed(2)}%
                       </p>
@@ -214,9 +225,7 @@ function AdCard({ ad, onStatusChange, onEdit }: AdCardProps) {
                   )}
                   {ad.roas !== null && ad.roas > 0 && (
                     <div className="flex flex-col gap-0.5">
-                      <p className="text-xs text-gray-500">
-                        ROAS
-                      </p>
+                      <p className="text-xs text-gray-500">ROAS</p>
                       <p className="text-sm font-semibold">
                         {ad.roas.toFixed(2)}x
                       </p>
@@ -230,43 +239,40 @@ function AdCard({ ad, onStatusChange, onEdit }: AdCardProps) {
           {/* Actions */}
           <Separator />
           <div className="flex items-center gap-2">
-            {ad.status === 'draft' && (
+            {ad.status === "draft" && (
               <Button
-                onClick={() => onStatusChange(ad.id, 'active')}
+                onClick={() => onStatusChange(ad.id, "active")}
                 className="bg-smart-500 hover:bg-smart-600 text-white"
               >
                 Activate
               </Button>
             )}
-            {ad.status === 'active' && (
+            {ad.status === "active" && (
               <Button
-                onClick={() => onStatusChange(ad.id, 'paused')}
+                onClick={() => onStatusChange(ad.id, "paused")}
                 variant="outline"
               >
                 Pause
               </Button>
             )}
-            {ad.status === 'paused' && (
+            {ad.status === "paused" && (
               <>
                 <Button
-                  onClick={() => onStatusChange(ad.id, 'active')}
+                  onClick={() => onStatusChange(ad.id, "active")}
                   className="bg-smart-500 hover:bg-smart-600 text-white"
                 >
                   Resume
                 </Button>
                 <Button
-                  onClick={() => onStatusChange(ad.id, 'archived')}
+                  onClick={() => onStatusChange(ad.id, "archived")}
                   variant="outline"
                 >
                   Archive
                 </Button>
               </>
             )}
-            {ad.status !== 'archived' && (
-              <Button
-                onClick={() => onEdit(ad)}
-                variant="outline"
-              >
+            {ad.status !== "archived" && (
+              <Button onClick={() => onEdit(ad)} variant="outline">
                 Edit
               </Button>
             )}
@@ -280,34 +286,36 @@ function AdCard({ ad, onStatusChange, onEdit }: AdCardProps) {
 export default function AdLibraryPage() {
   const { shopId, isLoading: shopLoading } = useShop();
 
-  const [selected, setSelected] = useState('all');
+  const [selected, setSelected] = useState("all");
   const [ads, setAds] = useState<AdLibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [bannerMessage, setBannerMessage] = useState<string>('');
-  const [bannerTone, setBannerTone] = useState<'success' | 'critical' | 'info'>('info');
+  const [bannerMessage, setBannerMessage] = useState<string>("");
+  const [bannerTone, setBannerTone] = useState<"success" | "critical" | "info">(
+    "info",
+  );
 
   // Helper for dynamic routes
-  const getAieUrl = () => shopId ? `/stores/${shopId}/aie` : '/aie';
+  const getAieUrl = () => (shopId ? `/stores/${shopId}/aie` : "/aie");
 
   const tabs = [
-    { id: 'all', content: 'All' },
-    { id: 'draft', content: 'Drafts' },
-    { id: 'active', content: 'Active' },
-    { id: 'paused', content: 'Paused' },
-    { id: 'archived', content: 'Archived' },
+    { id: "all", content: "All" },
+    { id: "draft", content: "Drafts" },
+    { id: "active", content: "Active" },
+    { id: "paused", content: "Paused" },
+    { id: "archived", content: "Archived" },
   ];
 
-  const statusFilter = selected === 'all' ? null : selected;
+  const statusFilter = selected === "all" ? null : selected;
 
   const fetchAds = async () => {
     if (!shopId) return;
 
     try {
       setLoading(true);
-      const url = new URL('/api/aie/library', window.location.origin);
-      url.searchParams.set('shopId', shopId);
+      const url = new URL("/api/aie/library", window.location.origin);
+      url.searchParams.set("shopId", shopId);
       if (statusFilter) {
-        url.searchParams.set('status', statusFilter);
+        url.searchParams.set("status", statusFilter);
       }
 
       const response = await fetch(url.toString());
@@ -316,12 +324,16 @@ export default function AdLibraryPage() {
       if (data.success) {
         setAds(data.data.ads || []);
       } else {
-        throw new Error(data.error?.message || 'Failed to fetch ads');
+        throw new Error(data.error?.message || "Failed to fetch ads");
       }
     } catch (error) {
-      logger.error('Error fetching ads:', error as Error, { component: 'library' });
-      setBannerMessage(error instanceof Error ? error.message : 'Failed to load ads');
-      setBannerTone('critical');
+      logger.error("Error fetching ads:", error as Error, {
+        component: "library",
+      });
+      setBannerMessage(
+        error instanceof Error ? error.message : "Failed to load ads",
+      );
+      setBannerTone("critical");
     } finally {
       setLoading(false);
     }
@@ -329,37 +341,41 @@ export default function AdLibraryPage() {
 
   useEffect(() => {
     fetchAds();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopId, selected]);
 
   const handleStatusChange = async (adId: string, newStatus: string) => {
     try {
-      const response = await fetch('/api/aie/library', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/aie/library", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ adId, status: newStatus }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        setBannerMessage('Ad status updated successfully');
-        setBannerTone('success');
+        setBannerMessage("Ad status updated successfully");
+        setBannerTone("success");
         fetchAds(); // Refresh the list
       } else {
-        throw new Error(data.error?.message || 'Failed to update ad');
+        throw new Error(data.error?.message || "Failed to update ad");
       }
     } catch (error) {
-      logger.error('Error updating ad:', error as Error, { component: 'library' });
-      setBannerMessage(error instanceof Error ? error.message : 'Failed to update ad status');
-      setBannerTone('critical');
+      logger.error("Error updating ad:", error as Error, {
+        component: "library",
+      });
+      setBannerMessage(
+        error instanceof Error ? error.message : "Failed to update ad status",
+      );
+      setBannerTone("critical");
     }
   };
 
-  const handleEdit = (ad: AdLibraryItem) => {
+  const handleEdit = (_ad: AdLibraryItem) => {
     // Future: Open edit modal
-    console.log('Edit ad:', ad);
-    setBannerMessage('Edit functionality coming soon');
-    setBannerTone('info');
+    setBannerMessage("Edit functionality coming soon");
+    setBannerTone("info");
   };
 
   const filteredAds = ads;
@@ -405,13 +421,13 @@ export default function AdLibraryPage() {
         <div className="flex flex-col gap-4">
           {bannerMessage && (
             <Alert
-              variant={bannerTone === 'critical' ? 'destructive' : 'default'}
+              variant={bannerTone === "critical" ? "destructive" : "default"}
               className={
-                bannerTone === 'success'
-                  ? 'bg-green-50 border-green-200 text-green-800'
-                  : bannerTone === 'info'
-                  ? 'bg-dodger-50 border-dodger-200 text-dodger-800'
-                  : ''
+                bannerTone === "success"
+                  ? "bg-green-50 border-green-200 text-green-800"
+                  : bannerTone === "info"
+                    ? "bg-dodger-50 border-dodger-200 text-dodger-800"
+                    : ""
               }
             >
               <AlertDescription className="flex items-center justify-between">
@@ -419,7 +435,7 @@ export default function AdLibraryPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setBannerMessage('')}
+                  onClick={() => setBannerMessage("")}
                   className="h-auto p-1"
                 >
                   <X className="w-4 h-4" />
@@ -448,36 +464,37 @@ export default function AdLibraryPage() {
                       </div>
                     ) : filteredAds.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                        <img
+                        <Image
                           src="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                           alt="No ads"
-                          className="w-32 h-32 mb-4 opacity-50"
+                          width={128}
+                          height={128}
+                          className="mb-4 opacity-50"
+                          unoptimized
                         />
                         <h3 className="text-lg font-semibold text-oxford-900 mb-2">
                           {statusFilter
                             ? `No ${statusFilter} ads yet`
-                            : 'No ads in your library yet'}
+                            : "No ads in your library yet"}
                         </h3>
                         <p className="text-gray-500 mb-4">
-                          {statusFilter === 'draft'
-                            ? 'Generate your first ad to get started'
+                          {statusFilter === "draft"
+                            ? "Generate your first ad to get started"
                             : statusFilter
-                            ? `No ads with "${statusFilter}" status`
-                            : 'Start by generating some ads'}
+                              ? `No ads with "${statusFilter}" status`
+                              : "Start by generating some ads"}
                         </p>
                         <Button
                           asChild
                           className="bg-smart-500 hover:bg-smart-600 text-white"
                         >
-                          <a href={getAieUrl()}>
-                            Generate New Ad
-                          </a>
+                          <a href={getAieUrl()}>Generate New Ad</a>
                         </Button>
                       </div>
                     ) : (
                       <div className="flex flex-col gap-4">
                         <p className="text-base text-gray-500">
-                          {adCount} {adCount === 1 ? 'ad' : 'ads'}
+                          {adCount} {adCount === 1 ? "ad" : "ads"}
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {filteredAds.map((ad) => (

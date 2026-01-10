@@ -46,7 +46,7 @@ This glossary maintains a single source of truth for all naming conventions, pre
 **Database**: `category_templates` table (id, name, category, content, is_default, store_id)
 **Code references**: `getCategoryTemplate()`, `CategoryTemplate` type
 **Foreign keys**: `store_id` → `shops.id`
-**Categories**: `womens_clothing`, `jewelry_accessories`, `general`
+**Categories**: `clothing`, `jewelry_accessories`, `home_living`, `beauty_personal_care`, `general`
 **Why this name**: Applies to specific product categories, provides structure
 **Related to**: `system_prompts` (used together for AI generation)
 

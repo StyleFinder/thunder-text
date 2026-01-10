@@ -12,7 +12,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 
 // ShopProfile type used for response typing
-type ShopProfile = {
+type _ShopProfile = {
   id: string;
   shop_domain: string;
   display_name: string | null;
@@ -28,8 +28,6 @@ type ShopProfile = {
   advertising_goals: string | null;
   coach_assigned: string | null;
 };
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _ShopProfileType: ShopProfile | null = null;
 
 // GET - Fetch shop profile
 export async function GET(

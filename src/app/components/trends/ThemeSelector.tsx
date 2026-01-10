@@ -1,11 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { logger } from '@/lib/logger'
+import { logger } from "@/lib/logger";
 
 interface Theme {
   id: string;
@@ -40,7 +46,9 @@ export function ThemeSelector({ onThemeEnabled }: ThemeSelectorProps) {
         setThemes(data.themes);
       }
     } catch (error) {
-      logger.error("Failed to load themes:", error as Error, { component: 'ThemeSelector' });
+      logger.error("Failed to load themes:", error as Error, {
+        component: "ThemeSelector",
+      });
     } finally {
       setLoading(false);
     }
@@ -66,10 +74,14 @@ export function ThemeSelector({ onThemeEnabled }: ThemeSelectorProps) {
           onThemeEnabled();
         }
       } else {
-        logger.error(`Failed to enable theme: ${data.error}`, undefined, { component: 'ThemeSelector' });
+        logger.error(`Failed to enable theme: ${data.error}`, undefined, {
+          component: "ThemeSelector",
+        });
       }
     } catch (error) {
-      logger.error("Error enabling theme:", error as Error, { component: 'ThemeSelector' });
+      logger.error("Error enabling theme:", error as Error, {
+        component: "ThemeSelector",
+      });
     } finally {
       setEnablingTheme(null);
     }
@@ -121,7 +133,10 @@ export function ThemeSelector({ onThemeEnabled }: ThemeSelectorProps) {
                             In Season
                           </Badge>
                         )}
-                        <Badge variant="outline" className="border-ace-gray-light text-ace-gray-dark">
+                        <Badge
+                          variant="outline"
+                          className="border-ace-gray-light text-ace-gray-dark"
+                        >
                           {category}
                         </Badge>
                       </div>
@@ -131,7 +146,8 @@ export function ThemeSelector({ onThemeEnabled }: ThemeSelectorProps) {
                       onClick={() => enableTheme(id)}
                       disabled={enablingTheme === id}
                       size="sm"
-                      className="bg-ace-blue hover:bg-ace-blue-dark text-white"
+                      style={{ backgroundColor: "#0066cc", color: "#ffffff" }}
+                      className="hover:opacity-90"
                     >
                       {enablingTheme === id ? (
                         <>

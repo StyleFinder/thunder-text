@@ -111,8 +111,10 @@ Look at the image and respond with ONLY ONE of these exact category names. No ex
 
     if (!normalizedCategory) {
       // Default to "Tops" if we can't match the detected category
-      console.warn(
+      logger.warn(
         `Detected category "${detectedCategory}" not in valid list, defaulting to "Tops"`,
+        undefined,
+        { component: "detect-category" },
       );
       return NextResponse.json({
         success: true,

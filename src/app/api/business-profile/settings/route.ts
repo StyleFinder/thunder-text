@@ -163,8 +163,8 @@ export const GET = requireAuth('user')(async (request: NextRequest) => {
         extractedData.valuePillars = extractedData.valuePillars.filter(v =>
           !v.includes('.') && !v.includes(':') && v.length > 2
         );
-      } catch (e) {
-        console.log("Could not parse master_profile_text:", e);
+      } catch {
+        // Silently skip invalid master_profile_text JSON
       }
     }
 

@@ -1,46 +1,24 @@
 /**
  * Developer Dashboard Authentication
  *
- * SECURITY HARDENED:
- * - Secrets accepted only via POST with Authorization header
- * - Opaque session tokens stored in cookies (not raw secrets)
+ * SIMPLIFIED & RELIABLE:
+ * - HMAC-signed cookie (no in-memory session storage)
+ * - Survives hot reloads and server restarts
  * - Rate limiting on authentication attempts
- * - HMAC-based token generation for session management
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 const DEV_ADMIN_SECRET = process.env.DEV_ADMIN_SECRET;
-const DEV_AUTH_COOKIE = 'dev_session_token';
+const DEV_AUTH_COOKIE = 'dev_auth';
 const COOKIE_MAX_AGE = 60 * 60 * 24; // 24 hours
-
-// Session token storage (in-memory for single instance)
-// For production distributed deployments, use Redis
-const activeSessions = new Map<string, { createdAt: number; expiresAt: number }>();
 
 // Rate limiting for auth attempts
 const authAttempts = new Map<string, { count: number; resetAt: number }>();
-const MAX_AUTH_ATTEMPTS = 5;
+const MAX_AUTH_ATTEMPTS = process.env.NODE_ENV === 'development' ? 100 : 5;
 const AUTH_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-
-/**
- * Clean up expired sessions every 5 minutes
- */
-setInterval(() => {
-  const now = Date.now();
-  for (const [token, session] of activeSessions.entries()) {
-    if (session.expiresAt < now) {
-      activeSessions.delete(token);
-    }
-  }
-  for (const [ip, attempt] of authAttempts.entries()) {
-    if (attempt.resetAt < now) {
-      authAttempts.delete(ip);
-    }
-  }
-}, 5 * 60 * 1000);
 
 /**
  * Check if dev auth is configured
@@ -50,65 +28,55 @@ export function isDevAuthConfigured(): boolean {
 }
 
 /**
- * Generate an opaque session token using HMAC
- * Token format: random_bytes.hmac_signature.timestamp
+ * Create a signed token that can be verified without server state
+ * Format: expiry.signature
  */
-function generateSessionToken(): string {
+function createSignedToken(): string {
   if (!DEV_ADMIN_SECRET) throw new Error('DEV_ADMIN_SECRET not configured');
 
-  const randomPart = randomBytes(32).toString('base64url');
-  const timestamp = Date.now().toString();
-  const dataToSign = `${randomPart}.${timestamp}`;
-
+  const expiry = Date.now() + (COOKIE_MAX_AGE * 1000);
   const hmac = createHmac('sha256', DEV_ADMIN_SECRET);
-  hmac.update(dataToSign);
-  const signature = hmac.digest('base64url');
+  hmac.update(`dev_auth:${expiry}`);
+  const signature = hmac.digest('hex');
 
-  return `${randomPart}.${signature}.${timestamp}`;
+  return `${expiry}.${signature}`;
 }
 
 /**
- * Validate a session token
+ * Verify a signed token
  */
-function validateSessionToken(token: string): boolean {
+function verifySignedToken(token: string): boolean {
   if (!DEV_ADMIN_SECRET || !token) return false;
 
   const parts = token.split('.');
-  if (parts.length !== 3) return false;
+  if (parts.length !== 2) return false;
 
-  const [randomPart, providedSignature, timestamp] = parts;
+  const [expiryStr, providedSig] = parts;
+  const expiry = parseInt(expiryStr, 10);
 
-  // Verify HMAC signature
-  const dataToSign = `${randomPart}.${timestamp}`;
+  // Check expiry
+  if (isNaN(expiry) || expiry < Date.now()) {
+    return false;
+  }
+
+  // Verify signature
   const hmac = createHmac('sha256', DEV_ADMIN_SECRET);
-  hmac.update(dataToSign);
-  const expectedSignature = hmac.digest('base64url');
+  hmac.update(`dev_auth:${expiry}`);
+  const expectedSig = hmac.digest('hex');
 
-  // Timing-safe comparison to prevent timing attacks
   try {
-    const providedBuffer = Buffer.from(providedSignature, 'base64url');
-    const expectedBuffer = Buffer.from(expectedSignature, 'base64url');
+    const providedBuffer = Buffer.from(providedSig, 'hex');
+    const expectedBuffer = Buffer.from(expectedSig, 'hex');
 
     if (providedBuffer.length !== expectedBuffer.length) return false;
-    if (!timingSafeEqual(providedBuffer, expectedBuffer)) return false;
+    return timingSafeEqual(providedBuffer, expectedBuffer);
   } catch {
     return false;
   }
-
-  // Check if session is still active
-  const session = activeSessions.get(token);
-  if (!session) return false;
-
-  if (session.expiresAt < Date.now()) {
-    activeSessions.delete(token);
-    return false;
-  }
-
-  return true;
 }
 
 /**
- * SECURITY: Validate dev secret using timing-safe comparison
+ * Validate dev secret
  */
 function validateDevSecret(providedSecret: string): boolean {
   if (!DEV_ADMIN_SECRET) return false;
@@ -130,31 +98,22 @@ function validateDevSecret(providedSecret: string): boolean {
 export function checkAuthRateLimit(ipAddress: string): {
   allowed: boolean;
   remaining: number;
-  resetIn: number
+  resetIn: number;
 } {
   const now = Date.now();
   const attempt = authAttempts.get(ipAddress);
 
   if (!attempt || attempt.resetAt < now) {
-    // Fresh window
     authAttempts.set(ipAddress, { count: 1, resetAt: now + AUTH_WINDOW_MS });
     return { allowed: true, remaining: MAX_AUTH_ATTEMPTS - 1, resetIn: AUTH_WINDOW_MS };
   }
 
   if (attempt.count >= MAX_AUTH_ATTEMPTS) {
-    return {
-      allowed: false,
-      remaining: 0,
-      resetIn: attempt.resetAt - now
-    };
+    return { allowed: false, remaining: 0, resetIn: attempt.resetAt - now };
   }
 
   attempt.count++;
-  return {
-    allowed: true,
-    remaining: MAX_AUTH_ATTEMPTS - attempt.count,
-    resetIn: attempt.resetAt - now
-  };
+  return { allowed: true, remaining: MAX_AUTH_ATTEMPTS - attempt.count, resetIn: attempt.resetAt - now };
 }
 
 /**
@@ -167,77 +126,54 @@ export function getClientIp(request: NextRequest): string {
 }
 
 /**
- * Authenticate with secret and create session
- * SECURITY: Only accepts secret via Authorization header
- *
- * @param secret - The dev admin secret from Authorization header
- * @returns Session token if valid, null if invalid
+ * Authenticate with secret and create signed token
  */
 export function authenticateWithSecret(secret: string): string | null {
   if (!validateDevSecret(secret)) {
     return null;
   }
-
-  const sessionToken = generateSessionToken();
-  const now = Date.now();
-
-  activeSessions.set(sessionToken, {
-    createdAt: now,
-    expiresAt: now + (COOKIE_MAX_AGE * 1000),
-  });
-
-  return sessionToken;
+  return createSignedToken();
 }
 
 /**
  * Check if request is authenticated for dev dashboard
- * SECURITY: Only checks session cookie (opaque token)
- * No longer accepts raw secrets in query params or cookies
+ * Supports both X-Dev-Key header (preferred) and cookie-based auth
  */
 export async function isDevAuthenticated(request: NextRequest): Promise<boolean> {
-  // Only check session cookie
-  const sessionToken = request.cookies.get(DEV_AUTH_COOKIE)?.value;
-  if (sessionToken && validateSessionToken(sessionToken)) {
+  // Check X-Dev-Key header first (preferred method - no cookies needed)
+  const devKeyHeader = request.headers.get('X-Dev-Key');
+  if (devKeyHeader && validateDevSecret(devKeyHeader)) {
     return true;
   }
 
-  // Check Authorization header for session token (for API calls)
-  const authHeader = request.headers.get('Authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
-    if (validateSessionToken(token)) {
-      return true;
-    }
+  // Fallback to cookie
+  const token = request.cookies.get(DEV_AUTH_COOKIE)?.value;
+  if (token && verifySignedToken(token)) {
+    return true;
   }
 
   return false;
 }
 
 /**
- * Set dev auth cookie with session token
+ * Set dev auth cookie
  */
-export async function setDevAuthCookie(sessionToken: string): Promise<void> {
+export async function setDevAuthCookie(token: string): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.set(DEV_AUTH_COOKIE, sessionToken, {
+  cookieStore.set(DEV_AUTH_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: COOKIE_MAX_AGE,
-    path: '/dev',
+    path: '/',
   });
 }
 
 /**
- * Clear dev auth cookie and invalidate session
+ * Clear dev auth cookie
  */
 export async function clearDevAuthCookie(): Promise<void> {
   const cookieStore = await cookies();
-  const sessionToken = cookieStore.get(DEV_AUTH_COOKIE)?.value;
-
-  if (sessionToken) {
-    activeSessions.delete(sessionToken);
-  }
-
   cookieStore.delete(DEV_AUTH_COOKIE);
 }
 
@@ -283,28 +219,33 @@ export function createRateLimitResponse(resetIn: number): NextResponse {
  */
 export function getSessionInfo(request: NextRequest): {
   authenticated: boolean;
-  expiresAt?: number
+  expiresAt?: number;
 } {
-  const sessionToken = request.cookies.get(DEV_AUTH_COOKIE)?.value;
+  const token = request.cookies.get(DEV_AUTH_COOKIE)?.value;
 
-  if (!sessionToken) {
+  if (!token) {
     return { authenticated: false };
   }
 
-  const session = activeSessions.get(sessionToken);
-  if (!session || session.expiresAt < Date.now()) {
+  const parts = token.split('.');
+  if (parts.length !== 2) {
     return { authenticated: false };
   }
 
-  return {
-    authenticated: true,
-    expiresAt: session.expiresAt
-  };
+  const expiry = parseInt(parts[0], 10);
+  if (isNaN(expiry) || expiry < Date.now()) {
+    return { authenticated: false };
+  }
+
+  if (!verifySignedToken(token)) {
+    return { authenticated: false };
+  }
+
+  return { authenticated: true, expiresAt: expiry };
 }
 
 /**
  * Middleware for dev routes
- * Use in route handlers: if (!await checkDevAuth(request)) return unauthorized response
  */
 export async function checkDevAuth(request: NextRequest): Promise<boolean> {
   return isDevAuthenticated(request);

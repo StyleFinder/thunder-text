@@ -85,8 +85,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    console.log(`[Ad Vault] Returning ${filteredVariants.length} ad variants`);
-
     return NextResponse.json({ variants: filteredVariants });
   } catch (error) {
     logger.error('[Ad Vault] Unexpected error:', error as Error, { component: 'ad-vault' });

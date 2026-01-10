@@ -5,13 +5,25 @@
  * for critical error patterns.
  */
 
-import { supabaseAdmin } from '@/lib/supabase';
-import { logger } from '@/lib/logger';
-import { triggerAlert, AlertSeverity, AlertType, alertHighErrorRate } from './alerting';
-import crypto from 'crypto';
+import { supabaseAdmin } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
+import {
+  triggerAlert,
+  AlertSeverity,
+  AlertType,
+  alertHighErrorRate,
+} from "./alerting";
+import crypto from "crypto";
 
 export interface ErrorLog {
-  errorType: 'api_error' | 'validation_error' | 'auth_error' | 'timeout' | 'rate_limit' | 'database_error' | 'unknown';
+  errorType:
+    | "api_error"
+    | "validation_error"
+    | "auth_error"
+    | "timeout"
+    | "rate_limit"
+    | "database_error"
+    | "unknown";
   errorCode?: string;
   errorMessage: string;
   shopId?: string;
@@ -40,24 +52,24 @@ export async function logError(error: ErrorLog): Promise<void> {
 
     // Check if we've seen this error recently (last hour)
     const { data: existingError } = await supabaseAdmin
-      .from('error_logs')
-      .select('id, occurrence_count')
-      .eq('error_hash', errorHash)
-      .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+      .from("error_logs")
+      .select("id, occurrence_count")
+      .eq("error_hash", errorHash)
+      .gte("created_at", new Date(Date.now() - 60 * 60 * 1000).toISOString())
       .single();
 
     if (existingError) {
       // Increment occurrence count for existing error
       await supabaseAdmin
-        .from('error_logs')
+        .from("error_logs")
         .update({
           occurrence_count: existingError.occurrence_count + 1,
           last_seen_at: new Date().toISOString(),
         })
-        .eq('id', existingError.id);
+        .eq("id", existingError.id);
     } else {
       // Insert new error
-      await supabaseAdmin.from('error_logs').insert({
+      await supabaseAdmin.from("error_logs").insert({
         error_type: error.errorType,
         error_code: error.errorCode || null,
         error_message: error.errorMessage,
@@ -81,8 +93,8 @@ export async function logError(error: ErrorLog): Promise<void> {
     await checkForCriticalPatterns(error);
   } catch (dbError) {
     // Don't let error logging break the app
-    logger.error('Failed to log error to database', dbError as Error, {
-      component: 'error-logger',
+    logger.error("Failed to log error to database", dbError as Error, {
+      component: "error-logger",
       originalError: error.errorMessage,
     });
   }
@@ -94,14 +106,17 @@ export async function logError(error: ErrorLog): Promise<void> {
 function generateErrorHash(errorType: string, errorMessage: string): string {
   // Normalize message by removing variable parts like IDs, timestamps
   const normalizedMessage = errorMessage
-    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '[UUID]')
-    .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/g, '[TIMESTAMP]')
-    .replace(/\d+/g, '[NUM]');
+    .replace(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+      "[UUID]",
+    )
+    .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/g, "[TIMESTAMP]")
+    .replace(/\d+/g, "[NUM]");
 
   const hash = crypto
-    .createHash('md5')
+    .createHash("md5")
     .update(`${errorType}:${normalizedMessage}`)
-    .digest('hex')
+    .digest("hex")
     .substring(0, 16);
 
   return hash;
@@ -129,15 +144,15 @@ function trackRecentError(errorType: string): void {
 async function checkForCriticalPatterns(error: ErrorLog): Promise<void> {
   // Check for OpenAI API failures
   if (
-    error.errorType === 'api_error' &&
-    (error.errorMessage.includes('OpenAI') ||
-      error.errorMessage.includes('openai') ||
-      error.errorCode === '401' ||
-      error.errorCode === '403')
+    error.errorType === "api_error" &&
+    (error.errorMessage.includes("OpenAI") ||
+      error.errorMessage.includes("openai") ||
+      error.errorCode === "401" ||
+      error.errorCode === "403")
   ) {
     // Count recent OpenAI errors
     const recentOpenAIErrors = recentErrors.filter(
-      (e) => e.type === 'api_error' && Date.now() - e.timestamp < 60000
+      (e) => e.type === "api_error" && Date.now() - e.timestamp < 60000,
     ).length;
 
     // If 5+ OpenAI errors in last minute, trigger alert
@@ -145,30 +160,30 @@ async function checkForCriticalPatterns(error: ErrorLog): Promise<void> {
       await triggerAlert({
         severity: AlertSeverity.CRITICAL,
         type: AlertType.OPENAI_API_FAILURE,
-        title: 'OpenAI API Failure Detected',
+        title: "OpenAI API Failure Detected",
         message: `${recentOpenAIErrors} OpenAI API errors in the last minute. AI generation may be unavailable.`,
         details: {
           recentErrorCount: recentOpenAIErrors,
           lastError: error.errorMessage,
           errorCode: error.errorCode,
         },
-        affectedComponent: 'openai',
+        affectedComponent: "openai",
       });
     }
   }
 
   // Check for database errors
-  if (error.errorType === 'database_error') {
+  if (error.errorType === "database_error") {
     await triggerAlert({
       severity: AlertSeverity.CRITICAL,
       type: AlertType.DATABASE_WRITE_FAILURE,
-      title: 'Database Error Detected',
+      title: "Database Error Detected",
       message: `Database operation failed: ${error.errorMessage}`,
       details: {
         endpoint: error.endpoint,
         operationType: error.operationType,
       },
-      affectedComponent: 'supabase',
+      affectedComponent: "supabase",
     });
   }
 
@@ -189,19 +204,27 @@ async function checkErrorRate(): Promise<void> {
 
   // Get total requests in window from database
   try {
-    const { data } = await supabaseAdmin.rpc('get_error_rate', { p_minutes: 5 });
+    const { data } = await supabaseAdmin.rpc("get_error_rate", {
+      p_minutes: 5,
+    });
 
     if (data && data.length > 0) {
-      const { total_requests, error_count, error_rate } = data[0];
+      const { total_requests, error_count: _error_count, error_rate } = data[0];
 
-      if (total_requests >= MIN_REQUESTS_FOR_ALERT && error_rate >= ERROR_RATE_THRESHOLD * 100) {
+      if (
+        total_requests >= MIN_REQUESTS_FOR_ALERT &&
+        error_rate >= ERROR_RATE_THRESHOLD * 100
+      ) {
         lastErrorRateAlertTime = now;
         await alertHighErrorRate(error_rate, total_requests, 5);
       }
     }
   } catch (error) {
     // Silently fail - this is just monitoring
-    logger.warn('Failed to check error rate', { component: 'error-logger', error });
+    logger.warn("Failed to check error rate", {
+      component: "error-logger",
+      error,
+    });
   }
 }
 
@@ -223,10 +246,10 @@ export async function getRecentErrorSummary(hours: number = 24): Promise<{
 
     // Get error counts by type
     const { data: errors } = await supabaseAdmin
-      .from('error_logs')
-      .select('error_type, error_message, occurrence_count, last_seen_at')
-      .gte('created_at', since)
-      .order('occurrence_count', { ascending: false })
+      .from("error_logs")
+      .select("error_type, error_message, occurrence_count, last_seen_at")
+      .gte("created_at", since)
+      .order("occurrence_count", { ascending: false })
       .limit(100);
 
     if (!errors || errors.length === 0) {
@@ -241,7 +264,8 @@ export async function getRecentErrorSummary(hours: number = 24): Promise<{
     let totalErrors = 0;
 
     for (const error of errors) {
-      errorsByType[error.error_type] = (errorsByType[error.error_type] || 0) + error.occurrence_count;
+      errorsByType[error.error_type] =
+        (errorsByType[error.error_type] || 0) + error.occurrence_count;
       totalErrors += error.occurrence_count;
     }
 
@@ -258,8 +282,8 @@ export async function getRecentErrorSummary(hours: number = 24): Promise<{
       topErrors,
     };
   } catch (error) {
-    logger.error('Failed to get error summary', error as Error, {
-      component: 'error-logger',
+    logger.error("Failed to get error summary", error as Error, {
+      component: "error-logger",
     });
     return {
       totalErrors: 0,

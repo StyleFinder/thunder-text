@@ -58,10 +58,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(
-      `🎨 Starting color detection for ${images.length} primary images`,
-    );
-
     // Process each image for color detection
     const colorResults: ColorDetectionResult[] = [];
 
@@ -69,9 +65,6 @@ export async function POST(request: NextRequest) {
       // Safe: i is loop counter, not user input
       // eslint-disable-next-line security/detect-object-injection
       const image = images[i];
-      console.log(
-        `🔍 Analyzing image ${i + 1}/${images.length}: ${image.filename}`,
-      );
 
       try {
         const completion = await openai.chat.completions.create({
@@ -155,9 +148,6 @@ CRITICAL: Respond with ONLY raw JSON, no code blocks or formatting:
           originalDetection: detectedColor,
         });
 
-        console.log(
-          `✅ Image ${i + 1} detected: ${detectedColor} → ${standardizedColor} (${confidencePercentage}%)`,
-        );
       } catch (error) {
         logger.error(`❌ Error analyzing image ${i + 1}:`, error as Error, {
           component: "detect-colors",
@@ -176,10 +166,6 @@ CRITICAL: Respond with ONLY raw JSON, no code blocks or formatting:
 
     // Group similar colors into variants
     const variants = groupColorsIntoVariants(colorResults);
-
-    console.log(
-      `🎯 Created ${variants.length} color variants from ${images.length} images`,
-    );
 
     return NextResponse.json({
       success: true,

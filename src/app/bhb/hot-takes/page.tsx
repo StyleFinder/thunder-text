@@ -15,7 +15,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { BHBLayout } from "@/components/bhb";
+import { BHBLayout } from "@/features/bhb";
+import { logger } from "@/lib/logger";
 
 interface HotTake {
   id: string;
@@ -64,7 +65,7 @@ export default function HotTakesManagement() {
         setHotTakes(data.data);
       }
     } catch (error) {
-      console.error("[HotTakes] Error fetching hot takes:", error);
+      logger.error("Error fetching hot takes", error, { component: "hot-takes-page" });
     } finally {
       setLoading(false);
     }
@@ -106,7 +107,7 @@ export default function HotTakesManagement() {
         alert("Failed to create hot take: " + data.error);
       }
     } catch (error) {
-      console.error("[HotTakes] Error creating hot take:", error);
+      logger.error("Error creating hot take", error, { component: "hot-takes-page" });
       alert("Failed to create hot take");
     } finally {
       setIsCreating(false);
@@ -133,7 +134,7 @@ export default function HotTakesManagement() {
         alert("Failed to update hot take: " + data.error);
       }
     } catch (error) {
-      console.error("[HotTakes] Error updating hot take:", error);
+      logger.error("Error updating hot take", error, { component: "hot-takes-page" });
       alert("Failed to update hot take");
     }
   };
@@ -164,7 +165,7 @@ export default function HotTakesManagement() {
         alert("Failed to delete hot take: " + data.error);
       }
     } catch (error) {
-      console.error("[HotTakes] Error deleting hot take:", error);
+      logger.error("Error deleting hot take", error, { component: "hot-takes-page" });
       alert("Failed to delete hot take");
     }
   };
@@ -211,7 +212,7 @@ export default function HotTakesManagement() {
         alert("Failed to update hot take: " + data.error);
       }
     } catch (error) {
-      console.error("[HotTakes] Error updating hot take:", error);
+      logger.error("Error updating hot take", error, { component: "hot-takes-page" });
       alert("Failed to update hot take");
     }
   };

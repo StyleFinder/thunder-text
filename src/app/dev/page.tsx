@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 // Types
 interface OverviewMetrics {
@@ -43,6 +43,22 @@ interface RecentAlert {
   createdAt: string;
 }
 
+type ApiHealthStatus = 'healthy' | 'degraded' | 'down' | 'unknown';
+
+interface ApiHealthInfo {
+  name: string;
+  status: ApiHealthStatus;
+  avgLatencyMs: number;
+  errorRate: number;
+  requestCount: number;
+  lastRequest: string | null;
+}
+
+interface ApiHealthMetrics {
+  services: ApiHealthInfo[];
+  lastChecked: string;
+}
+
 interface CostBreakdown {
   byModel: Record<string, number>;
   byOperation: Record<string, number>;
@@ -64,47 +80,59 @@ type TimeRange = "7d" | "30d" | "90d";
 
 export default function DevDashboard() {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const [devKey, setDevKey] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<TimeRange>("7d");
   const [data, setData] = useState<DashboardData | null>(null);
   const [realTimeStats, setRealTimeStats] = useState<RealTimeStats | null>(null);
+  const [apiHealth, setApiHealth] = useState<ApiHealthMetrics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Check authentication
+  // Helper to make authenticated requests
+  const authFetch = useCallback(async (url: string, options: RequestInit = {}) => {
+    if (!devKey) throw new Error("No dev key");
+    return fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        "X-Dev-Key": devKey,
+      },
+    });
+  }, [devKey]);
+
+  // Check authentication - just validate the key exists and is valid
   useEffect(() => {
     const key = searchParams.get("key");
-    checkAuth(key);
-  }, [searchParams]);
-
-  const checkAuth = async (key: string | null) => {
-    try {
-      const url = key ? `/api/dev/auth?key=${key}` : "/api/dev/auth";
-      const res = await fetch(url);
-      if (res.ok) {
-        setIsAuthenticated(true);
-        // Remove key from URL after successful auth
-        if (key) {
-          router.replace("/dev");
-        }
-      } else {
-        setIsAuthenticated(false);
-      }
-    } catch {
+    if (key) {
+      // Validate the key with a simple check
+      fetch("/api/dev/auth", {
+        method: "POST",
+        headers: { "X-Dev-Key": key },
+      })
+        .then((res) => {
+          if (res.ok) {
+            setDevKey(key);
+            setIsAuthenticated(true);
+          } else {
+            setIsAuthenticated(false);
+          }
+        })
+        .catch(() => setIsAuthenticated(false))
+        .finally(() => setIsLoading(false));
+    } else {
       setIsAuthenticated(false);
-    } finally {
       setIsLoading(false);
     }
-  };
+  }, [searchParams]);
 
   // Fetch dashboard data
   const fetchData = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !devKey) return;
 
     try {
-      const res = await fetch(`/api/dev/metrics?range=${timeRange}`);
+      const res = await authFetch(`/api/dev/metrics?range=${timeRange}`);
       if (!res.ok) throw new Error("Failed to fetch metrics");
       const json = await res.json();
       setData(json);
@@ -113,39 +141,57 @@ export default function DevDashboard() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     }
-  }, [isAuthenticated, timeRange]);
+  }, [isAuthenticated, devKey, timeRange, authFetch]);
 
   // Fetch real-time stats
   const fetchRealTimeStats = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !devKey) return;
 
     try {
-      const res = await fetch("/api/dev/realtime");
+      const res = await authFetch("/api/dev/realtime");
       if (!res.ok) return;
       const json = await res.json();
       setRealTimeStats(json);
     } catch {
       // Silently fail for real-time stats
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, devKey, authFetch]);
+
+  // Fetch API health
+  const fetchApiHealth = useCallback(async () => {
+    if (!isAuthenticated || !devKey) return;
+
+    try {
+      const res = await authFetch("/api/dev/health");
+      if (!res.ok) return;
+      const json = await res.json();
+      setApiHealth(json);
+    } catch {
+      // Silently fail for health stats
+    }
+  }, [isAuthenticated, devKey, authFetch]);
 
   // Initial fetch and polling
   useEffect(() => {
     if (isAuthenticated) {
       fetchData();
       fetchRealTimeStats();
+      fetchApiHealth();
 
       // Poll real-time stats every 10 seconds
       const realTimeInterval = setInterval(fetchRealTimeStats, 10000);
+      // Poll API health every 30 seconds
+      const healthInterval = setInterval(fetchApiHealth, 30000);
       // Refresh full data every 60 seconds
       const dataInterval = setInterval(fetchData, 60000);
 
       return () => {
         clearInterval(realTimeInterval);
+        clearInterval(healthInterval);
         clearInterval(dataInterval);
       };
     }
-  }, [isAuthenticated, fetchData, fetchRealTimeStats]);
+  }, [isAuthenticated, fetchData, fetchRealTimeStats, fetchApiHealth]);
 
   // Loading state
   if (isLoading) {
@@ -253,6 +299,81 @@ export default function DevDashboard() {
               <p className="text-xs text-[#6b7280]">Active Ops (5m)</p>
               <p className="text-lg font-bold text-[#003366]">{realTimeStats.activeOperations}</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* API Health Status */}
+      {apiHealth && (
+        <div className="bg-white rounded-lg p-4 mb-6 border border-[#e5e7eb] shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-[#003366]">🔌 API Health</span>
+            </div>
+            <span className="text-xs text-[#6b7280]">
+              Last checked: {new Date(apiHealth.lastChecked).toLocaleTimeString()}
+            </span>
+          </div>
+          <div className="grid grid-cols-5 gap-4">
+            {apiHealth.services.map((service) => (
+              <div
+                key={service.name}
+                className={`p-3 rounded-lg border ${
+                  service.status === 'healthy'
+                    ? 'bg-[#f0fdf4] border-[#86efac]'
+                    : service.status === 'degraded'
+                    ? 'bg-[#fffbeb] border-[#fcd34d]'
+                    : service.status === 'down'
+                    ? 'bg-[#fef2f2] border-[#fecaca]'
+                    : 'bg-[#f9fafb] border-[#e5e7eb]'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      service.status === 'healthy'
+                        ? 'bg-[#16a34a]'
+                        : service.status === 'degraded'
+                        ? 'bg-[#f59e0b]'
+                        : service.status === 'down'
+                        ? 'bg-[#dc2626]'
+                        : 'bg-[#9ca3af]'
+                    }`}
+                  />
+                  <span className="text-sm font-medium text-[#003366]">{service.name}</span>
+                </div>
+                <div className="text-xs text-[#6b7280] space-y-0.5">
+                  <p>
+                    Status:{' '}
+                    <span
+                      className={`font-medium ${
+                        service.status === 'healthy'
+                          ? 'text-[#16a34a]'
+                          : service.status === 'degraded'
+                          ? 'text-[#f59e0b]'
+                          : service.status === 'down'
+                          ? 'text-[#dc2626]'
+                          : 'text-[#6b7280]'
+                      }`}
+                    >
+                      {service.status}
+                    </span>
+                  </p>
+                  {service.requestCount > 0 && (
+                    <>
+                      <p>Latency: {service.avgLatencyMs}ms</p>
+                      <p>Error rate: {service.errorRate}%</p>
+                      <p>Requests (15m): {service.requestCount}</p>
+                    </>
+                  )}
+                  {service.lastRequest && (
+                    <p className="text-[10px]">
+                      Last: {new Date(service.lastRequest).toLocaleTimeString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

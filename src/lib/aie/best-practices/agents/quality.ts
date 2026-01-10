@@ -26,7 +26,7 @@ export class QualityAgent {
 
     // Skip quality check if requested
     if (context.original_input.skip_quality_check) {
-      console.log('[QualityAgent] Quality check skipped by request');
+      logger.debug('[QualityAgent] Quality check skipped by request', { component: 'quality' });
       return this.createPassingAssessment();
     }
 
@@ -134,8 +134,9 @@ export class QualityAgent {
         duplicate_similarity: duplicateCheck.is_duplicate ? duplicateCheck.similarity : undefined,
       };
 
-      console.log(
-        `[QualityAgent] Assessment complete: ${is_approved ? 'APPROVED' : 'REJECTED'} (score: ${overall_score.toFixed(1)})`
+      logger.debug(
+        `[QualityAgent] Assessment complete: ${is_approved ? 'APPROVED' : 'REJECTED'} (score: ${overall_score.toFixed(1)})`,
+        { component: 'quality', is_approved, overall_score }
       );
 
       return assessment;
@@ -249,7 +250,7 @@ Return JSON:
       );
 
       if (error) {
-        console.warn('[QualityAgent] Duplicate check failed:', error);
+        logger.warn('[QualityAgent] Duplicate check failed:', { component: 'quality', error: error.message });
         return { is_duplicate: false };
       }
 
@@ -258,8 +259,9 @@ Return JSON:
         const similarity = topMatch.similarity || 0;
 
         if (similarity >= this.MAX_DUPLICATE_SIMILARITY) {
-          console.log(
-            `[QualityAgent] Duplicate detected: ${topMatch.id} (${(similarity * 100).toFixed(1)}% similar)`
+          logger.debug(
+            `[QualityAgent] Duplicate detected: ${topMatch.id} (${(similarity * 100).toFixed(1)}% similar)`,
+            { component: 'quality', duplicate_id: topMatch.id, similarity }
           );
           return {
             is_duplicate: true,
@@ -271,7 +273,7 @@ Return JSON:
 
       return { is_duplicate: false };
     } catch (error) {
-      console.warn('[QualityAgent] Duplicate check error:', error);
+      logger.warn('[QualityAgent] Duplicate check error:', { component: 'quality', error: error instanceof Error ? error.message : 'Unknown error' });
       return { is_duplicate: false };
     }
   }

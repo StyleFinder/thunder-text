@@ -12,20 +12,22 @@
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 import { POST } from "@/app/api/content-center/generate/route";
 import { NextRequest } from "next/server";
-import { TEST_SHOP, API_URLS } from "../../utils/test-constants";
+import { TEST_SHOP as _TEST_SHOP, API_URLS } from "../../utils/test-constants";
 import { createAuthenticatedRequest } from "../../utils/auth-helpers";
 import {
   mockGenerateContent,
   resetContentGeneratorMock,
-  createMockGeneratedContent,
+  createMockGeneratedContent as _createMockGeneratedContent,
 } from "../../mocks/content-generator.mock";
 
 // Mock the content generator service
 jest.mock("@/lib/services/content-generator", () => ({
   generateContent: (...args: unknown[]) => mockGenerateContent(...args),
   countWords: jest.fn().mockImplementation((text: string) => {
-    return text.trim().split(/\s+/).filter((word: string) => word.length > 0)
-      .length;
+    return text
+      .trim()
+      .split(/\s+/)
+      .filter((word: string) => word.length > 0).length;
   }),
 }));
 
@@ -317,7 +319,7 @@ describe("POST /api/content-center/generate", () => {
         const retryAfter = response.headers.get("Retry-After");
         // May or may not be present depending on implementation
         expect(typeof retryAfter === "string" || retryAfter === null).toBe(
-          true
+          true,
         );
       }
     });
@@ -360,7 +362,7 @@ describe("POST /api/content-center/generate", () => {
       });
 
       const response = await POST(request);
-      const data = await response.json();
+      const _data = await response.json();
 
       // If successful, the mock should have been called with a voice profile
       if (response.status === 201) {
@@ -415,7 +417,7 @@ describe("POST /api/content-center/generate", () => {
         expect(data.data.content.store_id).toBeDefined();
         // Store ID should be a valid UUID
         expect(data.data.content.store_id).toMatch(
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
         );
       }
     });

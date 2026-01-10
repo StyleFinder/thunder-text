@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useShopContext } from "../ShopContext";
 import { useShopStatus } from "@/hooks/useShopStatus";
+import { logger } from "@/lib/logger";
 import {
   Loader2,
   Sparkles,
@@ -19,6 +20,13 @@ import {
   ArrowRight,
   Gift,
   CheckCircle,
+  HourglassIcon,
+  XCircle,
+  AlertTriangle,
+  Rocket,
+  Building2,
+  MessageSquare,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -139,7 +147,8 @@ function PlanUsageCard({
 }) {
   const productDescUsed = usage?.productDescriptions.used ?? 0;
   const adDescUsed = usage?.ads.used ?? 0;
-  const productDescTotal = usage?.productDescriptions.limit ?? FREE_PLAN_LIMITS.productDescriptions;
+  const productDescTotal =
+    usage?.productDescriptions.limit ?? FREE_PLAN_LIMITS.productDescriptions;
   const adDescTotal = usage?.ads.limit ?? FREE_PLAN_LIMITS.adDescriptions;
   const productPercent = usage?.productDescriptions.percentUsed ?? 0;
   const adPercent = usage?.ads.percentUsed ?? 0;
@@ -259,7 +268,8 @@ function ActivePlanCard({
   const isPro = subscription.plan === "pro";
 
   const productUsed = usage?.productDescriptions.used ?? 0;
-  const productLimit = usage?.productDescriptions.limit ?? (isPro ? 5000 : 2000);
+  const productLimit =
+    usage?.productDescriptions.limit ?? (isPro ? 5000 : 2000);
   const adsUsed = usage?.ads.used ?? 0;
   const adsLimit = usage?.ads.limit ?? (isPro ? 1000 : 300);
   const productPercent = usage?.productDescriptions.percentUsed ?? 0;
@@ -413,7 +423,9 @@ function ActivePlanCard({
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-white font-medium text-sm">
-                  {maxPercent >= 100 ? "You've reached your limit!" : "Running low on usage!"}
+                  {maxPercent >= 100
+                    ? "You've reached your limit!"
+                    : "Running low on usage!"}
                 </p>
                 <p className="text-amber-100 text-xs mt-0.5">
                   Upgrade to Pro for 5,000 products & 1,000 ads/month
@@ -440,7 +452,8 @@ function ActivePlanCard({
             <p
               className={`text-sm ${isPro ? "text-amber-800" : "text-blue-800"}`}
             >
-              {usage?.productDescriptions.remaining.toLocaleString() ?? 0} products remaining
+              {usage?.productDescriptions.remaining.toLocaleString() ?? 0}{" "}
+              products remaining
             </p>
             <Link href={`/stores/${shopId}/settings/billing`}>
               <Button
@@ -457,6 +470,208 @@ function ActivePlanCard({
               </Button>
             </Link>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Pending Plan Card - for subscriptions awaiting activation
+function PendingPlanCard({
+  shopId,
+  subscription,
+}: {
+  shopId: string;
+  subscription: SubscriptionInfo;
+}) {
+  const planName = subscription.plan === "pro" ? "Pro" : "Starter";
+  const isPro = subscription.plan === "pro";
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden shadow-lg"
+      style={{
+        background: isPro
+          ? "linear-gradient(135deg, #fef3c7 0%, #fcd34d 50%, #f59e0b 100%)"
+          : "linear-gradient(135deg, #dbeafe 0%, #93c5fd 50%, #3b82f6 100%)",
+        border: isPro ? "2px solid #f59e0b" : "2px solid #3b82f6",
+      }}
+    >
+      <div className="p-5 bg-white/90 backdrop-blur-sm">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                isPro
+                  ? "bg-gradient-to-br from-amber-400 to-amber-600"
+                  : "bg-gradient-to-br from-blue-400 to-blue-600"
+              }`}
+            >
+              {isPro ? (
+                <Crown className="w-5 h-5 text-white" />
+              ) : (
+                <Zap className="w-5 h-5 text-white" />
+              )}
+            </div>
+            <div>
+              <h3
+                className={`font-semibold ${isPro ? "text-amber-900" : "text-blue-900"}`}
+              >
+                {planName} Plan
+              </h3>
+              <p
+                className={`text-xs ${isPro ? "text-amber-700" : "text-blue-700"}`}
+              >
+                Subscription pending
+              </p>
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+            <HourglassIcon className="w-3 h-3" />
+            Pending
+          </span>
+        </div>
+
+        {/* Pending Status Message */}
+        <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 mb-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <HourglassIcon className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-amber-900">
+                Awaiting activation
+              </p>
+              <p className="text-xs text-amber-700 mt-1">
+                Your {planName} subscription is being processed. This usually
+                takes a few moments. If you just completed checkout, please
+                refresh the page.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => window.location.reload()}
+            size="sm"
+            className={
+              isPro
+                ? "bg-amber-600 hover:bg-amber-700 text-white"
+                : "bg-blue-600 hover:bg-blue-700 text-white"
+            }
+          >
+            <Loader2 className="w-3 h-3 mr-1" />
+            Refresh Status
+          </Button>
+          <Link href={`/stores/${shopId}/settings/billing`}>
+            <Button
+              size="sm"
+              variant="outline"
+              className={
+                isPro
+                  ? "border-amber-300 text-amber-700 hover:bg-amber-50"
+                  : "border-blue-300 text-blue-700 hover:bg-blue-50"
+              }
+            >
+              View Billing
+              <ArrowRight className="w-3 h-3 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Cancelled Plan Card - for subscriptions that have been cancelled
+function CancelledPlanCard({
+  shopId,
+  subscription,
+}: {
+  shopId: string;
+  subscription: SubscriptionInfo;
+}) {
+  const planName = subscription.plan === "pro" ? "Pro" : "Starter";
+  const isPro = subscription.plan === "pro";
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden shadow-lg"
+      style={{
+        background:
+          "linear-gradient(135deg, #fee2e2 0%, #fca5a5 50%, #ef4444 100%)",
+        border: "2px solid #ef4444",
+      }}
+    >
+      <div className="p-5 bg-white/90 backdrop-blur-sm">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                isPro
+                  ? "bg-gradient-to-br from-amber-400 to-amber-600"
+                  : "bg-gradient-to-br from-blue-400 to-blue-600"
+              }`}
+            >
+              {isPro ? (
+                <Crown className="w-5 h-5 text-white" />
+              ) : (
+                <Zap className="w-5 h-5 text-white" />
+              )}
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">{planName} Plan</h3>
+              <p className="text-xs text-gray-500">Subscription cancelled</p>
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-300">
+            <XCircle className="w-3 h-3" />
+            Cancelled
+          </span>
+        </div>
+
+        {/* Cancelled Status Message */}
+        <div className="p-4 bg-red-50 rounded-lg border border-red-200 mb-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-red-900">
+                Subscription Cancelled
+              </p>
+              <p className="text-xs text-red-700 mt-1">
+                Your {planName} subscription has been cancelled. You&apos;re now
+                on the Free plan with limited features. Resubscribe anytime to
+                restore full access.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          <Link href={`/stores/${shopId}/settings/billing`}>
+            <Button
+              size="sm"
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Zap className="w-3 h-3 mr-1" />
+              Resubscribe
+            </Button>
+          </Link>
+          <Link href={`/stores/${shopId}/settings/billing`}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-red-300 text-red-700 hover:bg-red-50"
+            >
+              View Billing
+              <ArrowRight className="w-3 h-3 ml-1" />
+            </Button>
+          </Link>
         </div>
       </div>
     </div>
@@ -616,8 +831,169 @@ function UsageLimitBanner({
   );
 }
 
+// Onboarding progress interface
+interface OnboardingProgress {
+  currentStep: string;
+  shopProfileCompleted: boolean;
+  voiceProfileCompleted: boolean;
+  businessProfileCompleted: boolean;
+  onboardingCompleted: boolean;
+}
+
+// Onboarding Card Component
+function OnboardingCard({ shopId }: { shopId: string }) {
+  const [progress, setProgress] = useState<OnboardingProgress | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const response = await fetch("/api/onboarding/progress");
+        const data = await response.json();
+        if (data.success && data.data) {
+          setProgress(data.data);
+        } else {
+          // API returned but no data - show onboarding card with defaults
+          setError(true);
+        }
+      } catch (err) {
+        logger.error("Error fetching onboarding progress", err, { component: "dashboard-onboarding" });
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProgress();
+  }, []);
+
+  // Don't show card while loading
+  if (loading) {
+    return null;
+  }
+
+  // Don't show if onboarding is fully completed
+  if (progress?.onboardingCompleted) {
+    return null;
+  }
+
+  // Show card if: no progress data, error, or onboarding not complete
+  // This ensures new users see the card even if API has issues
+
+  // Calculate completion percentage
+  const steps = [
+    { key: "profile", completed: progress?.shopProfileCompleted ?? false, label: "Shop Profile", icon: Building2 },
+    { key: "voice", completed: progress?.voiceProfileCompleted ?? false, label: "Brand Voice", icon: MessageSquare },
+    { key: "interview", completed: progress?.businessProfileCompleted ?? false, label: "Business Interview", icon: Users },
+  ];
+
+  const completedCount = steps.filter((s) => s.completed).length;
+  const progressPercent = Math.round((completedCount / steps.length) * 100);
+
+  // Determine next step
+  const nextStep = steps.find((s) => !s.completed);
+  const nextStepUrl = nextStep
+    ? `/stores/${shopId}/onboarding/${nextStep.key === "profile" ? "profile" : nextStep.key === "voice" ? "voice" : "interview"}`
+    : `/stores/${shopId}/onboarding/complete`;
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden shadow-lg mb-8"
+      style={{
+        background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%)",
+        border: "2px solid #0ea5e9",
+      }}
+    >
+      <div className="p-6 bg-white/90 backdrop-blur-sm">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600">
+              <Rocket className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg text-gray-900">Complete Your Setup</h3>
+              <p className="text-sm text-gray-600">
+                Personalize Thunder Text for better results
+              </p>
+            </div>
+          </div>
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-sky-100 text-sky-800 border border-sky-300">
+            {progressPercent}% Complete
+          </span>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mb-5">
+          <div className="w-full h-2 bg-sky-100 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-sky-500 to-blue-600"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Steps */}
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          {steps.map((step) => (
+            <div
+              key={step.key}
+              className={`flex items-center gap-2 p-3 rounded-lg border ${
+                step.completed
+                  ? "bg-green-50 border-green-200"
+                  : "bg-gray-50 border-gray-200"
+              }`}
+            >
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  step.completed
+                    ? "bg-green-100"
+                    : "bg-gray-100"
+                }`}
+              >
+                {step.completed ? (
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                ) : (
+                  <step.icon className="w-4 h-4 text-gray-400" />
+                )}
+              </div>
+              <span
+                className={`text-sm font-medium ${
+                  step.completed ? "text-green-700" : "text-gray-600"
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            {completedCount === 0
+              ? "Get started to unlock personalized AI content"
+              : completedCount === steps.length
+                ? "Almost there! Complete your setup"
+                : `${steps.length - completedCount} step${steps.length - completedCount > 1 ? "s" : ""} remaining`}
+          </p>
+          <Link href={nextStepUrl}>
+            <Button
+              className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-medium shadow-md"
+            >
+              {completedCount === 0 ? "Start Setup" : "Continue Setup"}
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Stats interface
 interface DashboardStats {
+  storeName?: string | null;
   productsGenerated: number;
   adsCreated: number;
   timeSavedMinutes: number;
@@ -628,8 +1004,10 @@ interface DashboardStats {
 
 function DashboardContent() {
   const { shopId, shopDomain } = useShopContext();
-  const { data: session, status } = useSession();
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const { data: _session, status } = useSession();
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(
+    null,
+  );
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     productsGenerated: 0,
@@ -649,9 +1027,12 @@ function DashboardContent() {
     redirectOnDisconnect: !!shopDomain,
   });
 
-  const storeName = shopDomain
-    ? decodeURIComponent(shopDomain).replace(".myshopify.com", "")
-    : "Your Store";
+  // Prefer display name from API (database), fall back to domain
+  const storeName =
+    stats.storeName ||
+    (shopDomain
+      ? decodeURIComponent(shopDomain).replace(".myshopify.com", "")
+      : "Your Store");
 
   // Fetch subscription status
   useEffect(() => {
@@ -671,7 +1052,7 @@ function DashboardContent() {
           setSubscription(data.subscription);
         }
       } catch (error) {
-        console.error("Error fetching subscription:", error);
+        logger.error("Error fetching subscription", error, { component: "dashboard", shop });
       } finally {
         setSubscriptionLoading(false);
       }
@@ -696,6 +1077,7 @@ function DashboardContent() {
 
         if (data.success && data.data) {
           setStats({
+            storeName: data.data.storeName || null,
             productsGenerated: data.data.productsGenerated || 0,
             adsCreated: data.data.adsCreated || 0,
             timeSavedMinutes: data.data.timeSavedMinutes || 0,
@@ -705,7 +1087,7 @@ function DashboardContent() {
           });
         }
       } catch (error) {
-        console.error("Error fetching stats:", error);
+        logger.error("Error fetching stats", error, { component: "dashboard", shop });
       } finally {
         setStatsLoading(false);
       }
@@ -713,11 +1095,6 @@ function DashboardContent() {
 
     fetchStats();
   }, [shop]);
-
-  // Determine if user is on a paid plan
-  const isPaidPlan =
-    subscription?.plan === "starter" || subscription?.plan === "pro";
-  const isActivePaid = isPaidPlan && subscription?.status === "active";
 
   // Show loading while session is being fetched
   if (status === "loading") {
@@ -815,6 +1192,9 @@ function DashboardContent() {
           </div>
         </div>
 
+        {/* Onboarding Card */}
+        <OnboardingCard shopId={shopId} />
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
@@ -896,16 +1276,6 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Plan Card */}
-        {!subscriptionLoading && (
-          <div className="mt-8">
-            {isActivePaid && subscription ? (
-              <ActivePlanCard shopId={shopId} subscription={subscription} usage={stats.usage} />
-            ) : (
-              <PlanUsageCard shopId={shopId} subscription={subscription} usage={stats.usage} />
-            )}
-          </div>
-        )}
       </main>
     </div>
   );

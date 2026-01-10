@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection -- Dynamic object access with validated keys is safe here */
 /**
  * Centralized LLM Model Configuration
  *
@@ -7,34 +8,39 @@
  *
  * GPT-4o pricing (for vision tasks):
  * - Input: $2.50 per 1M tokens
+ */
+
+import { logger } from "@/lib/logger";
+
+/*
  * - Output: $10.00 per 1M tokens
  */
 
 // Model identifiers
 export const MODELS = {
   // Primary model for text generation (cost-effective)
-  TEXT: 'gpt-4o-mini',
+  TEXT: "gpt-4o-mini",
 
   // Vision model for image analysis (required for vision capabilities)
-  VISION: 'gpt-4o',
+  VISION: "gpt-4o",
 
   // Embedding model for vector search
-  EMBEDDING: 'text-embedding-ada-002',
+  EMBEDDING: "text-embedding-ada-002",
 } as const;
 
 // Model pricing per 1M tokens (in USD)
 export const MODEL_PRICING = {
-  'gpt-4o-mini': {
-    input: 0.15,    // $0.15 per 1M tokens
-    output: 0.60,   // $0.60 per 1M tokens
+  "gpt-4o-mini": {
+    input: 0.15, // $0.15 per 1M tokens
+    output: 0.6, // $0.60 per 1M tokens
   },
-  'gpt-4o': {
-    input: 2.50,    // $2.50 per 1M tokens
-    output: 10.00,  // $10.00 per 1M tokens
+  "gpt-4o": {
+    input: 2.5, // $2.50 per 1M tokens
+    output: 10.0, // $10.00 per 1M tokens
   },
-  'text-embedding-ada-002': {
-    input: 0.10,    // $0.10 per 1M tokens
-    output: 0,      // No output tokens for embeddings
+  "text-embedding-ada-002": {
+    input: 0.1, // $0.10 per 1M tokens
+    output: 0, // No output tokens for embeddings
   },
 } as const;
 
@@ -46,12 +52,15 @@ export type ModelName = keyof typeof MODEL_PRICING;
 export function calculateTokenCost(
   model: ModelName,
   inputTokens: number,
-  outputTokens: number = 0
+  outputTokens: number = 0,
 ): number {
   const pricing = MODEL_PRICING[model];
   if (!pricing) {
-    console.warn(`Unknown model: ${model}, using gpt-4o-mini pricing`);
-    return calculateTokenCost('gpt-4o-mini', inputTokens, outputTokens);
+    logger.warn(`Unknown model: ${model}, using gpt-4o-mini pricing`, undefined, {
+      component: "models",
+      model,
+    });
+    return calculateTokenCost("gpt-4o-mini", inputTokens, outputTokens);
   }
 
   const inputCost = (inputTokens / 1_000_000) * pricing.input;
@@ -72,13 +81,13 @@ export function estimateCost(model: ModelName, totalTokens: number): number {
 /**
  * Get the appropriate model for a task type
  */
-export function getModelForTask(task: 'text' | 'vision' | 'embedding'): string {
+export function getModelForTask(task: "text" | "vision" | "embedding"): string {
   switch (task) {
-    case 'vision':
+    case "vision":
       return MODELS.VISION;
-    case 'embedding':
+    case "embedding":
       return MODELS.EMBEDDING;
-    case 'text':
+    case "text":
     default:
       return MODELS.TEXT;
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Select,
   SelectContent,
@@ -189,16 +189,19 @@ export default function LibraryPage() {
     }
   };
 
-  const filteredContent = content.filter((item) => {
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        item.topic.toLowerCase().includes(query) ||
-        item.generated_text.toLowerCase().includes(query)
-      );
-    }
-    return true;
-  });
+  // Q8: Memoize filtered content to avoid recomputation on every render
+  const filteredContent = useMemo(() => {
+    return content.filter((item) => {
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return (
+          item.topic.toLowerCase().includes(query) ||
+          item.generated_text.toLowerCase().includes(query)
+        );
+      }
+      return true;
+    });
+  }, [content, searchQuery]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
